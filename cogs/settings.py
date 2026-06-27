@@ -6,9 +6,8 @@ from utils.ui import SyncInkEmbed, SuccessEmbed
 from utils.permissions import has_permission
 
 class ConfigDashboardView(discord.ui.View):
-    def __init__(self, guild_id: int):
-        super().__init__(timeout=180.0)
-        self.guild_id = guild_id
+    def __init__(self):
+        super().__init__(timeout=None)
         
     @discord.ui.select(
         custom_id="config_category_select",
@@ -46,7 +45,7 @@ class Settings(commands.Cog):
     async def config(self, interaction: discord.Interaction):
         embed = SyncInkEmbed(title="⚙️ SyncInk Configuration Dashboard")
         embed.description = "Welcome to the control panel. Select a category below to view and manage your server settings."
-        await interaction.response.send_message(embed=embed, view=ConfigDashboardView(interaction.guild.id), ephemeral=True)
+        await interaction.response.send_message(embed=embed, view=ConfigDashboardView(), ephemeral=True)
         
     @app_commands.command(name="onboard", description="Start the guided setup wizard for new servers")
     @has_permission(administrator=True)
