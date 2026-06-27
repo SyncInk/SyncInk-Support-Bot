@@ -1,0 +1,10 @@
+{
+    "welcome_message_title": "Welcome to SyncInk Support!",
+    "welcome_message_desc": "Hello {user}! Welcome to the official SyncInk support server.\n\nPlease read the rules and enjoy your stay.",
+    "error_no_permission": "You do not have permission to perform this action.",
+    "error_generic": "An unexpected error occurred. The developers have been notified.",
+    "success_verified": "You have been verified successfully! Welcome to the server.",
+    "error_verify_failed": "An unexpected error occurred during verification.",
+    "success_feedback": "Your feedback has been submitted successfully!",
+    "mod_warn_success": "Successfully warned {user} for: {reason}"
+}
