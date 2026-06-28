@@ -56,7 +56,33 @@ class VerificationView(discord.ui.View):
             if unverified_role in interaction.user.roles:
                 await interaction.user.remove_roles(unverified_role, reason="Passed Verification Checkpoint")
             
-            await interaction.response.send_message(embed=SuccessEmbed("You have been verified successfully. Full server access has been granted."), ephemeral=True)
+            success_embed = SuccessEmbed("Verification completed.")
+            success_embed.title = "Welcome to SyncInk!"
+            success_embed.description = (
+                "• Your account has been successfully verified.\n"
+                "• You now have access to the entire server.\n"
+                "• If you need assistance, visit the Support channels."
+            )
+            await interaction.response.send_message(embed=success_embed, ephemeral=True)
+
+            # Send welcome message if configured
+            welcome_channel_id = settings.get('welcome_channel_id')
+            if welcome_channel_id:
+                channel = interaction.guild.get_channel(welcome_channel_id)
+                if channel:
+                    custom_msg = settings.get('welcome_message')
+                    if custom_msg:
+                        desc = custom_msg.replace("{user}", interaction.user.mention).replace("{server}", interaction.guild.name)
+                    else:
+                        from utils.i18n import i18n
+                        desc = i18n.get("welcome_message_desc", user=interaction.user.mention)
+                    
+                    w_embed = SyncInkEmbed(title=f"Welcome to {interaction.guild.name}", description=desc)
+                    w_embed.set_thumbnail(url=interaction.user.display_avatar.url)
+                    try:
+                        await channel.send(content=interaction.user.mention, embed=w_embed)
+                    except discord.Forbidden:
+                        pass
         except discord.Forbidden:
             embed = ErrorEmbed(
                 description="The bot lacks the necessary permissions to assign or remove roles.",
@@ -87,6 +113,25 @@ class Security(commands.Cog):
                         await member.add_roles(unverified_role, reason="Assigned Unverified role on join")
                     except Exception as e:
                         log.error(f"Failed to assign unverified role to {member.id}: {e}")
+        else:
+            # If verification is disabled, user instantly gets access. Send welcome message now.
+            welcome_channel_id = settings.get('welcome_channel_id')
+            if welcome_channel_id:
+                channel = member.guild.get_channel(welcome_channel_id)
+                if channel:
+                    custom_msg = settings.get('welcome_message')
+                    if custom_msg:
+                        desc = custom_msg.replace("{user}", member.mention).replace("{server}", member.guild.name)
+                    else:
+                        from utils.i18n import i18n
+                        desc = i18n.get("welcome_message_desc", user=member.mention)
+                    
+                    w_embed = SyncInkEmbed(title=f"Welcome to {member.guild.name}", description=desc)
+                    w_embed.set_thumbnail(url=member.display_avatar.url)
+                    try:
+                        await channel.send(content=member.mention, embed=w_embed)
+                    except discord.Forbidden:
+                        pass
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -116,7 +161,7 @@ class Security(commands.Cog):
 
         embed = SyncInkEmbed(title="Security Checkpoint", color=BRAND_ACCENT)
         embed.set_author(name="Server Security", icon_url="https://cdn.discordapp.com/emojis/1045237731211755561.webp")
-        embed.description = "To protect our community from spam, automated accounts, and unauthorized access, all members must complete verification before accessing the server."
+        embed.description = "To protect our community from spam, automated accounts, malicious users, and unauthorized access, all members must complete verification before accessing the server."
         embed.add_field(name="", value="> 🔒 Please click the button below to verify your account and instantly unlock server access.", inline=False)
         
         await interaction.channel.send(embed=embed, view=VerificationView())
