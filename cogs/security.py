@@ -2,10 +2,9 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from services.settings_service import SettingsService
-from utils.ui import SyncInkEmbed, SuccessEmbed, ErrorEmbed, BRAND_ACCENT, ERROR_COLOR
+from utils.ui import SyncInkEmbed, SuccessEmbed, ErrorEmbed, BRAND_ACCENT
 from utils.permissions import has_permission
 from utils.logger import log
-from utils.i18n import i18n
 import re
 
 class VerificationView(discord.ui.View):
@@ -18,12 +17,21 @@ class VerificationView(discord.ui.View):
         settings = await SettingsService.get_guild_settings(interaction.guild.id)
         role_id = settings.get("verification_role_id")
         
-        if not role_id:
+        if not settings.get('verification_enabled'):
             embed = ErrorEmbed(
                 description="The verification system is currently disabled on this server.",
-                resolution="Please enable verification from the configuration dashboard or contact a server administrator."
+                resolution="A server administrator must enable verification via the `/config` dashboard."
             )
-            embed.title = "Verification Not Enabled"
+            embed.title = "Verification Disabled"
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        if not role_id:
+            embed = ErrorEmbed(
+                description="The verification system is missing a target role.",
+                resolution="A server administrator must select a role via the `/config` dashboard."
+            )
+            embed.title = "Configuration Error"
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
             
@@ -31,13 +39,14 @@ class VerificationView(discord.ui.View):
         if not role:
             embed = ErrorEmbed(
                 description="The designated verification role could not be found.",
-                resolution="The server administrator must re-select a valid role in the configuration dashboard."
+                resolution="A server administrator must re-select a valid role via the `/config` dashboard."
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
             
         if role in interaction.user.roles:
-            await interaction.response.send_message(embed=SyncInkEmbed(title="Already Verified", description="You already have the verification role and full access to the server."), ephemeral=True)
+            embed = SyncInkEmbed(title="Already Verified", description="You already possess the verification role and full access to the server.")
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
         try:
@@ -46,11 +55,11 @@ class VerificationView(discord.ui.View):
         except discord.Forbidden:
             embed = ErrorEmbed(
                 description="The bot lacks the necessary permissions to assign the verification role.",
-                resolution="Please ensure the bot's role is placed **above** the verification role in the server settings."
+                resolution="Ensure the bot's role is placed **above** the verification role in the server settings."
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as e:
-            await interaction.response.send_message(embed=ErrorEmbed(description=i18n.get("error_verify_failed")), ephemeral=True)
+            await interaction.response.send_message(embed=ErrorEmbed(description="An unexpected error occurred during verification.", resolution=f"Details: `{e}`"), ephemeral=True)
             log.error(f"Verification error: {e}")
 
 class Security(commands.Cog):
@@ -85,7 +94,7 @@ class Security(commands.Cog):
             return
 
         embed = SyncInkEmbed(title="Server Verification", color=BRAND_ACCENT)
-        embed.set_author(name="Welcome to SyncInk", icon_url="https://cdn.discordapp.com/emojis/1045237731211755561.webp") # Shield-like generic check icon
+        embed.set_author(name="Welcome to SyncInk", icon_url="https://cdn.discordapp.com/emojis/1045237731211755561.webp")
         embed.description = "To access the server and unlock all channels, please verify yourself."
         embed.add_field(name="", value="> 🔒 Verification helps us keep the community safe, secure, and spam-free.", inline=False)
         
