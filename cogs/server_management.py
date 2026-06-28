@@ -18,9 +18,13 @@ class ServerManagement(commands.Cog):
                 return m.author == self.bot.user
             
             deleted = await interaction.channel.purge(limit=amount, check=is_me)
-            await interaction.followup.send(embed=SuccessEmbed(f"Cleaned up {len(deleted)} bot messages."))
+            await interaction.followup.send(embed=SuccessEmbed(f"Successfully cleaned up {len(deleted)} bot messages from this channel."))
         except discord.Forbidden:
-            await interaction.followup.send(embed=ErrorEmbed("Missing permissions to manage messages."))
+            embed = ErrorEmbed(
+                description="The bot lacks permissions to delete messages in this channel.",
+                resolution="Ensure the bot has the 'Manage Messages' permission enabled."
+            )
+            await interaction.followup.send(embed=embed)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(ServerManagement(bot))

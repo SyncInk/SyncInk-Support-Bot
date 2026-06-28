@@ -11,10 +11,10 @@ class ConfigDashboardView(discord.ui.View):
         
     @discord.ui.select(
         custom_id="config_category_select",
-        placeholder="Select a category to manage...",
+        placeholder="Select a category to configure...",
         options=[
-            discord.SelectOption(label="Security", description="Verification and Anti-Spam", emoji="🛡️", value="security"),
-            discord.SelectOption(label="Logging", description="Audit logs and tracking", emoji="📜", value="logging"),
+            discord.SelectOption(label="Security", description="Verification and Anti-Spam settings", emoji="🛡️", value="security"),
+            discord.SelectOption(label="Logging", description="Audit logs and channel tracking", emoji="📜", value="logging"),
             discord.SelectOption(label="Members", description="Welcome messages and Auto Roles", emoji="👋", value="members"),
         ]
     )
@@ -22,42 +22,53 @@ class ConfigDashboardView(discord.ui.View):
         category = select.values[0]
         settings = await SettingsService.get_guild_settings(interaction.guild.id)
         
-        embed = SyncInkEmbed(title=f"⚙️ {category.capitalize()} Configuration")
+        embed = SyncInkEmbed(title=f"{category.capitalize()} Configuration")
+        
         if category == "security":
-            verif = "Enabled ✅" if settings.get('verification_enabled') else "Disabled ❌"
-            embed.description = f"**Verification System:** {verif}\n*(Use dashboard buttons to edit - coming soon)*"
-        elif category == "logging":
-            log_ch = f"<#{settings['log_channel_id']}>" if settings.get('log_channel_id') else "Not Set"
-            embed.description = f"**Log Channel:** {log_ch}\n*(Use dashboard buttons to edit - coming soon)*"
-        elif category == "members":
-            welcome = f"<#{settings['welcome_channel_id']}>" if settings.get('welcome_channel_id') else "Not Set"
-            auto = f"<@&{settings['autorole_id']}>" if settings.get('autorole_id') else "Not Set"
-            embed.description = f"**Welcome Channel:** {welcome}\n**Auto Role:** {auto}\n*(Use dashboard buttons to edit - coming soon)*"
+            embed.description = "Manage server access and protect your community from spam."
+            verif = "🟢 Enabled" if settings.get('verification_enabled') else "🔴 Disabled"
+            embed.add_field(name="Verification System", value=verif, inline=False)
+            embed.add_field(name="Assigned Role", value=f"<@&{settings['verification_role_id']}>" if settings.get('verification_role_id') else "Not configured", inline=False)
             
+        elif category == "logging":
+            embed.description = "Track moderation actions, messages, and server events."
+            log_ch = f"<#{settings['log_channel_id']}>" if settings.get('log_channel_id') else "Not configured"
+            embed.add_field(name="Audit Log Channel", value=log_ch, inline=False)
+            
+        elif category == "members":
+            embed.description = "Configure the onboarding experience for new members."
+            welcome = f"<#{settings['welcome_channel_id']}>" if settings.get('welcome_channel_id') else "Not configured"
+            auto = f"<@&{settings['autorole_id']}>" if settings.get('autorole_id') else "Not configured"
+            embed.add_field(name="Welcome Channel", value=welcome, inline=True)
+            embed.add_field(name="Auto Role", value=auto, inline=True)
+            
+        embed.add_field(name="", value="> ⚙️ *Interactive configuration buttons coming soon.*", inline=False)
         await interaction.response.edit_message(embed=embed, view=self)
 
 class Settings(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="config", description="Manage server settings via the SyncInk Dashboard")
+    @app_commands.command(name="config", description="Manage server settings via the interactive dashboard.")
     @app_commands.default_permissions(administrator=True)
     @has_permission(administrator=True)
     async def config(self, interaction: discord.Interaction):
-        embed = SyncInkEmbed(
-            title="⚙️ Dashboard", 
-            description="Welcome to the SyncInk Control Panel.\n\nPlease select a category from the dropdown below to view and modify your server settings."
-        )
+        embed = SyncInkEmbed(title="Platform Dashboard")
+        embed.set_author(name="SyncInk Administration", icon_url="https://syncink.xyz/assets/logo.png")
+        embed.description = "Welcome to the control panel. Use the dropdown below to navigate through your server's configuration."
+        
+        embed.add_field(name="Quick Stats", value="Platform Version: v1.0.0\nModules Active: 4", inline=False)
+        
         await interaction.response.send_message(embed=embed, view=ConfigDashboardView(), ephemeral=True)
         
-    @app_commands.command(name="onboard", description="Initialize SyncInk on your server")
+    @app_commands.command(name="onboard", description="Initialize SyncInk and start the guided setup.")
     @app_commands.default_permissions(administrator=True)
     @has_permission(administrator=True)
     async def onboard(self, interaction: discord.Interaction):
-        embed = SyncInkEmbed(
-            title="✨ SyncInk Setup",
-            description="Welcome to SyncInk Platform!\n\nTo begin configuring your server, please run the `/config` command to open the interactive dashboard."
-        )
+        embed = SyncInkEmbed(title="Welcome to SyncInk")
+        embed.description = "Thank you for trusting SyncInk Support Platform.\nTo secure your community, please complete the initial setup."
+        embed.add_field(name="Next Steps", value="> 1. Run the `/config` command.\n> 2. Navigate to **Security** and enable verification.\n> 3. Set your audit log and welcome channels.", inline=False)
+        
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot: commands.Bot):

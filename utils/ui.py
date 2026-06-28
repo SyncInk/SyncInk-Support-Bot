@@ -2,33 +2,30 @@ import discord
 from typing import Optional, Union, Any
 
 # SyncInk Brand Colors
-BRAND_PRIMARY = 0x2b2d31  # Modern dark color (similar to Discord dark mode background)
+BRAND_PRIMARY = 0x2b2d31  # Modern dark color
 BRAND_ACCENT = 0x5865F2   # SyncInk Blurple
 SUCCESS_COLOR = 0x57F287  # Green
 ERROR_COLOR = 0xED4245    # Red
 WARNING_COLOR = 0xFEE75C  # Yellow
-DIVIDER = "━━━━━━━━━━━━━━━━━━"
 
 class SyncInkEmbed(discord.Embed):
     """Premium Base Embed class for the SyncInk Ecosystem."""
     
     def __init__(self, color: int = BRAND_ACCENT, **kwargs):
-        # Enforce spacing for standard descriptions if provided
-        description = kwargs.get("description", "")
-        if description and not description.startswith(DIVIDER):
-            kwargs["description"] = f"{DIVIDER}\n\n{description}\n\n{DIVIDER}"
-            
         super().__init__(color=color, **kwargs)
         self.timestamp = discord.utils.utcnow()
         self.set_footer(text="SyncInk Platform", icon_url="https://syncink.xyz/assets/logo.png")
 
 class SuccessEmbed(SyncInkEmbed):
     def __init__(self, description: str, **kwargs):
-        super().__init__(color=SUCCESS_COLOR, description=f"✅ **Success**\n\n{description}", **kwargs)
+        super().__init__(color=SUCCESS_COLOR, description=description, **kwargs)
+        self.set_author(name="Action Successful", icon_url="https://cdn.discordapp.com/emojis/1045237731211755561.webp") # Generic check icon
 
 class ErrorEmbed(SyncInkEmbed):
-    def __init__(self, description: str, **kwargs):
-        super().__init__(color=ERROR_COLOR, description=f"❌ **Error**\n\n{description}\n\n*If this persists, contact Support.*", **kwargs)
+    def __init__(self, description: str, resolution: str = "Please contact a server administrator if the issue persists.", **kwargs):
+        super().__init__(color=ERROR_COLOR, description=description, **kwargs)
+        self.set_author(name="Action Required", icon_url="https://cdn.discordapp.com/emojis/1045237748441968640.webp") # Generic warning icon
+        self.add_field(name="How to fix this?", value=f"> {resolution}", inline=False)
 
 class BaseConfirmView(discord.ui.View):
     """A standard confirmation view with Yes/No buttons."""
@@ -48,15 +45,17 @@ class BaseConfirmView(discord.ui.View):
 
 class LoadingEmbed(SyncInkEmbed):
     def __init__(self, description: str = "Processing request...", **kwargs):
-        super().__init__(color=BRAND_ACCENT, description=f"🔄 {description}", **kwargs)
+        super().__init__(color=BRAND_ACCENT, description=description, **kwargs)
+        self.set_author(name="Please Wait", icon_url="https://cdn.discordapp.com/emojis/1045237766863339591.webp") # Generic loading
 
 class EmptyStateEmbed(SyncInkEmbed):
     def __init__(self, title: str, description: str, **kwargs):
-        super().__init__(color=BRAND_PRIMARY, title=f"📭 {title}", description=description, **kwargs)
+        super().__init__(color=BRAND_PRIMARY, title=title, description=description, **kwargs)
+        self.set_author(name="Nothing Found")
 
 class InfoCard(SyncInkEmbed):
     def __init__(self, title: str, description: str, **kwargs):
-        super().__init__(color=BRAND_ACCENT, title=f"ℹ️ {title}", description=description, **kwargs)
+        super().__init__(color=BRAND_ACCENT, title=title, description=description, **kwargs)
 
 class PaginationView(discord.ui.View):
     """A generic pagination view for embeds."""
@@ -74,12 +73,12 @@ class PaginationView(discord.ui.View):
                 
         await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
 
-    @discord.ui.button(label="◀️ Previous", style=discord.ButtonStyle.secondary, custom_id="prev_btn", disabled=True)
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary, custom_id="prev_btn", disabled=True)
     async def prev_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.current_page -= 1
         await self.update_buttons(interaction)
 
-    @discord.ui.button(label="Next ▶️", style=discord.ButtonStyle.secondary, custom_id="next_btn")
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary, custom_id="next_btn")
     async def next_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.current_page += 1
         await self.update_buttons(interaction)

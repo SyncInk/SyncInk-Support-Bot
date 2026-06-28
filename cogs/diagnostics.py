@@ -18,30 +18,19 @@ class Diagnostics(commands.Cog):
         total_users = sum(g.member_count for g in self.bot.guilds if g.member_count)
         total_guilds = len(self.bot.guilds)
         
-        # Calculate uptime
         uptime_seconds = int(time.time() - STARTUP_TIME) if STARTUP_TIME else 0
         hours, remainder = divmod(uptime_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         uptime_str = f"{hours}h {minutes}m {seconds}s"
         
-        embed = SyncInkEmbed(title="📊 Platform Metrics")
+        embed = SyncInkEmbed(title="Platform Metrics")
+        embed.set_author(name="System Diagnostics", icon_url="https://syncink.xyz/assets/logo.png")
         
-        # Infrastructure
-        embed.add_field(name="Uptime", value=uptime_str, inline=True)
-        embed.add_field(name="Servers", value=f"{total_guilds:,}", inline=True)
-        embed.add_field(name="Total Users", value=f"{total_users:,}", inline=True)
+        embed.add_field(name="Infrastructure", value=f"**Uptime:** {uptime_str}\n**Servers:** {total_guilds:,}\n**Users:** {total_users:,}", inline=True)
+        embed.add_field(name="Performance", value=f"**Commands:** {metrics.commands_executed:,}\n**Latency:** {metrics.avg_command_time:.2f}ms\n**Errors:** {metrics.errors_raised:,}", inline=True)
+        embed.add_field(name="Ecosystem", value=f"**Mod Actions:** {metrics.moderation_actions:,}\n**Suggestions:** {metrics.suggestions_submitted:,}\n**Status:** 🟢 Healthy", inline=False)
         
-        # Platform Usage
-        embed.add_field(name="Commands Executed", value=f"{metrics.commands_executed:,}", inline=True)
-        embed.add_field(name="Avg Cmd Latency", value=f"{metrics.avg_command_time:.2f}ms", inline=True)
-        embed.add_field(name="Errors Caught", value=f"{metrics.errors_raised:,}", inline=True)
-        
-        # Ecosystem Activity
-        embed.add_field(name="Mod Actions", value=f"{metrics.moderation_actions:,}", inline=True)
-        embed.add_field(name="Suggestions", value=f"{metrics.suggestions_submitted:,}", inline=True)
-        
-        # Versioning
-        embed.set_footer(text=f"{PLATFORM_NAME} v{VERSION} | Build {BUILD_NUMBER} | Commit: {GIT_COMMIT}", icon_url="https://syncink.xyz/assets/logo.png")
+        embed.set_footer(text=f"{PLATFORM_NAME} v{VERSION} | Build {BUILD_NUMBER} | Commit: {GIT_COMMIT}")
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
 

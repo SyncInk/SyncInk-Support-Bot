@@ -12,10 +12,11 @@ class Feedback(commands.Cog):
     async def suggest(self, interaction: discord.Interaction, suggestion: str):
         metrics.record_suggestion()
         
-        embed = SyncInkEmbed(title="💡 Suggestion Recorded", description=suggestion)
+        embed = SyncInkEmbed(title="Suggestion Recorded")
         embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
+        embed.description = suggestion
         
-        await interaction.response.send_message(embed=SuccessEmbed("Your suggestion has been securely transmitted to the development team.\n\nThank you for helping improve SyncInk!"), ephemeral=True)
+        await interaction.response.send_message(embed=SuccessEmbed("Your suggestion has been securely transmitted to the development team. Thank you for helping improve SyncInk!"), ephemeral=True)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Feedback(bot))
