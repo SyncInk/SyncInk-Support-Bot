@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from services.settings_service import SettingsService
-from utils.ui import SyncInkEmbed, SuccessEmbed, ErrorEmbed, BRAND_ACCENT
+from utils.ui import SyncInkEmbed, SuccessEmbed, ErrorEmbed, BRAND_ACCENT, SUCCESS_COLOR, WARNING_COLOR
 from utils.permissions import has_permission
 from utils.logger import log
 import re

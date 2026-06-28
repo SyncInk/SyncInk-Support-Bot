@@ -65,6 +65,15 @@ class UnverifiedRoleSelect(discord.ui.RoleSelect):
         await SettingsService.update_setting(interaction.guild.id, "unverified_role_id", role.id)
         await self.view.update_category(interaction, "security", success_msg=f"Unverified role set to {role.name}.")
 
+class VerificationChannelSelect(discord.ui.ChannelSelect):
+    def __init__(self):
+        super().__init__(channel_types=[discord.ChannelType.text], placeholder="Select Verification Channel (Optional)", min_values=1, max_values=1, row=4)
+        
+    async def callback(self, interaction: discord.Interaction):
+        channel = self.values[0]
+        await SettingsService.update_setting(interaction.guild.id, "verification_channel_id", channel.id)
+        await self.view.update_category(interaction, "security", success_msg=f"Verification prompt channel set to #{channel.name}.")
+
 class LogChannelSelect(discord.ui.ChannelSelect):
     def __init__(self):
         super().__init__(channel_types=[discord.ChannelType.text], placeholder="Select Audit Log Channel", min_values=1, max_values=1, row=1)
@@ -117,6 +126,7 @@ class ConfigDashboardView(discord.ui.View):
         self.toggle_btn = ToggleVerificationButton(False)
         self.role_select = VerificationRoleSelect()
         self.unverified_select = UnverifiedRoleSelect()
+        self.verif_channel_select = VerificationChannelSelect()
         self.log_channel = LogChannelSelect()
         self.welcome_channel = WelcomeChannelSelect()
         self.welcome_msg_btn = WelcomeMessageButton()
@@ -149,6 +159,10 @@ class ConfigDashboardView(discord.ui.View):
             embed.add_field(name="Verified Role", value=vr_text, inline=True)
             embed.add_field(name="Unverified Role", value=uv_text, inline=True)
             
+            vc_id = settings.get("verification_channel_id")
+            vc_text = f"<#{vc_id}>" if vc_id else "<a:syncwarning:1520914584012328961> Not configured"
+            embed.add_field(name="Verification Channel", value=vc_text, inline=False)
+            
             self.toggle_btn.is_enabled = is_enabled
             self.toggle_btn.label = "Disable Verification" if is_enabled else "Enable Verification"
             self.toggle_btn.style = discord.ButtonStyle.red if is_enabled else discord.ButtonStyle.green
@@ -156,6 +170,7 @@ class ConfigDashboardView(discord.ui.View):
             self.add_item(self.toggle_btn)
             self.add_item(self.role_select)
             self.add_item(self.unverified_select)
+            self.add_item(self.verif_channel_select)
             
         elif category == "logging":
             embed.description = "Track moderation actions, messages, and server events."
