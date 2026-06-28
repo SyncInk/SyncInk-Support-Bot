@@ -141,9 +141,9 @@ class ConfigDashboardView(discord.ui.View):
             vr_id = settings.get('verification_role_id')
             uv_id = settings.get('unverified_role_id')
             
-            verif_text = "🟢 Enabled" if is_enabled else "🔴 Disabled"
-            vr_text = f"<@&{vr_id}>" if vr_id else "🔴 Missing (Required)"
-            uv_text = f"<@&{uv_id}>" if uv_id else "🔴 Missing (Required)"
+            verif_text = "<a:approved:1520901996389990440> Enabled" if is_enabled else "<a:refused:1520901852651323593> Disabled"
+            vr_text = f"<@&{vr_id}>" if vr_id else "<a:refused:1520901852651323593> Missing (Required)"
+            uv_text = f"<@&{uv_id}>" if uv_id else "<a:refused:1520901852651323593> Missing (Required)"
             
             embed.add_field(name="Verification System", value=verif_text, inline=False)
             embed.add_field(name="Verified Role", value=vr_text, inline=True)
@@ -165,14 +165,14 @@ class ConfigDashboardView(discord.ui.View):
         elif category == "members":
             embed.description = "Configure the onboarding experience for new members."
             embed.add_field(name="Welcome Channel", value=f"<#{settings['welcome_channel_id']}>" if settings.get('welcome_channel_id') else "Not configured", inline=True)
-            has_msg = "🟢 Configured" if settings.get('welcome_message') else "🔴 Not configured"
+            has_msg = "<a:approved:1520901996389990440> Configured" if settings.get('welcome_message') else "<a:refused:1520901852651323593> Not configured"
             embed.add_field(name="Welcome Message", value=has_msg, inline=True)
             
             self.add_item(self.welcome_channel)
             self.add_item(self.welcome_msg_btn)
 
         if success_msg:
-            embed.set_footer(text=f"✅ {success_msg}")
+            embed.set_footer(text=f"<a:approved:1520901996389990440> {success_msg}")
             
         await interaction.response.edit_message(embed=embed, view=self)
 

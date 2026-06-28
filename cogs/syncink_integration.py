@@ -13,9 +13,9 @@ class SyncInkIntegration(commands.Cog):
         embed.set_author(name="SyncInk Platform", icon_url="https://syncink.xyz/assets/logo.png")
         embed.description = "All core systems are currently online and functioning normally."
         
-        embed.add_field(name="🟢 Ticket System", value="Operational", inline=True)
-        embed.add_field(name="🟢 Voice Services", value="Operational", inline=True)
-        embed.add_field(name="🟢 Support Hub", value="Operational", inline=True)
+        embed.add_field(name="<a:approved:1520901996389990440> Ticket System", value="Operational", inline=True)
+        embed.add_field(name="<a:approved:1520901996389990440> Voice Services", value="Operational", inline=True)
+        embed.add_field(name="<a:approved:1520901996389990440> Support Hub", value="Operational", inline=True)
         
         await interaction.response.send_message(embed=embed)
 

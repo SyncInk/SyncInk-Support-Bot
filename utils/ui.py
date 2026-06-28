@@ -19,12 +19,12 @@ class SyncInkEmbed(discord.Embed):
 class SuccessEmbed(SyncInkEmbed):
     def __init__(self, description: str, **kwargs):
         super().__init__(color=SUCCESS_COLOR, description=description, **kwargs)
-        self.set_author(name="✅ Action Successful")
+        self.set_author(name="<a:approved:1520901996389990440> Action Successful")
 
 class ErrorEmbed(SyncInkEmbed):
     def __init__(self, description: str, resolution: str = "Please contact a server administrator if the issue persists.", **kwargs):
         super().__init__(color=ERROR_COLOR, description=description, **kwargs)
-        self.set_author(name="⚠️ Action Required")
+        self.set_author(name="<a:refused:1520901852651323593> Action Required")
         self.add_field(name="How to fix this?", value=f"> {resolution}", inline=False)
 
 class BaseConfirmView(discord.ui.View):
