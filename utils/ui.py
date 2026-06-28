@@ -46,12 +46,12 @@ class BaseConfirmView(discord.ui.View):
 class LoadingEmbed(SyncInkEmbed):
     def __init__(self, description: str = "Processing request...", **kwargs):
         super().__init__(color=BRAND_ACCENT, description=description, **kwargs)
-        self.set_author(name="⏳ Please Wait")
+        self.title = "<a:sync_alert~1:1518314359024124016> Please Wait"
 
 class EmptyStateEmbed(SyncInkEmbed):
     def __init__(self, title: str, description: str, **kwargs):
-        super().__init__(color=BRAND_PRIMARY, title=title, description=description, **kwargs)
-        self.set_author(name="🔍 Nothing Found")
+        super().__init__(color=BRAND_PRIMARY, description=description, **kwargs)
+        self.title = f"<a:refused:1520901852651323593> {title}"
 
 class InfoCard(SyncInkEmbed):
     def __init__(self, title: str, description: str, **kwargs):

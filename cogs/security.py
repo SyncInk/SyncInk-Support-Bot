@@ -212,8 +212,8 @@ class Security(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
-        embed = SyncInkEmbed(title="<:synctrusteduser:1520900022735208478> Security Checkpoint", color=BRAND_ACCENT)
-        embed.set_author(name="Server Security")
+        embed = SyncInkEmbed(title="Security Checkpoint", color=BRAND_ACCENT)
+        embed.set_author(name="Server Security", icon_url="https://cdn.discordapp.com/emojis/1520900022735208478.png")
         embed.description = "To protect our community from spam, automated accounts, malicious users, and unauthorized access, all members must complete verification before accessing the server."
         embed.add_field(name="", value="> 🔒 Please click the button below to verify your account and instantly unlock server access.", inline=False)
         
