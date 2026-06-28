@@ -12,25 +12,26 @@ class CategorySelect(discord.ui.Select):
             discord.SelectOption(label="Logging", description="Audit Logs", emoji="📜", value="logging"),
             discord.SelectOption(label="Members", description="Welcome & Auto Roles", emoji="👋", value="members"),
         ]
-        super().__init__(placeholder="Select a category to configure...", min_values=1, max_values=1, options=options, row=0, custom_id="config_category_select")
+        super().__init__(placeholder="Select a category to configure...", min_values=1, max_values=1, options=options, row=0)
 
     async def callback(self, interaction: discord.Interaction):
         await self.view.update_category(interaction, self.values[0])
 
 class ToggleVerificationButton(discord.ui.Button):
-    def __init__(self):
-        super().__init__(label="Toggle Verification", style=discord.ButtonStyle.secondary, row=1, custom_id="toggle_verification_btn")
+    def __init__(self, is_enabled: bool):
+        label = "Disable Verification" if is_enabled else "Enable Verification"
+        style = discord.ButtonStyle.red if is_enabled else discord.ButtonStyle.green
+        super().__init__(label=label, style=style, row=1)
+        self.is_enabled = is_enabled
         
     async def callback(self, interaction: discord.Interaction):
-        settings = await SettingsService.get_guild_settings(interaction.guild.id)
-        current = settings.get("verification_enabled", False)
-        new_state = not current
+        new_state = not self.is_enabled
         await SettingsService.update_setting(interaction.guild.id, "verification_enabled", new_state)
         await self.view.update_category(interaction, "security", success_msg=f"Verification {'enabled' if new_state else 'disabled'}.")
 
 class VerificationRoleSelect(discord.ui.RoleSelect):
     def __init__(self):
-        super().__init__(placeholder="Select Verification Role", min_values=1, max_values=1, row=2, custom_id="verify_role_select")
+        super().__init__(placeholder="Select Verification Role", min_values=1, max_values=1, row=2)
         
     async def callback(self, interaction: discord.Interaction):
         role = self.values[0]
@@ -39,7 +40,7 @@ class VerificationRoleSelect(discord.ui.RoleSelect):
 
 class LogChannelSelect(discord.ui.ChannelSelect):
     def __init__(self):
-        super().__init__(channel_types=[discord.ChannelType.text], placeholder="Select Audit Log Channel", min_values=1, max_values=1, row=1, custom_id="log_channel_select")
+        super().__init__(channel_types=[discord.ChannelType.text], placeholder="Select Audit Log Channel", min_values=1, max_values=1, row=1)
         
     async def callback(self, interaction: discord.Interaction):
         channel = self.values[0]
@@ -48,7 +49,7 @@ class LogChannelSelect(discord.ui.ChannelSelect):
 
 class WelcomeChannelSelect(discord.ui.ChannelSelect):
     def __init__(self):
-        super().__init__(channel_types=[discord.ChannelType.text], placeholder="Select Welcome Channel", min_values=1, max_values=1, row=1, custom_id="welcome_channel_select")
+        super().__init__(channel_types=[discord.ChannelType.text], placeholder="Select Welcome Channel", min_values=1, max_values=1, row=1)
         
     async def callback(self, interaction: discord.Interaction):
         channel = self.values[0]
@@ -57,7 +58,7 @@ class WelcomeChannelSelect(discord.ui.ChannelSelect):
 
 class AutoRoleSelect(discord.ui.RoleSelect):
     def __init__(self):
-        super().__init__(placeholder="Select Auto Role", min_values=1, max_values=1, row=2, custom_id="auto_role_select")
+        super().__init__(placeholder="Select Auto Role", min_values=1, max_values=1, row=2)
         
     async def callback(self, interaction: discord.Interaction):
         role = self.values[0]
@@ -67,24 +68,15 @@ class AutoRoleSelect(discord.ui.RoleSelect):
 
 class ConfigDashboardView(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=None)
-        # Instantiate all persistent components so main.py registers them
+        super().__init__(timeout=900) # 15 minutes timeout since it is ephemeral
         self.cat_select = CategorySelect()
-        self.toggle_btn = ToggleVerificationButton()
+        self.toggle_btn = ToggleVerificationButton(False)
         self.role_select = VerificationRoleSelect()
         self.log_channel = LogChannelSelect()
         self.welcome_channel = WelcomeChannelSelect()
         self.auto_role = AutoRoleSelect()
-        
-        self.add_item(self.cat_select)
-        self.add_item(self.toggle_btn)
-        self.add_item(self.role_select)
-        self.add_item(self.log_channel)
-        self.add_item(self.welcome_channel)
-        self.add_item(self.auto_role)
 
     def prepare_initial(self):
-        # Remove everything except the category select for initial load
         self.clear_items()
         self.add_item(self.cat_select)
         return self

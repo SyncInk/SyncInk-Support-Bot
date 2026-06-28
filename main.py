@@ -45,9 +45,7 @@ class SyncInkBot(commands.Bot):
             sys.exit(1)
             
         # Re-register persistent views
-        from cogs.settings import ConfigDashboardView
         from cogs.security import VerificationView
-        self.add_view(ConfigDashboardView())
         self.add_view(VerificationView())
         log.info("Persistent views registered.")
 
