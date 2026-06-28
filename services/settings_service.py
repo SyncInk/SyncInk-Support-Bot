@@ -26,7 +26,12 @@ class SettingsService:
     @staticmethod
     async def update_setting(guild_id: int, key: str, value: Any) -> bool:
         """Updates a specific setting for a guild and invalidates the cache."""
-        allowed_keys = ["welcome_channel_id", "log_channel_id", "autorole_id", "verification_enabled", "verification_role_id"]
+        allowed_keys = [
+            "welcome_channel_id", "log_channel_id", "autorole_id", 
+            "verification_enabled", "verification_role_id", "unverified_role_id",
+            "verification_channel_id", "require_verification", "account_age_requirement",
+            "anti_raid", "anti_spam", "welcome_message", "dm_welcome", "auto_delete_welcome"
+        ]
         if key not in allowed_keys:
             raise ValueError(f"Invalid setting key: {key}")
             
