@@ -11,6 +11,7 @@ import re
 class VerificationView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
+        self.add_item(discord.ui.Button(label="Support", style=discord.ButtonStyle.link, url="https://syncink.xyz/support"))
 
     @discord.ui.button(label="Verify", style=discord.ButtonStyle.green, custom_id="persistent_verify_btn", emoji="✅")
     async def verify_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -38,10 +39,6 @@ class VerificationView(discord.ui.View):
         except Exception as e:
             await interaction.response.send_message(embed=ErrorEmbed(i18n.get("error_verify_failed")), ephemeral=True)
             log.error(f"Verification error: {e}")
-            
-    @discord.ui.button(label="Support", style=discord.ButtonStyle.link, url="https://syncink.xyz/support")
-    async def support_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        pass # Link buttons don't need callbacks
 
 class Security(commands.Cog):
     def __init__(self, bot: commands.Bot):
