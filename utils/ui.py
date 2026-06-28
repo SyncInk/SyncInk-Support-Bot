@@ -14,7 +14,7 @@ class SyncInkEmbed(discord.Embed):
     def __init__(self, color: int = BRAND_ACCENT, **kwargs):
         super().__init__(color=color, **kwargs)
         self.timestamp = discord.utils.utcnow()
-        self.set_footer(text="SyncInk Platform")
+        self.set_footer(text="SyncInk Platform", icon_url="https://files.catbox.moe/74l9su.png")
 
 class SuccessEmbed(SyncInkEmbed):
     def __init__(self, description: str, **kwargs):
