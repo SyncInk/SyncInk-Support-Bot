@@ -19,12 +19,12 @@ class SyncInkEmbed(discord.Embed):
 class SuccessEmbed(SyncInkEmbed):
     def __init__(self, description: str, **kwargs):
         super().__init__(color=SUCCESS_COLOR, description=description, **kwargs)
-        self.title = "<a:approved:1520901996389990440> Action Successful"
+        self.title = "<a:approved:1520913982678896670> Action Successful"
 
 class ErrorEmbed(SyncInkEmbed):
     def __init__(self, description: str, resolution: str = "Please contact a server administrator if the issue persists.", **kwargs):
         super().__init__(color=ERROR_COLOR, description=description, **kwargs)
-        self.title = "<a:refused:1520901852651323593> Action Required"
+        self.title = "<a:refused:1520914088568295564> Action Required"
         self.add_field(name="How to fix this?", value=f"> {resolution}", inline=False)
 
 class BaseConfirmView(discord.ui.View):
@@ -46,12 +46,12 @@ class BaseConfirmView(discord.ui.View):
 class LoadingEmbed(SyncInkEmbed):
     def __init__(self, description: str = "Processing request...", **kwargs):
         super().__init__(color=BRAND_ACCENT, description=description, **kwargs)
-        self.title = "<a:sync_alert~1:1518314359024124016> Please Wait"
+        self.title = "<a:syncalert:1520914681231839313> Please Wait"
 
 class EmptyStateEmbed(SyncInkEmbed):
     def __init__(self, title: str, description: str, **kwargs):
         super().__init__(color=BRAND_PRIMARY, description=description, **kwargs)
-        self.title = f"<a:refused:1520901852651323593> {title}"
+        self.title = f"<a:refused:1520914088568295564> {title}"
 
 class InfoCard(SyncInkEmbed):
     def __init__(self, title: str, description: str, **kwargs):

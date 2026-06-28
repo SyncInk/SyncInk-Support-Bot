@@ -11,7 +11,7 @@ class VerificationView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Verify Now", style=discord.ButtonStyle.primary, custom_id="persistent_verify_btn", emoji=discord.PartialEmoji(name="approved", id=1520901996389990440, animated=True))
+    @discord.ui.button(label="Verify Now", style=discord.ButtonStyle.primary, custom_id="persistent_verify_btn", emoji=discord.PartialEmoji(name="approved", id=1520913982678896670, animated=True))
     async def verify_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         settings = await SettingsService.get_guild_settings(interaction.guild.id)
         role_id = settings.get("verification_role_id")
@@ -213,7 +213,7 @@ class Security(commands.Cog):
             return
 
         embed = SyncInkEmbed(title="Security Checkpoint", color=BRAND_ACCENT)
-        embed.set_author(name="Server Security", icon_url="https://cdn.discordapp.com/emojis/1520900022735208478.png")
+        embed.set_author(name="Server Security", icon_url="https://cdn.discordapp.com/emojis/1520914272908087436.png")
         embed.description = "To protect our community from spam, automated accounts, malicious users, and unauthorized access, all members must complete verification before accessing the server."
         embed.add_field(name="", value="> 🔒 Please click the button below to verify your account and instantly unlock server access.", inline=False)
         

@@ -28,7 +28,7 @@ class Diagnostics(commands.Cog):
         
         embed.add_field(name="Infrastructure", value=f"**Uptime:** {uptime_str}\n**Servers:** {total_guilds:,}\n**Users:** {total_users:,}", inline=True)
         embed.add_field(name="Performance", value=f"**Commands:** {metrics.commands_executed:,}\n**Latency:** {metrics.avg_command_time:.2f}ms\n**Errors:** {metrics.errors_raised:,}", inline=True)
-        embed.add_field(name="Ecosystem", value=f"**Mod Actions:** {metrics.moderation_actions:,}\n**Suggestions:** {metrics.suggestions_submitted:,}\n**Status:** <a:approved:1520901996389990440> Healthy", inline=False)
+        embed.add_field(name="Ecosystem", value=f"**Mod Actions:** {metrics.moderation_actions:,}\n**Suggestions:** {metrics.suggestions_submitted:,}\n**Status:** <a:approved:1520913982678896670> Healthy", inline=False)
         
         embed.set_footer(text=f"{PLATFORM_NAME} v{VERSION} | Build {BUILD_NUMBER} | Commit: {GIT_COMMIT}")
         
