@@ -6,13 +6,13 @@ from utils.ui import SyncInkEmbed
 from utils.metrics import metrics
 from utils.version import PLATFORM_NAME, VERSION, BUILD_NUMBER, GIT_COMMIT, STARTUP_TIME
 from utils.permissions import has_permission
-from utils.tasks import task_manager
 
 class Diagnostics(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="platform_metrics", description="View platform analytics and usage metrics")
+    @app_commands.command(name="platform_metrics", description="View internal analytics and platform health.")
+    @app_commands.default_permissions(administrator=True)
     @has_permission(administrator=True)
     async def platform_metrics(self, interaction: discord.Interaction):
         total_users = sum(g.member_count for g in self.bot.guilds if g.member_count)
@@ -41,7 +41,7 @@ class Diagnostics(commands.Cog):
         embed.add_field(name="Suggestions", value=f"{metrics.suggestions_submitted:,}", inline=True)
         
         # Versioning
-        embed.set_footer(text=f"{PLATFORM_NAME} v{VERSION} | Build {BUILD_NUMBER} | Commit: {GIT_COMMIT}")
+        embed.set_footer(text=f"{PLATFORM_NAME} v{VERSION} | Build {BUILD_NUMBER} | Commit: {GIT_COMMIT}", icon_url="https://syncink.xyz/assets/logo.png")
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
 

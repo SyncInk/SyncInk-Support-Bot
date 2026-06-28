@@ -1,42 +1,21 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from utils.ui import SyncInkEmbed, SuccessEmbed
-from utils.logger import log
-
-class SuggestionModal(discord.ui.Modal, title="Submit Feedback"):
-    suggestion = discord.ui.TextInput(
-        label="Your Suggestion / Bug Report",
-        style=discord.TextStyle.paragraph,
-        placeholder="Please describe your idea or the issue you found...",
-        min_length=10,
-        max_length=1024
-    )
-
-    async def on_submit(self, interaction: discord.Interaction):
-        embed = SyncInkEmbed(title="💡 New Feedback")
-        embed.set_author(name=f"{interaction.user} ({interaction.user.id})", icon_url=interaction.user.display_avatar.url)
-        embed.description = self.suggestion.value
-        
-        # In a full implementation, we'd send this to a specific feedback channel set in the DB
-        # For now, we just send it to the channel where it was invoked
-        msg = await interaction.channel.send(embed=embed)
-        
-        try:
-            await msg.add_reaction("👍")
-            await msg.add_reaction("👎")
-        except discord.Forbidden:
-            log.warning("Could not add reactions to suggestion message.")
-            
-        await interaction.response.send_message(embed=SuccessEmbed("Your feedback has been submitted successfully!"), ephemeral=True)
+from utils.ui import SuccessEmbed, SyncInkEmbed
+from utils.metrics import metrics
 
 class Feedback(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="suggest", description="Submit a suggestion or bug report to the developers")
-    async def suggest(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(SuggestionModal())
+    @app_commands.command(name="suggest", description="Submit a feature request or bug report to the team.")
+    async def suggest(self, interaction: discord.Interaction, suggestion: str):
+        metrics.record_suggestion()
+        
+        embed = SyncInkEmbed(title="💡 Suggestion Recorded", description=suggestion)
+        embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
+        
+        await interaction.response.send_message(embed=SuccessEmbed("Your suggestion has been securely transmitted to the development team.\n\nThank you for helping improve SyncInk!"), ephemeral=True)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Feedback(bot))

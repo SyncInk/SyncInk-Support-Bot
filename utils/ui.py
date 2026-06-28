@@ -3,26 +3,32 @@ from typing import Optional, Union, Any
 
 # SyncInk Brand Colors
 BRAND_PRIMARY = 0x2b2d31  # Modern dark color (similar to Discord dark mode background)
-BRAND_ACCENT = 0x5865F2   # Blurple accent
+BRAND_ACCENT = 0x5865F2   # SyncInk Blurple
 SUCCESS_COLOR = 0x57F287  # Green
 ERROR_COLOR = 0xED4245    # Red
 WARNING_COLOR = 0xFEE75C  # Yellow
+DIVIDER = "━━━━━━━━━━━━━━━━━━"
 
 class SyncInkEmbed(discord.Embed):
-    """Base Embed class for SyncInk. Ensures consistent branding across all messages."""
+    """Premium Base Embed class for the SyncInk Ecosystem."""
     
     def __init__(self, color: int = BRAND_ACCENT, **kwargs):
+        # Enforce spacing for standard descriptions if provided
+        description = kwargs.get("description", "")
+        if description and not description.startswith(DIVIDER):
+            kwargs["description"] = f"{DIVIDER}\n\n{description}\n\n{DIVIDER}"
+            
         super().__init__(color=color, **kwargs)
         self.timestamp = discord.utils.utcnow()
-        self.set_footer(text="SyncInk Support", icon_url="https://syncink.xyz/assets/logo.png") # Placeholder URL
+        self.set_footer(text="SyncInk Platform", icon_url="https://syncink.xyz/assets/logo.png")
 
 class SuccessEmbed(SyncInkEmbed):
     def __init__(self, description: str, **kwargs):
-        super().__init__(color=SUCCESS_COLOR, description=f"✅ {description}", **kwargs)
+        super().__init__(color=SUCCESS_COLOR, description=f"✅ **Success**\n\n{description}", **kwargs)
 
 class ErrorEmbed(SyncInkEmbed):
     def __init__(self, description: str, **kwargs):
-        super().__init__(color=ERROR_COLOR, description=f"❌ {description}", **kwargs)
+        super().__init__(color=ERROR_COLOR, description=f"❌ **Error**\n\n{description}\n\n*If this persists, contact Support.*", **kwargs)
 
 class BaseConfirmView(discord.ui.View):
     """A standard confirmation view with Yes/No buttons."""
@@ -41,7 +47,7 @@ class BaseConfirmView(discord.ui.View):
         self.stop()
 
 class LoadingEmbed(SyncInkEmbed):
-    def __init__(self, description: str = "Loading, please wait...", **kwargs):
+    def __init__(self, description: str = "Processing request...", **kwargs):
         super().__init__(color=BRAND_ACCENT, description=f"🔄 {description}", **kwargs)
 
 class EmptyStateEmbed(SyncInkEmbed):
