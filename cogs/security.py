@@ -65,6 +65,29 @@ class VerificationView(discord.ui.View):
             )
             await interaction.response.send_message(embed=success_embed, ephemeral=True)
 
+            # Delete personalized prompt if applicable
+            if interaction.message.content and str(interaction.user.id) in interaction.message.content:
+                try:
+                    await interaction.message.delete()
+                except discord.NotFound:
+                    pass
+
+            # Dispatch Verification Log
+            log_channel_id = settings.get('log_channel_verification')
+            if log_channel_id:
+                log_chan = interaction.guild.get_channel(log_channel_id)
+                if log_chan:
+                    log_embed = SyncInkEmbed(title="Member Verified", color=SUCCESS_COLOR)
+                    log_embed.set_author(name=f"{interaction.user} ({interaction.user.id})", icon_url=interaction.user.display_avatar.url)
+                    log_embed.add_field(name="Action", value="Completed Verification", inline=False)
+                    log_embed.add_field(name="Assigned Role", value=role.mention, inline=True)
+                    if unverified_role:
+                        log_embed.add_field(name="Removed Role", value=unverified_role.mention, inline=True)
+                    try:
+                        await log_chan.send(embed=log_embed)
+                    except discord.Forbidden:
+                        pass
+                        
             # Send welcome message if configured
             welcome_channel_id = settings.get('welcome_channel_id')
             if welcome_channel_id:
@@ -106,6 +129,8 @@ class Security(commands.Cog):
         settings = await SettingsService.get_guild_settings(member.guild.id)
         if settings.get('verification_enabled'):
             unverified_id = settings.get('unverified_role_id')
+            verif_chan_id = settings.get('verification_channel_id')
+            
             if unverified_id:
                 unverified_role = member.guild.get_role(unverified_id)
                 if unverified_role:
@@ -113,6 +138,34 @@ class Security(commands.Cog):
                         await member.add_roles(unverified_role, reason="Assigned Unverified role on join")
                     except Exception as e:
                         log.error(f"Failed to assign unverified role to {member.id}: {e}")
+            
+            # Send Verification Prompt
+            if verif_chan_id:
+                verif_chan = member.guild.get_channel(verif_chan_id)
+                if verif_chan:
+                    prompt_embed = SyncInkEmbed(title="Authentication Required", color=BRAND_ACCENT)
+                    prompt_embed.description = (
+                        "To protect our community from spam, automated accounts, and unauthorized access, "
+                        "you'll need to verify before accessing the server.\n\n"
+                        "Click **Verify Now** below to unlock access."
+                    )
+                    try:
+                        await verif_chan.send(content=f"Welcome, {member.mention}!", embed=prompt_embed, view=VerificationView())
+                    except discord.Forbidden:
+                        pass
+
+            # Dispatch Verification Log
+            log_channel_id = settings.get('log_channel_verification')
+            if log_channel_id:
+                log_chan = member.guild.get_channel(log_channel_id)
+                if log_chan:
+                    log_embed = SyncInkEmbed(title="Verification Started", color=WARNING_COLOR)
+                    log_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
+                    log_embed.add_field(name="Action", value="Member Joined (Unverified)", inline=False)
+                    try:
+                        await log_chan.send(embed=log_embed)
+                    except discord.Forbidden:
+                        pass
         else:
             # If verification is disabled, user instantly gets access. Send welcome message now.
             welcome_channel_id = settings.get('welcome_channel_id')

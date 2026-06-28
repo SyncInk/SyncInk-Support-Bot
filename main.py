@@ -24,7 +24,7 @@ class SyncInkBot(commands.Bot):
         intents.guilds = True
         
         super().__init__(
-            command_prefix=commands.when_mentioned_or("s!"),
+            command_prefix=commands.when_mentioned_or("s!", "?"),
             intents=intents,
             help_command=None,
             case_insensitive=True

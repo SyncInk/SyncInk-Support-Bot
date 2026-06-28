@@ -30,7 +30,10 @@ class SettingsService:
             "welcome_channel_id", "log_channel_id", "autorole_id", 
             "verification_enabled", "verification_role_id", "unverified_role_id",
             "verification_channel_id", "require_verification", "account_age_requirement",
-            "anti_raid", "anti_spam", "welcome_message", "dm_welcome", "auto_delete_welcome"
+            "anti_raid", "anti_spam", "welcome_message", "dm_welcome", "auto_delete_welcome",
+            "log_channel_message", "log_channel_member", "log_channel_moderation",
+            "log_channel_role", "log_channel_channel", "log_channel_voice",
+            "log_channel_verification", "log_channel_server"
         ]
         if key not in allowed_keys:
             raise ValueError(f"Invalid setting key: {key}")

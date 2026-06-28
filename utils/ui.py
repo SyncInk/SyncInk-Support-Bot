@@ -14,17 +14,17 @@ class SyncInkEmbed(discord.Embed):
     def __init__(self, color: int = BRAND_ACCENT, **kwargs):
         super().__init__(color=color, **kwargs)
         self.timestamp = discord.utils.utcnow()
-        self.set_footer(text="SyncInk Platform", icon_url="https://syncink.xyz/assets/logo.png")
+        self.set_footer(text="SyncInk Platform")
 
 class SuccessEmbed(SyncInkEmbed):
     def __init__(self, description: str, **kwargs):
         super().__init__(color=SUCCESS_COLOR, description=description, **kwargs)
-        self.set_author(name="Action Successful", icon_url="https://cdn.discordapp.com/emojis/1045237731211755561.webp") # Generic check icon
+        self.set_author(name="✅ Action Successful")
 
 class ErrorEmbed(SyncInkEmbed):
     def __init__(self, description: str, resolution: str = "Please contact a server administrator if the issue persists.", **kwargs):
         super().__init__(color=ERROR_COLOR, description=description, **kwargs)
-        self.set_author(name="Action Required", icon_url="https://cdn.discordapp.com/emojis/1045237748441968640.webp") # Generic warning icon
+        self.set_author(name="⚠️ Action Required")
         self.add_field(name="How to fix this?", value=f"> {resolution}", inline=False)
 
 class BaseConfirmView(discord.ui.View):
@@ -46,12 +46,12 @@ class BaseConfirmView(discord.ui.View):
 class LoadingEmbed(SyncInkEmbed):
     def __init__(self, description: str = "Processing request...", **kwargs):
         super().__init__(color=BRAND_ACCENT, description=description, **kwargs)
-        self.set_author(name="Please Wait", icon_url="https://cdn.discordapp.com/emojis/1045237766863339591.webp") # Generic loading
+        self.set_author(name="⏳ Please Wait")
 
 class EmptyStateEmbed(SyncInkEmbed):
     def __init__(self, title: str, description: str, **kwargs):
         super().__init__(color=BRAND_PRIMARY, title=title, description=description, **kwargs)
-        self.set_author(name="Nothing Found")
+        self.set_author(name="🔍 Nothing Found")
 
 class InfoCard(SyncInkEmbed):
     def __init__(self, title: str, description: str, **kwargs):
