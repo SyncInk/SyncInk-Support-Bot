@@ -65,14 +65,7 @@ class VerificationView(discord.ui.View):
             )
             await interaction.response.send_message(embed=success_embed, ephemeral=True)
 
-            # Delete personalized prompt if applicable
-            try:
-                async for msg in interaction.channel.history(limit=20):
-                    if msg.author == interaction.client.user and str(interaction.user.id) in msg.content and "Welcome," in msg.content:
-                        await msg.delete()
-                        break
-            except Exception:
-                pass
+            # No temporary pings to clean up in the new workflow
 
             # Dispatch Verification Log
             log_channel_id = settings.get('log_channel_verification')
@@ -99,8 +92,14 @@ class VerificationView(discord.ui.View):
                     if custom_msg:
                         desc = custom_msg.replace("{user}", interaction.user.mention).replace("{server}", interaction.guild.name)
                     else:
-                        from utils.i18n import i18n
-                        desc = i18n.get("welcome_message_desc", user=interaction.user.mention)
+                        desc = (
+                            f"Welcome to the {interaction.guild.name}, {interaction.user.mention}!\n\n"
+                            "We are thrilled to have you here. To get started, please check out our core channels:\n"
+                            "📢 **Announcements** - Stay updated with our latest news.\n"
+                            "💬 **Support Chat** - Get help from our dedicated team.\n"
+                            "💡 **Feature Requests** - Share your ideas for the platform.\n"
+                            "📦 **Products** - Explore what we have to offer."
+                        )
                     
                     w_embed = SyncInkEmbed(title=f"Welcome to {interaction.guild.name}", description=desc)
                     w_embed.set_thumbnail(url=interaction.user.display_avatar.url)
@@ -141,19 +140,7 @@ class Security(commands.Cog):
                     except Exception as e:
                         log.error(f"Failed to assign unverified role to {member.id}: {e}")
             
-            # Send Verification Prompt
-            if verif_chan_id:
-                verif_chan = member.guild.get_channel(verif_chan_id)
-                if verif_chan:
-                    content = (
-                        f"👋 Welcome, {member.mention}!\n\n"
-                        f"To access the SyncInk Support Server, please click the **Verify Now** button in the verification panel above.\n"
-                        f"Once verified, you'll automatically receive access to the rest of the server."
-                    )
-                    try:
-                        await verif_chan.send(content=content, delete_after=60)
-                    except discord.Forbidden:
-                        pass
+            # No temporary ping sent in the verification channel to keep it strictly clean
 
             # Dispatch Verification Log
             log_channel_id = settings.get('log_channel_verification')
@@ -177,8 +164,14 @@ class Security(commands.Cog):
                     if custom_msg:
                         desc = custom_msg.replace("{user}", member.mention).replace("{server}", member.guild.name)
                     else:
-                        from utils.i18n import i18n
-                        desc = i18n.get("welcome_message_desc", user=member.mention)
+                        desc = (
+                            f"Welcome to the {member.guild.name}, {member.mention}!\n\n"
+                            "We are thrilled to have you here. To get started, please check out our core channels:\n"
+                            "📢 **Announcements** - Stay updated with our latest news.\n"
+                            "💬 **Support Chat** - Get help from our dedicated team.\n"
+                            "💡 **Feature Requests** - Share your ideas for the platform.\n"
+                            "📦 **Products** - Explore what we have to offer."
+                        )
                     
                     w_embed = SyncInkEmbed(title=f"Welcome to {member.guild.name}", description=desc)
                     w_embed.set_thumbnail(url=member.display_avatar.url)
