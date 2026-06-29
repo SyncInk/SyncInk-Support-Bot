@@ -66,11 +66,13 @@ class VerificationView(discord.ui.View):
             await interaction.response.send_message(embed=success_embed, ephemeral=True)
 
             # Delete personalized prompt if applicable
-            if interaction.message.content and str(interaction.user.id) in interaction.message.content:
-                try:
-                    await interaction.message.delete()
-                except discord.NotFound:
-                    pass
+            try:
+                async for msg in interaction.channel.history(limit=20):
+                    if msg.author == interaction.client.user and str(interaction.user.id) in msg.content and "Welcome," in msg.content:
+                        await msg.delete()
+                        break
+            except Exception:
+                pass
 
             # Dispatch Verification Log
             log_channel_id = settings.get('log_channel_verification')
@@ -143,14 +145,13 @@ class Security(commands.Cog):
             if verif_chan_id:
                 verif_chan = member.guild.get_channel(verif_chan_id)
                 if verif_chan:
-                    prompt_embed = SyncInkEmbed(title="Authentication Required", color=BRAND_ACCENT)
-                    prompt_embed.description = (
-                        "To protect our community from spam, automated accounts, and unauthorized access, "
-                        "you'll need to verify before accessing the server.\n\n"
-                        "Click **Verify Now** below to unlock access."
+                    content = (
+                        f"👋 Welcome, {member.mention}!\n\n"
+                        f"To access the SyncInk Support Server, please click the **Verify Now** button in the verification panel above.\n"
+                        f"Once verified, you'll automatically receive access to the rest of the server."
                     )
                     try:
-                        await verif_chan.send(content=f"Welcome, {member.mention}!", embed=prompt_embed, view=VerificationView())
+                        await verif_chan.send(content=content, delete_after=60)
                     except discord.Forbidden:
                         pass
 
