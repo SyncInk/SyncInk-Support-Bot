@@ -105,7 +105,8 @@ class Moderation(commands.Cog):
             # Try to send a DM before banning
             try:
                 dm_embed = ErrorEmbed(
-                    description=f"You were banned in **{interaction.guild.name}**."
+                    description=f"You were banned in **{interaction.guild.name}**.",
+                    resolution="You cannot fix this. Bans are permanent."
                 )
                 dm_embed.title = "Official Ban Notice"
                 dm_embed.add_field(name="Reason", value=reason, inline=False)
