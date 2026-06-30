@@ -122,9 +122,7 @@ class Automod(commands.Cog):
             pattern = r'\b' + re.escape(bad_word) + r'\b'
             if re.search(pattern, content_lower):
                 await message.delete()
-                rules_channel = discord.utils.get(message.guild.channels, name="rules")
-                rules_text = rules_channel.mention if rules_channel else "#rules"
-                warn_embed = discord.Embed(description=f"<:syncwarning:1520914584012328961> Please watch your words! And check our {rules_text}", color=0xff0000)
+                warn_embed = discord.Embed(description=f"<a:syncwarning:1520914584012328961> **Please avoid inappropriate language. Continued violations may result in moderation action. Check https://discord.com/channels/1520457643842342912/1520460587522330634**", color=0xff0000)
                 try:
                     await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
                 except discord.Forbidden:
@@ -154,9 +152,7 @@ class Automod(commands.Cog):
             
             if matched:
                 await message.delete()
-                rules_channel = discord.utils.get(message.guild.channels, name="rules")
-                rules_text = rules_channel.mention if rules_channel else "#rules"
-                warn_embed = discord.Embed(description=f"<:syncwarning:1520914584012328961> Please watch your words! And check our {rules_text}", color=0xff0000)
+                warn_embed = discord.Embed(description=f"<a:syncwarning:1520914584012328961> **Please avoid inappropriate language. Continued violations may result in moderation action. Check https://discord.com/channels/1520457643842342912/1520460587522330634**", color=0xff0000)
                 try:
                     await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
                 except discord.Forbidden:
