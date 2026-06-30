@@ -140,7 +140,24 @@ class Automod(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         settings = await SettingsService.get_guild_settings(member.guild.id)
-        if not settings.get('automod_enabled') or not settings.get('emergency_mode'):
+        if not settings.get('automod_enabled'):
+            return
+
+        # Jail Evasion Protection
+        from database import db
+        active_jail = await db.fetchrow("SELECT id FROM automod_jails WHERE guild_id = $1 AND user_id = $2 AND (release_at IS NULL OR release_at > CURRENT_TIMESTAMP)", member.guild.id, member.id)
+        if active_jail:
+            jail_role_id = settings.get('jail_role_id')
+            if jail_role_id:
+                jail_role = member.guild.get_role(jail_role_id)
+                if jail_role:
+                    try:
+                        await member.add_roles(jail_role, reason="Jail Evasion Protection: Re-applied jail role on join.")
+                    except discord.Forbidden:
+                        pass
+            return # Skip further join logic
+
+        if not settings.get('emergency_mode'):
             return
 
         # Anti-Raid Emergency Mode Action
