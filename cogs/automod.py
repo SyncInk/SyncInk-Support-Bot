@@ -99,18 +99,28 @@ class Automod(commands.Cog):
             upper_count = sum(1 for c in content if c.isupper())
             if upper_count / len(content) > 0.7:
                 await message.delete()
-                await AutomodService.add_violation(self.bot, message.guild, message.author, 2, "Excessive capitalization", "Formatting Filter", message=message)
-                return
-
-        # 5. Bad Words & Slurs Filter (Hardcoded Defaults)
-        hardcoded_bad_words = ['fuck', 'bitch', 'cunt', 'nigger', 'faggot', 'slut', 'whore']
-        content_lower = content.lower()
-        if any(bad_word in content_lower for bad_word in hardcoded_bad_words):
+        # 5. One-character message block
+        if len(content.strip()) == 1:
             await message.delete()
-            await AutomodService.add_violation(self.bot, message.guild, message.author, 5, "Triggered bad words filter", "Content Filter", message=message)
+            # We don't necessarily want to give points for a typo, but we block it as requested
+            # await AutomodService.add_violation(self.bot, message.guild, message.author, 1, "One-character spam", "Spam Filter", message=message)
             return
 
-        # 6. DB Blacklist & Scam checks
+        # 6. Bad Words & Slurs Filter (Massive List)
+        from utils.bad_words import BAD_WORDS
+        content_lower = content.lower()
+        
+        # Split into words to avoid matching substrings incorrectly, but also check exact match for multi-word phrases in the list
+        # We will use regex to find standalone words to prevent "ass" triggering on "class"
+        for bad_word in BAD_WORDS:
+            # \b matches word boundaries
+            pattern = r'\b' + re.escape(bad_word) + r'\b'
+            if re.search(pattern, content_lower):
+                await message.delete()
+                await AutomodService.add_violation(self.bot, message.guild, message.author, 5, "Triggered bad words filter", "Content Filter", message=message)
+                return
+
+        # 7. DB Blacklist & Scam checks
         from database import db
         blacklisted = await db.fetch("SELECT pattern, points, match_type FROM automod_blacklist WHERE guild_id = $1", message.guild.id)
         for row in blacklisted:
