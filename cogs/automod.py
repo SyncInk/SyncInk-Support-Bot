@@ -70,7 +70,7 @@ class Automod(commands.Cog):
         if len(recent_msgs) >= spam_threshold:
             self.message_cache[message.author.id] = [] # Reset
             await message.delete()
-            await AutomodService.add_violation(self.bot, message.guild, message.author, 3, "Message spam (Rapid messaging)", "Spam Filter", content, message.jump_url)
+            await AutomodService.add_violation(self.bot, message.guild, message.author, 3, "Message spam (Rapid messaging)", "Spam Filter", message=message)
             return
 
         # Duplicate detection (same content repeated)
@@ -78,20 +78,20 @@ class Automod(commands.Cog):
         if len(duplicates) >= 3:
             self.message_cache[message.author.id] = []
             await message.delete()
-            await AutomodService.add_violation(self.bot, message.guild, message.author, 4, "Duplicate message spam", "Spam Filter", content, message.jump_url)
+            await AutomodService.add_violation(self.bot, message.guild, message.author, 4, "Duplicate message spam", "Spam Filter", message=message)
             return
 
         # 2. Mention Spam
         mention_threshold = settings.get('mention_threshold', 5)
         if len(message.mentions) >= mention_threshold or message.mention_everyone:
             await message.delete()
-            await AutomodService.add_violation(self.bot, message.guild, message.author, 8, "Mass mention spam", "Mention Filter", content, message.jump_url)
+            await AutomodService.add_violation(self.bot, message.guild, message.author, 8, "Mass mention spam", "Mention Filter", message=message)
             return
 
         # 3. Discord Invites
         if re.search(r'(discord\.gg/|discordapp\.com/invite/)', content, re.IGNORECASE):
             await message.delete()
-            await AutomodService.add_violation(self.bot, message.guild, message.author, 5, "Posted unauthorized Discord invite", "Link Filter", content, message.jump_url)
+            await AutomodService.add_violation(self.bot, message.guild, message.author, 5, "Posted unauthorized Discord invite", "Link Filter", message=message)
             return
 
         # 4. Caps Spam
@@ -99,10 +99,18 @@ class Automod(commands.Cog):
             upper_count = sum(1 for c in content if c.isupper())
             if upper_count / len(content) > 0.7:
                 await message.delete()
-                await AutomodService.add_violation(self.bot, message.guild, message.author, 2, "Excessive capitalization", "Formatting Filter", content, message.jump_url)
+                await AutomodService.add_violation(self.bot, message.guild, message.author, 2, "Excessive capitalization", "Formatting Filter", message=message)
                 return
 
-        # 5. DB Blacklist & Scam checks (Assume we fetch blacklist from DB in reality, simulated here)
+        # 5. Bad Words & Slurs Filter (Hardcoded Defaults)
+        hardcoded_bad_words = ['fuck', 'bitch', 'cunt', 'nigger', 'faggot', 'slut', 'whore']
+        content_lower = content.lower()
+        if any(bad_word in content_lower for bad_word in hardcoded_bad_words):
+            await message.delete()
+            await AutomodService.add_violation(self.bot, message.guild, message.author, 5, "Triggered bad words filter", "Content Filter", message=message)
+            return
+
+        # 6. DB Blacklist & Scam checks
         from database import db
         blacklisted = await db.fetch("SELECT pattern, points, match_type FROM automod_blacklist WHERE guild_id = $1", message.guild.id)
         for row in blacklisted:
@@ -124,7 +132,7 @@ class Automod(commands.Cog):
             
             if matched:
                 await message.delete()
-                await AutomodService.add_violation(self.bot, message.guild, message.author, pts, f"Triggered blacklist filter: {pattern}", "Content Filter", content, message.jump_url)
+                await AutomodService.add_violation(self.bot, message.guild, message.author, pts, f"Triggered blacklist filter: {pattern}", "Content Filter", message=message)
                 return
 
 

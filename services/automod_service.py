@@ -14,7 +14,7 @@ class AutomodService:
         return record['points'] if record else 0
 
     @staticmethod
-    async def add_violation(bot, guild: discord.Guild, member: discord.Member, points: int, reason: str, detection_type: str, original_message: str, jump_url: str):
+    async def add_violation(bot, guild: discord.Guild, member: discord.Member, points: int, reason: str, detection_type: str, message: discord.Message = None):
         if points <= 0:
             return None
 
@@ -57,20 +57,40 @@ class AutomodService:
                     await member.timeout(duration_td, reason=reason)
                     case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "TIMEOUT (Automod)", reason)
                     action_taken = f"Timed Out ({duration} mins)"
+                    if message:
+                        try:
+                            await message.channel.send(embed=ErrorEmbed(description=f"🔨 {member.mention} has been timed out by Automod for {reason}."), delete_after=15)
+                        except discord.Forbidden:
+                            pass
                 
                 elif action == 'JAIL':
                     case_id = await AutomodService.jail_user(guild, member, bot.user, reason, duration)
                     action_taken = f"Jailed"
+                    if message:
+                        try:
+                            await message.channel.send(embed=ErrorEmbed(description=f"🔒 {member.mention} has been jailed by Automod for {reason}."), delete_after=15)
+                        except discord.Forbidden:
+                            pass
                 
                 elif action == 'KICK':
                     await member.kick(reason=reason)
                     case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "KICK (Automod)", reason)
                     action_taken = "Kicked"
+                    if message:
+                        try:
+                            await message.channel.send(embed=ErrorEmbed(description=f"👢 {member.mention} was kicked by Automod for {reason}."), delete_after=15)
+                        except discord.Forbidden:
+                            pass
                 
                 elif action == 'BAN':
                     await member.ban(reason=reason)
                     case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "BAN (Automod)", reason)
                     action_taken = "Banned"
+                    if message:
+                        try:
+                            await message.channel.send(embed=ErrorEmbed(description=f"🔨 {member.mention} was permanently banned by Automod for {reason}."), delete_after=15)
+                        except discord.Forbidden:
+                            pass
             
             except discord.Forbidden:
                 action_taken = f"Failed to execute {action} (Missing Permissions)"
@@ -79,6 +99,8 @@ class AutomodService:
                 action_taken = f"Error executing {action}"
 
         # Dispatch Log
+        original_message = message.content if message else None
+        jump_url = message.jump_url if message else None
         await AutomodService._dispatch_log(bot, guild, member, action_taken, detection_type, reason, total_points, case_id, original_message, jump_url)
 
     @staticmethod
