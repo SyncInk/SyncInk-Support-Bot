@@ -102,6 +102,17 @@ class Moderation(commands.Cog):
     @has_permission(ban_members=True)
     async def ban(self, interaction: discord.Interaction, member: discord.Member, reason: str):
         try:
+            # Try to send a DM before banning
+            try:
+                dm_embed = ErrorEmbed(
+                    description=f"You were banned in **{interaction.guild.name}**.",
+                    resolution=f"Reason: {reason}"
+                )
+                dm_embed.title = "Official Ban Notice"
+                await member.send(embed=dm_embed)
+            except discord.Forbidden:
+                pass
+
             await member.ban(reason=reason)
             await ModService.log_case(interaction.guild.id, member.id, interaction.user.id, "BAN", reason)
             

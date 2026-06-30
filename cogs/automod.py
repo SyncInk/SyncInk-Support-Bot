@@ -6,12 +6,15 @@ from services.settings_service import SettingsService
 from utils.permissions import has_permission
 from utils.logger import log
 import re
+import collections
+import io
 from datetime import datetime, timedelta
 
 class Automod(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.message_cache = {} # {user_id: [ (msg_content, timestamp), ... ]}
+        self.user_history = collections.defaultdict(lambda: collections.deque(maxlen=30))
         
         # Start background tasks
         self.point_decay_loop.start()
@@ -46,6 +49,8 @@ class Automod(commands.Cog):
     async def check_message(self, message: discord.Message):
         if message.author.bot or not message.guild:
             return
+        
+        self.user_history[message.author.id].append(f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] #{message.channel.name}: {message.content}")
 
         settings = await SettingsService.get_guild_settings(message.guild.id)
         if not settings.get('automod_enabled'):
@@ -117,7 +122,14 @@ class Automod(commands.Cog):
             pattern = r'\b' + re.escape(bad_word) + r'\b'
             if re.search(pattern, content_lower):
                 await message.delete()
-                await AutomodService.add_violation(self.bot, message.guild, message.author, 5, "Triggered bad words filter", "Content Filter", message=message)
+                rules_channel = discord.utils.get(message.guild.channels, name="rules")
+                rules_text = rules_channel.mention if rules_channel else "#rules"
+                warn_embed = discord.Embed(description=f"<:syncwarning:1520914584012328961> Please watch your words! And check our {rules_text}", color=0xff0000)
+                try:
+                    await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
+                except discord.Forbidden:
+                    pass
+                await AutomodService.add_violation(self.bot, message.guild, message.author, 4, "Triggered bad words filter", "Content Filter", message=message)
                 return
 
         # 7. DB Blacklist & Scam checks
@@ -142,6 +154,13 @@ class Automod(commands.Cog):
             
             if matched:
                 await message.delete()
+                rules_channel = discord.utils.get(message.guild.channels, name="rules")
+                rules_text = rules_channel.mention if rules_channel else "#rules"
+                warn_embed = discord.Embed(description=f"<:syncwarning:1520914584012328961> Please watch your words! And check our {rules_text}", color=0xff0000)
+                try:
+                    await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
+                except discord.Forbidden:
+                    pass
                 await AutomodService.add_violation(self.bot, message.guild, message.author, pts, f"Triggered blacklist filter: {pattern}", "Content Filter", message=message)
                 return
 
@@ -207,6 +226,19 @@ class Automod(commands.Cog):
         except Exception as e:
             from utils.ui import ErrorEmbed
             await interaction.response.send_message(embed=ErrorEmbed(description="Failed to unjail member.", resolution=str(e)), ephemeral=True)
+
+    @app_commands.command(name="history", description="Get a text file of a user's last 30 messages.")
+    @app_commands.default_permissions(moderate_members=True)
+    @has_permission(moderate_members=True)
+    async def history(self, interaction: discord.Interaction, member: discord.Member):
+        msgs = self.user_history.get(member.id, [])
+        if not msgs:
+            await interaction.response.send_message("No recent messages found for this user in memory.", ephemeral=True)
+            return
+            
+        content = "\n".join(msgs)
+        file = discord.File(io.BytesIO(content.encode('utf-8')), filename=f"{member.name}_history.txt")
+        await interaction.response.send_message(f"Recent message history for {member.mention}:", file=file, ephemeral=True)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Automod(bot))
