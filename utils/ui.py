@@ -94,8 +94,8 @@ class JailAppealModal(discord.ui.Modal, title='Jail Appeal'):
     async def on_submit(self, interaction: discord.Interaction):
         from services.settings_service import SettingsService
         settings = await SettingsService.get_guild_settings(interaction.guild_id)
-        # fallback to standard log channel if dedicated appeal channel is missing
-        channel_id = settings.get("log_channel_moderation")
+        # Check for dedicated appeals channel, fallback to standard moderation log channel
+        channel_id = settings.get("log_channel_appeals") or settings.get("log_channel_moderation") or settings.get("log_channel_id")
         
         if not channel_id:
             await interaction.response.send_message("The server has no moderation log channel configured to receive appeals. Please contact an admin directly.", ephemeral=True)

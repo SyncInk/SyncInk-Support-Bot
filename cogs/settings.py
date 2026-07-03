@@ -82,7 +82,18 @@ class LogChannelSelect(discord.ui.ChannelSelect):
     async def callback(self, interaction: discord.Interaction):
         channel = self.values[0]
         await SettingsService.update_setting(interaction.guild.id, "log_channel_id", channel.id)
+        # Update legacy variable to keep compatibility
+        await SettingsService.update_setting(interaction.guild.id, "log_channel_moderation", channel.id)
         await self.view.update_category(interaction, "logging", success_msg=f"Audit log channel set to #{channel.name}.")
+
+class AppealChannelSelect(discord.ui.ChannelSelect):
+    def __init__(self):
+        super().__init__(channel_types=[discord.ChannelType.text], placeholder="Select Appeals Channel", min_values=1, max_values=1, row=2)
+        
+    async def callback(self, interaction: discord.Interaction):
+        channel = self.values[0]
+        await SettingsService.update_setting(interaction.guild.id, "log_channel_appeals", channel.id)
+        await self.view.update_category(interaction, "logging", success_msg=f"Appeal channel set to #{channel.name}.")
 
 class WelcomeChannelSelect(discord.ui.ChannelSelect):
     def __init__(self):
@@ -172,6 +183,7 @@ class ConfigDashboardView(discord.ui.View):
         self.unverified_select = UnverifiedRoleSelect()
         self.verif_channel_select = VerificationChannelSelect()
         self.log_channel = LogChannelSelect()
+        self.appeal_channel = AppealChannelSelect()
         self.welcome_channel = WelcomeChannelSelect()
         self.welcome_msg_btn = WelcomeMessageButton()
 
@@ -243,8 +255,15 @@ class ConfigDashboardView(discord.ui.View):
             
         elif category == "logging":
             embed.description = "Track moderation actions, messages, and server events."
-            embed.add_field(name="Audit Log Channel", value=f"<#{settings['log_channel_id']}>" if settings.get('log_channel_id') else "Not configured", inline=False)
+            
+            main_log_id = settings.get('log_channel_id') or settings.get('log_channel_moderation')
+            embed.add_field(name="Audit Log Channel", value=f"<#{main_log_id}>" if main_log_id else "Not configured", inline=False)
+            
+            appeal_id = settings.get('log_channel_appeals')
+            embed.add_field(name="Appeals Channel", value=f"<#{appeal_id}>" if appeal_id else "Not configured (Appeals go to Audit Log)", inline=False)
+            
             self.add_item(self.log_channel)
+            self.add_item(self.appeal_channel)
             
         elif category == "members":
             embed.description = "Configure the onboarding experience for new members."

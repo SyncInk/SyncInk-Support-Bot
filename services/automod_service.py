@@ -172,10 +172,13 @@ class AutomodService:
         from utils.ui import JailAppealView
         try:
             embed = ErrorEmbed(
-                description=f"You have been jailed in **{guild.name}**.\nReason: {reason}",
-                resolution="You have lost access to the server. You can submit an appeal using the button below."
+                description=f"You have been placed in jail in **{guild.name}**.\nThis is a strict disciplinary action.",
+                resolution="You have lost access to all standard channels. You may submit an appeal using the button below to be reviewed by the administration team."
             )
             embed.title = "Official Jail Notice"
+            embed.add_field(name="Infraction Reason", value=f"```\n{reason}\n```", inline=False)
+            embed.add_field(name="Case ID", value=str(case_id), inline=False)
+            embed.set_thumbnail(url="https://files.catbox.moe/74l9su.png")
             await member.send(embed=embed, view=JailAppealView())
         except discord.Forbidden:
             pass
