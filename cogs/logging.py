@@ -33,8 +33,26 @@ class AdvancedLogging(commands.Cog):
         if message.author.bot or not message.guild:
             return
             
+        deleter = None
+        # Check audit logs to see if a moderator deleted the message
+        try:
+            async for entry in message.guild.audit_logs(limit=5, action=discord.AuditLogAction.message_delete):
+                if entry.target.id == message.author.id and entry.extra.channel.id == message.channel.id:
+                    # We assume this entry corresponds to our deleted message
+                    # A small race condition exists here but this is the standard discord.py approach
+                    deleter = entry.user
+                    break
+        except discord.Forbidden:
+            pass
+
         embed = SyncInkEmbed(title="Message Deleted", color=ERROR_COLOR)
-        embed.set_author(name=f"{message.author} ({message.author.id})", icon_url=message.author.display_avatar.url)
+        
+        if deleter:
+            embed.set_author(name=f"Deleted by {deleter} ({deleter.id})", icon_url=deleter.display_avatar.url)
+            embed.add_field(name="Author", value=f"{message.author.mention}", inline=True)
+        else:
+            embed.set_author(name=f"{message.author} ({message.author.id})", icon_url=message.author.display_avatar.url)
+            
         embed.add_field(name="Channel", value=message.channel.mention, inline=True)
         if message.content:
             embed.add_field(name="Content", value=f"```\n{message.content[:1000]}\n```", inline=False)

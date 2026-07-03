@@ -168,6 +168,18 @@ class AutomodService:
             VALUES ($1, $2, $3, $4, $5, $6, $7)
         """, guild.id, member.id, moderator.id, reason, roles_str, release_at, case_id)
 
+        # DM the user with an Appeal button
+        from utils.ui import JailAppealView
+        try:
+            embed = ErrorEmbed(
+                description=f"You have been jailed in **{guild.name}**.\nReason: {reason}",
+                resolution="You have lost access to the server. You can submit an appeal using the button below."
+            )
+            embed.title = "Official Jail Notice"
+            await member.send(embed=embed, view=JailAppealView())
+        except discord.Forbidden:
+            pass
+
         return case_id
 
     @staticmethod
