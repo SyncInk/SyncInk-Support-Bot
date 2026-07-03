@@ -91,9 +91,13 @@ class JailAppealModal(discord.ui.Modal, title='Jail Appeal'):
         max_length=1000
     )
 
+    def __init__(self, guild_id: int):
+        super().__init__()
+        self.guild_id = guild_id
+
     async def on_submit(self, interaction: discord.Interaction):
         from services.settings_service import SettingsService
-        settings = await SettingsService.get_guild_settings(interaction.guild_id)
+        settings = await SettingsService.get_guild_settings(self.guild_id)
         # Check for dedicated appeals channel, fallback to standard moderation log channel
         channel_id = settings.get("log_channel_appeals") or settings.get("log_channel_moderation") or settings.get("log_channel_id")
         
@@ -101,7 +105,11 @@ class JailAppealModal(discord.ui.Modal, title='Jail Appeal'):
             await interaction.response.send_message("The server has no moderation log channel configured to receive appeals. Please contact an admin directly.", ephemeral=True)
             return
             
-        guild = interaction.guild
+        guild = interaction.client.get_guild(self.guild_id)
+        if not guild:
+            await interaction.response.send_message("Could not find the server. It might be unavailable.", ephemeral=True)
+            return
+            
         channel = guild.get_channel(channel_id)
         if channel:
             embed = SyncInkEmbed(title="New Jail Appeal", color=WARNING_COLOR)
@@ -149,4 +157,11 @@ class JailAppealView(discord.ui.View):
         
     @discord.ui.button(label="Submit Appeal", style=discord.ButtonStyle.primary, custom_id="jail_appeal_btn")
     async def appeal_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(JailAppealModal())
+        try:
+            footer_text = interaction.message.embeds[0].footer.text
+            guild_id = int(footer_text.split("Server ID: ")[1].strip())
+            await interaction.response.send_modal(JailAppealModal(guild_id))
+        except Exception as e:
+            from utils.logger import log
+            log.error(f"Error parsing guild_id for appeal: {e}")
+            await interaction.response.send_message("Could not verify server context. Please contact an admin.", ephemeral=True)

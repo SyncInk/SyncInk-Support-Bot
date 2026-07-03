@@ -179,6 +179,7 @@ class AutomodService:
             embed.add_field(name="Infraction Reason", value=f"```\n{reason}\n```", inline=False)
             embed.add_field(name="Case ID", value=str(case_id), inline=False)
             embed.set_thumbnail(url="https://files.catbox.moe/74l9su.png")
+            embed.set_footer(text=f"SyncInk Platform | Server ID: {guild.id}", icon_url="https://files.catbox.moe/74l9su.png")
             await member.send(embed=embed, view=JailAppealView())
         except discord.Forbidden:
             pass
