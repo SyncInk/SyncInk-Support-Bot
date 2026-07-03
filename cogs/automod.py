@@ -128,13 +128,7 @@ class Automod(commands.Cog):
                     await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
                 except discord.Forbidden:
                     pass
-                await AutomodService.add_violation(self.bot, message.guild, message.author, 4, "Triggered bad words filter", "Content Filter", message=message)
-                
-                async def reset_points():
-                    await asyncio.sleep(60)
-                    from database import db
-                    await db.execute("UPDATE automod_scores SET points = GREATEST(points - 4, 0) WHERE guild_id = $1 AND user_id = $2", message.guild.id, message.author.id)
-                self.bot.loop.create_task(reset_points())
+                await AutomodService.add_violation(self.bot, message.guild, message.author, 20, "Triggered bad words filter", "Content Filter", message=message)
                 return
 
         # 7. DB Blacklist & Scam checks
