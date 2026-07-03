@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from utils.ui import SyncInkEmbed, SuccessEmbed
+from utils.permissions import has_permission
 
 class Admin(commands.Cog):
     def __init__(self, bot: commands.Bot):
