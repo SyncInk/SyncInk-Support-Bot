@@ -8,6 +8,7 @@ from utils.logger import log
 import re
 import collections
 import io
+import asyncio
 from datetime import datetime, timedelta
 
 class Automod(commands.Cog):
@@ -128,6 +129,12 @@ class Automod(commands.Cog):
                 except discord.Forbidden:
                     pass
                 await AutomodService.add_violation(self.bot, message.guild, message.author, 4, "Triggered bad words filter", "Content Filter", message=message)
+                
+                async def reset_points():
+                    await asyncio.sleep(60)
+                    from database import db
+                    await db.execute("UPDATE automod_scores SET points = GREATEST(points - 4, 0) WHERE guild_id = $1 AND user_id = $2", message.guild.id, message.author.id)
+                self.bot.loop.create_task(reset_points())
                 return
 
         # 7. DB Blacklist & Scam checks
