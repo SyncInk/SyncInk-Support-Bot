@@ -33,7 +33,7 @@ class SettingsService:
             "anti_raid", "anti_spam", "welcome_message", "dm_welcome", "auto_delete_welcome",
             "log_channel_message", "log_channel_member", "log_channel_moderation",
             "log_channel_role", "log_channel_channel", "log_channel_voice",
-            "log_channel_verification", "log_channel_server",
+            "log_channel_verification", "log_channel_server", "log_channel_appeals",
             "automod_enabled", "automod_log_channel_id", "jail_role_id",
             "jail_channel_id", "appeal_channel_id", "emergency_mode",
             "point_decay_rate", "point_decay_hours", "spam_threshold", "mention_threshold"

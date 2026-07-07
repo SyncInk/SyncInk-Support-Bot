@@ -88,6 +88,7 @@ class JailAppealModal(discord.ui.Modal, title='Jail Appeal'):
         style=discord.TextStyle.long,
         placeholder='Please provide a detailed explanation...',
         required=True,
+        min_length=30,
         max_length=1000
     )
 
@@ -141,10 +142,42 @@ class JailAppealModal(discord.ui.Modal, title='Jail Appeal'):
 
                 @discord.ui.button(label="Deny", style=discord.ButtonStyle.red)
                 async def deny(self, btn_interaction: discord.Interaction, button: discord.ui.Button):
-                    await btn_interaction.response.send_message("Appeal denied.", ephemeral=True)
-                    for child in self.children:
-                        child.disabled = True
-                    await btn_interaction.message.edit(view=self)
+                    class JailAppealDenyModal(discord.ui.Modal, title="Deny Jail Appeal"):
+                        reason = discord.ui.TextInput(
+                            label="Reason for Denial",
+                            style=discord.TextStyle.paragraph,
+                            placeholder="Please provide a reason to the user...",
+                            required=True,
+                            max_length=1000
+                        )
+
+                        def __init__(self, user_id: int, original_view: discord.ui.View):
+                            super().__init__()
+                            self.user_id = user_id
+                            self.original_view = original_view
+
+                        async def on_submit(self, modal_interaction: discord.Interaction):
+                            guild = modal_interaction.guild
+                            member = guild.get_member(self.user_id)
+                            
+                            if member:
+                                try:
+                                    deny_embed = ErrorEmbed(
+                                        description="Your jail appeal has been reviewed and denied by the moderation team.",
+                                        resolution="Wait for your sentence to expire, or appeal again if permitted later."
+                                    )
+                                    deny_embed.add_field(name="Reason from Staff", value=f"> {self.reason.value}", inline=False)
+                                    await member.send(embed=deny_embed)
+                                except discord.Forbidden:
+                                    pass
+
+                            await modal_interaction.response.send_message("Appeal denied and user has been notified.", ephemeral=True)
+                            
+                            for child in self.original_view.children:
+                                child.disabled = True
+                            await modal_interaction.message.edit(view=self.original_view)
+
+                    await btn_interaction.response.send_modal(JailAppealDenyModal(self.user_id, self))
             
             await channel.send(embed=embed, view=AppealActionView(interaction.user.id))
             await interaction.response.send_message("Your appeal has been submitted to the moderation team.", ephemeral=True)
