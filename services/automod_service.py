@@ -195,7 +195,7 @@ class AutomodService:
         settings = await SettingsService.get_guild_settings(guild.id)
         jail_role_id = settings.get('jail_role_id')
         if jail_role_id:
-            jail_role = guild.get_role(jail_role_id)
+            jail_role = guild.get_role(int(jail_role_id))
             if jail_role:
                 await member.remove_roles(jail_role, reason="Unjailed")
 

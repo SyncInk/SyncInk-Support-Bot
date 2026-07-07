@@ -122,7 +122,7 @@ class JailAppealModal(discord.ui.Modal, title='Jail Appeal'):
                     super().__init__(timeout=None)
                     self.user_id = user_id
                     
-                @discord.ui.button(label="Accept & Unjail", style=discord.ButtonStyle.green, custom_id=f"appeal_accept_{user_id}")
+                @discord.ui.button(label="Accept & Unjail", style=discord.ButtonStyle.green)
                 async def accept(self, btn_interaction: discord.Interaction, button: discord.ui.Button):
                     from services.automod_service import AutomodService
                     guild = btn_interaction.guild
@@ -139,7 +139,7 @@ class JailAppealModal(discord.ui.Modal, title='Jail Appeal'):
                     except Exception as e:
                         await btn_interaction.response.send_message(f"Error unjailing: {e}", ephemeral=True)
 
-                @discord.ui.button(label="Deny", style=discord.ButtonStyle.red, custom_id=f"appeal_deny_{user_id}")
+                @discord.ui.button(label="Deny", style=discord.ButtonStyle.red)
                 async def deny(self, btn_interaction: discord.Interaction, button: discord.ui.Button):
                     await btn_interaction.response.send_message("Appeal denied.", ephemeral=True)
                     for child in self.children:
