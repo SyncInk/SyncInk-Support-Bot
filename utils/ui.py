@@ -92,9 +92,11 @@ class JailAppealModal(discord.ui.Modal, title='Jail Appeal'):
         max_length=1000
     )
 
-    def __init__(self, guild_id: int):
+    def __init__(self, guild_id: int, message: discord.Message = None, is_reappeal: bool = False):
         super().__init__()
         self.guild_id = guild_id
+        self.message = message
+        self.is_reappeal = is_reappeal
 
     async def on_submit(self, interaction: discord.Interaction):
         from services.settings_service import SettingsService
@@ -113,7 +115,8 @@ class JailAppealModal(discord.ui.Modal, title='Jail Appeal'):
             
         channel = guild.get_channel(channel_id)
         if channel:
-            embed = SyncInkEmbed(title="New Jail Appeal", color=WARNING_COLOR)
+            title = "New Jail Re-Appeal" if self.is_reappeal else "New Jail Appeal"
+            embed = SyncInkEmbed(title=title, color=WARNING_COLOR)
             embed.set_author(name=f"{interaction.user} ({interaction.user.id})", icon_url=interaction.user.display_avatar.url)
             embed.add_field(name="Reason", value=self.reason.value, inline=False)
             
@@ -164,10 +167,27 @@ class JailAppealModal(discord.ui.Modal, title='Jail Appeal'):
                                 try:
                                     deny_embed = ErrorEmbed(
                                         description="Your jail appeal has been reviewed and denied by the moderation team.",
-                                        resolution="Wait for your sentence to expire, or appeal again if permitted later."
+                                        resolution="You may submit one final re-appeal if you believe this was a mistake, or wait for your sentence to expire."
                                     )
                                     deny_embed.add_field(name="Reason from Staff", value=f"> {self.reason.value}", inline=False)
-                                    await member.send(embed=deny_embed)
+                                    deny_embed.set_footer(text=f"SyncInk Platform | Server ID: {guild.id}", icon_url="https://files.catbox.moe/74l9su.png")
+                                    
+                                    class JailReAppealView(discord.ui.View):
+                                        def __init__(self):
+                                            super().__init__(timeout=None)
+                                            
+                                        @discord.ui.button(label="Submit Re-Appeal", style=discord.ButtonStyle.primary, custom_id="jail_reappeal_btn")
+                                        async def reappeal_btn(self, re_interaction: discord.Interaction, button: discord.ui.Button):
+                                            try:
+                                                footer_text = re_interaction.message.embeds[0].footer.text
+                                                guild_id = int(footer_text.split("Server ID: ")[1].strip())
+                                                await re_interaction.response.send_modal(JailAppealModal(guild_id, message=re_interaction.message, is_reappeal=True))
+                                            except Exception as e:
+                                                from utils.logger import log
+                                                log.error(f"Error parsing guild_id for re-appeal: {e}")
+                                                await re_interaction.response.send_message("Could not verify server context. Please contact an admin.", ephemeral=True)
+
+                                    await member.send(embed=deny_embed, view=JailReAppealView())
                                 except discord.Forbidden:
                                     pass
 
@@ -181,6 +201,15 @@ class JailAppealModal(discord.ui.Modal, title='Jail Appeal'):
             
             await channel.send(embed=embed, view=AppealActionView(interaction.user.id))
             await interaction.response.send_message("Your appeal has been submitted to the moderation team.", ephemeral=True)
+            
+            if self.message:
+                try:
+                    view = discord.ui.View.from_message(self.message)
+                    for child in view.children:
+                        child.disabled = True
+                    await self.message.edit(view=view)
+                except Exception:
+                    pass
         else:
             await interaction.response.send_message("Could not find the moderation channel.", ephemeral=True)
 
@@ -193,7 +222,7 @@ class JailAppealView(discord.ui.View):
         try:
             footer_text = interaction.message.embeds[0].footer.text
             guild_id = int(footer_text.split("Server ID: ")[1].strip())
-            await interaction.response.send_modal(JailAppealModal(guild_id))
+            await interaction.response.send_modal(JailAppealModal(guild_id, message=interaction.message, is_reappeal=False))
         except Exception as e:
             from utils.logger import log
             log.error(f"Error parsing guild_id for appeal: {e}")
