@@ -136,7 +136,21 @@ class JailAppealModal(discord.ui.Modal, title='Jail Appeal'):
                         return
                     try:
                         await AutomodService.unjail_user(guild, member, btn_interaction.user, "Appeal Accepted")
-                        await btn_interaction.response.send_message("User unjailed successfully.", ephemeral=True)
+                        
+                        try:
+                            success_embed = SuccessEmbed(
+                                description="Your jail appeal has been reviewed and accepted. You have been unjailed."
+                            )
+                            success_embed.add_field(
+                                name="⚠️ Strict Warning",
+                                value="Please ensure you read and strictly follow the server rules to avoid future disciplinary action.\n\n[📖 Click here to read the Server Rules](https://discord.com/channels/1520457643842342912/1520460587522330634)",
+                                inline=False
+                            )
+                            await member.send(embed=success_embed)
+                        except discord.Forbidden:
+                            pass
+
+                        await btn_interaction.response.send_message("User unjailed and notified successfully.", ephemeral=True)
                         for child in self.children:
                             child.disabled = True
                         await btn_interaction.message.edit(view=self)
