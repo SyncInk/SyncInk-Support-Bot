@@ -10,7 +10,7 @@ class AnnouncementModal(discord.ui.Modal, title="Broadcast Announcement"):
         style=discord.TextStyle.paragraph,
         placeholder="# 🚀 SyncInk Update\n\n## ✨ What's New\n- Feature 1",
         required=True,
-        max_length=2000
+        max_length=4000
     )
     
     def __init__(self, target_channel: discord.TextChannel):
@@ -19,7 +19,28 @@ class AnnouncementModal(discord.ui.Modal, title="Broadcast Announcement"):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            await self.target_channel.send(content=self.content.value)
+            content = self.content.value
+            if len(content) <= 2000:
+                await self.target_channel.send(content=content)
+            else:
+                chunks = []
+                current_chunk = ""
+                for line in content.split('\n'):
+                    if len(current_chunk) + len(line) + 1 > 2000:
+                        if not current_chunk.strip():
+                            # If a single line is over 2000 chars, force split it
+                            current_chunk = line[:1990]
+                            line = line[1990:]
+                        chunks.append(current_chunk)
+                        current_chunk = line + "\n"
+                    else:
+                        current_chunk += line + "\n"
+                if current_chunk.strip():
+                    chunks.append(current_chunk)
+                    
+                for chunk in chunks:
+                    await self.target_channel.send(content=chunk)
+
             await interaction.response.send_message(embed=SuccessEmbed(f"Announcement successfully broadcasted to {self.target_channel.mention}."), ephemeral=True)
         except discord.Forbidden:
             await interaction.response.send_message(embed=ErrorEmbed("I do not have permission to send messages in that channel."), ephemeral=True)
