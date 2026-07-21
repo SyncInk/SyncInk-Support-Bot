@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from utils.ui import SyncInkEmbed, SuccessEmbed
+from utils.ui import SyncInkEmbed, SuccessEmbed, ErrorEmbed
 from utils.permissions import has_permission
 
 class AnnouncementModal(discord.ui.Modal, title="Broadcast Announcement"):
@@ -10,7 +10,7 @@ class AnnouncementModal(discord.ui.Modal, title="Broadcast Announcement"):
         style=discord.TextStyle.paragraph,
         placeholder="# 🚀 SyncInk Update\n\n## ✨ What's New\n- Feature 1",
         required=True,
-        max_length=4000
+        max_length=2000
     )
     
     def __init__(self, target_channel: discord.TextChannel):
