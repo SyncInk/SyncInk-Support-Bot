@@ -46,10 +46,7 @@ class SyncInkBot(commands.Bot):
             
         # Re-register persistent views
         from cogs.security import VerificationView
-        from utils.ui import TicketPanelView, TicketActionView
         self.add_view(VerificationView())
-        self.add_view(TicketPanelView())
-        self.add_view(TicketActionView())
         log.info("Persistent views registered.")
 
         # Load Cogs dynamically

@@ -36,8 +36,7 @@ class SettingsService:
             "log_channel_verification", "log_channel_server", "log_channel_appeals",
             "automod_enabled", "automod_log_channel_id", "jail_role_id",
             "jail_channel_id", "appeal_channel_id", "emergency_mode",
-            "point_decay_rate", "point_decay_hours", "spam_threshold", "mention_threshold",
-            "ticket_support_role_id", "ticket_category_id", "ticket_transcript_channel_id"
+            "point_decay_rate", "point_decay_hours", "spam_threshold", "mention_threshold"
         ]
         if key not in allowed_keys:
             raise ValueError(f"Invalid setting key: {key}")
