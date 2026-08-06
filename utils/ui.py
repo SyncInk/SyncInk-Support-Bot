@@ -241,3 +241,36 @@ class JailAppealView(discord.ui.View):
             from utils.logger import log
             log.error(f"Error parsing guild_id for appeal: {e}")
             await interaction.response.send_message("Could not verify server context. Please contact an admin.", ephemeral=True)
+
+class TicketPanelView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        
+    @discord.ui.button(label="Open Ticket", style=discord.ButtonStyle.blurple, emoji="🎫", custom_id="syncink_ticket_open")
+    async def open_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        from services.ticket_service import TicketService
+        await TicketService.create_ticket(interaction)
+
+class TicketCloseModal(discord.ui.Modal, title="Close Ticket"):
+    reason = discord.ui.TextInput(
+        label="Reason for closing",
+        style=discord.TextStyle.short,
+        placeholder="Resolved, no response, etc.",
+        required=False,
+        max_length=100
+    )
+    def __init__(self):
+        super().__init__()
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        from services.ticket_service import TicketService
+        await TicketService.close_ticket(interaction, self.reason.value)
+
+class TicketActionView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        
+    @discord.ui.button(label="Close Ticket", style=discord.ButtonStyle.red, emoji="🔒", custom_id="syncink_ticket_close")
+    async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(TicketCloseModal())
