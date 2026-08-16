@@ -15,7 +15,7 @@ class DatabaseManager:
             raise DatabaseError("DATABASE_URL environment variable is not set.")
         
         try:
-            self.pool = await asyncpg.create_pool(dsn=dsn, command_timeout=60, ssl="require")
+            self.pool = await asyncpg.create_pool(dsn=dsn, command_timeout=60)
             log.info("Successfully connected to the PostgreSQL database.")
             
             # Run migrations
