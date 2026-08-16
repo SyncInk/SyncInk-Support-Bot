@@ -14,8 +14,13 @@ class DatabaseManager:
         if not dsn:
             raise DatabaseError("DATABASE_URL environment variable is not set.")
         
+        # Smart SSL Handling: Disable for local Termux DBs, Require for cloud providers (Railway)
+        ssl_ctx = "require"
+        if "127.0.0.1" in dsn or "localhost" in dsn or "sslmode=disable" in dsn.lower():
+            ssl_ctx = False
+            
         try:
-            self.pool = await asyncpg.create_pool(dsn=dsn, command_timeout=60)
+            self.pool = await asyncpg.create_pool(dsn=dsn, command_timeout=60, ssl=ssl_ctx)
             log.info("Successfully connected to the PostgreSQL database.")
             
             # Run migrations
