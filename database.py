@@ -14,8 +14,13 @@ class DatabaseManager:
         if not dsn:
             raise DatabaseError("DATABASE_URL environment variable is not set.")
         
+        import ssl
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
         try:
-            self.pool = await asyncpg.create_pool(dsn=dsn, command_timeout=60)
+            self.pool = await asyncpg.create_pool(dsn=dsn, command_timeout=60, ssl=ctx)
             log.info("Successfully connected to the PostgreSQL database.")
             
             # Run migrations
