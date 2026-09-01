@@ -82,7 +82,7 @@ class ChatGPT(commands.Cog):
                 response = await self.get_ai_response(prompt)
                 
                 embed = discord.Embed(
-                    title="<:ChatGPT:1544367927501787246> OpenAI Response",
+                    title="<:CharGPT:1544376850476826796> OpenAI Response",
                     description=response,
                     color=0x2b2d31
                 )
@@ -99,7 +99,7 @@ class ChatGPT(commands.Cog):
         response = await self.get_ai_response(question)
         
         embed = discord.Embed(
-            title="<:ChatGPT:1544367927501787246> OpenAI Response",
+            title="<:CharGPT:1544376850476826796> OpenAI Response",
             description=response,
             color=0x2b2d31
         )
