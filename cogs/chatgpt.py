@@ -7,7 +7,7 @@ from utils.logger import log
 class ChatGPT(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.api_key = os.getenv("PERPLEXITY_API_KEY")
+        self.api_key = os.getenv("OPENROUTER_API_KEY")
         self.ai_channel_id = os.getenv("AI_CHANNEL_ID")
         if self.ai_channel_id:
             self.ai_channel_id = int(self.ai_channel_id)
@@ -19,37 +19,40 @@ class ChatGPT(commands.Cog):
         self.cached_model = None
 
     async def get_model(self) -> str:
-        """Fetch the first available model from Perplexity Router API"""
+        """Fetch the first available model from OpenRouter API"""
         if self.cached_model:
             return self.cached_model
             
         if not self.api_key:
-            return "sonar-pro"
+            return "google/gemini-2.5-flash-free"
             
         headers = {"Authorization": f"Bearer {self.api_key}"}
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get("https://api.perplexity.ai/router/v1/models", headers=headers) as response:
+                async with session.get("https://openrouter.ai/api/v1/models", headers=headers) as response:
                     if response.status == 200:
                         data = await response.json()
                         if "data" in data and len(data["data"]) > 0:
-                            self.cached_model = data["data"][0]["id"]
+                            # Use a free model by default if available, or just fallback to the first one
+                            self.cached_model = "google/gemini-2.5-flash-free"
                             return self.cached_model
-            return "sonar-pro" # fallback
+            return "google/gemini-2.5-flash-free" # fallback
         except Exception as e:
-            log.error(f"Failed to fetch Perplexity models: {e}")
-            return "sonar-pro"
+            log.error(f"Failed to fetch OpenRouter models: {e}")
+            return "google/gemini-2.5-flash-free"
 
     async def get_ai_response(self, prompt: str) -> str:
-        """Helper to call Perplexity Router API using aiohttp to avoid Android rust compilation issues"""
+        """Helper to call OpenRouter API using aiohttp to avoid Android rust compilation issues"""
         if not self.api_key:
-            return "My Perplexity API key has not been set up yet! Please configure `PERPLEXITY_API_KEY`."
+            return "My OpenRouter API key has not been set up yet! Please configure `OPENROUTER_API_KEY` in .env."
             
         try:
             model_id = await self.get_model()
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/SyncInk/SyncInk-Support-Bot",
+                "X-Title": "SyncInk Support Bot"
             }
             payload = {
                 "model": model_id,
@@ -62,14 +65,16 @@ class ChatGPT(commands.Cog):
             }
             
             async with aiohttp.ClientSession() as session:
-                async with session.post("https://api.perplexity.ai/router/v1/chat/completions", headers=headers, json=payload) as response:
+                async with session.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload) as response:
                     if response.status != 200:
                         text = await response.text()
-                        log.error(f"Perplexity API Error ({response.status}): {text}")
+                        log.error(f"OpenRouter API Error ({response.status}): {text}")
                         if response.status == 401:
-                            return "Error 401: Unauthorized. Please check that your PERPLEXITY_API_KEY is real and valid!"
+                            return "Error 401: Unauthorized. Please check that your OPENROUTER_API_KEY is real and valid!"
+                        elif response.status == 402:
+                            return "Error 402: Insufficient credits. Please add credits to your OpenRouter account or use a free model."
                         elif response.status == 429:
-                            return "Error 429: Rate limited or model overloaded. Please honor the Retry-After header and try again."
+                            return "Error 429: Rate limited or model overloaded. Please try again later."
                         return f"An error occurred (HTTP {response.status})."
                         
                     data = await response.json()
@@ -77,11 +82,11 @@ class ChatGPT(commands.Cog):
                     usage = data.get("usage", {})
                     prompt_tokens = usage.get('prompt_tokens', 0)
                     completion_tokens = usage.get('completion_tokens', 0)
-                    log.info(f"Perplexity Router usage: {prompt_tokens} prompt tokens, {completion_tokens} completion tokens.")
+                    log.info(f"OpenRouter usage: {prompt_tokens} prompt tokens, {completion_tokens} completion tokens.")
                     
                     return data["choices"][0]["message"]["content"]
         except Exception as e:
-            log.error(f"Perplexity API HTTP Error: {e}")
+            log.error(f"OpenRouter API HTTP Error: {e}")
             return f"An error occurred while contacting the AI: {str(e)}"
 
     @commands.Cog.listener()
