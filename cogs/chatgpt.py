@@ -24,7 +24,7 @@ class ChatGPT(commands.Cog):
             return self.cached_model
             
         if not self.api_key:
-            return "google/gemini-2.5-flash-free"
+            return "google/gemma-4-26b-a4b-it:free"
             
         headers = {"Authorization": f"Bearer {self.api_key}"}
         try:
@@ -33,13 +33,17 @@ class ChatGPT(commands.Cog):
                     if response.status == 200:
                         data = await response.json()
                         if "data" in data and len(data["data"]) > 0:
-                            # Use a free model by default if available, or just fallback to the first one
-                            self.cached_model = "google/gemini-2.5-flash-free"
+                            # Search for a free model, or just use the first available one
+                            free_models = [m["id"] for m in data["data"] if ":free" in m["id"] or m.get("pricing", {}).get("prompt", "1") in ["0", "0.0"]]
+                            if free_models:
+                                self.cached_model = free_models[0]
+                            else:
+                                self.cached_model = data["data"][0]["id"]
                             return self.cached_model
-            return "google/gemini-2.5-flash-free" # fallback
+            return "google/gemma-4-26b-a4b-it:free" # fallback
         except Exception as e:
             log.error(f"Failed to fetch OpenRouter models: {e}")
-            return "google/gemini-2.5-flash-free"
+            return "google/gemma-4-26b-a4b-it:free"
 
     async def get_ai_response(self, prompt: str) -> str:
         """Helper to call OpenRouter API using aiohttp to avoid Android rust compilation issues"""
