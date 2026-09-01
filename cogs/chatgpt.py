@@ -45,13 +45,14 @@ class ChatGPT(commands.Cog):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload) as response:
-                    data = await response.json()
-                    
                     if response.status != 200:
-                        error_msg = data.get("error", {}).get("message", "Unknown error")
-                        log.error(f"OpenAI API Error: {error_msg}")
-                        return f"An error occurred while contacting the AI: {error_msg}"
+                        text = await response.text()
+                        log.error(f"OpenAI API Error ({response.status}): {text}")
+                        if response.status == 401:
+                            return "Error 401: Unauthorized. Please check that your OpenAI API keys are real and valid!"
+                        return f"An error occurred (HTTP {response.status})."
                         
+                    data = await response.json()
                     return data["choices"][0]["message"]["content"]
         except Exception as e:
             log.error(f"OpenAI API HTTP Error: {e}")
@@ -72,7 +73,7 @@ class ChatGPT(commands.Cog):
                 is_reply = True
 
         if self.bot.user in message.mentions or is_reply:
-            prompt = message.content.replace(f'<@{self.bot.user.id}>', '').strip()
+            prompt = message.content.replace(f'<@{self.bot.user.id}>', '').replace(f'<@!{self.bot.user.id}>', '').strip()
             
             if not prompt:
                 return
@@ -81,7 +82,7 @@ class ChatGPT(commands.Cog):
                 response = await self.get_ai_response(prompt)
                 
                 embed = discord.Embed(
-                    title="🤖 OpenAI Response",
+                    title="<:ChatGPT:1544367927501787246> OpenAI Response",
                     description=response,
                     color=0x2b2d31
                 )
@@ -98,7 +99,7 @@ class ChatGPT(commands.Cog):
         response = await self.get_ai_response(question)
         
         embed = discord.Embed(
-            title="🤖 OpenAI Response",
+            title="<:ChatGPT:1544367927501787246> OpenAI Response",
             description=response,
             color=0x2b2d31
         )
