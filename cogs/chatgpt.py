@@ -2,61 +2,76 @@ import discord
 from discord.ext import commands
 import os
 import random
-import aiohttp
+from openai import AsyncOpenAI
 from utils.logger import log
 
 class ChatGPT(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # Load multiple keys separated by commas
-        keys_env = os.getenv("OPENAI_API_KEY", "")
-        self.api_keys = [k.strip() for k in keys_env.split(",") if k.strip()]
         
-        # Load allowed channel
+        self.api_key = os.getenv("PERPLEXITY_API_KEY")
+        self.client = None
+        if self.api_key:
+            self.client = AsyncOpenAI(
+                api_key=self.api_key,
+                base_url="https://api.perplexity.ai/router/v1"
+            )
+            
         self.ai_channel_id = os.getenv("AI_CHANNEL_ID")
         if self.ai_channel_id:
             self.ai_channel_id = int(self.ai_channel_id)
-        
+            
         self.system_prompt = (
             "You are a helpful, professional, and knowledgeable AI assistant. "
             "You provide clear, concise, and accurate answers to user questions."
         )
+        self.cached_model = None
+
+    async def get_model(self) -> str:
+        """Fetch the first available model from Perplexity Router API"""
+        if self.cached_model:
+            return self.cached_model
+            
+        try:
+            models_response = await self.client.models.list()
+            self.cached_model = models_response.data[0].id
+            return self.cached_model
+        except Exception as e:
+            log.error(f"Failed to fetch Perplexity models: {e}")
+            raise e
 
     async def get_ai_response(self, prompt: str) -> str:
-        """Helper to call OpenAI API using aiohttp to avoid Android rust compilation issues"""
-        if not self.api_keys:
-            return "My OpenAI API keys have not been set up yet! Please configure `OPENAI_API_KEY`."
+        """Helper to call Perplexity Router API"""
+        if not self.client:
+            return "My Perplexity API key has not been set up yet! Please configure `PERPLEXITY_API_KEY`."
             
-        selected_key = random.choice(self.api_keys)
-        headers = {
-            "Authorization": f"Bearer {selected_key}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": "openai/gpt-oss-20b",
-            "messages": [
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": prompt}
-            ],
-            "max_tokens": 1500,
-            "temperature": 0.7
-        }
-        
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post("https://integrate.api.nvidia.com/v1/chat/completions", headers=headers, json=payload) as response:
-                    if response.status != 200:
-                        text = await response.text()
-                        log.error(f"OpenAI API Error ({response.status}): {text}")
-                        if response.status == 401:
-                            return "Error 401: Unauthorized. Please check that your OpenAI API keys are real and valid!"
-                        return f"An error occurred (HTTP {response.status})."
-                        
-                    data = await response.json()
-                    return data["choices"][0]["message"]["content"]
+            model_id = await self.get_model()
+            
+            response = await self.client.chat.completions.create(
+                model=model_id,
+                messages=[
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=1500,
+                temperature=0.7
+            )
+            
+            usage = response.usage
+            prompt_tokens = getattr(usage, 'prompt_tokens', 0)
+            completion_tokens = getattr(usage, 'completion_tokens', 0)
+            log.info(f"Perplexity Router usage: {prompt_tokens} prompt tokens, {completion_tokens} completion tokens.")
+            
+            return response.choices[0].message.content
         except Exception as e:
-            log.error(f"OpenAI API HTTP Error: {e}")
-            return f"An error occurred while contacting the AI: {str(e)}"
+            log.error(f"Perplexity API Error: {e}")
+            error_str = str(e)
+            if "401" in error_str:
+                return "Error 401: Unauthorized. Please check that your PERPLEXITY_API_KEY is real and valid!"
+            elif "429" in error_str:
+                return "Error 429: Rate limited or model overloaded. Please honor the Retry-After header and try again."
+            return f"An error occurred while contacting the AI: {error_str}"
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
