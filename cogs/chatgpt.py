@@ -33,7 +33,7 @@ class ChatGPT(commands.Cog):
             "Content-Type": "application/json"
         }
         payload = {
-            "model": "gpt-4o-mini",
+            "model": "openai/gpt-oss-20b",
             "messages": [
                 {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": prompt}
@@ -44,7 +44,7 @@ class ChatGPT(commands.Cog):
         
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload) as response:
+                async with session.post("https://integrate.api.nvidia.com/v1/chat/completions", headers=headers, json=payload) as response:
                     if response.status != 200:
                         text = await response.text()
                         log.error(f"OpenAI API Error ({response.status}): {text}")
