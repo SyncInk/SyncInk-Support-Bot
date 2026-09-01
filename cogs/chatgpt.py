@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import os
 import random
-from openai import AsyncOpenAI
+import aiohttp
 from utils.logger import log
 
 class ChatGPT(commands.Cog):
@@ -23,27 +23,38 @@ class ChatGPT(commands.Cog):
         )
 
     async def get_ai_response(self, prompt: str) -> str:
-        """Helper to call OpenAI API using a random key from the pool"""
+        """Helper to call OpenAI API using aiohttp to avoid Android rust compilation issues"""
         if not self.api_keys:
             return "My OpenAI API keys have not been set up yet! Please configure `OPENAI_API_KEY`."
             
-        # Rotate keys by picking a random one per request
         selected_key = random.choice(self.api_keys)
-        client = AsyncOpenAI(api_key=selected_key)
+        headers = {
+            "Authorization": f"Bearer {selected_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": 1500,
+            "temperature": 0.7
+        }
         
         try:
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=1500,
-                temperature=0.7
-            )
-            return response.choices[0].message.content
+            async with aiohttp.ClientSession() as session:
+                async with session.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload) as response:
+                    data = await response.json()
+                    
+                    if response.status != 200:
+                        error_msg = data.get("error", {}).get("message", "Unknown error")
+                        log.error(f"OpenAI API Error: {error_msg}")
+                        return f"An error occurred while contacting the AI: {error_msg}"
+                        
+                    return data["choices"][0]["message"]["content"]
         except Exception as e:
-            log.error(f"OpenAI API Error: {e}")
+            log.error(f"OpenAI API HTTP Error: {e}")
             return f"An error occurred while contacting the AI: {str(e)}"
 
     @commands.Cog.listener()
