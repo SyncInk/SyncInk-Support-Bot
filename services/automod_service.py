@@ -106,7 +106,7 @@ class AutomodService:
                 )
                 if message:
                     try:
-                        await message.channel.send(embed=mute_embed, delete_after=15)
+                        await message.channel.send(content=member.mention, embed=mute_embed, delete_after=20)
                     except discord.Forbidden:
                         pass
                 try:
@@ -126,21 +126,21 @@ class AutomodService:
                 case_id = await AutomodService.jail_user(guild, member, bot.user, f"Automod Strike {strike_count} in 24h: {reason}")
                 action_taken = f"Jailed (Strike {strike_count} in 24h)"
                 jail_embed = SyncInkEmbed(
-                    title="<a:refused:1520914088568295564> **Member Jailed**",
+                    title="<a:refused:1520914088568295564> **SECURITY ENFORCEMENT: Member Jailed**",
                     color=ERROR_COLOR
                 )
                 jail_embed.set_author(name=f"{member.display_name} ({member.id})", icon_url=member.display_avatar.url)
                 jail_embed.description = (
                     f"<a:refused:1520914088568295564> **{member.mention} has exceeded maximum allowed violations in 24 hours and has been jailed.**\n\n"
                     f"👤 **Member:** {member.mention}\n"
-                    f"🔒 **Status:** **Jailed** (Roles Restricted)\n"
+                    f"🔒 **Status:** **Jailed** (All server roles stripped)\n"
                     f"⚠️ **Strike Level:** **Strike {strike_count}** (Exceeded 5/5 in 24h)\n"
                     f"📜 **Reason:** **{reason}**\n"
                     f"📩 **Appeals:** Please check your direct messages to submit an appeal."
                 )
                 if message:
                     try:
-                        await message.channel.send(embed=jail_embed, delete_after=15)
+                        await message.channel.send(content=member.mention, embed=jail_embed, delete_after=20)
                     except discord.Forbidden:
                         pass
 

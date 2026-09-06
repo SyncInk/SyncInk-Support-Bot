@@ -53,6 +53,11 @@ class Setup(commands.Cog):
         """Configure the verification log channel (Started, Completed, Failed)."""
         await self._update_log_channel(ctx, "log_channel_verification", channel, "Verification Logs")
 
+    @commands.command(name="set_suggestions_channel", aliases=["set_feature_channel", "set_suggest_channel"], hidden=True)
+    async def set_suggestions_channel(self, ctx: commands.Context, channel: discord.TextChannel):
+        """Configure the feature requests and suggestions channel."""
+        await self._update_log_channel(ctx, "suggestion_channel_id", channel, "Feature Requests Channel")
+
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: commands.CommandError):
         """Handle errors specific to setup commands."""

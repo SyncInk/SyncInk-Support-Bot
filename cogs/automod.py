@@ -15,6 +15,7 @@ class Automod(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.message_cache = {} # {user_id: [ (msg_content, timestamp), ... ]}
+        self.mention_history = {} # {user_id: [ (target_id, timestamp), ... ]}
         self.user_history = collections.defaultdict(lambda: collections.deque(maxlen=30))
         
         # Start background tasks
@@ -80,15 +81,53 @@ class Automod(commands.Cog):
             await AutomodService.add_violation(self.bot, message.guild, message.author, "Duplicate message spam", "Spam Filter", message=message)
             return
 
-        # 2. Mention Spam
-        mention_threshold = settings.get('mention_threshold', 5)
-        if len(message.mentions) >= mention_threshold or message.mention_everyone:
-            try:
-                await message.delete()
-            except (discord.NotFound, discord.Forbidden):
-                pass
-            await AutomodService.add_violation(self.bot, message.guild, message.author, "Mass mention spam", "Mention Filter", message=message)
-            return
+        # 2. Mention Spam & Continuous Mentions
+        if message.mentions or message.mention_everyone:
+            mention_records = self.mention_history.setdefault(message.author.id, [])
+            
+            # Prune records older than 20 seconds
+            self.mention_history[message.author.id] = [
+                m for m in mention_records if now - m[1] < timedelta(seconds=20)
+            ]
+            
+            # Add current mentions to history
+            for m in message.mentions:
+                self.mention_history[message.author.id].append((m.id, now))
+                
+            recent_mentions = self.mention_history[message.author.id]
+            
+            # Check A: Repeatedly mentioning the SAME member across messages (Harassment/Ghost-ping)
+            target_counts = collections.Counter(t_id for t_id, _ in recent_mentions)
+            for target_id, count in target_counts.items():
+                if count >= 3:
+                    self.mention_history[message.author.id] = []
+                    try:
+                        await message.delete()
+                    except (discord.NotFound, discord.Forbidden):
+                        pass
+                    await AutomodService.add_violation(
+                        self.bot, message.guild, message.author, 
+                        "Continuously mentioning the same user", 
+                        "Mention Harassment", 
+                        message=message
+                    )
+                    return
+
+            # Check B: Continuous mass mentions across messages within 20s or single mass mention
+            mention_threshold = settings.get('mention_threshold', 5)
+            if len(recent_mentions) >= mention_threshold or message.mention_everyone or len(message.mentions) >= mention_threshold:
+                self.mention_history[message.author.id] = []
+                try:
+                    await message.delete()
+                except (discord.NotFound, discord.Forbidden):
+                    pass
+                await AutomodService.add_violation(
+                    self.bot, message.guild, message.author, 
+                    "Continuous mention spam across messages", 
+                    "Mention Filter", 
+                    message=message
+                )
+                return
 
         # 3. Discord Invites
         if re.search(r'(discord\.gg/|discordapp\.com/invite/)', content, re.IGNORECASE):
