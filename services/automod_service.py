@@ -9,102 +9,135 @@ from utils.ui import ErrorEmbed, SyncInkEmbed, WARNING_COLOR, ERROR_COLOR
 
 class AutomodService:
     @staticmethod
-    async def get_score(guild_id: int, user_id: int) -> int:
-        record = await db.fetchrow("SELECT points FROM automod_scores WHERE guild_id = $1 AND user_id = $2", guild_id, user_id)
-        return record['points'] if record else 0
+    async def get_user_24h_strikes(guild_id: int, user_id: int) -> int:
+        record = await db.fetchrow("""
+            SELECT COUNT(*) as count FROM automod_violations 
+            WHERE guild_id = $1 AND user_id = $2 
+              AND created_at >= (CURRENT_TIMESTAMP - INTERVAL '24 hours')
+        """, guild_id, user_id)
+        return record['count'] if record else 0
 
     @staticmethod
-    async def add_violation(bot, guild: discord.Guild, member: discord.Member, points: int, reason: str, detection_type: str, message: discord.Message = None):
-        if points <= 0:
-            return None
+    async def get_score(guild_id: int, user_id: int) -> int:
+        return await AutomodService.get_user_24h_strikes(guild_id, user_id)
 
-        # Add points to DB
+    @staticmethod
+    async def add_violation(bot, guild: discord.Guild, member: discord.Member, reason: str, detection_type: str, message: discord.Message = None, points: int = None):
+        # 1. Record violation into persistent history table
         await db.execute("""
-            INSERT INTO automod_scores (guild_id, user_id, points, last_updated)
-            VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-            ON CONFLICT (guild_id, user_id) DO UPDATE 
-            SET points = automod_scores.points + $3, last_updated = CURRENT_TIMESTAMP
-        """, guild.id, member.id, points)
-        
-        total_points = await AutomodService.get_score(guild.id, member.id)
-        
-        # Check punishments
-        punishment = await db.fetchrow("""
-            SELECT action, duration_mins FROM automod_punishments 
-            WHERE guild_id = $1 AND points <= $2 
-            ORDER BY points DESC LIMIT 1
-        """, guild.id, total_points)
-        
-        action_taken = "Logged (No threshold met)"
-        case_id = None
-        duration = None
+            INSERT INTO automod_violations (guild_id, user_id, reason, detection_type, created_at)
+            VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+        """, guild.id, member.id, reason, detection_type)
 
-        if punishment:
-            action = punishment['action'].upper()
-            duration = punishment['duration_mins']
-            
-            try:
-                if action == 'WARN':
-                    case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "WARN (Automod)", reason)
-                    action_taken = "Warned"
+        # 2. Count strikes in rolling 24-hour window
+        strike_count = await AutomodService.get_user_24h_strikes(guild.id, member.id)
+
+        action_taken = "Logged"
+        case_id = None
+
+        # 3. Progressive 24-Hour Strike Tier System:
+        # Strike 1: Normal warning in chat + delete message
+        # Strike 2: 2 mins mute
+        # Strike 3: 10 mins mute
+        # Strike 4: 30 mins mute
+        # Strike 5: 1h 30m (90 mins) mute
+        # Strike 6+: Jail
+        try:
+            if strike_count == 1:
+                case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "WARN (Automod)", f"{reason} [Strike 1/5 (24h)]")
+                action_taken = "Warned (Strike 1/5)"
+                warn_embed = discord.Embed(
+                    title="⚠️ Inappropriate Content Warning",
+                    description=(
+                        f"{member.mention}, please avoid inappropriate language or rule violations!\n"
+                        f"**Reason:** {reason}\n"
+                        f"**Strikes:** 1/5 in the last 24 hours.\n"
+                        f"*Continued violations will result in progressive mutes (2m, 10m, 30m, 1h 30m) and Jail.*"
+                    ),
+                    color=WARNING_COLOR
+                )
+                if message:
                     try:
-                        await member.send(embed=ErrorEmbed(description=f"You have received an automated warning in **{guild.name}**.\nReason: {reason}"))
+                        await message.channel.send(content=member.mention, embed=warn_embed, delete_after=15)
                     except discord.Forbidden:
                         pass
-                
-                elif action == 'TIMEOUT':
-                    duration_td = timedelta(minutes=duration) if duration else timedelta(minutes=5)
-                    await member.timeout(duration_td, reason=reason)
-                    case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "TIMEOUT (Automod)", reason)
-                    action_taken = f"Timed Out ({duration} mins)"
-                    if message:
-                        try:
-                            await message.channel.send(embed=ErrorEmbed(description=f"🔨 {member.mention} has been timed out by Automod for {reason}."), delete_after=15)
-                        except discord.Forbidden:
-                            pass
-                
-                elif action == 'JAIL':
-                    case_id = await AutomodService.jail_user(guild, member, bot.user, reason, duration)
-                    action_taken = f"Jailed"
-                    if message:
-                        try:
-                            await message.channel.send(embed=ErrorEmbed(description=f"🔒 {member.mention} has been jailed by Automod for {reason}."), delete_after=15)
-                        except discord.Forbidden:
-                            pass
-                
-                elif action == 'KICK':
-                    await member.kick(reason=reason)
-                    case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "KICK (Automod)", reason)
-                    action_taken = "Kicked"
-                    if message:
-                        try:
-                            await message.channel.send(embed=ErrorEmbed(description=f"👢 {member.mention} was kicked by Automod for {reason}."), delete_after=15)
-                        except discord.Forbidden:
-                            pass
-                
-                elif action == 'BAN':
-                    await member.ban(reason=reason)
-                    case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "BAN (Automod)", reason)
-                    action_taken = "Banned"
-                    if message:
-                        try:
-                            await message.channel.send(embed=ErrorEmbed(description=f"🔨 {member.mention} was permanently banned by Automod for {reason}."), delete_after=15)
-                        except discord.Forbidden:
-                            pass
-            
-            except discord.Forbidden:
-                action_taken = f"Failed to execute {action} (Missing Permissions)"
-            except Exception as e:
-                log.error(f"Failed to execute automod action {action}: {e}")
-                action_taken = f"Error executing {action}"
+                try:
+                    await member.send(embed=ErrorEmbed(
+                        description=f"You received an automated warning in **{guild.name}**.\n**Reason:** {reason}\n**Strikes:** 1/5 in the last 24 hours."
+                    ))
+                except discord.Forbidden:
+                    pass
+
+            elif strike_count in (2, 3, 4, 5):
+                timeout_map = {
+                    2: (2, "2 minutes", "TIMEOUT 2m (Automod)"),
+                    3: (10, "10 minutes", "TIMEOUT 10m (Automod)"),
+                    4: (30, "30 minutes", "TIMEOUT 30m (Automod)"),
+                    5: (90, "1 hour 30 minutes", "TIMEOUT 1h30m (Automod)")
+                }
+                duration_mins, duration_label, case_action = timeout_map[strike_count]
+                duration_td = timedelta(minutes=duration_mins)
+                await member.timeout(duration_td, reason=f"Automod Strike {strike_count}/5 (24h): {reason}")
+                case_id = await ModService.log_case(guild.id, member.id, bot.user.id, case_action, f"{reason} [Strike {strike_count}/5 (24h)]")
+                action_taken = f"Timed Out ({duration_label} - Strike {strike_count}/5)"
+
+                mute_embed = discord.Embed(
+                    title="🔇 Member Muted",
+                    description=(
+                        f"{member.mention} has been muted for **{duration_label}**.\n"
+                        f"**Reason:** {reason}\n"
+                        f"**Strikes:** {strike_count}/5 in last 24 hours."
+                        + ("\n⚠️ **FINAL WARNING:** Next violation within 24 hours will result in Jail!" if strike_count == 5 else "")
+                    ),
+                    color=ERROR_COLOR
+                )
+                if message:
+                    try:
+                        await message.channel.send(embed=mute_embed, delete_after=15)
+                    except discord.Forbidden:
+                        pass
+                try:
+                    await member.send(embed=ErrorEmbed(
+                        description=(
+                            f"You have been muted in **{guild.name}** for **{duration_label}**.\n"
+                            f"**Reason:** {reason}\n"
+                            f"**Strikes:** {strike_count}/5 in the last 24 hours."
+                            + ("\n**FINAL WARNING:** Any further violation within 24 hours will result in Jail!" if strike_count == 5 else "")
+                        )
+                    ))
+                except discord.Forbidden:
+                    pass
+
+            else: # strike_count >= 6
+                case_id = await AutomodService.jail_user(guild, member, bot.user, f"Automod Strike {strike_count} in 24h: {reason}")
+                action_taken = f"Jailed (Strike {strike_count} in 24h)"
+                jail_embed = discord.Embed(
+                    title="🔒 Member Jailed",
+                    description=(
+                        f"{member.mention} has exceeded the maximum allowed violations within 24 hours (**Strike {strike_count}**) and has been sent to jail.\n"
+                        f"**Reason:** {reason}"
+                    ),
+                    color=ERROR_COLOR
+                )
+                if message:
+                    try:
+                        await message.channel.send(embed=jail_embed, delete_after=15)
+                    except discord.Forbidden:
+                        pass
+
+        except discord.Forbidden:
+            action_taken = f"Failed (Missing Permissions for Strike {strike_count})"
+        except Exception as e:
+            log.error(f"Failed to execute automod action for strike {strike_count}: {e}")
+            action_taken = f"Error (Strike {strike_count}: {e})"
 
         # Dispatch Log
         original_message = message.content if message else None
         jump_url = message.jump_url if message else None
-        await AutomodService._dispatch_log(bot, guild, member, action_taken, detection_type, reason, total_points, case_id, original_message, jump_url)
+        await AutomodService._dispatch_log(bot, guild, member, action_taken, detection_type, reason, strike_count, case_id, original_message, jump_url)
 
     @staticmethod
-    async def _dispatch_log(bot, guild, member, action, detection, reason, score, case_id, message_content, jump_url):
+    async def _dispatch_log(bot, guild, member, action, detection, reason, strike_count, case_id, message_content, jump_url):
         settings = await SettingsService.get_guild_settings(guild.id)
         log_chan_id = settings.get("automod_log_channel_id") or settings.get("log_channel_moderation")
         if not log_chan_id:
@@ -118,7 +151,7 @@ class AutomodService:
         embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
         embed.add_field(name="Action Taken", value=action, inline=True)
         embed.add_field(name="Detection", value=detection, inline=True)
-        embed.add_field(name="Current Score", value=f"{score} Points", inline=True)
+        embed.add_field(name="24h Strikes", value=f"{strike_count} Violation(s)", inline=True)
         embed.add_field(name="Reason", value=reason, inline=False)
         
         if message_content:
@@ -212,25 +245,8 @@ class AutomodService:
 
     @staticmethod
     async def point_decay_task():
-        # Decay points globally based on settings
-        records = await db.fetch("SELECT guild_id, point_decay_rate, point_decay_hours FROM guild_settings WHERE automod_enabled = TRUE AND point_decay_rate > 0")
-        for settings in records:
-            guild_id = settings['guild_id']
-            rate = settings['point_decay_rate']
-            hours = settings['point_decay_hours'] or 24
-            
-            # Find scores that haven't been updated in `hours` and have points > 0
-            # To simulate decay perfectly: We will just deduct `rate` points if `last_updated` is older than `hours`
-            # and set `last_updated` to CURRENT_TIMESTAMP so it waits another 24h.
-            
-            await db.execute("""
-                UPDATE automod_scores
-                SET points = GREATEST(points - $1, 0),
-                    last_updated = CURRENT_TIMESTAMP
-                WHERE guild_id = $2 
-                  AND points > 0 
-                  AND last_updated <= (CURRENT_TIMESTAMP - INTERVAL '1 hour' * $3)
-            """, rate, guild_id, hours)
+        # Retired in favor of rolling 24-hour progressive violation window.
+        pass
 
     @staticmethod
     async def check_timed_jails(bot):

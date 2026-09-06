@@ -12,6 +12,11 @@ class AdvancedLogging(commands.Cog):
         settings = await SettingsService.get_guild_settings(guild_id)
         channel_id = settings.get(key)
         if not channel_id:
+            if key == "log_channel_server":
+                channel_id = settings.get("log_channel_channel") or settings.get("log_channel_role")
+            elif key == "log_channel_channel":
+                channel_id = settings.get("log_channel_server")
+        if not channel_id:
             return
             
         guild = self.bot.get_guild(guild_id)
@@ -177,16 +182,32 @@ class AdvancedLogging(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel: discord.abc.GuildChannel):
+        if isinstance(channel, discord.CategoryChannel):
+            embed = SyncInkEmbed(title="Category Created", color=SUCCESS_COLOR)
+            embed.add_field(name="Category Name", value=channel.name, inline=True)
+            embed.add_field(name="Category ID", value=str(channel.id), inline=True)
+            await self._send_log(channel.guild.id, "log_channel_server", embed)
+            return
+
         embed = SyncInkEmbed(title="Channel Created", color=SUCCESS_COLOR)
         embed.add_field(name="Channel", value=channel.mention, inline=True)
         embed.add_field(name="Category", value=channel.category.name if channel.category else "None", inline=True)
+        embed.add_field(name="Channel Type", value=str(channel.type).capitalize(), inline=True)
         await self._send_log(channel.guild.id, "log_channel_server", embed)
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel: discord.abc.GuildChannel):
+        if isinstance(channel, discord.CategoryChannel):
+            embed = SyncInkEmbed(title="Category Deleted", color=ERROR_COLOR)
+            embed.add_field(name="Category Name", value=channel.name, inline=True)
+            embed.add_field(name="Category ID", value=str(channel.id), inline=True)
+            await self._send_log(channel.guild.id, "log_channel_server", embed)
+            return
+
         embed = SyncInkEmbed(title="Channel Deleted", color=ERROR_COLOR)
         embed.add_field(name="Channel Name", value=channel.name, inline=True)
         embed.add_field(name="Category", value=channel.category.name if channel.category else "None", inline=True)
+        embed.add_field(name="Channel Type", value=str(channel.type).capitalize(), inline=True)
         await self._send_log(channel.guild.id, "log_channel_server", embed)
 
 

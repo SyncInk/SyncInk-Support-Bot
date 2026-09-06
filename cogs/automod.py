@@ -18,23 +18,10 @@ class Automod(commands.Cog):
         self.user_history = collections.defaultdict(lambda: collections.deque(maxlen=30))
         
         # Start background tasks
-        self.point_decay_loop.start()
         self.timed_jail_loop.start()
 
     def cog_unload(self):
-        self.point_decay_loop.cancel()
         self.timed_jail_loop.cancel()
-
-    @tasks.loop(minutes=30)
-    async def point_decay_loop(self):
-        try:
-            await AutomodService.point_decay_task()
-        except Exception as e:
-            log.error(f"Point decay task failed: {e}")
-
-    @point_decay_loop.before_loop
-    async def before_point_decay(self):
-        await self.bot.wait_until_ready()
 
     @tasks.loop(minutes=1)
     async def timed_jail_loop(self):
@@ -75,41 +62,57 @@ class Automod(commands.Cog):
         spam_threshold = settings.get('spam_threshold', 5)
         if len(recent_msgs) >= spam_threshold:
             self.message_cache[message.author.id] = [] # Reset
-            await message.delete()
-            await AutomodService.add_violation(self.bot, message.guild, message.author, 3, "Message spam (Rapid messaging)", "Spam Filter", message=message)
+            try:
+                await message.delete()
+            except (discord.NotFound, discord.Forbidden):
+                pass
+            await AutomodService.add_violation(self.bot, message.guild, message.author, "Message spam (Rapid messaging)", "Spam Filter", message=message)
             return
 
         # Duplicate detection (same content repeated)
         duplicates = [m for m in recent_msgs if m[0] == content]
         if len(duplicates) >= 3:
             self.message_cache[message.author.id] = []
-            await message.delete()
-            await AutomodService.add_violation(self.bot, message.guild, message.author, 4, "Duplicate message spam", "Spam Filter", message=message)
+            try:
+                await message.delete()
+            except (discord.NotFound, discord.Forbidden):
+                pass
+            await AutomodService.add_violation(self.bot, message.guild, message.author, "Duplicate message spam", "Spam Filter", message=message)
             return
 
         # 2. Mention Spam
         mention_threshold = settings.get('mention_threshold', 5)
         if len(message.mentions) >= mention_threshold or message.mention_everyone:
-            await message.delete()
-            await AutomodService.add_violation(self.bot, message.guild, message.author, 8, "Mass mention spam", "Mention Filter", message=message)
+            try:
+                await message.delete()
+            except (discord.NotFound, discord.Forbidden):
+                pass
+            await AutomodService.add_violation(self.bot, message.guild, message.author, "Mass mention spam", "Mention Filter", message=message)
             return
 
         # 3. Discord Invites
         if re.search(r'(discord\.gg/|discordapp\.com/invite/)', content, re.IGNORECASE):
-            await message.delete()
-            await AutomodService.add_violation(self.bot, message.guild, message.author, 5, "Posted unauthorized Discord invite", "Link Filter", message=message)
+            try:
+                await message.delete()
+            except (discord.NotFound, discord.Forbidden):
+                pass
+            await AutomodService.add_violation(self.bot, message.guild, message.author, "Posted unauthorized Discord invite", "Link Filter", message=message)
             return
 
         # 4. Caps Spam
         if len(content) > 15:
             upper_count = sum(1 for c in content if c.isupper())
             if upper_count / len(content) > 0.7:
-                await message.delete()
+                try:
+                    await message.delete()
+                except (discord.NotFound, discord.Forbidden):
+                    pass
         # 5. One-character message block
         if len(content.strip()) == 1:
-            await message.delete()
-            # We don't necessarily want to give points for a typo, but we block it as requested
-            # await AutomodService.add_violation(self.bot, message.guild, message.author, 1, "One-character spam", "Spam Filter", message=message)
+            try:
+                await message.delete()
+            except (discord.NotFound, discord.Forbidden):
+                pass
             return
 
         # 6. Bad Words & Slurs Filter (Massive List)
@@ -122,22 +125,19 @@ class Automod(commands.Cog):
             # \b matches word boundaries
             pattern = r'\b' + re.escape(bad_word) + r'\b'
             if re.search(pattern, content_lower):
-                await message.delete()
-                warn_embed = discord.Embed(description=f"<a:syncwarning:1520914584012328961> **Please avoid inappropriate language. Continued violations may result in moderation action. Check https://discord.com/channels/1520457643842342912/1520460587522330634**", color=0xff0000)
                 try:
-                    await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
-                except discord.Forbidden:
+                    await message.delete()
+                except (discord.NotFound, discord.Forbidden):
                     pass
-                await AutomodService.add_violation(self.bot, message.guild, message.author, 20, "Triggered bad words filter", "Content Filter", message=message)
+                await AutomodService.add_violation(self.bot, message.guild, message.author, "Inappropriate language / Bad words", "Content Filter", message=message)
                 return
 
         # 7. DB Blacklist & Scam checks
         from database import db
-        blacklisted = await db.fetch("SELECT pattern, points, match_type FROM automod_blacklist WHERE guild_id = $1", message.guild.id)
+        blacklisted = await db.fetch("SELECT pattern, match_type FROM automod_blacklist WHERE guild_id = $1", message.guild.id)
         for row in blacklisted:
             pattern = row['pattern']
             match_type = row['match_type']
-            pts = row['points']
             
             matched = False
             if match_type == 'exact' and pattern.lower() == content.lower():
@@ -152,13 +152,11 @@ class Automod(commands.Cog):
                     pass
             
             if matched:
-                await message.delete()
-                warn_embed = discord.Embed(description=f"<a:syncwarning:1520914584012328961> **Please avoid inappropriate language. Continued violations may result in moderation action. Check https://discord.com/channels/1520457643842342912/1520460587522330634**", color=0xff0000)
                 try:
-                    await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
-                except discord.Forbidden:
+                    await message.delete()
+                except (discord.NotFound, discord.Forbidden):
                     pass
-                await AutomodService.add_violation(self.bot, message.guild, message.author, pts, f"Triggered blacklist filter: {pattern}", "Content Filter", message=message)
+                await AutomodService.add_violation(self.bot, message.guild, message.author, f"Triggered blacklist filter: {pattern}", "Content Filter", message=message)
                 return
 
 
