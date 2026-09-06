@@ -1,4 +1,5 @@
 import discord
+import asyncio
 from discord.ext import commands
 from services.settings_service import SettingsService
 from utils.ui import SyncInkEmbed, BRAND_ACCENT, SUCCESS_COLOR, ERROR_COLOR, WARNING_COLOR
@@ -7,6 +8,7 @@ from utils.logger import log
 class AdvancedLogging(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self._role_update_buffers = {}
 
     async def _send_log(self, guild_id: int, key: str, embed: discord.Embed):
         settings = await SettingsService.get_guild_settings(guild_id)
@@ -121,20 +123,48 @@ class AdvancedLogging(commands.Cog):
             embed.add_field(name="After", value=after.nick or after.name, inline=True)
             await self._send_log(after.guild.id, "log_channel_member", embed)
             
-        # Role Logs
+        # Role Logs (Debounced to coalesce multiple role changes into a single message)
         if set(before.roles) != set(after.roles):
-            added_roles = [r for r in after.roles if r not in before.roles]
-            removed_roles = [r for r in before.roles if r not in after.roles]
-            
-            embed = SyncInkEmbed(title="Member Roles Updated", color=BRAND_ACCENT)
-            embed.set_author(name=f"{after} ({after.id})", icon_url=after.display_avatar.url)
-            
-            if added_roles:
-                embed.add_field(name="Roles Added", value=" ".join([r.mention for r in added_roles]), inline=False)
-            if removed_roles:
-                embed.add_field(name="Roles Removed", value=" ".join([r.mention for r in removed_roles]), inline=False)
-                
-            await self._send_log(after.guild.id, "log_channel_server", embed)
+            key = (after.guild.id, after.id)
+            if key in self._role_update_buffers:
+                self._role_update_buffers[key]["after"] = set(after.roles)
+                self._role_update_buffers[key]["member"] = after
+            else:
+                task = asyncio.create_task(self._flush_role_updates(key))
+                self._role_update_buffers[key] = {
+                    "before": set(before.roles),
+                    "after": set(after.roles),
+                    "member": after,
+                    "task": task
+                }
+
+    async def _flush_role_updates(self, key: tuple):
+        await asyncio.sleep(1.5)
+        buffer = self._role_update_buffers.pop(key, None)
+        if not buffer:
+            return
+
+        before_roles = buffer["before"]
+        after_roles = buffer["after"]
+        member = buffer["member"]
+
+        added_roles = [r for r in after_roles if r not in before_roles]
+        removed_roles = [r for r in before_roles if r not in after_roles]
+
+        if not added_roles and not removed_roles:
+            return
+
+        embed = SyncInkEmbed(title="🛡️ **Member Roles Updated**", color=BRAND_ACCENT)
+        embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
+
+        if added_roles:
+            added_roles.sort(key=lambda r: r.position, reverse=True)
+            embed.add_field(name="<a:approved:1520913982678896670> **Roles Added**", value=" ".join([r.mention for r in added_roles]), inline=False)
+        if removed_roles:
+            removed_roles.sort(key=lambda r: r.position, reverse=True)
+            embed.add_field(name="<a:refused:1520914088568295564> **Roles Removed**", value=" ".join([r.mention for r in removed_roles]), inline=False)
+
+        await self._send_log(member.guild.id, "log_channel_server", embed)
 
     # ==========================
     # VOICE LOGS
@@ -148,15 +178,15 @@ class AdvancedLogging(commands.Cog):
         embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
         
         if before.channel is None and after.channel is not None:
-            embed.title = "Joined Voice Channel"
+            embed.title = "<a:approved:1520913982678896670> **Joined Voice Channel**"
             embed.color = SUCCESS_COLOR
             embed.add_field(name="Channel", value=after.channel.mention, inline=False)
         elif before.channel is not None and after.channel is None:
-            embed.title = "Left Voice Channel"
+            embed.title = "<a:refused:1520914088568295564> **Left Voice Channel**"
             embed.color = ERROR_COLOR
             embed.add_field(name="Channel", value=before.channel.mention, inline=False)
         else:
-            embed.title = "Moved Voice Channel"
+            embed.title = "🔊 **Moved Voice Channel**"
             embed.color = WARNING_COLOR
             embed.add_field(name="Before", value=before.channel.mention, inline=True)
             embed.add_field(name="After", value=after.channel.mention, inline=True)
@@ -168,14 +198,14 @@ class AdvancedLogging(commands.Cog):
     # ==========================
     @commands.Cog.listener()
     async def on_guild_role_create(self, role: discord.Role):
-        embed = SyncInkEmbed(title="Role Created", color=SUCCESS_COLOR)
+        embed = SyncInkEmbed(title="<a:approved:1520913982678896670> **Role Created**", color=SUCCESS_COLOR)
         embed.add_field(name="Role", value=role.mention, inline=True)
         embed.add_field(name="ID", value=str(role.id), inline=True)
         await self._send_log(role.guild.id, "log_channel_server", embed)
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role: discord.Role):
-        embed = SyncInkEmbed(title="Role Deleted", color=ERROR_COLOR)
+        embed = SyncInkEmbed(title="<a:refused:1520914088568295564> **Role Deleted**", color=ERROR_COLOR)
         embed.add_field(name="Role Name", value=role.name, inline=True)
         embed.add_field(name="ID", value=str(role.id), inline=True)
         await self._send_log(role.guild.id, "log_channel_server", embed)
@@ -183,13 +213,13 @@ class AdvancedLogging(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel: discord.abc.GuildChannel):
         if isinstance(channel, discord.CategoryChannel):
-            embed = SyncInkEmbed(title="Category Created", color=SUCCESS_COLOR)
+            embed = SyncInkEmbed(title="<a:approved:1520913982678896670> **Category Created**", color=SUCCESS_COLOR)
             embed.add_field(name="Category Name", value=channel.name, inline=True)
             embed.add_field(name="Category ID", value=str(channel.id), inline=True)
             await self._send_log(channel.guild.id, "log_channel_server", embed)
             return
 
-        embed = SyncInkEmbed(title="Channel Created", color=SUCCESS_COLOR)
+        embed = SyncInkEmbed(title="<a:approved:1520913982678896670> **Channel Created**", color=SUCCESS_COLOR)
         embed.add_field(name="Channel", value=channel.mention, inline=True)
         embed.add_field(name="Category", value=channel.category.name if channel.category else "None", inline=True)
         embed.add_field(name="Channel Type", value=str(channel.type).capitalize(), inline=True)
@@ -198,13 +228,13 @@ class AdvancedLogging(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel: discord.abc.GuildChannel):
         if isinstance(channel, discord.CategoryChannel):
-            embed = SyncInkEmbed(title="Category Deleted", color=ERROR_COLOR)
+            embed = SyncInkEmbed(title="<a:refused:1520914088568295564> **Category Deleted**", color=ERROR_COLOR)
             embed.add_field(name="Category Name", value=channel.name, inline=True)
             embed.add_field(name="Category ID", value=str(channel.id), inline=True)
             await self._send_log(channel.guild.id, "log_channel_server", embed)
             return
 
-        embed = SyncInkEmbed(title="Channel Deleted", color=ERROR_COLOR)
+        embed = SyncInkEmbed(title="<a:refused:1520914088568295564> **Channel Deleted**", color=ERROR_COLOR)
         embed.add_field(name="Channel Name", value=channel.name, inline=True)
         embed.add_field(name="Category", value=channel.category.name if channel.category else "None", inline=True)
         embed.add_field(name="Channel Type", value=str(channel.type).capitalize(), inline=True)

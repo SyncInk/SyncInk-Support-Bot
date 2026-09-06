@@ -46,15 +46,18 @@ class AutomodService:
             if strike_count == 1:
                 case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "WARN (Automod)", f"{reason} [Strike 1/5 (24h)]")
                 action_taken = "Warned (Strike 1/5)"
-                warn_embed = discord.Embed(
-                    title="⚠️ Inappropriate Content Warning",
-                    description=(
-                        f"{member.mention}, please avoid inappropriate language or rule violations!\n"
-                        f"**Reason:** {reason}\n"
-                        f"**Strikes:** 1/5 in the last 24 hours.\n"
-                        f"*Continued violations will result in progressive mutes (2m, 10m, 30m, 1h 30m) and Jail.*"
-                    ),
+                warn_embed = SyncInkEmbed(
+                    title="<a:syncwarning:1520914584012328961> **Inappropriate Content Warning**",
                     color=WARNING_COLOR
+                )
+                warn_embed.set_author(name=f"{member.display_name} ({member.id})", icon_url=member.display_avatar.url)
+                warn_embed.description = (
+                    f"<a:syncwarning:1520914584012328961> **Please avoid inappropriate language!** "
+                    f"Continued violations will result in progressive timeouts and jail.\n"
+                    f"Check the server rules: [Server Rules](https://discord.com/channels/1520457643842342912/1520460587522330634)\n\n"
+                    f"👤 **Member:** {member.mention}\n"
+                    f"⚠️ **Strike Level:** **1/5** (Last 24 Hours)\n"
+                    f"📜 **Reason:** **{reason}**"
                 )
                 if message:
                     try:
@@ -63,7 +66,8 @@ class AutomodService:
                         pass
                 try:
                     await member.send(embed=ErrorEmbed(
-                        description=f"You received an automated warning in **{guild.name}**.\n**Reason:** {reason}\n**Strikes:** 1/5 in the last 24 hours."
+                        description=f"You received an automated warning in **{guild.name}**.\n**Reason:** {reason}\n**Strikes:** 1/5 in the last 24 hours.",
+                        resolution="Please review the server rules: https://discord.com/channels/1520457643842342912/1520460587522330634"
                     ))
                 except discord.Forbidden:
                     pass
@@ -81,15 +85,24 @@ class AutomodService:
                 case_id = await ModService.log_case(guild.id, member.id, bot.user.id, case_action, f"{reason} [Strike {strike_count}/5 (24h)]")
                 action_taken = f"Timed Out ({duration_label} - Strike {strike_count}/5)"
 
-                mute_embed = discord.Embed(
-                    title="🔇 Member Muted",
-                    description=(
-                        f"{member.mention} has been muted for **{duration_label}**.\n"
-                        f"**Reason:** {reason}\n"
-                        f"**Strikes:** {strike_count}/5 in last 24 hours."
-                        + ("\n⚠️ **FINAL WARNING:** Next violation within 24 hours will result in Jail!" if strike_count == 5 else "")
-                    ),
+                final_notice = (
+                    f"\n\n<a:syncalert:1520914681231839313> **FINAL WARNING:** Next violation within 24 hours will result in **Jail**!"
+                    if strike_count == 5 else ""
+                )
+
+                mute_embed = SyncInkEmbed(
+                    title="<a:syncwarning:1520914584012328961> **Member Muted**",
                     color=ERROR_COLOR
+                )
+                mute_embed.set_author(name=f"{member.display_name} ({member.id})", icon_url=member.display_avatar.url)
+                mute_embed.description = (
+                    f"<a:syncwarning:1520914584012328961> **{member.mention} has been muted for {duration_label}.**\n\n"
+                    f"👤 **Member:** {member.mention}\n"
+                    f"⏳ **Duration:** **{duration_label}**\n"
+                    f"⚠️ **Strike Level:** **{strike_count}/5** (Last 24 Hours)\n"
+                    f"📜 **Reason:** **{reason}**\n"
+                    f"🔗 **Rules:** [Server Rules](https://discord.com/channels/1520457643842342912/1520460587522330634)"
+                    f"{final_notice}"
                 )
                 if message:
                     try:
@@ -102,8 +115,9 @@ class AutomodService:
                             f"You have been muted in **{guild.name}** for **{duration_label}**.\n"
                             f"**Reason:** {reason}\n"
                             f"**Strikes:** {strike_count}/5 in the last 24 hours."
-                            + ("\n**FINAL WARNING:** Any further violation within 24 hours will result in Jail!" if strike_count == 5 else "")
-                        )
+                            + ("\n\n**FINAL WARNING:** Any further violation within 24 hours will result in Jail!" if strike_count == 5 else "")
+                        ),
+                        resolution="Please review the server rules: https://discord.com/channels/1520457643842342912/1520460587522330634"
                     ))
                 except discord.Forbidden:
                     pass
@@ -111,13 +125,18 @@ class AutomodService:
             else: # strike_count >= 6
                 case_id = await AutomodService.jail_user(guild, member, bot.user, f"Automod Strike {strike_count} in 24h: {reason}")
                 action_taken = f"Jailed (Strike {strike_count} in 24h)"
-                jail_embed = discord.Embed(
-                    title="🔒 Member Jailed",
-                    description=(
-                        f"{member.mention} has exceeded the maximum allowed violations within 24 hours (**Strike {strike_count}**) and has been sent to jail.\n"
-                        f"**Reason:** {reason}"
-                    ),
+                jail_embed = SyncInkEmbed(
+                    title="<a:refused:1520914088568295564> **Member Jailed**",
                     color=ERROR_COLOR
+                )
+                jail_embed.set_author(name=f"{member.display_name} ({member.id})", icon_url=member.display_avatar.url)
+                jail_embed.description = (
+                    f"<a:refused:1520914088568295564> **{member.mention} has exceeded maximum allowed violations in 24 hours and has been jailed.**\n\n"
+                    f"👤 **Member:** {member.mention}\n"
+                    f"🔒 **Status:** **Jailed** (Roles Restricted)\n"
+                    f"⚠️ **Strike Level:** **Strike {strike_count}** (Exceeded 5/5 in 24h)\n"
+                    f"📜 **Reason:** **{reason}**\n"
+                    f"📩 **Appeals:** Please check your direct messages to submit an appeal."
                 )
                 if message:
                     try:
@@ -147,12 +166,12 @@ class AutomodService:
         if not channel:
             return
 
-        embed = SyncInkEmbed(title="Automod Incident", color=ERROR_COLOR)
+        embed = SyncInkEmbed(title="<a:syncalert:1520914681231839313> **Automod Security Incident**", color=ERROR_COLOR)
         embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
-        embed.add_field(name="Action Taken", value=action, inline=True)
-        embed.add_field(name="Detection", value=detection, inline=True)
-        embed.add_field(name="24h Strikes", value=f"{strike_count} Violation(s)", inline=True)
-        embed.add_field(name="Reason", value=reason, inline=False)
+        embed.add_field(name="<a:refused:1520914088568295564> **Action Taken**", value=f"**{action}**", inline=True)
+        embed.add_field(name="🛡️ **Detection**", value=f"**{detection}**", inline=True)
+        embed.add_field(name="<a:syncwarning:1520914584012328961> **24h Strikes**", value=f"**{strike_count} Violation(s)**", inline=True)
+        embed.add_field(name="📜 **Reason**", value=f"**{reason}**", inline=False)
         
         if message_content:
             embed.add_field(name="Original Message", value=f"```\n{message_content[:1000]}\n```", inline=False)
@@ -165,6 +184,8 @@ class AutomodService:
             await channel.send(embed=embed)
         except discord.Forbidden:
             pass
+        
+
 
     @staticmethod
     async def jail_user(guild: discord.Guild, member: discord.Member, moderator: discord.Member, reason: str, duration_mins: int = None) -> int:
