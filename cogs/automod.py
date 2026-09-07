@@ -109,6 +109,11 @@ class Automod(commands.Cog):
                 await message.delete()
             except (discord.NotFound, discord.Forbidden):
                 pass
+
+            # Server Owner exemption: strictly delete the message without any warnings, strikes, timeouts, or jail
+            if message.author.id == message.guild.owner_id:
+                return
+
             await AutomodService.add_violation(
                 self.bot, message.guild, message.author, 
                 f"Inappropriate language / Bad words: {bad_word_hit}", 
@@ -143,6 +148,11 @@ class Automod(commands.Cog):
                     await message.delete()
                 except (discord.NotFound, discord.Forbidden):
                     pass
+
+                # Server Owner exemption: strictly delete the message without any warnings, strikes, timeouts, or jail
+                if message.author.id == message.guild.owner_id:
+                    return
+
                 await AutomodService.add_violation(
                     self.bot, message.guild, message.author, 
                     f"Triggered blacklist filter: {pattern}", 

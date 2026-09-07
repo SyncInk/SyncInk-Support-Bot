@@ -46,6 +46,9 @@ class AutomodService:
 
     @staticmethod
     async def add_violation(bot, guild: discord.Guild, member: discord.Member, reason: str, detection_type: str, message: discord.Message = None, points: int = None):
+        if member.id == guild.owner_id:
+            return  # Server owner is strictly immune to warnings, strikes, timeouts, and jail
+
         # 1. Record violation into persistent history table
         await db.execute("""
             INSERT INTO automod_violations (guild_id, user_id, reason, detection_type, created_at)
@@ -237,6 +240,9 @@ class AutomodService:
 
     @staticmethod
     async def jail_user(guild: discord.Guild, member: discord.Member, moderator: discord.Member, reason: str, duration_mins: int = None) -> int:
+        if member.id == guild.owner_id:
+            raise Exception("Cannot jail the server owner.")
+
         settings = await SettingsService.get_guild_settings(guild.id)
         jail_role_id = settings.get('jail_role_id')
         if not jail_role_id:
