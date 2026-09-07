@@ -22,6 +22,20 @@ class AutomodService:
         return await AutomodService.get_user_24h_strikes(guild_id, user_id)
 
     @staticmethod
+    async def is_user_jailed(guild: discord.Guild, member: discord.Member) -> bool:
+        settings = await SettingsService.get_guild_settings(guild.id)
+        jail_role_id = settings.get('jail_role_id')
+        if jail_role_id and any(r.id == int(jail_role_id) for r in member.roles):
+            return True
+        if any("jail" in r.name.lower() for r in member.roles):
+            return True
+        active_jail = await db.fetchrow(
+            "SELECT id FROM automod_jails WHERE guild_id = $1 AND user_id = $2 AND (release_at IS NULL OR release_at > CURRENT_TIMESTAMP)",
+            guild.id, member.id
+        )
+        return bool(active_jail)
+
+    @staticmethod
     async def add_violation(bot, guild: discord.Guild, member: discord.Member, reason: str, detection_type: str, message: discord.Message = None, points: int = None):
         # 1. Record violation into persistent history table
         await db.execute("""
@@ -123,26 +137,51 @@ class AutomodService:
                     pass
 
             else: # strike_count >= 6
-                case_id = await AutomodService.jail_user(guild, member, bot.user, f"Automod Strike {strike_count} in 24h: {reason}")
-                action_taken = f"Jailed (Strike {strike_count} in 24h)"
-                jail_embed = SyncInkEmbed(
-                    title="<a:refused:1520914088568295564> **SECURITY ENFORCEMENT: Member Jailed**",
-                    color=ERROR_COLOR
-                )
-                jail_embed.set_author(name=f"{member.display_name} ({member.id})", icon_url=member.display_avatar.url)
-                jail_embed.description = (
-                    f"<a:refused:1520914088568295564> **{member.mention} has exceeded maximum allowed violations in 24 hours and has been jailed.**\n\n"
-                    f"👤 **Member:** {member.mention}\n"
-                    f"🔒 **Status:** **Jailed** (All server roles stripped)\n"
-                    f"⚠️ **Strike Level:** **Strike {strike_count}** (Exceeded 5/5 in 24h)\n"
-                    f"📜 **Reason:** **{reason}**\n"
-                    f"📩 **Appeals:** Please check your direct messages to submit an appeal."
-                )
-                if message:
-                    try:
-                        await message.channel.send(content=member.mention, embed=jail_embed, delete_after=20)
-                    except discord.Forbidden:
-                        pass
+                if await AutomodService.is_user_jailed(guild, member):
+                    # User is already jailed and continuing to violate/spam: apply strict 2-hour timeout
+                    duration_td = timedelta(hours=2)
+                    await member.timeout(duration_td, reason=f"Jailed repeat violation (Strike {strike_count} in 24h): {reason}")
+                    case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "TIMEOUT 2h (Jailed Repeat)", f"{reason} [Strike {strike_count} in 24h]")
+                    action_taken = f"Timed Out 2h (Jailed Repeat - Strike {strike_count})"
+                    repeat_embed = SyncInkEmbed(
+                        title="<a:syncalert:1520914681231839313> **SECURITY ENFORCEMENT: Jailed Member Timed Out**",
+                        color=ERROR_COLOR
+                    )
+                    repeat_embed.set_author(name=f"{member.display_name} ({member.id})", icon_url=member.display_avatar.url)
+                    repeat_embed.description = (
+                        f"<a:syncalert:1520914681231839313> **{member.mention} is already jailed and has been timed out for 2 hours for repeated infractions.**\n\n"
+                        f"👤 **Member:** {member.mention}\n"
+                        f"⏳ **Duration:** **2 Hours**\n"
+                        f"🔒 **Status:** **Jailed + Timed Out**\n"
+                        f"⚠️ **Strike Level:** **Strike {strike_count}** (Exceeded 5/5 in 24h)\n"
+                        f"📜 **Reason:** **{reason}**"
+                    )
+                    if message:
+                        try:
+                            await message.channel.send(content=member.mention, embed=repeat_embed, delete_after=25)
+                        except discord.Forbidden:
+                            pass
+                else:
+                    case_id = await AutomodService.jail_user(guild, member, bot.user, f"Automod Strike {strike_count} in 24h: {reason}")
+                    action_taken = f"Jailed (Strike {strike_count} in 24h)"
+                    jail_embed = SyncInkEmbed(
+                        title="<a:refused:1520914088568295564> **SECURITY ENFORCEMENT: Member Jailed**",
+                        color=ERROR_COLOR
+                    )
+                    jail_embed.set_author(name=f"{member.display_name} ({member.id})", icon_url=member.display_avatar.url)
+                    jail_embed.description = (
+                        f"<a:refused:1520914088568295564> **{member.mention} has exceeded maximum allowed violations in 24 hours and has been jailed.**\n\n"
+                        f"👤 **Member:** {member.mention}\n"
+                        f"🔒 **Status:** **Jailed** (All server roles stripped)\n"
+                        f"⚠️ **Strike Level:** **Strike {strike_count}** (Exceeded 5/5 in 24h)\n"
+                        f"📜 **Reason:** **{reason}**\n"
+                        f"📩 **Appeals:** Please check your direct messages to submit an appeal."
+                    )
+                    if message:
+                        try:
+                            await message.channel.send(content=member.mention, embed=jail_embed, delete_after=20)
+                        except discord.Forbidden:
+                            pass
 
         except discord.Forbidden:
             action_taken = f"Failed (Missing Permissions for Strike {strike_count})"
@@ -198,11 +237,15 @@ class AutomodService:
         if not jail_role:
             raise Exception("Jail role could not be found.")
 
-        # Snapshot current roles
+        jail_role_id_int = int(jail_role_id) if jail_role_id else None
+
+        # Snapshot current roles (strictly exclude any jail roles so unjailing never re-jails)
         stored_roles = []
         roles_to_remove = []
         for role in member.roles:
             if role.id != guild.default_role.id and not role.is_integration() and not role.is_premium_subscriber() and role < guild.me.top_role:
+                if (jail_role_id_int and role.id == jail_role_id_int) or ("jail" in role.name.lower()):
+                    continue
                 stored_roles.append(str(role.id))
                 roles_to_remove.append(role)
 
@@ -248,18 +291,32 @@ class AutomodService:
 
         settings = await SettingsService.get_guild_settings(guild.id)
         jail_role_id = settings.get('jail_role_id')
-        if jail_role_id:
-            jail_role = guild.get_role(int(jail_role_id))
-            if jail_role:
-                await member.remove_roles(jail_role, reason="Unjailed")
+        jail_role_id_int = int(jail_role_id) if jail_role_id else None
 
-        if jail_record['previous_roles']:
-            role_ids = [int(rid) for rid in jail_record['previous_roles'].split(',')]
-            roles_to_add = [guild.get_role(rid) for rid in role_ids if guild.get_role(rid)]
+        # Remove configured jail role and ANY role containing 'jail' in name
+        roles_to_strip = []
+        for r in member.roles:
+            if (jail_role_id_int and r.id == jail_role_id_int) or ("jail" in r.name.lower()):
+                roles_to_strip.append(r)
+        if roles_to_strip:
             try:
-                await member.add_roles(*roles_to_add, reason="Unjailed - Restoring Roles")
+                await member.remove_roles(*roles_to_strip, reason="Unjailed")
             except discord.Forbidden:
                 pass
+
+        if jail_record['previous_roles']:
+            role_ids = [int(rid) for rid in jail_record['previous_roles'].split(',') if rid.strip()]
+            roles_to_add = [
+                guild.get_role(rid) for rid in role_ids 
+                if guild.get_role(rid) 
+                and not (jail_role_id_int and rid == jail_role_id_int) 
+                and not ("jail" in guild.get_role(rid).name.lower())
+            ]
+            if roles_to_add:
+                try:
+                    await member.add_roles(*roles_to_add, reason="Unjailed - Restoring Roles")
+                except discord.Forbidden:
+                    pass
 
         await db.execute("DELETE FROM automod_jails WHERE id = $1", jail_record['id'])
         await ModService.log_case(guild.id, member.id, moderator.id, "UNJAIL", reason)

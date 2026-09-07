@@ -94,11 +94,16 @@ class SuggestionVoteView(discord.ui.View):
         await interaction.followup.send(resp_msg, ephemeral=True)
 
 
+REQUIRED_SUGGESTION_CHANNEL_ID = 1546548728721178724
+
 class Feedback(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     async def _resolve_suggestion_channel(self, guild: discord.Guild) -> discord.TextChannel:
+        ch = guild.get_channel(REQUIRED_SUGGESTION_CHANNEL_ID)
+        if ch:
+            return ch
         settings = await SettingsService.get_guild_settings(guild.id)
         chan_id = settings.get("suggestion_channel_id")
         if chan_id:
@@ -139,7 +144,7 @@ class Feedback(commands.Cog):
         embed.add_field(name="📊 **Status**", value="🟡 **Pending Review**", inline=True)
         embed.add_field(
             name="🗳️ **Community Votes**", 
-            value="<a:approved:1520913982678896670> **0** Upvotes   •   <a:refused:1520914088568295564> **0** Downvotes", 
+            value="<a:approved:1520914088568295564> **0** Upvotes   •   <a:refused:1520914088568295564> **0** Downvotes", 
             inline=False
         )
         embed.set_footer(text=f"SyncInk Platform • Request #{request_id}", icon_url="https://files.catbox.moe/74l9su.png")
@@ -163,11 +168,33 @@ class Feedback(commands.Cog):
     @app_commands.command(name="suggest", description="Submit a feature request or suggestion for the platform.")
     @app_commands.describe(title="Short title for your request", description="Detailed explanation of the feature or idea")
     async def suggest(self, interaction: discord.Interaction, title: str, description: str):
+        if interaction.channel_id != REQUIRED_SUGGESTION_CHANNEL_ID:
+            embed = SyncInkEmbed(
+                title="<a:refused:1520914088568295564> **Channel Restriction**",
+                color=ERROR_COLOR
+            )
+            embed.description = (
+                f"<a:refused:1520914088568295564> **This command can only be used in <#{REQUIRED_SUGGESTION_CHANNEL_ID}>.**\n\n"
+                f"Please navigate to <#{REQUIRED_SUGGESTION_CHANNEL_ID}> to submit your feature request or suggestion."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
         await self._process_suggestion(interaction, title, description)
 
     @app_commands.command(name="feature_request", description="Submit a formal feature request with community voting.")
     @app_commands.describe(title="Short title for your request", description="Detailed explanation of the feature or idea")
     async def feature_request(self, interaction: discord.Interaction, title: str, description: str):
+        if interaction.channel_id != REQUIRED_SUGGESTION_CHANNEL_ID:
+            embed = SyncInkEmbed(
+                title="<a:refused:1520914088568295564> **Channel Restriction**",
+                color=ERROR_COLOR
+            )
+            embed.description = (
+                f"<a:refused:1520914088568295564> **This command can only be used in <#{REQUIRED_SUGGESTION_CHANNEL_ID}>.**\n\n"
+                f"Please navigate to <#{REQUIRED_SUGGESTION_CHANNEL_ID}> to submit your feature request or suggestion."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
         await self._process_suggestion(interaction, title, description)
 
     @app_commands.command(name="set_suggestion_status", description="Update the status of a feature request (Staff Only).")

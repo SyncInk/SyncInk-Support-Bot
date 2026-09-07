@@ -2,9 +2,10 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from services.settings_service import SettingsService
-from utils.ui import SyncInkEmbed, SuccessEmbed, ErrorEmbed, BRAND_ACCENT, SUCCESS_COLOR, WARNING_COLOR
+from utils.ui import SyncInkEmbed, SuccessEmbed, ErrorEmbed, BRAND_ACCENT, SUCCESS_COLOR, WARNING_COLOR, ERROR_COLOR
 from utils.permissions import has_permission
 from utils.logger import log
+from database import db
 import re
 
 class VerificationView(discord.ui.View):
@@ -46,6 +47,50 @@ class VerificationView(discord.ui.View):
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
             
+        # Check if user is jailed (Active jail in DB or possessing jail role)
+        jail_role_id = settings.get("jail_role_id")
+        is_jailed = False
+        if jail_role_id and any(r.id == int(jail_role_id) for r in interaction.user.roles):
+            is_jailed = True
+        elif any("jail" in r.name.lower() for r in interaction.user.roles):
+            is_jailed = True
+        else:
+            active_jail = await db.fetchrow(
+                "SELECT id FROM automod_jails WHERE guild_id = $1 AND user_id = $2 AND (release_at IS NULL OR release_at > CURRENT_TIMESTAMP)",
+                interaction.guild.id, interaction.user.id
+            )
+            if active_jail:
+                is_jailed = True
+
+        if is_jailed:
+            # Strip verified role if user somehow possesses it
+            if role and role in interaction.user.roles:
+                try:
+                    await interaction.user.remove_roles(role, reason="Jailed member attempted verification")
+                except discord.Forbidden:
+                    pass
+
+            # Re-apply jail role if missing
+            if jail_role_id:
+                jail_role = interaction.guild.get_role(int(jail_role_id))
+                if jail_role and jail_role not in interaction.user.roles:
+                    try:
+                        await interaction.user.add_roles(jail_role, reason="Re-applying jail role on verification attempt")
+                    except discord.Forbidden:
+                        pass
+
+            denied_embed = SyncInkEmbed(
+                title="<a:refused:1520914088568295564> **Verification Denied**",
+                color=ERROR_COLOR
+            )
+            denied_embed.description = (
+                f"<a:refused:1520914088568295564> **Access Denied: You are currently Jailed.**\n\n"
+                f"You cannot complete verification or access the server while serving a disciplinary jail sentence.\n"
+                f"If you wish to appeal your penalty, please use the official appeal channel or contact the administration team."
+            )
+            await interaction.response.send_message(embed=denied_embed, ephemeral=True)
+            return
+
         if role in interaction.user.roles:
             embed = SyncInkEmbed(title="Already Verified", description="You already possess the verification role and full access to the server.")
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -125,6 +170,14 @@ class Security(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         if member.bot:
+            return
+
+        # Check if user is currently jailed - if so, do not assign unverified role or trigger verification
+        active_jail = await db.fetchrow(
+            "SELECT id FROM automod_jails WHERE guild_id = $1 AND user_id = $2 AND (release_at IS NULL OR release_at > CURRENT_TIMESTAMP)",
+            member.guild.id, member.id
+        )
+        if active_jail:
             return
             
         settings = await SettingsService.get_guild_settings(member.guild.id)
