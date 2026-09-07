@@ -25,15 +25,24 @@ class AutomodService:
     async def is_user_jailed(guild: discord.Guild, member: discord.Member) -> bool:
         settings = await SettingsService.get_guild_settings(guild.id)
         jail_role_id = settings.get('jail_role_id')
-        if jail_role_id and any(r.id == int(jail_role_id) for r in member.roles):
-            return True
-        if any("jail" in r.name.lower() for r in member.roles):
-            return True
-        active_jail = await db.fetchrow(
-            "SELECT id FROM automod_jails WHERE guild_id = $1 AND user_id = $2 AND (release_at IS NULL OR release_at > CURRENT_TIMESTAMP)",
-            guild.id, member.id
-        )
-        return bool(active_jail)
+        jail_role_id_int = int(jail_role_id) if jail_role_id else None
+
+        has_jail_role = False
+        if jail_role_id_int and any(r.id == jail_role_id_int for r in member.roles):
+            has_jail_role = True
+        elif any("jail" in r.name.lower() for r in member.roles):
+            has_jail_role = True
+
+        # A member currently in the server is ONLY jailed if they actively possess the jail role.
+        # If they do not have the jail role, clean up any stale automod_jails records to prevent phantom jail status.
+        if not has_jail_role:
+            try:
+                await db.execute("DELETE FROM automod_jails WHERE guild_id = $1 AND user_id = $2", guild.id, member.id)
+            except Exception:
+                pass
+            return False
+
+        return True
 
     @staticmethod
     async def add_violation(bot, guild: discord.Guild, member: discord.Member, reason: str, detection_type: str, message: discord.Message = None, points: int = None):

@@ -32,6 +32,28 @@ def normalize_content(text: str) -> str:
     t = re.sub(r'([a-z0-9])[\s/\\._\-*~`!@#$%^&=+]+(?=[a-z0-9])', r'\1', t)
     return t
 
+def is_ticket_channel(channel) -> bool:
+    """Checks if a channel or thread is an appeal or ticket channel."""
+    name = getattr(channel, 'name', '').lower()
+    if any(k in name for k in ['ticket', 'appeal', 'unjail']):
+        return True
+
+    if isinstance(channel, discord.Thread):
+        parent = channel.parent
+        if parent:
+            p_name = parent.name.lower()
+            if any(k in p_name for k in ['ticket', 'appeal', 'unjail']):
+                return True
+            p_cat = getattr(parent, 'category', None)
+            if p_cat and any(k in p_cat.name.lower() for k in ['ticket', 'appeal', 'unjail', 'jail']):
+                return True
+
+    category = getattr(channel, 'category', None)
+    if category and any(k in category.name.lower() for k in ['ticket', 'appeal', 'unjail', 'jail']):
+        return True
+
+    return False
+
 class Automod(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -136,76 +158,12 @@ class Automod(commands.Cog):
         if message.author.guild_permissions.manage_messages:
             return
 
-        # -------------------------------------------------------------
-        # 3. SPAM DETECTION (Rapid messaging & Duplicates)
-        # With strict 2h timeout punishment if user is already jailed (e.g. spamming in ticket/appeal channel)
-        # -------------------------------------------------------------
         now = datetime.utcnow()
-        user_cache = self.message_cache.setdefault(message.author.id, [])
-        user_cache.append((content, now))
-        
-        # Prune cache > 10 seconds old
-        self.message_cache[message.author.id] = [m for m in user_cache if now - m[1] < timedelta(seconds=10)]
-        recent_msgs = self.message_cache[message.author.id]
-        
-        spam_threshold = settings.get('spam_threshold', 5)
-        is_spam = len(recent_msgs) >= spam_threshold
-        duplicates = [m for m in recent_msgs if m[0] == content]
-        is_duplicate = len(duplicates) >= 3
-
-        if is_spam or is_duplicate:
-            self.message_cache[message.author.id] = [] # Reset cache
-            try:
-                await message.delete()
-            except (discord.NotFound, discord.Forbidden):
-                pass
-
-            # Check if user is ALREADY JAILED (e.g., ticket channel spam abuse)
-            if await AutomodService.is_user_jailed(message.guild, message.author):
-                try:
-                    await message.author.timeout(
-                        timedelta(hours=2), 
-                        reason="Non-stop spamming while jailed / Ticket appeal abuse"
-                    )
-                except discord.Forbidden:
-                    pass
-
-                abuse_embed = SyncInkEmbed(
-                    title="<a:syncalert:1520914681231839313> **TICKET ABUSE ENFORCEMENT: Jailed Member Timed Out**",
-                    color=ERROR_COLOR
-                )
-                abuse_embed.set_author(name=f"{message.author.display_name} ({message.author.id})", icon_url=message.author.display_avatar.url)
-                abuse_embed.description = (
-                    f"<a:syncalert:1520914681231839313> **{message.author.mention} is currently jailed and has been timed out for 2 hours for continuous spamming.**\n\n"
-                    f"👤 **Member:** {message.author.mention}\n"
-                    f"🔒 **Status:** **Jailed + Timed Out (2 Hours)**\n"
-                    f"⚠️ **Infraction:** Ticket / Channel Spam Abuse\n"
-                    f"🚫 **Penalty:** All server messaging privileges suspended for 2 hours."
-                )
-                try:
-                    await message.channel.send(content=message.author.mention, embed=abuse_embed, delete_after=25)
-                except discord.Forbidden:
-                    pass
-
-                await AutomodService._dispatch_log(
-                    self.bot, message.guild, message.author, 
-                    "Timed Out 2h (Jailed Ticket Spam)", 
-                    "Spam Abuse Filter", 
-                    "Non-stop spamming while jailed", 
-                    strike_count=6, 
-                    case_id=None, 
-                    message_content=message.content, 
-                    jump_url=message.jump_url
-                )
-                return
-
-            spam_reason = "Duplicate message spam" if is_duplicate else "Message spam (Rapid messaging)"
-            await AutomodService.add_violation(self.bot, message.guild, message.author, spam_reason, "Spam Filter", message=message)
-            return
 
         # -------------------------------------------------------------
-        # 4. MENTION SPAM & CONTINUOUS MENTIONS
-        # Warn with syncwarning emoji in one single sentence in an embedded message
+        # 3. MENTION HARASSMENT & CONTINUOUS MENTIONS
+        # Checked BEFORE general spam/duplicate detection so repeated pings
+        # receive the single-sentence warning embed instead of duplicate spam
         # -------------------------------------------------------------
         if message.mentions or message.mention_everyone:
             mention_records = self.mention_history.setdefault(message.author.id, [])
@@ -253,6 +211,72 @@ class Automod(commands.Cog):
                     message=None
                 )
                 return
+
+        # -------------------------------------------------------------
+        # 4. SPAM DETECTION (Rapid messaging & Duplicates)
+        # -------------------------------------------------------------
+        user_cache = self.message_cache.setdefault(message.author.id, [])
+        user_cache.append((content, now))
+        
+        # Prune cache > 10 seconds old
+        self.message_cache[message.author.id] = [m for m in user_cache if now - m[1] < timedelta(seconds=10)]
+        recent_msgs = self.message_cache[message.author.id]
+        
+        spam_threshold = settings.get('spam_threshold', 5)
+        is_spam = len(recent_msgs) >= spam_threshold
+        duplicates = [m for m in recent_msgs if m[0] == content]
+        is_duplicate = len(duplicates) >= 3
+
+        if is_spam or is_duplicate:
+            self.message_cache[message.author.id] = [] # Reset cache
+            try:
+                await message.delete()
+            except (discord.NotFound, discord.Forbidden):
+                pass
+
+            # STRICT TICKET ABUSE CHECK: ONLY if user is currently jailed AND channel is an appeal/ticket channel/thread
+            if is_ticket_channel(message.channel) and await AutomodService.is_user_jailed(message.guild, message.author):
+                try:
+                    await message.author.timeout(
+                        timedelta(hours=2), 
+                        reason="Non-stop spamming while jailed / Ticket appeal abuse"
+                    )
+                except discord.Forbidden:
+                    pass
+
+                abuse_embed = SyncInkEmbed(
+                    title="<a:syncalert:1520914681231839313> **TICKET ABUSE ENFORCEMENT: Jailed Member Timed Out**",
+                    color=ERROR_COLOR
+                )
+                abuse_embed.set_author(name=f"{message.author.display_name} ({message.author.id})", icon_url=message.author.display_avatar.url)
+                abuse_embed.description = (
+                    f"<a:syncalert:1520914681231839313> **{message.author.mention} is currently jailed and has been timed out for 2 hours for continuous spamming in a ticket/appeal channel.**\n\n"
+                    f"👤 **Member:** {message.author.mention}\n"
+                    f"🔒 **Status:** **Jailed + Timed Out (2 Hours)**\n"
+                    f"⚠️ **Infraction:** Ticket / Appeal Spam Abuse\n"
+                    f"🚫 **Penalty:** All server messaging privileges suspended for 2 hours."
+                )
+                try:
+                    await message.channel.send(content=message.author.mention, embed=abuse_embed, delete_after=25)
+                except discord.Forbidden:
+                    pass
+
+                await AutomodService._dispatch_log(
+                    self.bot, message.guild, message.author, 
+                    "Timed Out 2h (Jailed Ticket Spam)", 
+                    "Spam Abuse Filter", 
+                    "Non-stop spamming in ticket while jailed", 
+                    strike_count=6, 
+                    case_id=None, 
+                    message_content=message.content, 
+                    jump_url=message.jump_url
+                )
+                return
+
+            # Standard channels (e.g. #general): Progressive 24h strike escalation (warn, 2m, 10m, 30m, 90m, jail)
+            spam_reason = "Duplicate message spam" if is_duplicate else "Message spam (Rapid messaging)"
+            await AutomodService.add_violation(self.bot, message.guild, message.author, spam_reason, "Spam Filter", message=message)
+            return
 
         # -------------------------------------------------------------
         # 5. DISCORD INVITES
