@@ -284,27 +284,25 @@ class Settings(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="config", description="Manage server settings via the interactive dashboard.")
-    @app_commands.default_permissions(administrator=True)
-    @has_permission(administrator=True)
-    async def config(self, interaction: discord.Interaction):
+    @commands.command(name="config", description="Manage server settings via the interactive dashboard.")
+    @commands.has_permissions(administrator=True)
+    async def config(self, ctx: commands.Context):
         embed = SyncInkEmbed(title="Platform Dashboard")
         embed.set_author(name="SyncInk Administration", icon_url="https://syncink.xyz/assets/logo.png")
         embed.description = "Welcome to the control panel. Use the dropdown below to navigate and configure your server."
         embed.add_field(name="Status", value="All Systems Operational", inline=False)
         
         view = ConfigDashboardView().prepare_initial()
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await ctx.send(embed=embed, view=view)
         
-    @app_commands.command(name="onboard", description="Initialize SyncInk and start the guided setup.")
-    @app_commands.default_permissions(administrator=True)
-    @has_permission(administrator=True)
-    async def onboard(self, interaction: discord.Interaction):
+    @commands.command(name="onboard", description="Initialize SyncInk and start the guided setup.")
+    @commands.has_permissions(administrator=True)
+    async def onboard(self, ctx: commands.Context):
         embed = SyncInkEmbed(title="Welcome to SyncInk")
         embed.description = "Thank you for trusting the SyncInk Support Platform. To secure your community, please complete the initial setup."
-        embed.add_field(name="Setup Guide", value="1. Run the `/config` command.\n2. Navigate to **Security** and set Verified & Unverified roles.\n3. Enable Verification.\n4. Configure your Welcome channel.", inline=False)
+        embed.add_field(name="Setup Guide", value="1. Run the `?config` command.\n2. Navigate to **Security** and set Verified & Unverified roles.\n3. Enable Verification.\n4. Configure your Welcome channel.", inline=False)
         
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await ctx.send(embed=embed)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Settings(bot))

@@ -24,140 +24,118 @@ class Moderation(commands.Cog):
             except discord.Forbidden:
                 pass
 
-    @app_commands.command(name="warn", description="Issue a formal warning to a server member.")
-    @app_commands.default_permissions(moderate_members=True)
-    @has_permission(moderate_members=True)
-    async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str):
-        case_id = await ModService.log_case(interaction.guild.id, member.id, interaction.user.id, "WARN", reason)
-        
-        try:
-            embed = ErrorEmbed(
-                description=f"You have received a formal warning in **{interaction.guild.name}**.",
-                resolution="Please review the server rules to avoid further moderation actions."
-            )
-            embed.title = "Official Warning"
-            embed.add_field(name="Reason", value=reason, inline=False)
-            await member.send(embed=embed)
-        except discord.Forbidden:
-            pass
-
-        await interaction.response.send_message(embed=SuccessEmbed(f"Warning issued to {member.mention} for: `{reason}`"), ephemeral=True)
+    @commands.command(name="warn", description="Issue a formal warning to a server member.")
+    @commands.has_permissions(moderate_members=True)
+    async def warn(self, ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
+        case_id = await ModService.log_case(ctx.guild.id, member.id, ctx.author.id, "WARN", reason)
+        await ctx.send(embed=SuccessEmbed(f"Warning issued to {member.mention} for: `{reason}`"))
         
         # Dispatch log
         log_embed = SyncInkEmbed(title="Member Warned", color=WARNING_COLOR)
         log_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
-        log_embed.add_field(name="Moderator", value=interaction.user.mention, inline=True)
+        log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
         log_embed.add_field(name="Reason", value=reason, inline=False)
-        await self._dispatch_mod_log(interaction.guild, log_embed)
+        log_embed.set_footer(text=f"Case ID: {case_id}")
+        await self._dispatch_mod_log(ctx.guild, log_embed)
 
-
-    @app_commands.command(name="timeout", description="Temporarily restrict a member's chat access.")
-    @app_commands.default_permissions(moderate_members=True)
-    @has_permission(moderate_members=True)
-    async def timeout(self, interaction: discord.Interaction, member: discord.Member, duration_minutes: int, reason: str):
+    @commands.command(name="timeout", aliases=["mute"], description="Temporarily restrict a member's chat access.")
+    @commands.has_permissions(moderate_members=True)
+    async def timeout(self, ctx: commands.Context, member: discord.Member, duration_minutes: int, *, reason: str = "No reason provided"):
         try:
             duration = timedelta(minutes=duration_minutes)
             await member.timeout(duration, reason=reason)
-            await ModService.log_case(interaction.guild.id, member.id, interaction.user.id, "TIMEOUT", reason)
+            case_id = await ModService.log_case(ctx.guild.id, member.id, ctx.author.id, "TIMEOUT", reason)
             
             embed = SuccessEmbed(f"{member.mention} has been timed out for {duration_minutes} minutes.")
             embed.add_field(name="Reason", value=reason, inline=False)
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await ctx.send(embed=embed)
             
             # Dispatch log
             log_embed = SyncInkEmbed(title="Member Timed Out", color=WARNING_COLOR)
             log_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
             log_embed.add_field(name="Duration", value=f"{duration_minutes} minutes", inline=True)
-            log_embed.add_field(name="Moderator", value=interaction.user.mention, inline=True)
+            log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
             log_embed.add_field(name="Reason", value=reason, inline=False)
-            await self._dispatch_mod_log(interaction.guild, log_embed)
+            log_embed.set_footer(text=f"Case ID: {case_id}")
+            await self._dispatch_mod_log(ctx.guild, log_embed)
 
         except discord.Forbidden:
             embed = ErrorEmbed(
                 description="Failed to timeout member due to role hierarchy constraints.",
                 resolution="Ensure the bot's role is positioned higher than the target member's top role."
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            
-    @app_commands.command(name="kick", description="Kick a member from the server.")
-    @app_commands.default_permissions(kick_members=True)
-    @has_permission(kick_members=True)
-    async def kick(self, interaction: discord.Interaction, member: discord.Member, reason: str):
+            await ctx.send(embed=embed)
+
+    @commands.command(name="kick", description="Kick a member from the server.")
+    @commands.has_permissions(kick_members=True)
+    async def kick(self, ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
         try:
             await member.kick(reason=reason)
-            await ModService.log_case(interaction.guild.id, member.id, interaction.user.id, "KICK", reason)
+            case_id = await ModService.log_case(ctx.guild.id, member.id, ctx.author.id, "KICK", reason)
             
-            await interaction.response.send_message(embed=SuccessEmbed(f"{member.mention} has been kicked."), ephemeral=True)
+            await ctx.send(embed=SuccessEmbed(f"{member.mention} has been kicked."))
             
             log_embed = SyncInkEmbed(title="Member Kicked", color=ERROR_COLOR)
             log_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
-            log_embed.add_field(name="Moderator", value=interaction.user.mention, inline=True)
+            log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
             log_embed.add_field(name="Reason", value=reason, inline=False)
-            await self._dispatch_mod_log(interaction.guild, log_embed)
+            log_embed.set_footer(text=f"Case ID: {case_id}")
+            await self._dispatch_mod_log(ctx.guild, log_embed)
         except discord.Forbidden:
-            await interaction.response.send_message(embed=ErrorEmbed("Cannot kick this member due to role hierarchy."), ephemeral=True)
+            await ctx.send(embed=ErrorEmbed("Cannot kick this member due to role hierarchy."))
 
-    @app_commands.command(name="ban", description="Ban a member from the server.")
-    @app_commands.default_permissions(ban_members=True)
-    @has_permission(ban_members=True)
-    async def ban(self, interaction: discord.Interaction, member: discord.Member, reason: str):
+    @commands.command(name="ban", description="Ban a member from the server.")
+    @commands.has_permissions(ban_members=True)
+    async def ban(self, ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
         try:
-            # Try to send a DM before banning
-            try:
-                dm_embed = ErrorEmbed(
-                    description=f"You were banned in **{interaction.guild.name}**.",
-                    resolution="You cannot fix this. Bans are permanent."
-                )
-                dm_embed.title = "Official Ban Notice"
-                dm_embed.add_field(name="Reason", value=reason, inline=False)
-                await member.send(embed=dm_embed)
-            except discord.Forbidden:
-                pass
-
             await member.ban(reason=reason)
-            await ModService.log_case(interaction.guild.id, member.id, interaction.user.id, "BAN", reason)
+            case_id = await ModService.log_case(ctx.guild.id, member.id, ctx.author.id, "BAN", reason)
             
-            await interaction.response.send_message(embed=SuccessEmbed(f"{member.mention} has been banned."), ephemeral=True)
+            await ctx.send(embed=SuccessEmbed(f"{member.mention} has been banned."))
             
             log_embed = SyncInkEmbed(title="Member Banned", color=ERROR_COLOR)
             log_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
-            log_embed.add_field(name="Moderator", value=interaction.user.mention, inline=True)
+            log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
             log_embed.add_field(name="Reason", value=reason, inline=False)
-            await self._dispatch_mod_log(interaction.guild, log_embed)
+            log_embed.set_footer(text=f"Case ID: {case_id}")
+            await self._dispatch_mod_log(ctx.guild, log_embed)
         except discord.Forbidden:
-            await interaction.response.send_message(embed=ErrorEmbed("Cannot ban this member due to role hierarchy."), ephemeral=True)
+            await ctx.send(embed=ErrorEmbed("Cannot ban this member due to role hierarchy."))
 
-    @app_commands.command(name="unban", description="Unban a user from the server.")
-    @app_commands.default_permissions(ban_members=True)
-    @has_permission(ban_members=True)
-    async def unban(self, interaction: discord.Interaction, user_id: str, reason: str):
+    @commands.command(name="unban", description="Unban a user from the server.")
+    @commands.has_permissions(ban_members=True)
+    async def unban(self, ctx: commands.Context, user_id: int, *, reason: str = "No reason provided"):
         try:
-            user = await self.bot.fetch_user(int(user_id))
-            await interaction.guild.unban(user, reason=reason)
-            await ModService.log_case(interaction.guild.id, user.id, interaction.user.id, "UNBAN", reason)
+            user = await self.bot.fetch_user(user_id)
+            await ctx.guild.unban(user, reason=reason)
+            case_id = await ModService.log_case(ctx.guild.id, user.id, ctx.author.id, "UNBAN", reason)
             
-            await interaction.response.send_message(embed=SuccessEmbed(f"{user.mention} has been unbanned."), ephemeral=True)
+            await ctx.send(embed=SuccessEmbed(f"{user.mention} has been unbanned."))
             
+            from utils.ui import SUCCESS_COLOR
             log_embed = SyncInkEmbed(title="Member Unbanned", color=SUCCESS_COLOR)
             log_embed.set_author(name=f"{user} ({user.id})", icon_url=user.display_avatar.url)
-            log_embed.add_field(name="Moderator", value=interaction.user.mention, inline=True)
+            log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
             log_embed.add_field(name="Reason", value=reason, inline=False)
-            await self._dispatch_mod_log(interaction.guild, log_embed)
+            log_embed.set_footer(text=f"Case ID: {case_id}")
+            await self._dispatch_mod_log(ctx.guild, log_embed)
         except discord.NotFound:
-            await interaction.response.send_message(embed=ErrorEmbed("User not found or not banned."), ephemeral=True)
+            await ctx.send(embed=ErrorEmbed("User not found or not banned."))
         except Exception as e:
-            await interaction.response.send_message(embed=ErrorEmbed(f"Failed to unban: {e}"), ephemeral=True)
+            await ctx.send(embed=ErrorEmbed(f"Failed to unban: {e}"))
 
-    @app_commands.command(name="purge", description="Bulk delete recent messages in the current channel.")
-    @app_commands.default_permissions(manage_messages=True)
-    @has_permission(manage_messages=True)
-    async def purge(self, interaction: discord.Interaction, amount: app_commands.Range[int, 1, 100]):
-        await interaction.response.defer(ephemeral=True)
+    @commands.command(name="purge", aliases=["clear"], description="Bulk delete recent messages in the current channel.")
+    @commands.has_permissions(manage_messages=True)
+    async def purge(self, ctx: commands.Context, amount: int = 10):
+        if amount < 1 or amount > 100:
+            await ctx.send(embed=ErrorEmbed("Please specify an amount between 1 and 100."))
+            return
         try:
-            deleted = await interaction.channel.purge(limit=amount)
-            await interaction.followup.send(embed=SuccessEmbed(f"Successfully deleted {len(deleted)} messages from this channel."))
+            deleted = await ctx.channel.purge(limit=amount + 1)
+            msg = await ctx.send(embed=SuccessEmbed(f"Successfully deleted {len(deleted) - 1} messages."))
+            await msg.delete(delay=5)
         except Exception as e:
-            await interaction.followup.send(embed=ErrorEmbed(description="An error occurred while purging messages.", resolution=f"Details: `{e}`"))
+            await ctx.send(embed=ErrorEmbed(description="An error occurred while purging messages.", resolution=f"Details: `{e}`"))
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Moderation(bot))

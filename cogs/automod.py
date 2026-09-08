@@ -359,42 +359,49 @@ class Automod(commands.Cog):
             await member.kick(reason="Anti-Raid Emergency Mode: Account too new.")
             log.warning(f"Kicked {member.id} via Anti-Raid Mode.")
 
-    @app_commands.command(name="jail", description="Manually jail a user, restricting their server access.")
-    @app_commands.default_permissions(moderate_members=True)
-    @has_permission(moderate_members=True)
-    async def jail(self, interaction: discord.Interaction, member: discord.Member, reason: str, duration_mins: int = None):
+    @commands.command(name="jail", description="Manually jail a user, restricting their server access.")
+    @commands.has_permissions(moderate_members=True)
+    async def jail(self, ctx: commands.Context, member: discord.Member, *args):
+        duration_mins = None
+        reason = "No reason provided"
+        if args:
+            if args[0].isdigit():
+                duration_mins = int(args[0])
+                if len(args) > 1:
+                    reason = " ".join(args[1:])
+            else:
+                reason = " ".join(args)
+
         try:
-            await AutomodService.jail_user(interaction.guild, member, interaction.user, reason, duration_mins)
+            await AutomodService.jail_user(ctx.guild, member, ctx.author, reason, duration_mins)
             from utils.ui import SuccessEmbed
-            await interaction.response.send_message(embed=SuccessEmbed(f"Successfully jailed {member.mention}."), ephemeral=True)
+            await ctx.send(embed=SuccessEmbed(f"Successfully jailed {member.mention}."))
         except Exception as e:
             from utils.ui import ErrorEmbed
-            await interaction.response.send_message(embed=ErrorEmbed(description="Failed to jail member.", resolution=str(e)), ephemeral=True)
+            await ctx.send(embed=ErrorEmbed(description="Failed to jail member.", resolution=str(e)))
 
-    @app_commands.command(name="unjail", description="Release a user from jail and restore their roles.")
-    @app_commands.default_permissions(moderate_members=True)
-    @has_permission(moderate_members=True)
-    async def unjail(self, interaction: discord.Interaction, member: discord.Member, reason: str):
+    @commands.command(name="unjail", description="Release a user from jail and restore their roles.")
+    @commands.has_permissions(moderate_members=True)
+    async def unjail(self, ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
         try:
-            await AutomodService.unjail_user(interaction.guild, member, interaction.user, reason)
+            await AutomodService.unjail_user(ctx.guild, member, ctx.author, reason)
             from utils.ui import SuccessEmbed
-            await interaction.response.send_message(embed=SuccessEmbed(f"Successfully unjailed {member.mention}."), ephemeral=True)
+            await ctx.send(embed=SuccessEmbed(f"Successfully unjailed {member.mention}."))
         except Exception as e:
             from utils.ui import ErrorEmbed
-            await interaction.response.send_message(embed=ErrorEmbed(description="Failed to unjail member.", resolution=str(e)), ephemeral=True)
+            await ctx.send(embed=ErrorEmbed(description="Failed to unjail member.", resolution=str(e)))
 
-    @app_commands.command(name="history", description="Get a text file of a user's last 30 messages.")
-    @app_commands.default_permissions(moderate_members=True)
-    @has_permission(moderate_members=True)
-    async def history(self, interaction: discord.Interaction, member: discord.Member):
+    @commands.command(name="history", description="Get a text file of a user's last 30 messages.")
+    @commands.has_permissions(moderate_members=True)
+    async def history(self, ctx: commands.Context, member: discord.Member):
         msgs = self.user_history.get(member.id, [])
         if not msgs:
-            await interaction.response.send_message("No recent messages found for this user in memory.", ephemeral=True)
+            await ctx.send("No recent messages found for this user in memory.")
             return
             
         content = "\n".join(msgs)
         file = discord.File(io.BytesIO(content.encode('utf-8')), filename=f"{member.name}_history.txt")
-        await interaction.response.send_message(f"Recent message history for {member.mention}:", file=file, ephemeral=True)
+        await ctx.send(f"Recent message history for {member.mention}:", file=file)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Automod(bot))

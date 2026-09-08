@@ -115,11 +115,61 @@ class WebhookCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="webhook_post", description="Post a custom message using a webhook (useful for FAQs/Guides).")
-    @app_commands.default_permissions(administrator=True)
-    @has_permission(administrator=True)
-    async def webhook_post(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(WebhookModal())
+    @commands.command(name="webhook_post", description="Post a custom message using a webhook (useful for FAQs/Guides).")
+    @commands.has_permissions(administrator=True)
+    async def webhook_post(self, ctx: commands.Context, *, content: str = None):
+        if not content:
+            await ctx.send(embed=ErrorEmbed(
+                description="Please provide content for the webhook post.",
+                resolution="Format: `?webhook_post <Message Content>` or `?webhook_post Name | AvatarURL | Message`"
+            ))
+            return
+
+        name = "SyncInk"
+        avatar_url = None
+        msg_content = content
+
+        if "|" in content:
+            parts = [p.strip() for p in content.split("|")]
+            if len(parts) >= 3:
+                name = parts[0]
+                avatar_url = parts[1] if parts[1].startswith("http") else None
+                msg_content = "|".join(parts[2:]).strip()
+            elif len(parts) == 2:
+                name = parts[0]
+                msg_content = parts[1].strip()
+
+        try:
+            webhooks = await ctx.channel.webhooks()
+            webhook = next((wh for wh in webhooks if wh.user == self.bot.user), None)
+            
+            if not webhook:
+                webhook = await ctx.channel.create_webhook(name="SyncInk Webhook")
+
+            kwargs = {"username": name}
+            if avatar_url:
+                kwargs["avatar_url"] = avatar_url
+
+            chunks = split_message(msg_content)
+            for i, chunk in enumerate(chunks):
+                kwargs["content"] = chunk
+                try:
+                    await webhook.send(**kwargs)
+                except Exception as e:
+                    await ctx.send(embed=ErrorEmbed(description=f"Failed to post part {i+1} out of {len(chunks)}.", resolution=str(e)))
+                    return
+            
+            plural = "message" if len(chunks) == 1 else "messages"
+            try:
+                await ctx.message.delete()
+            except Exception:
+                pass
+            msg = await ctx.send(embed=SuccessEmbed(f"Successfully posted custom webhook across {len(chunks)} {plural}."))
+            await msg.delete(delay=5)
+        except discord.Forbidden:
+            await ctx.send(embed=ErrorEmbed("I don't have permission to manage webhooks in this channel."))
+        except Exception as e:
+            await ctx.send(embed=ErrorEmbed(description="Failed to prepare webhook.", resolution=str(e)))
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(WebhookCog(bot))

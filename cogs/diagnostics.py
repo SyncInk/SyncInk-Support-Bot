@@ -11,10 +11,9 @@ class Diagnostics(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="platform_metrics", description="View internal analytics and platform health.")
-    @app_commands.default_permissions(administrator=True)
-    @has_permission(administrator=True)
-    async def platform_metrics(self, interaction: discord.Interaction):
+    @commands.command(name="platform_metrics", aliases=["metrics"], description="View internal analytics and platform health.")
+    @commands.has_permissions(administrator=True)
+    async def platform_metrics(self, ctx: commands.Context):
         total_users = sum(g.member_count for g in self.bot.guilds if g.member_count)
         total_guilds = len(self.bot.guilds)
         
@@ -32,7 +31,7 @@ class Diagnostics(commands.Cog):
         
         embed.set_footer(text=f"{PLATFORM_NAME} v{VERSION} | Build {BUILD_NUMBER} | Commit: {GIT_COMMIT}")
         
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await ctx.send(embed=embed)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Diagnostics(bot))

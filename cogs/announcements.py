@@ -47,17 +47,49 @@ class AnnouncementModal(discord.ui.Modal, title="Broadcast Announcement"):
         except Exception as e:
             await interaction.response.send_message(embed=ErrorEmbed(f"Failed to send announcement: {e}"), ephemeral=True)
 
+import typing
+
 class Announcements(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="announce", description="Broadcast a professional Markdown announcement to a channel.")
-    @app_commands.describe(channel="The channel to send the announcement to.")
-    @app_commands.default_permissions(administrator=True)
-    @has_permission(administrator=True)
-    async def announce(self, interaction: discord.Interaction, channel: discord.TextChannel = None):
-        target_channel = channel or interaction.channel
-        await interaction.response.send_modal(AnnouncementModal(target_channel))
+    @commands.command(name="announce", description="Broadcast a professional Markdown announcement to a channel.")
+    @commands.has_permissions(administrator=True)
+    async def announce(self, ctx: commands.Context, channel: typing.Optional[discord.TextChannel] = None, *, message: str = None):
+        target_channel = channel or ctx.channel
+        if not message:
+            await ctx.send(embed=ErrorEmbed(
+                description="Please provide the announcement message content.",
+                resolution="Usage: `?announce [#channel] <announcement message>`"
+            ))
+            return
+
+        try:
+            if len(message) <= 2000:
+                await target_channel.send(content=message)
+            else:
+                chunks = []
+                current_chunk = ""
+                for line in message.split('\n'):
+                    if len(current_chunk) + len(line) + 1 > 2000:
+                        if not current_chunk.strip():
+                            current_chunk = line[:1990]
+                            line = line[1990:]
+                        chunks.append(current_chunk)
+                        current_chunk = line + "\n"
+                    else:
+                        current_chunk += line + "\n"
+                if current_chunk.strip():
+                    chunks.append(current_chunk)
+                    
+                for chunk in chunks:
+                    await target_channel.send(content=chunk)
+
+            await ctx.send(embed=SuccessEmbed(f"Announcement successfully broadcasted to {target_channel.mention}."))
+        except discord.Forbidden:
+            await ctx.send(embed=ErrorEmbed("I do not have permission to send messages in that channel."))
+        except Exception as e:
+            await ctx.send(embed=ErrorEmbed(f"Failed to send announcement: {e}"))
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Announcements(bot))

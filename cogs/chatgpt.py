@@ -123,22 +123,25 @@ class ChatGPT(commands.Cog):
                 )
                 await message.reply(embed=embed, mention_author=False)
 
-    @discord.app_commands.command(name="ask", description="Ask the AI a question")
-    @discord.app_commands.describe(question="The question you want to ask")
-    async def ask(self, interaction: discord.Interaction, question: str):
-        if self.ai_channel_id and interaction.channel_id != self.ai_channel_id:
-            await interaction.response.send_message(f"This command can only be used in <#{self.ai_channel_id}>!", ephemeral=True)
+    @commands.command(name="ask", aliases=["ai"], description="Ask the AI a question")
+    async def ask(self, ctx: commands.Context, *, question: str = None):
+        if self.ai_channel_id and ctx.channel.id != self.ai_channel_id:
+            await ctx.send(f"This command can only be used in <#{self.ai_channel_id}>!")
             return
             
-        await interaction.response.defer(thinking=True)
-        response = await self.get_ai_response(question)
-        
-        embed = discord.Embed(
-            title="<:CharGPT:1544376850476826796> OpenAI Response",
-            description=response,
-            color=0x2b2d31
-        )
-        await interaction.followup.send(embed=embed)
+        if not question:
+            await ctx.send("Please provide a question to ask the AI! Usage: `?ask <question>`")
+            return
+
+        async with ctx.typing():
+            response = await self.get_ai_response(question)
+            
+            embed = discord.Embed(
+                title="<:CharGPT:1544376850476826796> OpenAI Response",
+                description=response,
+                color=0x2b2d31
+            )
+            await ctx.reply(embed=embed, mention_author=False)
 
 async def setup(bot):
     await bot.add_cog(ChatGPT(bot))

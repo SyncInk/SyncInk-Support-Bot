@@ -21,7 +21,7 @@ class VerificationView(discord.ui.View):
         if not settings.get('verification_enabled'):
             embed = ErrorEmbed(
                 description="The verification system is currently disabled on this server.",
-                resolution="A server administrator must enable verification via the `/config` dashboard."
+                resolution="A server administrator must enable verification via the `?config` dashboard."
             )
             embed.title = "Verification Disabled"
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -30,7 +30,7 @@ class VerificationView(discord.ui.View):
         if not role_id or not unverified_id:
             embed = ErrorEmbed(
                 description="The verification system is missing required role configurations.",
-                resolution="A server administrator must select both roles via the `/config` dashboard."
+                resolution="A server administrator must select both roles via the `?config` dashboard."
             )
             embed.title = "Configuration Error"
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -42,7 +42,7 @@ class VerificationView(discord.ui.View):
         if not role or not unverified_role:
             embed = ErrorEmbed(
                 description="The designated verification roles could not be found.",
-                resolution="A server administrator must re-select valid roles via the `/config` dashboard."
+                resolution="A server administrator must re-select valid roles via the `?config` dashboard."
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
@@ -246,17 +246,16 @@ class Security(commands.Cog):
             except discord.Forbidden:
                 pass
 
-    @app_commands.command(name="spawn_verification", description="Deploy the advanced verification checkpoint to the current channel.")
-    @app_commands.default_permissions(administrator=True)
-    @has_permission(administrator=True)
-    async def spawn_verification(self, interaction: discord.Interaction):
-        settings = await SettingsService.get_guild_settings(interaction.guild.id)
+    @commands.command(name="spawn_verification", description="Deploy the advanced verification checkpoint to the current channel.")
+    @commands.has_permissions(administrator=True)
+    async def spawn_verification(self, ctx: commands.Context):
+        settings = await SettingsService.get_guild_settings(ctx.guild.id)
         if not settings.get('verification_enabled') or not settings.get('verification_role_id') or not settings.get('unverified_role_id'):
             embed = ErrorEmbed(
                 description="The verification module must be fully configured before deployment.",
-                resolution="Use the `/config` dashboard to assign both Verified and Unverified roles, then enable verification."
+                resolution="Use the `?config` dashboard to assign both Verified and Unverified roles, then enable verification."
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await ctx.send(embed=embed)
             return
 
         embed = SyncInkEmbed(title="Security Checkpoint", color=BRAND_ACCENT)
@@ -264,8 +263,8 @@ class Security(commands.Cog):
         embed.description = "To protect our community from spam, automated accounts, malicious users, and unauthorized access, all members must complete verification before accessing the server."
         embed.add_field(name="", value="> 🔒 Please click the button below to verify your account and instantly unlock server access.", inline=False)
         
-        await interaction.channel.send(embed=embed, view=VerificationView())
-        await interaction.response.send_message(embed=SuccessEmbed("The security checkpoint has been successfully deployed to this channel."), ephemeral=True)
+        await ctx.channel.send(embed=embed, view=VerificationView())
+        await ctx.send(embed=SuccessEmbed("The security checkpoint has been successfully deployed to this channel."))
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Security(bot))

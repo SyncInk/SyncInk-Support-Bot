@@ -24,7 +24,7 @@ class SyncInkBot(commands.Bot):
         intents.guilds = True
         
         super().__init__(
-            command_prefix=commands.when_mentioned_or("s!", "?"),
+            command_prefix="?",
             intents=intents,
             help_command=None,
             case_insensitive=True
@@ -61,10 +61,20 @@ class SyncInkBot(commands.Bot):
                     log.error(f"Failed to load extension {cog_name}: {e}")
                     traceback.print_exc()
                     
-        # Sync slash commands
-        log.info("Syncing application commands...")
-        await self.tree.sync()
-        log.info("Application commands synced.")
+        # Deregister all application slash commands from Discord so users cannot see them when typing /
+        try:
+            log.info("Clearing application slash commands from Discord...")
+            self.tree.clear_commands(guild=None)
+            await self.tree.sync()
+            log.info("Slash commands cleared. Commands are strictly available via '?' prefix.")
+        except Exception as e:
+            log.warning(f"Failed to clear application slash commands: {e}")
+
+    async def on_message(self, message: discord.Message):
+        """Global message processor; strictly ignores all DMs so the bot never replies in DMs."""
+        if message.guild is None or message.author.bot:
+            return
+        await self.process_commands(message)
 
     async def on_ready(self):
         log.info(f"Logged in as {self.user} (ID: {self.user.id})")
@@ -79,6 +89,9 @@ class SyncInkBot(commands.Bot):
 
     async def on_command_error(self, ctx: commands.Context, error: commands.CommandError):
         """Global error handler for prefix commands."""
+        if ctx.guild is None:
+            return
+
         if isinstance(error, commands.CommandNotFound):
             return
             

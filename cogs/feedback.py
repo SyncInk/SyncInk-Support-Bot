@@ -119,32 +119,32 @@ class Feedback(commands.Cog):
                 
         return None
 
-    async def _process_suggestion(self, interaction: discord.Interaction, title: str, description: str):
+    async def _process_suggestion(self, ctx: commands.Context, title: str, description: str):
         metrics.record_suggestion()
         
-        target_channel = await self._resolve_suggestion_channel(interaction.guild)
+        target_channel = await self._resolve_suggestion_channel(ctx.guild)
         if not target_channel:
-            target_channel = interaction.channel
+            target_channel = ctx.channel
 
         # Insert into DB
         row = await db.fetchrow("""
             INSERT INTO feature_requests (guild_id, user_id, channel_id, title, content, status)
             VALUES ($1, $2, $3, $4, $5, 'PENDING')
             RETURNING id
-        """, interaction.guild.id, interaction.user.id, target_channel.id, title, description)
+        """, ctx.guild.id, ctx.author.id, target_channel.id, title, description)
         request_id = row['id']
 
         embed = SyncInkEmbed(
             title=f"💡 **Feature Request #{request_id}: {title}**",
             color=BRAND_ACCENT
         )
-        embed.set_author(name=f"{interaction.user.display_name} ({interaction.user})", icon_url=interaction.user.display_avatar.url)
+        embed.set_author(name=f"{ctx.author.display_name} ({ctx.author})", icon_url=ctx.author.display_avatar.url)
         embed.description = f"```\n{description}\n```"
-        embed.add_field(name="👤 **Submitted By**", value=interaction.user.mention, inline=True)
+        embed.add_field(name="👤 **Submitted By**", value=ctx.author.mention, inline=True)
         embed.add_field(name="📊 **Status**", value="🟡 **Pending Review**", inline=True)
         embed.add_field(
             name="🗳️ **Community Votes**", 
-            value="<a:approved:1520914088568295564> **0** Upvotes   •   <a:refused:1520914088568295564> **0** Downvotes", 
+            value="<a:approved:1520913982678896670> **0** Upvotes   •   <a:refused:1520914088568295564> **0** Downvotes", 
             inline=False
         )
         embed.set_footer(text=f"SyncInk Platform • Request #{request_id}", icon_url="https://files.catbox.moe/74l9su.png")
@@ -155,20 +155,17 @@ class Feedback(commands.Cog):
             sent_msg = await target_channel.send(embed=embed, view=view)
             await db.execute("UPDATE feature_requests SET message_id = $1 WHERE id = $2", sent_msg.id, request_id)
             
-            await interaction.response.send_message(
-                embed=SuccessEmbed(f"Your feature request has been successfully posted in {target_channel.mention}!"),
-                ephemeral=True
+            await ctx.send(
+                embed=SuccessEmbed(f"Your feature request has been successfully posted in {target_channel.mention}!")
             )
         except discord.Forbidden:
-            await interaction.response.send_message(
-                embed=ErrorEmbed(description="Failed to post feature request.", resolution="Bot lacks permissions to send messages in the target channel."),
-                ephemeral=True
+            await ctx.send(
+                embed=ErrorEmbed(description="Failed to post feature request.", resolution="Bot lacks permissions to send messages in the target channel.")
             )
 
-    @app_commands.command(name="suggest", description="Submit a feature request or suggestion for the platform.")
-    @app_commands.describe(title="Short title for your request", description="Detailed explanation of the feature or idea")
-    async def suggest(self, interaction: discord.Interaction, title: str, description: str):
-        if interaction.channel_id != REQUIRED_SUGGESTION_CHANNEL_ID:
+    @commands.command(name="suggest", description="Submit a feature request or suggestion for the platform.")
+    async def suggest(self, ctx: commands.Context, *, text: str = None):
+        if ctx.channel.id != REQUIRED_SUGGESTION_CHANNEL_ID:
             embed = SyncInkEmbed(
                 title="<a:refused:1520914088568295564> **Channel Restriction**",
                 color=ERROR_COLOR
@@ -177,44 +174,79 @@ class Feedback(commands.Cog):
                 f"<a:refused:1520914088568295564> **This command can only be used in <#{REQUIRED_SUGGESTION_CHANNEL_ID}>.**\n\n"
                 f"Please navigate to <#{REQUIRED_SUGGESTION_CHANNEL_ID}> to submit your feature request or suggestion."
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await ctx.send(embed=embed)
             return
-        await self._process_suggestion(interaction, title, description)
 
-    @app_commands.command(name="feature_request", description="Submit a formal feature request with community voting.")
-    @app_commands.describe(title="Short title for your request", description="Detailed explanation of the feature or idea")
-    async def feature_request(self, interaction: discord.Interaction, title: str, description: str):
-        if interaction.channel_id != REQUIRED_SUGGESTION_CHANNEL_ID:
-            embed = SyncInkEmbed(
-                title="<a:refused:1520914088568295564> **Channel Restriction**",
-                color=ERROR_COLOR
-            )
-            embed.description = (
-                f"<a:refused:1520914088568295564> **This command can only be used in <#{REQUIRED_SUGGESTION_CHANNEL_ID}>.**\n\n"
-                f"Please navigate to <#{REQUIRED_SUGGESTION_CHANNEL_ID}> to submit your feature request or suggestion."
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+        if not text:
+            await ctx.send(embed=ErrorEmbed(
+                description="Please provide your suggestion!",
+                resolution="Format: `?suggest Title | Detailed description` or `?suggest Your idea here`"
+            ))
             return
-        await self._process_suggestion(interaction, title, description)
 
-    @app_commands.command(name="set_suggestion_status", description="Update the status of a feature request (Staff Only).")
-    @app_commands.describe(request_id="The ID of the feature request", status="New status")
-    @app_commands.choices(status=[
-        app_commands.Choice(name="🟡 Pending Review", value="PENDING"),
-        app_commands.Choice(name="🟢 Approved / Planned", value="APPROVED"),
-        app_commands.Choice(name="🟣 Implemented", value="IMPLEMENTED"),
-        app_commands.Choice(name="🔴 Declined", value="DECLINED")
-    ])
-    @app_commands.default_permissions(manage_guild=True)
-    @has_permission(manage_guild=True)
-    async def set_status(self, interaction: discord.Interaction, request_id: int, status: app_commands.Choice[str]):
-        req = await db.fetchrow("SELECT * FROM feature_requests WHERE id = $1 AND guild_id = $2", request_id, interaction.guild.id)
+        if "|" in text:
+            parts = text.split("|", 1)
+            title = parts[0].strip()
+            description = parts[1].strip()
+        elif "\n" in text:
+            parts = text.split("\n", 1)
+            title = parts[0].strip()
+            description = parts[1].strip()
+        else:
+            if len(text) > 40:
+                cut = text[:40].rfind(" ")
+                if cut > 10:
+                    title = text[:cut].strip()
+                    description = text[cut:].strip()
+                else:
+                    title = "Suggestion"
+                    description = text.strip()
+            else:
+                title = text.strip()
+                description = text.strip()
+
+        await self._process_suggestion(ctx, title, description)
+
+    @commands.command(name="feature_request", description="Submit a formal feature request with community voting.")
+    async def feature_request(self, ctx: commands.Context, *, text: str = None):
+        await self.suggest(ctx, text=text)
+
+    @commands.command(name="set_suggestion_status", aliases=["set_status"], description="Update the status of a feature request (Staff Only).")
+    @commands.has_permissions(manage_guild=True)
+    async def set_status(self, ctx: commands.Context, request_id: int = None, status: str = None):
+        if request_id is None or status is None:
+            await ctx.send(embed=ErrorEmbed(
+                description="Missing required arguments.",
+                resolution="Usage: `?set_suggestion_status <request_id> <pending|approved|implemented|declined>`"
+            ))
+            return
+
+        STATUS_MAP = {
+            "pending": ("PENDING", "🟡 Pending Review"),
+            "approved": ("APPROVED", "🟢 Approved / Planned"),
+            "planned": ("APPROVED", "🟢 Approved / Planned"),
+            "implemented": ("IMPLEMENTED", "🟣 Implemented"),
+            "done": ("IMPLEMENTED", "🟣 Implemented"),
+            "declined": ("DECLINED", "🔴 Declined"),
+            "rejected": ("DECLINED", "🔴 Declined")
+        }
+        status_key = status.lower().strip()
+        if status_key not in STATUS_MAP:
+            valid_statuses = "pending, approved, implemented, declined"
+            await ctx.send(embed=ErrorEmbed(
+                description=f"Invalid status `{status}`.",
+                resolution=f"Valid options: `{valid_statuses}`\nUsage: `?set_suggestion_status <id> <status>`"
+            ))
+            return
+
+        db_status, display_name = STATUS_MAP[status_key]
+        req = await db.fetchrow("SELECT * FROM feature_requests WHERE id = $1 AND guild_id = $2", request_id, ctx.guild.id)
         if not req:
-            return await interaction.response.send_message(embed=ErrorEmbed("Feature request not found."), ephemeral=True)
+            return await ctx.send(embed=ErrorEmbed("Feature request not found."))
 
-        await db.execute("UPDATE feature_requests SET status = $1 WHERE id = $2", status.value, request_id)
+        await db.execute("UPDATE feature_requests SET status = $1 WHERE id = $2", db_status, request_id)
 
-        channel = interaction.guild.get_channel(req['channel_id'])
+        channel = ctx.guild.get_channel(req['channel_id'])
         if channel and req['message_id']:
             try:
                 msg = await channel.fetch_message(req['message_id'])
@@ -222,15 +254,14 @@ class Feedback(commands.Cog):
                     embed = msg.embeds[0]
                     for i, field in enumerate(embed.fields):
                         if "Status" in field.name:
-                            embed.set_field_at(i, name="📊 **Status**", value=f"**{status.name}**", inline=True)
+                            embed.set_field_at(i, name="📊 **Status**", value=f"**{display_name}**", inline=True)
                             break
                     await msg.edit(embed=embed)
             except Exception:
                 pass
 
-        await interaction.response.send_message(
-            embed=SuccessEmbed(f"Feature Request **#{request_id}** status updated to **{status.name}**."),
-            ephemeral=True
+        await ctx.send(
+            embed=SuccessEmbed(f"Feature Request **#{request_id}** status updated to **{display_name}**.")
         )
 
 async def setup(bot: commands.Bot):
