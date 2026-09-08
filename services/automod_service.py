@@ -92,6 +92,8 @@ class AutomodService:
                 duration_mins, duration_label, case_action = timeout_map[strike_count]
                 duration_td = timedelta(minutes=duration_mins)
                 await member.timeout(duration_td, reason=f"Automod Strike {strike_count}/5 (24h): {reason}")
+                from utils.ui import send_mute_dm
+                await send_mute_dm(member, reason, guild.name)
                 case_id = await ModService.log_case(guild.id, member.id, bot.user.id, case_action, f"{reason} [Strike {strike_count}/5 (24h)]")
                 action_taken = f"Timed Out ({duration_label} - Strike {strike_count}/5)"
 
@@ -111,6 +113,8 @@ class AutomodService:
                     # User is already jailed and continuing to violate/spam: apply strict 2-hour timeout
                     duration_td = timedelta(hours=2)
                     await member.timeout(duration_td, reason=f"Jailed repeat violation (Strike {strike_count} in 24h): {reason}")
+                    from utils.ui import send_mute_dm
+                    await send_mute_dm(member, reason, guild.name)
                     case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "TIMEOUT 2h (Jailed Repeat)", f"{reason} [Strike {strike_count} in 24h]")
                     action_taken = f"Timed Out 2h (Jailed Repeat - Strike {strike_count})"
                     repeat_embed = SyncInkEmbed(

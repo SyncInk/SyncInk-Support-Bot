@@ -122,6 +122,20 @@ class AdvancedLogging(commands.Cog):
             embed.add_field(name="Before", value=before.nick or before.name, inline=True)
             embed.add_field(name="After", value=after.nick or after.name, inline=True)
             await self._send_log(after.guild.id, "log_channel_member", embed)
+
+        # Timeout Detection & Mute DM
+        if before.timed_out_until is None and after.timed_out_until is not None:
+            reason = "No reason provided"
+            try:
+                async for entry in after.guild.audit_logs(limit=3, action=discord.AuditLogAction.member_update):
+                    if entry.target.id == after.id and getattr(entry.after, 'timed_out_until', None) is not None:
+                        if entry.reason:
+                            reason = entry.reason
+                        break
+            except Exception:
+                pass
+            from utils.ui import send_mute_dm
+            await send_mute_dm(after, reason, after.guild.name)
             
         # Role Logs (Debounced to coalesce multiple role changes into a single message)
         if set(before.roles) != set(after.roles):

@@ -251,6 +251,8 @@ class Automod(commands.Cog):
                         timedelta(hours=2), 
                         reason="Non-stop spamming while jailed / Ticket appeal abuse"
                     )
+                    from utils.ui import send_mute_dm
+                    await send_mute_dm(message.author, "Continuous spamming in ticket", message.guild.name)
                 except discord.Forbidden:
                     pass
 

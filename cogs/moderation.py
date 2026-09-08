@@ -44,6 +44,8 @@ class Moderation(commands.Cog):
         try:
             duration = timedelta(minutes=duration_minutes)
             await member.timeout(duration, reason=reason)
+            from utils.ui import send_mute_dm
+            await send_mute_dm(member, reason, ctx.guild.name)
             case_id = await ModService.log_case(ctx.guild.id, member.id, ctx.author.id, "TIMEOUT", reason)
             
             embed = SuccessEmbed(f"{member.mention} has been timed out for {duration_minutes} minutes.")

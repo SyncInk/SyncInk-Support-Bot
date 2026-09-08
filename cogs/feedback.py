@@ -119,28 +119,33 @@ class Feedback(commands.Cog):
                 
         return None
 
-    async def _process_suggestion(self, ctx: commands.Context, title: str, description: str):
+    async def _process_suggestion(self, target, title: str, description: str):
         metrics.record_suggestion()
         
-        target_channel = await self._resolve_suggestion_channel(ctx.guild)
+        is_interaction = isinstance(target, discord.Interaction)
+        guild = target.guild
+        author = target.user if is_interaction else target.author
+        source_channel = target.channel
+
+        target_channel = await self._resolve_suggestion_channel(guild)
         if not target_channel:
-            target_channel = ctx.channel
+            target_channel = source_channel
 
         # Insert into DB
         row = await db.fetchrow("""
             INSERT INTO feature_requests (guild_id, user_id, channel_id, title, content, status)
             VALUES ($1, $2, $3, $4, $5, 'PENDING')
             RETURNING id
-        """, ctx.guild.id, ctx.author.id, target_channel.id, title, description)
+        """, guild.id, author.id, target_channel.id, title, description)
         request_id = row['id']
 
         embed = SyncInkEmbed(
             title=f"💡 **Feature Request #{request_id}: {title}**",
             color=BRAND_ACCENT
         )
-        embed.set_author(name=f"{ctx.author.display_name} ({ctx.author})", icon_url=ctx.author.display_avatar.url)
+        embed.set_author(name=f"{author.display_name} ({author})", icon_url=author.display_avatar.url)
         embed.description = f"```\n{description}\n```"
-        embed.add_field(name="👤 **Submitted By**", value=ctx.author.mention, inline=True)
+        embed.add_field(name="👤 **Submitted By**", value=author.mention, inline=True)
         embed.add_field(name="📊 **Status**", value="🟡 **Pending Review**", inline=True)
         embed.add_field(
             name="🗳️ **Community Votes**", 
@@ -155,26 +160,46 @@ class Feedback(commands.Cog):
             sent_msg = await target_channel.send(embed=embed, view=view)
             await db.execute("UPDATE feature_requests SET message_id = $1 WHERE id = $2", sent_msg.id, request_id)
             
-            await ctx.send(
-                embed=SuccessEmbed(f"Your feature request has been successfully posted in {target_channel.mention}!")
-            )
+            resp = SuccessEmbed(f"Your feature request has been successfully posted in {target_channel.mention}!")
+            if is_interaction:
+                await target.response.send_message(embed=resp, ephemeral=True)
+            else:
+                await target.send(embed=resp)
         except discord.Forbidden:
-            await ctx.send(
-                embed=ErrorEmbed(description="Failed to post feature request.", resolution="Bot lacks permissions to send messages in the target channel.")
+            err = ErrorEmbed(description="Failed to post feature request.", resolution="Bot lacks permissions to send messages in the target channel.")
+            if is_interaction:
+                await target.response.send_message(embed=err, ephemeral=True)
+            else:
+                await target.send(embed=err)
+
+    @app_commands.command(name="suggest", description="Submit a feature request or suggestion for the platform.")
+    @app_commands.describe(title="Short title for your request", description="Detailed explanation of the feature or idea")
+    async def slash_suggest(self, interaction: discord.Interaction, title: str, description: str):
+        if interaction.channel_id != REQUIRED_SUGGESTION_CHANNEL_ID:
+            embed = SyncInkEmbed(
+                title="<a:refused:1520914088568295564> **Channel Restriction**",
+                description=f"This command can only be used in <#{REQUIRED_SUGGESTION_CHANNEL_ID}>.",
+                color=ERROR_COLOR
             )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        await self._process_suggestion(interaction, title, description)
+
+    @app_commands.command(name="feature_request", description="Submit a formal feature request with community voting.")
+    @app_commands.describe(title="Short title for your request", description="Detailed explanation of the feature or idea")
+    async def slash_feature_request(self, interaction: discord.Interaction, title: str, description: str):
+        await self.slash_suggest(interaction, title, description)
 
     @commands.command(name="suggest", description="Submit a feature request or suggestion for the platform.")
     async def suggest(self, ctx: commands.Context, *, text: str = None):
         if ctx.channel.id != REQUIRED_SUGGESTION_CHANNEL_ID:
             embed = SyncInkEmbed(
                 title="<a:refused:1520914088568295564> **Channel Restriction**",
+                description=f"This command can only be used in <#{REQUIRED_SUGGESTION_CHANNEL_ID}>.",
                 color=ERROR_COLOR
             )
-            embed.description = (
-                f"<a:refused:1520914088568295564> **This command can only be used in <#{REQUIRED_SUGGESTION_CHANNEL_ID}>.**\n\n"
-                f"Please navigate to <#{REQUIRED_SUGGESTION_CHANNEL_ID}> to submit your feature request or suggestion."
-            )
-            await ctx.send(embed=embed)
+            msg = await ctx.send(embed=embed)
+            await msg.delete(delay=8)
             return
 
         if not text:

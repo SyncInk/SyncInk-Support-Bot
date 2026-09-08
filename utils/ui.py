@@ -241,3 +241,27 @@ class JailAppealView(discord.ui.View):
             from utils.logger import log
             log.error(f"Error parsing guild_id for appeal: {e}")
             await interaction.response.send_message("Could not verify server context. Please contact an admin.", ephemeral=True)
+
+import time
+
+_recent_mute_dms = {}
+
+async def send_mute_dm(member: discord.Member, reason: str = "No reason provided", server_name: str = None):
+    """Sends a standardized mute notification DM to a member matching the exact screenshot format."""
+    now = time.time()
+    last_sent = _recent_mute_dms.get(member.id, 0)
+    if now - last_sent < 5:
+        return
+
+    _recent_mute_dms[member.id] = now
+    s_name = server_name or getattr(member.guild, 'name', 'SyncInk Support Server')
+    clean_reason = reason.strip() if reason else "No reason provided"
+    
+    embed = discord.Embed(
+        description=f"You were muted in {s_name}. | **{clean_reason}**",
+        color=0xE74C3C
+    )
+    try:
+        await member.send(embed=embed)
+    except Exception:
+        pass

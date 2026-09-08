@@ -61,14 +61,13 @@ class SyncInkBot(commands.Bot):
                     log.error(f"Failed to load extension {cog_name}: {e}")
                     traceback.print_exc()
                     
-        # Deregister all application slash commands from Discord so users cannot see them when typing /
+        # Sync application slash commands with Discord
         try:
-            log.info("Clearing application slash commands from Discord...")
-            self.tree.clear_commands(guild=None)
+            log.info("Syncing application slash commands with Discord...")
             await self.tree.sync()
-            log.info("Slash commands cleared. Commands are strictly available via '?' prefix.")
+            log.info("Application slash commands successfully synced.")
         except Exception as e:
-            log.warning(f"Failed to clear application slash commands: {e}")
+            log.warning(f"Failed to sync application slash commands: {e}")
 
     async def on_message(self, message: discord.Message):
         """Global message processor; strictly ignores all DMs so the bot never replies in DMs."""
