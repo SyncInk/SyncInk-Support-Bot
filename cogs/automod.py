@@ -255,19 +255,11 @@ class Automod(commands.Cog):
                     pass
 
                 abuse_embed = SyncInkEmbed(
-                    title="<a:syncalert:1520914681231839313> **TICKET ABUSE ENFORCEMENT: Jailed Member Timed Out**",
+                    description=f"<a:syncalert:1520914681231839313> {message.author.mention} **Timed out for 2 hours for continuous spamming.**",
                     color=ERROR_COLOR
                 )
-                abuse_embed.set_author(name=f"{message.author.display_name} ({message.author.id})", icon_url=message.author.display_avatar.url)
-                abuse_embed.description = (
-                    f"<a:syncalert:1520914681231839313> **{message.author.mention} is currently jailed and has been timed out for 2 hours for continuous spamming in a ticket/appeal channel.**\n\n"
-                    f"👤 **Member:** {message.author.mention}\n"
-                    f"🔒 **Status:** **Jailed + Timed Out (2 Hours)**\n"
-                    f"⚠️ **Infraction:** Ticket / Appeal Spam Abuse\n"
-                    f"🚫 **Penalty:** All server messaging privileges suspended for 2 hours."
-                )
                 try:
-                    await message.channel.send(content=message.author.mention, embed=abuse_embed, delete_after=25)
+                    await message.channel.send(content=message.author.mention, embed=abuse_embed, delete_after=12)
                 except discord.Forbidden:
                     pass
 
