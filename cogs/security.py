@@ -1,11 +1,13 @@
-import discord
+﻿import discord
 from discord.ext import commands
 from discord import app_commands
 from services.settings_service import SettingsService
+from services.security_service import SecurityService
 from utils.ui import SyncInkEmbed, SuccessEmbed, ErrorEmbed, BRAND_ACCENT, SUCCESS_COLOR, WARNING_COLOR, ERROR_COLOR
 from utils.permissions import has_permission
 from utils.logger import log
 from database import db
+import asyncio
 import re
 
 class VerificationView(discord.ui.View):
@@ -21,7 +23,7 @@ class VerificationView(discord.ui.View):
         if not settings.get('verification_enabled'):
             embed = ErrorEmbed(
                 description="The verification system is currently disabled on this server.",
-                resolution="A server administrator must enable verification via the `?config` dashboard."
+                resolution="A server administrator must enable verification via the `?config` or `/security` dashboard."
             )
             embed.title = "Verification Disabled"
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -30,7 +32,7 @@ class VerificationView(discord.ui.View):
         if not role_id or not unverified_id:
             embed = ErrorEmbed(
                 description="The verification system is missing required role configurations.",
-                resolution="A server administrator must select both roles via the `?config` dashboard."
+                resolution="A server administrator must select both roles via the `?config` or `/security` dashboard."
             )
             embed.title = "Configuration Error"
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -42,19 +44,15 @@ class VerificationView(discord.ui.View):
         if not role or not unverified_role:
             embed = ErrorEmbed(
                 description="The designated verification roles could not be found.",
-                resolution="A server administrator must re-select valid roles via the `?config` dashboard."
+                resolution="A server administrator must re-select valid roles via the `?config` or `/security` dashboard."
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
             
-        # Check if user is jailed (Active jail in DB or possessing jail role)
-        jail_role_id = settings.get("jail_role_id")
-        is_jailed = False
-        if jail_role_id and any(r.id == int(jail_role_id) for r in interaction.user.roles):
-            is_jailed = True
-        elif any("jail" in r.name.lower() for r in interaction.user.roles):
-            is_jailed = True
-        else:
+        # Check if user is jailed or quarantined (Active jail in DB or possessing jail/quarantine role)
+        from services.automod_service import AutomodService
+        is_jailed = await AutomodService.is_user_jailed(interaction.guild, interaction.user)
+        if not is_jailed:
             active_jail = await db.fetchrow(
                 "SELECT id FROM automod_jails WHERE guild_id = $1 AND user_id = $2 AND (release_at IS NULL OR release_at > CURRENT_TIMESTAMP)",
                 interaction.guild.id, interaction.user.id
@@ -70,12 +68,13 @@ class VerificationView(discord.ui.View):
                 except discord.Forbidden:
                     pass
 
-            # Re-apply jail role if missing
+            # Re-apply jail/quarantine role if missing
+            jail_role_id = settings.get("quarantine_role_id") or settings.get("jail_role_id")
             if jail_role_id:
                 jail_role = interaction.guild.get_role(int(jail_role_id))
                 if jail_role and jail_role not in interaction.user.roles:
                     try:
-                        await interaction.user.add_roles(jail_role, reason="Re-applying jail role on verification attempt")
+                        await interaction.user.add_roles(jail_role, reason="Re-applying quarantine role on verification attempt")
                     except discord.Forbidden:
                         pass
 
@@ -84,8 +83,8 @@ class VerificationView(discord.ui.View):
                 color=ERROR_COLOR
             )
             denied_embed.description = (
-                f"<a:refused:1520914088568295564> **Access Denied: You are currently Jailed.**\n\n"
-                f"You cannot complete verification or access the server while serving a disciplinary jail sentence.\n"
+                f"<a:refused:1520914088568295564> **Access Denied: You are currently Quarantined / Jailed.**\n\n"
+                f"You cannot complete verification or access the server while serving a disciplinary sentence.\n"
                 f"If you wish to appeal your penalty, please use the official appeal channel or contact the administration team."
             )
             await interaction.response.send_message(embed=denied_embed, ephemeral=True)
@@ -109,8 +108,6 @@ class VerificationView(discord.ui.View):
                 "• If you need assistance, visit the Support channels."
             )
             await interaction.response.send_message(embed=success_embed, ephemeral=True)
-
-            # No temporary pings to clean up in the new workflow
 
             # Dispatch Verification Log
             log_channel_id = settings.get('log_channel_verification')
@@ -165,26 +162,98 @@ class VerificationView(discord.ui.View):
 class Security(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.scam_links = [r"discord\.gift", r"steamcommunity-", r"nitro-free"]
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        settings = await SettingsService.get_guild_settings(member.guild.id)
+
+        # -------------------------------------------------------------
+        # 1. MASS BOT ADD PROTECTION
+        # -------------------------------------------------------------
         if member.bot:
+            if settings.get('mass_bot_protection_enabled', True):
+                await asyncio.sleep(1.5) # allow audit log to settle
+                adder = None
+                try:
+                    async for entry in member.guild.audit_logs(action=discord.AuditLogAction.bot_add, limit=3):
+                        if entry.target and entry.target.id == member.id:
+                            adder = entry.user
+                            break
+                except Exception:
+                    pass
+
+                if adder:
+                    # Check if adder is Server Owner or whitelisted
+                    is_authorized = (adder.id == member.guild.owner_id) or await SecurityService.is_whitelisted(member.guild.id, "user", str(adder.id))
+                    if not is_authorized:
+                        try:
+                            await member.kick(reason=f"Mass Bot Protection: Unauthorized bot added by {adder} ({adder.id}).")
+                            log.warning(f"Kicked unauthorized bot {member.id} added by {adder.id}")
+
+                            # Dispatch security alert
+                            log_chan_id = settings.get("log_channel_moderation") or settings.get("automod_log_channel_id")
+                            if log_chan_id:
+                                ch = member.guild.get_channel(log_chan_id)
+                                if ch:
+                                    alert_embed = SyncInkEmbed(
+                                        title="<a:syncalert:1520914681231839313> Unauthorized Bot Kicked",
+                                        color=ERROR_COLOR
+                                    )
+                                    alert_embed.add_field(name="Bot", value=f"{member.mention} (`{member.id}`)", inline=True)
+                                    alert_embed.add_field(name="Added By", value=f"{adder.mention} (`{adder.id}`)", inline=True)
+                                    alert_embed.add_field(name="Action Taken", value="**Instantly Kicked**", inline=False)
+                                    await ch.send(embed=alert_embed)
+                        except Exception as e:
+                            log.error(f"Failed to kick unauthorized bot {member.id}: {e}")
+                        return
             return
 
-        # Check if user is currently jailed - if so, do not assign unverified role or trigger verification
+        # -------------------------------------------------------------
+        # 2. ANTI-RAID & JOIN VELOCITY CHECK
+        # -------------------------------------------------------------
+        is_burst, current_state, action_taken = await SecurityService.record_member_join(member.guild, member)
+        if action_taken:
+            # High-risk account auto-quarantined during raid state
+            log_chan_id = settings.get("log_channel_moderation") or settings.get("automod_log_channel_id")
+            if log_chan_id:
+                ch = member.guild.get_channel(log_chan_id)
+                if ch:
+                    alert_embed = SyncInkEmbed(
+                        title="<a:syncalert:1520914681231839313> Anti-Raid Shield Triggered",
+                        color=ERROR_COLOR
+                    )
+                    alert_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
+                    alert_embed.add_field(name="Active Raid State", value=f"`{current_state}`", inline=True)
+                    alert_embed.add_field(name="Action", value=f"**{action_taken}**", inline=True)
+                    try:
+                        await ch.send(embed=alert_embed)
+                    except Exception:
+                        pass
+            return # Block regular verification setup while quarantined
+
+        # -------------------------------------------------------------
+        # 3. JAIL / QUARANTINE EVASION PROTECTION
+        # -------------------------------------------------------------
         active_jail = await db.fetchrow(
             "SELECT id FROM automod_jails WHERE guild_id = $1 AND user_id = $2 AND (release_at IS NULL OR release_at > CURRENT_TIMESTAMP)",
             member.guild.id, member.id
         )
         if active_jail:
+            jail_role_id = settings.get('quarantine_role_id') or settings.get('jail_role_id')
+            if jail_role_id:
+                jail_role = member.guild.get_role(int(jail_role_id))
+                if jail_role:
+                    try:
+                        await member.add_roles(jail_role, reason="Jail Evasion Protection: Re-applied quarantine role on join.")
+                    except discord.Forbidden:
+                        pass
             return
-            
-        settings = await SettingsService.get_guild_settings(member.guild.id)
+
+        # -------------------------------------------------------------
+        # 4. VERIFICATION / WELCOME FLOW
+        # -------------------------------------------------------------
         if settings.get('verification_enabled'):
             unverified_id = settings.get('unverified_role_id')
-            verif_chan_id = settings.get('verification_channel_id')
-            
             if unverified_id:
                 unverified_role = member.guild.get_role(unverified_id)
                 if unverified_role:
@@ -192,8 +261,6 @@ class Security(commands.Cog):
                         await member.add_roles(unverified_role, reason="Assigned Unverified role on join")
                     except Exception as e:
                         log.error(f"Failed to assign unverified role to {member.id}: {e}")
-            
-            # No temporary ping sent in the verification channel to keep it strictly clean
 
             # Dispatch Verification Log
             log_channel_id = settings.get('log_channel_verification')
@@ -208,7 +275,7 @@ class Security(commands.Cog):
                     except discord.Forbidden:
                         pass
         else:
-            # If verification is disabled, user instantly gets access. Send welcome message now.
+            # If verification is disabled, member instantly gets access. Send welcome message now.
             welcome_channel_id = settings.get('welcome_channel_id')
             if welcome_channel_id:
                 channel = member.guild.get_channel(welcome_channel_id)
@@ -233,19 +300,52 @@ class Security(commands.Cog):
                     except discord.Forbidden:
                         pass
 
+    # -------------------------------------------------------------
+    # 5. ANTI-NUKE AUDIT LOG STREAMER
+    # -------------------------------------------------------------
     @commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
-        if message.author.bot or not message.guild:
+    async def on_audit_log_entry_create(self, entry: discord.AuditLogEntry):
+        """Streams Discord audit log events in real-time to intercept rogue moderators."""
+        if not entry.guild or not entry.user or entry.user.bot:
             return
 
-        content = message.content.lower()
-        if any(re.search(pattern, content) for pattern in self.scam_links):
+        action = entry.action
+        destructive_actions = {
+            discord.AuditLogAction.channel_delete: "Channel Deleted",
+            discord.AuditLogAction.channel_create: "Channel Created",
+            discord.AuditLogAction.role_delete: "Role Deleted",
+            discord.AuditLogAction.role_create: "Role Created",
+            discord.AuditLogAction.kick: "Member Kicked",
+            discord.AuditLogAction.ban: "Member Banned",
+            discord.AuditLogAction.webhook_delete: "Webhook Deleted",
+            discord.AuditLogAction.webhook_create: "Webhook Created",
+        }
+
+        action_name = destructive_actions.get(action)
+        if action_name:
+            target_str = str(entry.target) if entry.target else "Unknown Target"
+            await SecurityService.record_audit_action(
+                entry.guild, entry.user, action_name, details=f"Target: `{target_str}`"
+            )
+            return
+
+        # Check dangerous permission escalations on role updates
+        if action == discord.AuditLogAction.role_update:
             try:
-                await message.delete()
-                await message.channel.send(embed=ErrorEmbed(description=f"{message.author.mention}, that link is blacklisted and has been blocked.", resolution="Avoid sending unauthorized links to prevent account penalties."), delete_after=10)
-            except discord.Forbidden:
+                after = getattr(entry.after, 'permissions', None)
+                if after:
+                    dangerous = after.administrator or after.manage_guild or after.ban_members or after.mention_everyone
+                    if dangerous:
+                        await SecurityService.record_audit_action(
+                            entry.guild, entry.user, "Dangerous Role Permissions Granted", 
+                            details=f"Modified role: `{entry.target}`"
+                        )
+            except Exception:
                 pass
 
+    # -------------------------------------------------------------
+    # 6. COMMANDS
+    # -------------------------------------------------------------
     @commands.command(name="spawn_verification", description="Deploy the advanced verification checkpoint to the current channel.")
     @commands.has_permissions(administrator=True)
     async def spawn_verification(self, ctx: commands.Context):
@@ -253,7 +353,7 @@ class Security(commands.Cog):
         if not settings.get('verification_enabled') or not settings.get('verification_role_id') or not settings.get('unverified_role_id'):
             embed = ErrorEmbed(
                 description="The verification module must be fully configured before deployment.",
-                resolution="Use the `?config` dashboard to assign both Verified and Unverified roles, then enable verification."
+                resolution="Use the `?config` or `/security` dashboard to assign both Verified and Unverified roles, then enable verification."
             )
             await ctx.send(embed=embed)
             return

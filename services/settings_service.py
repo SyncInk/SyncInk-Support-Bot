@@ -37,7 +37,12 @@ class SettingsService:
             "automod_enabled", "automod_log_channel_id", "jail_role_id",
             "jail_channel_id", "appeal_channel_id", "emergency_mode",
             "point_decay_rate", "point_decay_hours", "spam_threshold", "mention_threshold",
-            "suggestion_channel_id"
+            "suggestion_channel_id",
+            "anti_nuke_enabled", "anti_nuke_threshold", "anti_nuke_window_seconds",
+            "anti_raid_enabled", "anti_raid_threshold", "anti_raid_window_seconds",
+            "anti_raid_state", "anti_phishing_enabled", "mention_guard_enabled",
+            "content_filter_enabled", "mass_bot_protection_enabled",
+            "ghost_ping_detection_enabled", "quarantine_role_id", "lockdown_channels"
         ]
         if key not in allowed_keys:
             raise ValueError(f"Invalid setting key: {key}")

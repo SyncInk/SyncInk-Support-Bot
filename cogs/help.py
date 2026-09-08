@@ -102,6 +102,10 @@ class Help(commands.Cog):
                 "clear": ("`?clear <amount>`", "Bulk delete recent messages in current channel.", True),
                 "history": ("`?history <@member>`", "Export member's recent 30 recorded messages as a text file.", True),
                 "config": ("`?config`", "Open the interactive server configuration and automod dashboard.", True),
+                "security": ("`?security` or `/security`", "Open the interactive master security dashboard and anti-nuke controls.", True),
+                "automod": ("`?automod` or `/automod`", "Open the interactive automod overview and toggle panel.", True),
+                "lockdown": ("`?lockdown [reason]` or `/lockdown`", "Emergency lockdown or unlock server channels during a raid.", True),
+                "whitelist": ("`?whitelist <add|remove|list> <role|user|channel|domain> <target>`", "Manage trusted exemptions from automod and security.", True),
                 "onboard": ("`?onboard`", "Run the guided interactive setup for server security.", True),
                 "spawn_verification": ("`?spawn_verification`", "Deploy the persistent 'Verify Now' security gate button.", True),
                 "announce": ("`?announce [#channel] <message>`", "Broadcast a formatted markdown announcement.", True),
@@ -187,8 +191,12 @@ class Help(commands.Cog):
 
         if is_admin:
             raw_pages_data.append((
-                "⚙️ Administration & Setup (Admin Only)",
+                "⚙️ Administration & Security (Admin Only)",
                 [
+                    ("?security", "Open the master security dashboard and anti-nuke control panel (Slash: `/security`)."),
+                    ("?automod", "Open the automod overview and quick toggles (Slash: `/automod`)."),
+                    ("?lockdown [reason]", "Trigger emergency lockdown or restore channels during a raid (Slash: `/lockdown`)."),
+                    ("?whitelist <action> <type> <val>", "Manage security exemptions for roles, users, channels, or domains."),
                     ("?config", "Open the interactive server configuration and automod dashboard."),
                     ("?onboard", "Run the guided interactive setup for server security."),
                     ("?spawn_verification", "Deploy the persistent 'Verify Now' security gate button."),
@@ -206,17 +214,21 @@ class Help(commands.Cog):
             for idx, (title, cmds) in enumerate(raw_pages_data)
         ]
 
+        # 1. Send paginated guide directly in the channel
+        view = HelpPaginationView(pages, author_id=member.id)
+        await ctx.send(embed=pages[0], view=view)
+
+        # 2. Send sleek, beautiful DM notification to the user
+        dm_embed = discord.Embed(
+            title="SyncInk Support Server",
+            description="Commands in this server start with `?`",
+            color=HELP_COLOR
+        )
+        dm_embed.set_footer(text="SyncInk Support Server", icon_url="https://files.catbox.moe/74l9su.png")
         try:
-            view = HelpPaginationView(pages, author_id=member.id)
-            await member.send(embed=pages[0], view=view)
-            try:
-                ack = await ctx.send("📬 Check your DMs! I've sent you the command list.")
-                await ack.delete(delay=6)
-            except Exception:
-                pass
-        except discord.Forbidden:
-            err = await ctx.send("❌ I couldn't send you a DM. Please enable direct messages from server members in your privacy settings to view the help guide.")
-            await err.delete(delay=10)
+            await member.send(embed=dm_embed)
+        except (discord.Forbidden, discord.HTTPException):
+            pass
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Help(bot))
