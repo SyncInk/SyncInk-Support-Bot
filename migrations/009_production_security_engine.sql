@@ -1,4 +1,4 @@
-﻿-- 009_production_security_engine.sql
+-- 009_production_security_engine.sql
 -- Production Security and Anti-Nuke Engine Migration
 
 -- 1. Extend guild_settings with security modules & thresholds
@@ -16,13 +16,13 @@ ADD COLUMN IF NOT EXISTS content_filter_enabled BOOLEAN DEFAULT TRUE,
 ADD COLUMN IF NOT EXISTS mass_bot_protection_enabled BOOLEAN DEFAULT TRUE,
 ADD COLUMN IF NOT EXISTS ghost_ping_detection_enabled BOOLEAN DEFAULT TRUE,
 ADD COLUMN IF NOT EXISTS quarantine_role_id BIGINT,
-ADD COLUMN IF NOT EXISTS lockdown_channels JSONB DEFAULT '[]'::jsonb;
+ADD COLUMN IF NOT EXISTS lockdown_channels TEXT DEFAULT '[]';
 
 -- 2. Security Whitelist Table (Users, Roles, Channels, Domains)
 CREATE TABLE IF NOT EXISTS security_whitelist (
     id SERIAL PRIMARY KEY,
     guild_id BIGINT NOT NULL,
-    entity_type VARCHAR(20) NOT NULL, -- 'user', 'role', 'channel', 'domain'
+    entity_type VARCHAR(20) NOT NULL,
     entity_id_or_val TEXT NOT NULL,
     added_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -37,9 +37,9 @@ CREATE TABLE IF NOT EXISTS security_incidents (
     id SERIAL PRIMARY KEY,
     guild_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
-    module VARCHAR(50) NOT NULL, -- 'ANTI_NUKE', 'ANTI_RAID', 'PHISHING', 'SPAM', 'MENTION', 'CONTENT_FILTER'
+    module VARCHAR(50) NOT NULL,
     action_taken VARCHAR(50) NOT NULL,
-    severity VARCHAR(20) NOT NULL DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
+    severity VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
     risk_score INT DEFAULT 0,
     details TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

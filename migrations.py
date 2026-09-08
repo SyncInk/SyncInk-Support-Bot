@@ -42,8 +42,8 @@ class MigrationManager:
                 version = int(file.split("_")[0])
                 if version > current_version:
                     log.info(f"Applying migration: {file}")
-                    with open(os.path.join(self.migrations_dir, file), "r") as f:
-                        sql = f.read()
+                    with open(os.path.join(self.migrations_dir, file), "r", encoding="utf-8-sig") as f:
+                        sql = f.read().strip()
                         
                     async with conn.transaction():
                         await conn.execute(sql)
