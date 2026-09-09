@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkRequestAdminAuth } from "@/lib/auth";
+import { checkRequestAdminAuth, getCurrentUser } from "@/lib/auth";
 import { query, queryOne } from "@/lib/db";
 
 export async function POST(request: Request) {
@@ -8,9 +8,14 @@ export async function POST(request: Request) {
   }
 
   try {
+    const user = await getCurrentUser();
     const body = await request.json();
     const { module, value, guildId: reqGuildId } = body;
-    const guildId = reqGuildId || process.env.DEFAULT_GUILD_ID || "1520461877073674392";
+    const guildId =
+      reqGuildId ||
+      user?.guildId ||
+      process.env.DEFAULT_GUILD_ID ||
+      "1520461877073674392";
 
     // 1. Emergency Lockdown Toggle
     if (module === "emergency_lockdown") {

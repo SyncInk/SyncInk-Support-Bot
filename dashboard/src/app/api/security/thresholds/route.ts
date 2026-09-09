@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkRequestAdminAuth } from "@/lib/auth";
+import { checkRequestAdminAuth, getCurrentUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 
 export async function POST(request: Request) {
@@ -8,6 +8,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    const user = await getCurrentUser();
     const body = await request.json();
     const {
       spamLimit,
@@ -17,7 +18,11 @@ export async function POST(request: Request) {
       guildId: reqGuildId
     } = body;
 
-    const guildId = reqGuildId || process.env.DEFAULT_GUILD_ID || "1520461877073674392";
+    const guildId =
+      reqGuildId ||
+      user?.guildId ||
+      process.env.DEFAULT_GUILD_ID ||
+      "1520461877073674392";
 
     const s = Math.max(1, parseInt(spamLimit || "5", 10));
     const m = Math.max(1, parseInt(mentionLimit || "5", 10));

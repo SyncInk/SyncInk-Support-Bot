@@ -55,6 +55,8 @@ interface CurrentUser {
   isOwner?: boolean;
   isAdmin?: boolean;
   role?: string;
+  guildId?: string;
+  guildName?: string;
 }
 
 export default function DashboardPage() {
@@ -84,10 +86,12 @@ export default function DashboardPage() {
 
   const router = useRouter();
 
-  const fetchData = useCallback(async (silent = false) => {
+  const fetchData = useCallback(async (silent = false, specificGuildId?: string) => {
     if (!silent) setRefreshing(true);
     try {
-      const res = await fetch("/api/security");
+      const gid = specificGuildId || currentUser?.guildId;
+      const url = gid ? `/api/security?guildId=${encodeURIComponent(gid)}` : "/api/security";
+      const res = await fetch(url);
       if (res.status === 401) {
         router.push("/login");
         return;
@@ -109,7 +113,7 @@ export default function DashboardPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [router]);
+  }, [router, currentUser?.guildId]);
 
   const fetchWhitelist = useCallback(async () => {
     try {
@@ -142,12 +146,15 @@ export default function DashboardPage() {
         const json = await res.json();
         if (json.authenticated && json.user) {
           setCurrentUser(json.user);
+          if (json.user.guildId) {
+            fetchData(true, json.user.guildId);
+          }
         }
       }
     } catch (err) {
       console.error("Fetch user error:", err);
     }
-  }, []);
+  }, [fetchData]);
 
   useEffect(() => {
     fetchUser();
@@ -324,7 +331,9 @@ export default function DashboardPage() {
                   SERVER DEFENSE
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Server ID: {data?.guildId}</p>
+              <p className="text-xs text-slate-400">
+                {currentUser?.guildName ? `${currentUser.guildName} • ` : ""}Server ID: {data?.guildId || currentUser?.guildId || "1520461877073674392"}
+              </p>
             </div>
           </div>
 

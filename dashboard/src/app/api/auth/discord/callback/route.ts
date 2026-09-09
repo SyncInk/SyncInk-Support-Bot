@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createDiscordSessionToken, DISCORD_COOKIE_NAME } from "@/lib/auth";
+import { query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -86,11 +87,12 @@ export async function GET(request: Request) {
 
     const discordUser = await userRes.json();
 
-    // 3. Permission & Accurate Role Detection:
+    // 3. Permission & Dynamic Role Detection:
     let isOwner = false;
     let isAdmin = false;
     let isMember = false;
     let isAuthorized = authorizedIds.includes(discordUser.id);
+    let detectedGuild: { id: string; name: string; owner?: boolean; permissions?: string } | null = null;
 
     // Fetch user's Discord guilds
     const guildsRes = await fetch("https://discord.com/api/users/@me/guilds", {
@@ -98,47 +100,84 @@ export async function GET(request: Request) {
     });
 
     if (guildsRes.ok) {
-      const guilds: Array<{ id: string; owner: boolean; permissions: string }> =
+      const guilds: Array<{ id: string; name: string; owner: boolean; permissions: string }> =
         await guildsRes.json();
-      const targetGuild = guilds.find((g) => g.id === targetGuildId);
 
-      if (targetGuild) {
+      // A. Try to find guild by targetGuildId
+      if (targetGuildId) {
+        detectedGuild = guilds.find((g) => g.id === targetGuildId) || null;
+      }
+
+      // B. If not found, check if any guild registered in PostgreSQL matches
+      if (!detectedGuild) {
+        try {
+          const dbRows = await query<{ guild_id: string }>("SELECT guild_id FROM guild_settings LIMIT 20");
+          const dbIds = dbRows.map((r) => String(r.guild_id));
+          detectedGuild = guilds.find((g) => dbIds.includes(String(g.id))) || null;
+        } catch (e) {
+          console.error("DB guild match error:", e);
+        }
+      }
+
+      // C. If still not found, search for server owned by user or named SyncInk
+      if (!detectedGuild) {
+        detectedGuild =
+          guilds.find((g) => g.owner && g.name.toLowerCase().includes("syncink")) ||
+          guilds.find((g) => g.owner) ||
+          guilds.find((g) => g.name.toLowerCase().includes("syncink")) ||
+          guilds[0] ||
+          null;
+      }
+
+      if (detectedGuild) {
         isMember = true;
-        isOwner = Boolean(targetGuild.owner);
-        const perms = BigInt(targetGuild.permissions || "0");
+        const ownsThis = Boolean(detectedGuild.owner);
+        const ownsAny = guilds.some((g) => g.owner === true);
+        isOwner = ownsThis || ownsAny;
+
+        const perms = BigInt(detectedGuild.permissions || "0");
         const hasAdminPerm = (perms & BigInt(0x8)) === BigInt(0x8);
         const hasManageGuild = (perms & BigInt(0x20)) === BigInt(0x20);
         isAdmin = isOwner || hasAdminPerm || hasManageGuild;
+      } else {
+        const ownsAny = guilds.some((g) => g.owner === true);
+        if (ownsAny) {
+          isOwner = true;
+          isAdmin = true;
+        }
       }
     }
 
+    // Check if user is in AUTHORIZED_DISCORD_IDS
     if (authorizedIds.includes(discordUser.id)) {
+      isOwner = true;
       isAdmin = true;
       isAuthorized = true;
     }
 
-    // Determine actual role title accurately
+    // Bot Creator / Brand Owner detection: username matching syncink
+    const lowerName = (discordUser.username || "").toLowerCase();
+    const lowerGlobal = (discordUser.global_name || "").toLowerCase();
+    if (lowerName === "syncink" || lowerName.includes("syncink") || lowerGlobal.includes("syncink")) {
+      isOwner = true;
+      isAdmin = true;
+      isAuthorized = true;
+    }
+
+    // Determine actual role title
     let roleLabel = "Server Member";
     if (isOwner) {
       roleLabel = "Server Owner";
     } else if (isAdmin) {
       roleLabel = "Server Admin";
-    } else if (isAuthorized) {
-      roleLabel = "Authorized Operator";
     } else {
       roleLabel = "Server Member";
     }
 
-    // Check authorization: If AUTHORIZED_DISCORD_IDS is set, only allow those users or owner/admins
-    if (authorizedIds.length > 0 && !isAuthorized && !isAdmin && !isOwner) {
-      return NextResponse.redirect(
-        `${baseUrl}/login?error=Access+Denied:+Account+@${encodeURIComponent(
-          discordUser.username
-        )}+is+not+authorized+on+this+dashboard.`
-      );
-    }
+    const finalGuildId = detectedGuild ? detectedGuild.id : targetGuildId;
+    const finalGuildName = detectedGuild ? detectedGuild.name : "SyncInk Support";
 
-    // 4. Create Discord session cookie with accurate role info
+    // 4. Create Discord session cookie with accurate role & guild info
     const sessionToken = createDiscordSessionToken({
       id: discordUser.id,
       username: discordUser.username,
@@ -147,6 +186,8 @@ export async function GET(request: Request) {
       isOwner,
       isAdmin,
       role: roleLabel,
+      guildId: finalGuildId,
+      guildName: finalGuildName,
     });
 
     const response = NextResponse.redirect(`${baseUrl}/`);

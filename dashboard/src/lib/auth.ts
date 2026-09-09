@@ -11,6 +11,8 @@ export interface DiscordUser {
   isOwner?: boolean;
   isAdmin?: boolean;
   role?: string;
+  guildId?: string;
+  guildName?: string;
 }
 
 export function getAdminKey(): string {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkRequestAuth } from "@/lib/auth";
+import { checkRequestAuth, checkRequestAdminAuth, getCurrentUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 
 export async function GET(request: Request) {
@@ -8,8 +8,13 @@ export async function GET(request: Request) {
   }
 
   try {
+    const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
-    const guildId = searchParams.get("guildId") || process.env.DEFAULT_GUILD_ID || "1520461877073674392";
+    const guildId =
+      searchParams.get("guildId") ||
+      user?.guildId ||
+      process.env.DEFAULT_GUILD_ID ||
+      "1520461877073674392";
 
     const entries = await query(
       `SELECT id, guild_id, entity_type, entity_id_or_val, added_by, created_at 
@@ -26,14 +31,19 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!checkRequestAuth(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!checkRequestAdminAuth(request)) {
+    return NextResponse.json({ error: "Access Denied: Only Server Owner & Administrators can add whitelist items." }, { status: 403 });
   }
 
   try {
+    const user = await getCurrentUser();
     const body = await request.json();
     const { type, value, guildId: reqGuildId } = body;
-    const guildId = reqGuildId || process.env.DEFAULT_GUILD_ID || "1520461877073674392";
+    const guildId =
+      reqGuildId ||
+      user?.guildId ||
+      process.env.DEFAULT_GUILD_ID ||
+      "1520461877073674392";
 
     if (!type || !value) {
       return NextResponse.json({ error: "Type and value are required" }, { status: 400 });
@@ -63,8 +73,8 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (!checkRequestAuth(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!checkRequestAdminAuth(request)) {
+    return NextResponse.json({ error: "Access Denied: Only Server Owner & Administrators can delete whitelist items." }, { status: 403 });
   }
 
   try {
