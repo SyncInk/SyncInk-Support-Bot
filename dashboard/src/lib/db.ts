@@ -5,22 +5,34 @@ declare global {
 }
 
 function createPool(): Pool {
-  const connectionString = process.env.DATABASE_URL;
+  let connectionString = process.env.DATABASE_URL || "";
   if (!connectionString) {
     console.warn("DATABASE_URL is not set. Dashboard database operations will fail.");
   }
 
+  // Automatic optimization: Supabase port 5432 is Session Mode (limited to 15 concurrent clients).
+  // Port 6543 with pgbouncer=true is Transaction Mode (unlimited concurrent serverless clients).
+  // If the user provided the 5432 pooler URL, automatically route through the 6543 transaction pooler.
+  if (connectionString.includes("pooler.supabase.com:5432")) {
+    connectionString = connectionString.replace("pooler.supabase.com:5432", "pooler.supabase.com:6543");
+    if (!connectionString.includes("pgbouncer=true")) {
+      connectionString += (connectionString.includes("?") ? "&" : "?") + "pgbouncer=true";
+    }
+  }
+
   const isLocal =
-    connectionString?.includes("localhost") ||
-    connectionString?.includes("127.0.0.1") ||
-    connectionString?.includes("sslmode=disable");
+    connectionString.includes("localhost") ||
+    connectionString.includes("127.0.0.1") ||
+    connectionString.includes("sslmode=disable");
 
   return new Pool({
     connectionString,
     ssl: isLocal ? false : { rejectUnauthorized: false },
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    // In serverless environments (Vercel), each lambda only processes 1 request at a time.
+    // Keeping max at 2 and idleTimeout low ensures connections are returned to the pooler immediately.
+    max: 2,
+    idleTimeoutMillis: 1500,
+    connectionTimeoutMillis: 6000,
   });
 }
 
@@ -30,12 +42,21 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export async function query<T = any>(text: string, params: any[] = []): Promise<T[]> {
-  const client = await pool.connect();
   try {
-    const res = await client.query(text, params);
+    const res = await pool.query(text, params);
     return res.rows;
-  } finally {
-    client.release();
+  } catch (err: any) {
+    // Graceful retry once in case of transient pooler burst
+    if (
+      err.message?.includes("EMAXCONN") ||
+      err.message?.includes("max clients") ||
+      err.code === "53300"
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      const retryRes = await pool.query(text, params);
+      return retryRes.rows;
+    }
+    throw err;
   }
 }
 
