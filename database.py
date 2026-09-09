@@ -20,7 +20,10 @@ class DatabaseManager:
             ssl_ctx = False
             
         try:
-            self.pool = await asyncpg.create_pool(dsn=dsn, command_timeout=60, ssl=ssl_ctx)
+            pool_kwargs = {"dsn": dsn, "command_timeout": 60, "ssl": ssl_ctx}
+            if "6543" in dsn or "pgbouncer" in dsn.lower():
+                pool_kwargs["statement_cache_size"] = 0
+            self.pool = await asyncpg.create_pool(**pool_kwargs)
             log.info("Successfully connected to the PostgreSQL database.")
             
             # Run migrations
