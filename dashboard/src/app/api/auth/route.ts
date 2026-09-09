@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isValidKey, createSessionToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { isValidKey, createSessionToken, AUTH_COOKIE_NAME, DISCORD_COOKIE_NAME } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
@@ -32,5 +32,6 @@ export async function POST(request: Request) {
 export async function DELETE() {
   const response = NextResponse.json({ success: true, message: "Logged out" });
   response.cookies.delete(AUTH_COOKIE_NAME);
+  response.cookies.delete(DISCORD_COOKIE_NAME);
   return response;
 }

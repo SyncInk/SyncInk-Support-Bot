@@ -47,7 +47,16 @@ interface SecurityState {
   timestamp: string;
 }
 
+interface CurrentUser {
+  id: string;
+  username: string;
+  global_name?: string | null;
+  avatar?: string | null;
+  isOwner?: boolean;
+}
+
 export default function DashboardPage() {
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [data, setData] = useState<SecurityState | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -124,11 +133,26 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const fetchUser = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.authenticated && json.user) {
+          setCurrentUser(json.user);
+        }
+      }
+    } catch (err) {
+      console.error("Fetch user error:", err);
+    }
+  }, []);
+
   useEffect(() => {
+    fetchUser();
     fetchData();
     fetchWhitelist();
     fetchQuarantine();
-  }, [fetchData, fetchWhitelist, fetchQuarantine]);
+  }, [fetchUser, fetchData, fetchWhitelist, fetchQuarantine]);
 
   // Auto-refresh timer every 6 seconds
   useEffect(() => {
@@ -300,10 +324,36 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-3">
             {/* Live Sync Badge */}
-            <div className="hidden sm:flex items-center gap-2 rounded-full border border-border bg-surface-card px-3 py-1 text-xs text-slate-400">
+            <div className="hidden md:flex items-center gap-2 rounded-full border border-border bg-surface-card px-3 py-1 text-xs text-slate-400">
               <span className={`h-2 w-2 rounded-full ${autoRefresh ? "bg-emerald-500 animate-ping" : "bg-slate-500"}`} />
               <span>Live Sync Active</span>
             </div>
+
+            {/* Authenticated Discord User Badge */}
+            {currentUser && (
+              <div className="flex items-center gap-2.5 rounded-xl border border-border bg-surface-card/90 px-3 py-1.5 shadow-sm">
+                {currentUser.avatar ? (
+                  <img
+                    src={`https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png`}
+                    alt={currentUser.username}
+                    className="h-7 w-7 rounded-full object-cover ring-1 ring-border"
+                  />
+                ) : (
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#5865F2] text-xs font-bold text-white">
+                    {(currentUser.global_name || currentUser.username || "U").charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="flex flex-col text-left">
+                  <span className="text-xs font-semibold text-white leading-tight">
+                    {currentUser.global_name || currentUser.username}
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-medium leading-tight flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" />
+                    {currentUser.isOwner ? "Server Owner" : "Admin"}
+                  </span>
+                </div>
+              </div>
+            )}
 
             <button
               onClick={() => fetchData()}
