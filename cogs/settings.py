@@ -115,6 +115,12 @@ class WelcomeMessageModal(discord.ui.Modal, title="Configure Welcome Message"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
+        is_server_owner = (interaction.guild and interaction.user.id == interaction.guild.owner_id)
+        is_bot_owner = await interaction.client.is_owner(interaction.user)
+        if not (is_server_owner or is_bot_owner):
+            await interaction.response.send_message("❌ Access Denied: Only the Server Owner can modify server settings.", ephemeral=True)
+            return
+
         await SettingsService.update_setting(interaction.guild.id, "welcome_message", self.message.value)
         # Assuming the view is attached to the interaction message, we need to manually trigger an update
         # Since this is a modal, we can't directly access `self.view` from the modal, but we can just send a success message.
@@ -187,6 +193,19 @@ class ConfigDashboardView(discord.ui.View):
         self.appeal_channel = AppealChannelSelect()
         self.welcome_channel = WelcomeChannelSelect()
         self.welcome_msg_btn = WelcomeMessageButton()
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if not interaction.guild:
+            return False
+        is_server_owner = (interaction.user.id == interaction.guild.owner_id)
+        is_bot_owner = await interaction.client.is_owner(interaction.user)
+        if not (is_server_owner or is_bot_owner):
+            await interaction.response.send_message(
+                "❌ Access Denied: Only the Server Owner can modify server configuration.",
+                ephemeral=True
+            )
+            return False
+        return True
 
     def prepare_initial(self):
         self.clear_items()
@@ -285,11 +304,12 @@ class Settings(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name="config", description="Manage server settings via the interactive dashboard.")
-    @commands.has_permissions(administrator=True)
+    @commands.command(name="config", description="Manage server settings via the interactive dashboard (Server Owner only).")
     async def config(self, ctx: commands.Context):
-        from utils.permissions import require_staff_channel
+        from utils.permissions import require_staff_channel, require_server_owner
         if not await require_staff_channel(ctx):
+            return
+        if not await require_server_owner(ctx):
             return
         embed = SyncInkEmbed(title="Platform Dashboard")
         embed.set_author(name="SyncInk Administration", icon_url="https://syncink.xyz/assets/logo.png")
@@ -299,11 +319,12 @@ class Settings(commands.Cog):
         view = ConfigDashboardView().prepare_initial()
         await ctx.send(embed=embed, view=view)
         
-    @commands.command(name="onboard", description="Initialize SyncInk and start the guided setup.")
-    @commands.has_permissions(administrator=True)
+    @commands.command(name="onboard", description="Initialize SyncInk and start the guided setup (Server Owner only).")
     async def onboard(self, ctx: commands.Context):
-        from utils.permissions import require_staff_channel
+        from utils.permissions import require_staff_channel, require_server_owner
         if not await require_staff_channel(ctx):
+            return
+        if not await require_server_owner(ctx):
             return
         embed = SyncInkEmbed(title="Welcome to SyncInk")
         embed.description = "Thank you for trusting the SyncInk Support Platform. To secure your community, please complete the initial setup."

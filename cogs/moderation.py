@@ -32,6 +32,13 @@ class Moderation(commands.Cog):
     @commands.command(name="warn", description="Issue a formal warning to a server member.")
     @commands.has_permissions(moderate_members=True)
     async def warn(self, ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
+        if member.id == ctx.guild.owner_id or await self.bot.is_owner(member):
+            await ctx.send(embed=ErrorEmbed("You cannot perform moderation actions against the Server Owner."))
+            return
+        if member.id == self.bot.user.id or member.id == ctx.author.id:
+            await ctx.send(embed=ErrorEmbed("You cannot perform moderation actions against this member."))
+            return
+
         case_id = await ModService.log_case(ctx.guild.id, member.id, ctx.author.id, "WARN", reason)
         await ctx.send(embed=SuccessEmbed(f"Warning issued to {member.mention} for: `{reason}`"))
         
@@ -46,6 +53,13 @@ class Moderation(commands.Cog):
     @commands.command(name="timeout", aliases=["mute"], description="Temporarily restrict a member's chat access.")
     @commands.has_permissions(moderate_members=True)
     async def timeout(self, ctx: commands.Context, member: discord.Member, duration_minutes: int, *, reason: str = "No reason provided"):
+        if member.id == ctx.guild.owner_id or await self.bot.is_owner(member):
+            await ctx.send(embed=ErrorEmbed("You cannot perform moderation actions against the Server Owner."))
+            return
+        if member.id == self.bot.user.id or member.id == ctx.author.id:
+            await ctx.send(embed=ErrorEmbed("You cannot perform moderation actions against this member."))
+            return
+
         try:
             duration = timedelta(minutes=duration_minutes)
             await member.timeout(duration, reason=reason)
@@ -76,6 +90,13 @@ class Moderation(commands.Cog):
     @commands.command(name="kick", description="Kick a member from the server.")
     @commands.has_permissions(kick_members=True)
     async def kick(self, ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
+        if member.id == ctx.guild.owner_id or await self.bot.is_owner(member):
+            await ctx.send(embed=ErrorEmbed("You cannot perform moderation actions against the Server Owner."))
+            return
+        if member.id == self.bot.user.id or member.id == ctx.author.id:
+            await ctx.send(embed=ErrorEmbed("You cannot perform moderation actions against this member."))
+            return
+
         try:
             await member.kick(reason=reason)
             case_id = await ModService.log_case(ctx.guild.id, member.id, ctx.author.id, "KICK", reason)
@@ -94,6 +115,13 @@ class Moderation(commands.Cog):
     @commands.command(name="ban", description="Ban a member from the server.")
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
+        if member.id == ctx.guild.owner_id or await self.bot.is_owner(member):
+            await ctx.send(embed=ErrorEmbed("You cannot perform moderation actions against the Server Owner."))
+            return
+        if member.id == self.bot.user.id or member.id == ctx.author.id:
+            await ctx.send(embed=ErrorEmbed("You cannot perform moderation actions against this member."))
+            return
+
         try:
             await member.ban(reason=reason)
             case_id = await ModService.log_case(ctx.guild.id, member.id, ctx.author.id, "BAN", reason)

@@ -347,9 +347,11 @@ class Security(commands.Cog):
     # -------------------------------------------------------------
     # 6. COMMANDS
     # -------------------------------------------------------------
-    @commands.command(name="spawn_verification", description="Deploy the advanced verification checkpoint to the current channel.")
-    @commands.has_permissions(administrator=True)
+    @commands.command(name="spawn_verification", description="Deploy the advanced verification checkpoint to the current channel (Server Owner only).")
     async def spawn_verification(self, ctx: commands.Context):
+        from utils.permissions import require_server_owner
+        if not await require_server_owner(ctx):
+            return
         settings = await SettingsService.get_guild_settings(ctx.guild.id)
         if not settings.get('verification_enabled') or not settings.get('verification_role_id') or not settings.get('unverified_role_id'):
             embed = ErrorEmbed(

@@ -45,3 +45,25 @@ async def require_staff_channel(ctx) -> bool:
         return False
     return True
 
+async def require_server_owner(ctx) -> bool:
+    """Verifies that the command is run by the Server Owner or Bot Owner."""
+    is_owner = (ctx.guild and ctx.author.id == ctx.guild.owner_id) or await ctx.bot.is_owner(ctx.author)
+    if not is_owner:
+        try:
+            await ctx.message.delete()
+        except (discord.Forbidden, discord.NotFound):
+            pass
+        from utils.ui import SyncInkEmbed, ERROR_COLOR
+        from utils.emojis import Emojis
+        embed = SyncInkEmbed(
+            title=f"{Emojis.REFUSED} **Access Denied**",
+            description="Security and configuration controls are strictly restricted to the **Server Owner**.",
+            color=ERROR_COLOR
+        )
+        try:
+            await ctx.send(embed=embed, delete_after=6)
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+        return False
+    return True
+

@@ -114,15 +114,21 @@ class ChatGPT(commands.Cog):
             if not prompt:
                 return
 
-            async with message.channel.typing():
-                response = await self.get_ai_response(prompt)
-                
-                embed = discord.Embed(
-                    title=f"{Emojis.CHATGPT} OpenAI Response",
-                    description=response,
-                    color=0x2b2d31
-                )
-                await message.reply(embed=embed, mention_author=False)
+            try:
+                async with message.channel.typing():
+                    response = await self.get_ai_response(prompt)
+                    ai_emoji = getattr(Emojis, "CHATGPT", "<:CharGPT:1544376850476826796>")
+                    desc = response[:4000] + "..." if len(response) > 4000 else response
+                    
+                    embed = discord.Embed(
+                        title=f"{ai_emoji} OpenAI Response",
+                        description=desc,
+                        color=0x2b2d31
+                    )
+                    await message.reply(embed=embed, mention_author=False)
+            except Exception as e:
+                log.error(f"Error handling AI mention: {e}")
+                await message.reply(f"An error occurred while generating a response: `{e}`", mention_author=False)
 
     @commands.command(name="ask", aliases=["ai"], description="Ask the AI a question")
     async def ask(self, ctx: commands.Context, *, question: str = None):
@@ -141,15 +147,21 @@ class ChatGPT(commands.Cog):
             await ctx.send("Please provide a question to ask the AI! Usage: `?ask <question>`")
             return
 
-        async with ctx.typing():
-            response = await self.get_ai_response(question)
-            
-            embed = discord.Embed(
-                title=f"{Emojis.CHATGPT} OpenAI Response",
-                description=response,
-                color=0x2b2d31
-            )
-            await ctx.reply(embed=embed, mention_author=False)
+        try:
+            async with ctx.typing():
+                response = await self.get_ai_response(question)
+                ai_emoji = getattr(Emojis, "CHATGPT", "<:CharGPT:1544376850476826796>")
+                desc = response[:4000] + "..." if len(response) > 4000 else response
+                
+                embed = discord.Embed(
+                    title=f"{ai_emoji} OpenAI Response",
+                    description=desc,
+                    color=0x2b2d31
+                )
+                await ctx.reply(embed=embed, mention_author=False)
+        except Exception as e:
+            log.error(f"Error handling ?ask command: {e}")
+            await ctx.reply(f"An error occurred while generating a response: `{e}`", mention_author=False)
 
 async def setup(bot):
     await bot.add_cog(ChatGPT(bot))

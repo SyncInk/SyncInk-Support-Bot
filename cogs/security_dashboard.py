@@ -44,6 +44,12 @@ class ThresholdModal(discord.ui.Modal, title="Security Thresholds"):
         self.nuke_limit.default = str(current_settings.get("anti_nuke_threshold", 3))
 
     async def on_submit(self, interaction: discord.Interaction):
+        is_server_owner = (interaction.guild and interaction.user.id == interaction.guild.owner_id)
+        is_bot_owner = await interaction.client.is_owner(interaction.user)
+        if not (is_server_owner or is_bot_owner):
+            await interaction.response.send_message("❌ Access Denied: Only the Server Owner can tune security thresholds.", ephemeral=True)
+            return
+
         try:
             s_lim = int(self.spam_limit.value)
             m_lim = int(self.mention_limit.value)
@@ -80,8 +86,13 @@ class SecurityDashboardView(discord.ui.View):
         self.author_id = author_id
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id != self.author_id and interaction.user.id != self.guild.owner_id:
-            await interaction.response.send_message("You are not authorized to use this control panel.", ephemeral=True)
+        is_server_owner = (interaction.guild and interaction.user.id == interaction.guild.owner_id)
+        is_bot_owner = await interaction.client.is_owner(interaction.user)
+        if not (is_server_owner or is_bot_owner):
+            await interaction.response.send_message(
+                "❌ Access Denied: Only the Server Owner can use these security controls.",
+                ephemeral=True
+            )
             return False
         return True
 
@@ -249,148 +260,37 @@ class SecurityDashboard(commands.Cog):
         self.bot = bot
 
     # -------------------------------------------------------------
-    # SLASH COMMAND: /security
-    # -------------------------------------------------------------
-    @app_commands.command(name="security", description="Open the master interactive security dashboard and anti-nuke controls.")
-    @app_commands.default_permissions(administrator=True)
-    async def slash_security(self, interaction: discord.Interaction):
-        if not interaction.guild:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-            return
-
-        embed = await build_security_dashboard_embed(interaction.guild)
-        view = SecurityDashboardView(interaction.guild, interaction.user.id)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
-    # -------------------------------------------------------------
-    # SLASH COMMAND: /automod
-    # -------------------------------------------------------------
-    @app_commands.command(name="automod", description="Quick overview of automod and content filtering modules.")
-    @app_commands.default_permissions(administrator=True)
-    async def slash_automod(self, interaction: discord.Interaction):
-        if not interaction.guild:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-            return
-
-        embed = await build_security_dashboard_embed(interaction.guild)
-        view = SecurityDashboardView(interaction.guild, interaction.user.id)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
-    # -------------------------------------------------------------
-    # SLASH COMMAND: /lockdown
-    # -------------------------------------------------------------
-    @app_commands.command(name="lockdown", description="Instantly toggle emergency server lockdown or restore normal state.")
-    @app_commands.describe(
-        action="Choose whether to activate or lift lockdown",
-        reason="Reason for lockdown action"
-    )
-    @app_commands.default_permissions(administrator=True)
-    async def slash_lockdown(
-        self, interaction: discord.Interaction, 
-        action: Literal["activate", "lift"], 
-        reason: str = "No reason provided"
-    ):
-        if not interaction.guild:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-            return
-
-        if action == "activate":
-            await SecurityService.set_raid_state(interaction.guild.id, "LOCKDOWN")
-            await interaction.response.send_message(
-                embed=ErrorEmbed(
-                    description=f"{Emojis.LOCK} **Server entered EMERGENCY LOCKDOWN.**\nReason: *{reason}*",
-                    resolution="All new incoming joins will be quarantined. Use `/lockdown lift` to restore normal state."
-                ),
-                ephemeral=True
-            )
-        else:
-            await SecurityService.set_raid_state(interaction.guild.id, "NORMAL")
-            await interaction.response.send_message(
-                embed=SuccessEmbed(
-                    f"{Emojis.APPROVED} **Lockdown lifted.** Server returned to **NORMAL** operations.\nReason: *{reason}*"
-                ),
-                ephemeral=True
-            )
-
-    # -------------------------------------------------------------
-    # SLASH COMMAND: /whitelist
-    # -------------------------------------------------------------
-    @app_commands.command(name="whitelist", description="Manage trusted exemptions for roles, users, channels, or domains.")
-    @app_commands.describe(
-        action="Action to perform",
-        entity_type="Type of entity to whitelist",
-        target="Target ID, mention, or domain name"
-    )
-    @app_commands.default_permissions(administrator=True)
-    async def slash_whitelist(
-        self, interaction: discord.Interaction,
-        action: Literal["add", "remove", "list"],
-        entity_type: Optional[Literal["user", "role", "channel", "domain"]] = None,
-        target: Optional[str] = None
-    ):
-        if not interaction.guild:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-            return
-
-        if action == "list":
-            entries = await SecurityService.get_whitelist_entries(interaction.guild.id, entity_type)
-            if not entries:
-                await interaction.response.send_message("No whitelist entries found.", ephemeral=True)
-                return
-
-            lines = [f"• **[{e['entity_type'].upper()}]** `{e['entity_id_or_val']}`" for e in entries[:25]]
-            embed = SyncInkEmbed(title=f"{Emojis.MODERATION} Security Whitelist", description="\n".join(lines), color=BRAND_ACCENT)
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-
-        if not entity_type or not target:
-            await interaction.response.send_message("Please provide both `entity_type` and `target` for add/remove.", ephemeral=True)
-            return
-
-        # Clean target string (strip <@>, <#>, <@&>)
-        clean_target = target.strip("<@!&#> ").lower()
-
-        if action == "add":
-            success = await SecurityService.add_whitelist(interaction.guild.id, entity_type, clean_target, interaction.user.id)
-            if success:
-                await interaction.response.send_message(embed=SuccessEmbed(f"Added **[{entity_type.upper()}]** `{clean_target}` to whitelist."), ephemeral=True)
-            else:
-                await interaction.response.send_message(embed=ErrorEmbed("Failed to add whitelist entry."), ephemeral=True)
-        else: # remove
-            success = await SecurityService.remove_whitelist(interaction.guild.id, entity_type, clean_target)
-            if success:
-                await interaction.response.send_message(embed=SuccessEmbed(f"Removed **[{entity_type.upper()}]** `{clean_target}` from whitelist."), ephemeral=True)
-            else:
-                await interaction.response.send_message(embed=ErrorEmbed("Failed to remove whitelist entry."), ephemeral=True)
-
-    # -------------------------------------------------------------
     # PREFIX COMMANDS: ?security, ?automod, ?lockdown, ?whitelist
+    # Strictly restricted to Server Owner in Authorized Staff Channels
     # -------------------------------------------------------------
-    @commands.command(name="security", description="Open the interactive security dashboard.")
-    @commands.has_permissions(administrator=True)
+    @commands.command(name="security", description="Open the master interactive security dashboard (Server Owner only).")
     async def prefix_security(self, ctx: commands.Context):
-        from utils.permissions import require_staff_channel
+        from utils.permissions import require_staff_channel, require_server_owner
         if not await require_staff_channel(ctx):
+            return
+        if not await require_server_owner(ctx):
             return
         embed = await build_security_dashboard_embed(ctx.guild)
         view = SecurityDashboardView(ctx.guild, ctx.author.id)
-        await ctx.send(embed=embed, view=view, delete_after=120)
+        await ctx.send(embed=embed, view=view, delete_after=180)
 
-    @commands.command(name="automod_panel", aliases=["automod"], description="Open the automod overview panel.")
-    @commands.has_permissions(administrator=True)
+    @commands.command(name="automod_panel", aliases=["automod"], description="Open the automod overview panel (Server Owner only).")
     async def prefix_automod(self, ctx: commands.Context):
-        from utils.permissions import require_staff_channel
+        from utils.permissions import require_staff_channel, require_server_owner
         if not await require_staff_channel(ctx):
+            return
+        if not await require_server_owner(ctx):
             return
         embed = await build_security_dashboard_embed(ctx.guild)
         view = SecurityDashboardView(ctx.guild, ctx.author.id)
-        await ctx.send(embed=embed, view=view, delete_after=120)
+        await ctx.send(embed=embed, view=view, delete_after=180)
 
-    @commands.command(name="lockdown", description="Emergency lockdown or restore server channels.")
-    @commands.has_permissions(administrator=True)
+    @commands.command(name="lockdown", description="Emergency lockdown or restore server channels (Server Owner only).")
     async def prefix_lockdown(self, ctx: commands.Context, *, reason: str = "No reason provided"):
-        from utils.permissions import require_staff_channel
+        from utils.permissions import require_staff_channel, require_server_owner
         if not await require_staff_channel(ctx):
+            return
+        if not await require_server_owner(ctx):
             return
         current_state = await SecurityService.get_raid_state(ctx.guild.id)
         if current_state == "LOCKDOWN":
@@ -403,11 +303,12 @@ class SecurityDashboard(commands.Cog):
                 resolution="All new incoming joins will be quarantined. Type `?lockdown` again to restore normal state."
             ))
 
-    @commands.command(name="whitelist", description="Manage security exemptions for roles, users, channels, or domains.")
-    @commands.has_permissions(administrator=True)
+    @commands.command(name="whitelist", description="Manage security exemptions for roles, users, channels, or domains (Server Owner only).")
     async def prefix_whitelist(self, ctx: commands.Context, action: str, entity_type: str = None, target: str = None):
-        from utils.permissions import require_staff_channel
+        from utils.permissions import require_staff_channel, require_server_owner
         if not await require_staff_channel(ctx):
+            return
+        if not await require_server_owner(ctx):
             return
         action_clean = action.lower()
         if action_clean == "list":

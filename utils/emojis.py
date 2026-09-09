@@ -18,6 +18,7 @@ class Emojis:
     LOCK = "<:syncink_lock:1547034002689491025>"
     SUGGESTION = "<:syncinksuggestion:1547033969646903437>"
     QUESTION = "<:syncinkquestion:1547033451029594222>"
+    CHATGPT = "<:CharGPT:1544376850476826796>"
     # Feature request custom emojis
     LOADING = "<a:Loading:1547095365679849492>"
     PENDING = "<a:pending:1547110867466985532>"
