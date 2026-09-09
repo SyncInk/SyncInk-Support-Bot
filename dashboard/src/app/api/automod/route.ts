@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkRequestAuth, checkRequestAdminAuth, getCurrentUser } from "@/lib/auth";
-import { query, queryOne } from "@/lib/db";
+import { query, queryOne, resolveGuildId } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +12,7 @@ export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
-    const guildId =
-      searchParams.get("guildId") ||
-      user?.guildId ||
-      process.env.DEFAULT_GUILD_ID ||
-      "1520461877073674392";
+    const guildId = await resolveGuildId(searchParams.get("guildId") || user?.guildId);
 
     // 1. Fetch Blacklist items
     const blacklist = await query(
@@ -86,12 +82,8 @@ export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
     const body = await request.json();
-    const { pattern, matchType, points, severity, guildId: reqGuildId } = body;
-    const guildId =
-      reqGuildId ||
-      user?.guildId ||
-      process.env.DEFAULT_GUILD_ID ||
-      "1520461877073674392";
+    const { pattern, matchType = "contains", points = 1, severity = "MEDIUM", guildId: reqGuildId } = body;
+    const guildId = await resolveGuildId(reqGuildId || user?.guildId);
 
     if (!pattern || !pattern.trim()) {
       return NextResponse.json(
@@ -142,7 +134,7 @@ export async function DELETE(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const resetUser = searchParams.get("resetUser");
-    const guildId = searchParams.get("guildId") || process.env.DEFAULT_GUILD_ID || "1520461877073674392";
+    const guildId = await resolveGuildId(searchParams.get("guildId"));
 
     if (resetUser) {
       await query(

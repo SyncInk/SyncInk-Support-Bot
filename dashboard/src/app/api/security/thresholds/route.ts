@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkRequestAdminAuth, getCurrentUser } from "@/lib/auth";
-import { query } from "@/lib/db";
+import { query, resolveGuildId } from "@/lib/db";
 
 export async function POST(request: Request) {
   if (!checkRequestAdminAuth(request)) {
@@ -18,11 +18,7 @@ export async function POST(request: Request) {
       guildId: reqGuildId
     } = body;
 
-    const guildId =
-      reqGuildId ||
-      user?.guildId ||
-      process.env.DEFAULT_GUILD_ID ||
-      "1520461877073674392";
+    const guildId = await resolveGuildId(reqGuildId || user?.guildId);
 
     const s = Math.max(1, parseInt(spamLimit || "5", 10));
     const m = Math.max(1, parseInt(mentionLimit || "5", 10));

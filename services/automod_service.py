@@ -1,5 +1,6 @@
 import discord
 import asyncio
+from typing import Optional
 from datetime import datetime, timedelta
 from database import db
 from services.settings_service import SettingsService
@@ -24,26 +25,24 @@ class AutomodService:
 
     @staticmethod
     async def is_user_jailed(guild: discord.Guild, member: discord.Member) -> bool:
+        if member.id == guild.owner_id:
+            return False
+
         settings = await SettingsService.get_guild_settings(guild.id)
         jail_role_id = settings.get('quarantine_role_id') or settings.get('jail_role_id')
         jail_role_id_int = int(jail_role_id) if jail_role_id else None
 
-        has_jail_role = False
         if jail_role_id_int and any(r.id == jail_role_id_int for r in member.roles):
-            has_jail_role = True
-        elif any("jail" in r.name.lower() or "quarantine" in r.name.lower() for r in member.roles):
-            has_jail_role = True
+            return True
+        if any("jail" in r.name.lower() or "quarantine" in r.name.lower() for r in member.roles):
+            return True
 
-        # A member currently in the server is ONLY jailed if they actively possess the jail role.
-        # If they do not have the jail role, clean up any stale automod_jails records to prevent phantom jail status.
-        if not has_jail_role:
-            try:
-                await db.execute("DELETE FROM automod_jails WHERE guild_id = $1 AND user_id = $2", guild.id, member.id)
-            except Exception:
-                pass
-            return False
-
-        return True
+        # Check if user has an active record in automod_jails
+        record = await db.fetchrow(
+            "SELECT id FROM automod_jails WHERE guild_id = $1 AND user_id = $2 AND (release_at IS NULL OR release_at > CURRENT_TIMESTAMP)",
+            guild.id, member.id
+        )
+        return record is not None
 
     @staticmethod
     async def add_violation(
@@ -234,22 +233,55 @@ class AutomodService:
 
 
     @staticmethod
+    async def get_or_create_jail_role(guild: discord.Guild) -> Optional[discord.Role]:
+        settings = await SettingsService.get_guild_settings(guild.id)
+        jail_role_id = settings.get('quarantine_role_id') or settings.get('jail_role_id')
+        if jail_role_id:
+            role = guild.get_role(int(jail_role_id))
+            if role:
+                return role
+
+        for r in guild.roles:
+            if any(k in r.name.lower() for k in ("quarantine", "jail", "prisoner")):
+                await db.execute(
+                    "UPDATE guild_settings SET quarantine_role_id = $1 WHERE guild_id = $2",
+                    r.id, guild.id
+                )
+                return r
+
+        # Auto-create Quarantine role if bot has manage_roles permission
+        if guild.me.guild_permissions.manage_roles:
+            try:
+                role = await guild.create_role(
+                    name="Quarantined",
+                    color=discord.Color.dark_grey(),
+                    reason="SyncInk Security: Auto-created quarantine isolation role"
+                )
+                try:
+                    positions = {role: max(1, guild.me.top_role.position - 1)}
+                    await guild.edit_role_positions(positions=positions)
+                except Exception:
+                    pass
+
+                await db.execute(
+                    "UPDATE guild_settings SET quarantine_role_id = $1 WHERE guild_id = $2",
+                    role.id, guild.id
+                )
+                log.info(f"Auto-created Quarantined role (ID: {role.id}) in guild {guild.name} ({guild.id})")
+                return role
+            except Exception as e:
+                log.error(f"Failed to auto-create Quarantined role in guild {guild.id}: {e}")
+
+        return None
+
+    @staticmethod
     async def jail_user(guild: discord.Guild, member: discord.Member, moderator: discord.Member, reason: str, duration_mins: int = None) -> int:
         if member.id == guild.owner_id:
             raise Exception("Cannot jail the server owner.")
 
-        settings = await SettingsService.get_guild_settings(guild.id)
-        jail_role_id = settings.get('quarantine_role_id') or settings.get('jail_role_id')
-        jail_role = None
-        if jail_role_id:
-            jail_role = guild.get_role(int(jail_role_id))
+        jail_role = await AutomodService.get_or_create_jail_role(guild)
         if not jail_role:
-            for r in guild.roles:
-                if any(k in r.name.lower() for k in ("quarantine", "jail")):
-                    jail_role = r
-                    break
-        if not jail_role:
-            raise Exception("Neither Quarantine nor Jail role is configured on this server.")
+            raise Exception("Neither Quarantine nor Jail role is configured on this server, and bot lacks permission to create one.")
 
         jail_role_id_int = jail_role.id
 
@@ -265,43 +297,67 @@ class AutomodService:
 
         # Apply jail
         try:
-            await member.remove_roles(*roles_to_remove, reason="Jailed")
-            await member.add_roles(jail_role, reason="Jailed")
+            if roles_to_remove:
+                await member.remove_roles(*roles_to_remove, reason="Quarantine: Roles Stripped")
+            if jail_role not in member.roles:
+                await member.add_roles(jail_role, reason="Quarantine: Isolation Applied")
         except discord.Forbidden:
             raise Exception("Missing permissions to modify roles.")
 
-        case_id = await ModService.log_case(guild.id, member.id, moderator.id, "JAIL", reason)
+        mod_id = moderator.id if moderator else (guild.me.id if guild.me else 0)
+        case_id = await ModService.log_case(guild.id, member.id, mod_id, "JAIL", reason)
         roles_str = ",".join(stored_roles)
         release_at = (datetime.utcnow() + timedelta(minutes=duration_mins)) if duration_mins else None
 
-        await db.execute("""
-            INSERT INTO automod_jails (guild_id, user_id, mod_id, reason, previous_roles, release_at, case_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-        """, guild.id, member.id, moderator.id, reason, roles_str, release_at, case_id)
+        # Check if record already exists (e.g. from web dashboard)
+        existing = await db.fetchrow(
+            "SELECT id, previous_roles FROM automod_jails WHERE guild_id = $1 AND user_id = $2 ORDER BY jailed_at DESC LIMIT 1",
+            guild.id, member.id
+        )
+        if existing:
+            saved_roles = existing['previous_roles'] if existing['previous_roles'] else roles_str
+            await db.execute("""
+                UPDATE automod_jails
+                SET mod_id = COALESCE($1, mod_id),
+                    reason = COALESCE($2, reason),
+                    previous_roles = $3,
+                    release_at = $4,
+                    case_id = COALESCE($5, case_id),
+                    jailed_at = CURRENT_TIMESTAMP
+                WHERE id = $6
+            """, mod_id, reason, saved_roles, release_at, case_id, existing['id'])
+        else:
+            await db.execute("""
+                INSERT INTO automod_jails (guild_id, user_id, mod_id, reason, previous_roles, release_at, case_id)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+            """, guild.id, member.id, mod_id, reason, roles_str, release_at, case_id)
 
         # DM the user with an Appeal button
         from utils.ui import JailAppealView
         try:
             embed = ErrorEmbed(
-                description=f"You have been placed in jail in **{guild.name}**.\nThis is a strict disciplinary action.",
-                resolution="You have lost access to all standard channels. You may submit an appeal using the button below to be reviewed by the administration team."
+                description=f"You have been placed in quarantine isolation in **{guild.name}**.\nThis is a strict disciplinary action.",
+                resolution="You have lost access to standard channels. You may submit an appeal using the button below to be reviewed by the administration team."
             )
             embed.title = f"{Emojis.LOCK} Official Jail Notice"
             embed.add_field(name="Infraction Reason", value=f"```\n{reason}\n```", inline=False)
             embed.add_field(name="Case ID", value=str(case_id), inline=False)
+            if release_at:
+                embed.add_field(name="Release Due", value=f"<t:{int(release_at.timestamp())}:R>", inline=False)
             embed.set_thumbnail(url="https://files.catbox.moe/74l9su.png")
             embed.set_footer(text=f"SyncInk Platform | Server ID: {guild.id}", icon_url="https://files.catbox.moe/74l9su.png")
             await member.send(embed=embed, view=JailAppealView())
-        except discord.Forbidden:
+        except Exception:
             pass
 
         return case_id
 
     @staticmethod
     async def unjail_user(guild: discord.Guild, member: discord.Member, moderator: discord.Member, reason: str):
-        jail_record = await db.fetchrow("SELECT previous_roles, id FROM automod_jails WHERE guild_id = $1 AND user_id = $2 ORDER BY jailed_at DESC LIMIT 1", guild.id, member.id)
-        if not jail_record:
-            raise Exception("No active jail record found for this user.")
+        jail_record = await db.fetchrow(
+            "SELECT previous_roles, id FROM automod_jails WHERE guild_id = $1 AND user_id = $2 ORDER BY jailed_at DESC LIMIT 1",
+            guild.id, member.id
+        )
 
         settings = await SettingsService.get_guild_settings(guild.id)
         jail_role_id = settings.get('quarantine_role_id') or settings.get('jail_role_id')
@@ -318,13 +374,14 @@ class AutomodService:
             except discord.Forbidden:
                 pass
 
-        if jail_record['previous_roles']:
-            role_ids = [int(rid) for rid in jail_record['previous_roles'].split(',') if rid.strip()]
+        if jail_record and jail_record['previous_roles']:
+            role_ids = [int(rid) for rid in jail_record['previous_roles'].split(',') if rid.strip().isdigit()]
             roles_to_add = [
                 guild.get_role(rid) for rid in role_ids 
                 if guild.get_role(rid) 
                 and not (jail_role_id_int and rid == jail_role_id_int) 
                 and not any(k in guild.get_role(rid).name.lower() for k in ("jail", "quarantine"))
+                and guild.get_role(rid) < guild.me.top_role
             ]
             if roles_to_add:
                 try:
@@ -332,8 +389,23 @@ class AutomodService:
                 except discord.Forbidden:
                     pass
 
-        await db.execute("DELETE FROM automod_jails WHERE id = $1", jail_record['id'])
-        await ModService.log_case(guild.id, member.id, moderator.id, "UNJAIL", reason)
+        if jail_record:
+            await db.execute("DELETE FROM automod_jails WHERE id = $1", jail_record['id'])
+
+        mod_id = moderator.id if moderator else (guild.me.id if guild.me else 0)
+        await ModService.log_case(guild.id, member.id, mod_id, "UNJAIL", reason)
+
+        # Notify member in DM
+        try:
+            from utils.ui import SuccessEmbed
+            embed = SuccessEmbed(
+                description=f"Your quarantine sentence in **{guild.name}** has been lifted.\nYour normal server access and roles have been restored."
+            )
+            embed.title = "Quarantine Released"
+            embed.set_footer(text=f"SyncInk Platform | Server ID: {guild.id}", icon_url="https://files.catbox.moe/74l9su.png")
+            await member.send(embed=embed)
+        except Exception:
+            pass
 
     @staticmethod
     async def point_decay_task():
@@ -345,8 +417,15 @@ class AutomodService:
         records = await db.fetch("SELECT id, guild_id, user_id FROM automod_jails WHERE release_at IS NOT NULL AND release_at <= CURRENT_TIMESTAMP")
         for record in records:
             guild = bot.get_guild(record['guild_id'])
+            if not guild and len(bot.guilds) == 1:
+                guild = bot.guilds[0]
             if guild:
                 member = guild.get_member(record['user_id'])
+                if not member:
+                    try:
+                        member = await guild.fetch_member(record['user_id'])
+                    except Exception:
+                        member = None
                 if member:
                     try:
                         await AutomodService.unjail_user(guild, member, bot.user, "Automatic Timed Release")
@@ -354,3 +433,4 @@ class AutomodService:
                         log.error(f"Failed to auto-unjail {member.id}: {e}")
             # Ensure it's deleted even if member left
             await db.execute("DELETE FROM automod_jails WHERE id = $1", record['id'])
+

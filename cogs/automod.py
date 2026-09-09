@@ -4,7 +4,9 @@ from discord import app_commands
 from services.automod_service import AutomodService
 from services.settings_service import SettingsService
 from services.security_service import SecurityService
+from services.mod_service import ModService
 from services.risk_service import RiskEngine
+from database import db
 from utils.ui import SyncInkEmbed, WARNING_COLOR, ERROR_COLOR
 from utils.emojis import Emojis
 from utils.permissions import has_permission
@@ -116,22 +118,227 @@ class Automod(commands.Cog):
         self.recent_mentions = {}
 
         # Start background tasks
-        self.timed_jail_loop.start()
+        self.sync_dispatcher_loop.start()
         self.cache_prune_loop.start()
 
     def cog_unload(self):
-        self.timed_jail_loop.cancel()
+        self.sync_dispatcher_loop.cancel()
         self.cache_prune_loop.cancel()
 
-    @tasks.loop(minutes=1)
-    async def timed_jail_loop(self):
+    @tasks.loop(seconds=4)
+    async def sync_dispatcher_loop(self):
+        """
+        Real-time bi-directional synchronization between Web Dashboard and Discord Bot:
+        1. Dispatches queued actions from pending_bot_actions (JAIL, UNJAIL, KICK, BAN, UNBAN, TIMEOUT)
+        2. Reconciles orphan/direct database entries in automod_jails (e.g. jailing directly via DB or web)
+        3. Releases expired timed sentences in automod_jails
+        """
+        # --- Part 1: Action Queue Dispatch ---
+        try:
+            pending_actions = await db.fetch("""
+                SELECT id, guild_id, user_id, action, mod_id, reason, duration_mins
+                FROM pending_bot_actions
+                WHERE status = 'PENDING'
+                ORDER BY id ASC
+                LIMIT 10
+            """)
+        except Exception:
+            pending_actions = []
+
+        for row in pending_actions:
+            action_id = row['id']
+            guild_id = row['guild_id']
+            user_id = row['user_id']
+            action = row['action'].upper().strip()
+            mod_id = row['mod_id']
+            reason = row['reason'] or "Dispatched from Web Dashboard"
+            duration_mins = row['duration_mins']
+
+            # Mark as processing
+            await db.execute("UPDATE pending_bot_actions SET status = 'PROCESSING' WHERE id = $1", action_id)
+
+            guild = self.bot.get_guild(guild_id)
+            if not guild and len(self.bot.guilds) == 1:
+                guild = self.bot.guilds[0]
+
+            if not guild:
+                await db.execute(
+                    "UPDATE pending_bot_actions SET status = 'FAILED', error_message = 'Guild not found on bot instance', processed_at = CURRENT_TIMESTAMP WHERE id = $1",
+                    action_id
+                )
+                continue
+
+            try:
+                moderator = guild.get_member(mod_id) if mod_id else self.bot.user
+                if not moderator:
+                    moderator = self.bot.user
+
+                if action == "JAIL":
+                    member = guild.get_member(user_id)
+                    if not member:
+                        try:
+                            member = await guild.fetch_member(user_id)
+                        except Exception:
+                            member = None
+
+                    if member:
+                        await AutomodService.jail_user(guild, member, moderator, reason, duration_mins)
+                        await db.execute("UPDATE pending_bot_actions SET status = 'COMPLETED', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
+                    else:
+                        # User not in server currently; already registered in automod_jails for evasion protection on join
+                        await db.execute(
+                            "UPDATE pending_bot_actions SET status = 'COMPLETED', error_message = 'Member not currently in server; recorded in automod_jails for evasion protection', processed_at = CURRENT_TIMESTAMP WHERE id = $1",
+                            action_id
+                        )
+
+                elif action == "UNJAIL":
+                    member = guild.get_member(user_id)
+                    if not member:
+                        try:
+                            member = await guild.fetch_member(user_id)
+                        except Exception:
+                            member = None
+
+                    if member:
+                        await AutomodService.unjail_user(guild, member, moderator, reason)
+                    else:
+                        await db.execute("DELETE FROM automod_jails WHERE guild_id = $1 AND user_id = $2", guild.id, user_id)
+
+                    await db.execute("UPDATE pending_bot_actions SET status = 'COMPLETED', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
+
+                elif action == "KICK":
+                    member = guild.get_member(user_id)
+                    if not member:
+                        try:
+                            member = await guild.fetch_member(user_id)
+                        except Exception:
+                            member = None
+                    if member:
+                        await member.kick(reason=f"[Web Dash] {reason}")
+                        await ModService.log_case(guild.id, member.id, moderator.id, "KICK", reason)
+                        await db.execute("UPDATE pending_bot_actions SET status = 'COMPLETED', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
+                    else:
+                        await db.execute("UPDATE pending_bot_actions SET status = 'FAILED', error_message = 'Member not found in guild', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
+
+                elif action == "BAN":
+                    await guild.ban(discord.Object(id=user_id), reason=f"[Web Dash] {reason}")
+                    await ModService.log_case(guild.id, user_id, moderator.id, "BAN", reason)
+                    await db.execute("UPDATE pending_bot_actions SET status = 'COMPLETED', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
+
+                elif action == "UNBAN":
+                    await guild.unban(discord.Object(id=user_id), reason=f"[Web Dash] {reason}")
+                    await ModService.log_case(guild.id, user_id, moderator.id, "UNBAN", reason)
+                    await db.execute("UPDATE pending_bot_actions SET status = 'COMPLETED', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
+
+                elif action == "TIMEOUT":
+                    member = guild.get_member(user_id)
+                    if not member:
+                        try:
+                            member = await guild.fetch_member(user_id)
+                        except Exception:
+                            member = None
+                    if member:
+                        mins = duration_mins or 10
+                        await member.timeout(timedelta(minutes=mins), reason=f"[Web Dash] {reason}")
+                        await ModService.log_case(guild.id, member.id, moderator.id, "TIMEOUT", f"{mins}m: {reason}")
+                        await db.execute("UPDATE pending_bot_actions SET status = 'COMPLETED', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
+                    else:
+                        await db.execute("UPDATE pending_bot_actions SET status = 'FAILED', error_message = 'Member not found in guild', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
+
+                else:
+                    await db.execute("UPDATE pending_bot_actions SET status = 'FAILED', error_message = 'Unknown action type', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
+
+            except Exception as e:
+                log.error(f"Error processing pending action {action_id} ({action}): {e}")
+                await db.execute(
+                    "UPDATE pending_bot_actions SET status = 'FAILED', error_message = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2",
+                    str(e)[:500], action_id
+                )
+
+        # --- Part 2: Active Quarantine Reconciliation ---
+        try:
+            active_jails = await db.fetch("""
+                SELECT id, guild_id, user_id, mod_id, reason, previous_roles, release_at
+                FROM automod_jails
+                WHERE (release_at IS NULL OR release_at > CURRENT_TIMESTAMP)
+            """)
+        except Exception:
+            active_jails = []
+
+        for jail in active_jails:
+            try:
+                guild = self.bot.get_guild(jail['guild_id'])
+                if not guild and len(self.bot.guilds) == 1:
+                    guild = self.bot.guilds[0]
+                if not guild:
+                    continue
+
+                member = guild.get_member(jail['user_id'])
+                if not member or member.id == guild.owner_id:
+                    continue
+
+                jail_role = await AutomodService.get_or_create_jail_role(guild)
+                if not jail_role:
+                    continue
+
+                # If member is in automod_jails but does not have the jail role on Discord:
+                if jail_role not in member.roles:
+                    stored_roles = []
+                    roles_to_remove = []
+                    for role in member.roles:
+                        if (
+                            role.id != guild.default_role.id
+                            and not role.is_integration()
+                            and not role.is_premium_subscriber()
+                            and role < guild.me.top_role
+                            and role.id != jail_role.id
+                            and not any(k in role.name.lower() for k in ("jail", "quarantine"))
+                        ):
+                            stored_roles.append(str(role.id))
+                            roles_to_remove.append(role)
+
+                    if roles_to_remove:
+                        try:
+                            await member.remove_roles(*roles_to_remove, reason="Quarantine Sync: Isolation Enforced")
+                        except discord.Forbidden:
+                            pass
+                    try:
+                        await member.add_roles(jail_role, reason="Quarantine Sync: Isolation Enforced")
+                    except discord.Forbidden:
+                        pass
+
+                    roles_str = ",".join(stored_roles) if stored_roles else (jail['previous_roles'] or "")
+                    await db.execute("UPDATE automod_jails SET previous_roles = $1 WHERE id = $2", roles_str, jail['id'])
+
+                    # Notify user in DM
+                    try:
+                        from utils.ui import JailAppealView
+                        embed = ErrorEmbed(
+                            description=f"You have been placed in quarantine isolation in **{guild.name}**.\nThis is a strict disciplinary action.",
+                            resolution="You have lost access to standard channels. You may submit an appeal using the button below to be reviewed by the administration team."
+                        )
+                        embed.title = f"{Emojis.LOCK} Official Jail Notice"
+                        embed.add_field(name="Infraction Reason", value=f"```\n{jail['reason'] or 'Quarantined via Web Dashboard'}\n```", inline=False)
+                        if jail['release_at']:
+                            embed.add_field(name="Release Due", value=f"<t:{int(jail['release_at'].timestamp())}:R>", inline=False)
+                        embed.set_thumbnail(url="https://files.catbox.moe/74l9su.png")
+                        embed.set_footer(text=f"SyncInk Platform | Server ID: {guild.id}", icon_url="https://files.catbox.moe/74l9su.png")
+                        await member.send(embed=embed, view=JailAppealView())
+                    except Exception:
+                        pass
+
+                    log.info(f"Quarantine Sync: Enforced jail on {member.display_name} ({member.id}) in {guild.name}")
+            except Exception as e:
+                log.error(f"Error during jail reconciliation for user {jail.get('user_id')}: {e}")
+
+        # --- Part 3: Auto-Release Expired Timed Jails ---
         try:
             await AutomodService.check_timed_jails(self.bot)
         except Exception as e:
-            log.error(f"Timed jail loop failed: {e}")
+            log.error(f"Timed jail check failed: {e}")
 
-    @timed_jail_loop.before_loop
-    async def before_timed_jail(self):
+    @sync_dispatcher_loop.before_loop
+    async def before_sync_dispatcher(self):
         await self.bot.wait_until_ready()
 
     @tasks.loop(minutes=2)

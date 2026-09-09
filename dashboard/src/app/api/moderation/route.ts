@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkRequestAuth, checkRequestAdminAuth, getCurrentUser } from "@/lib/auth";
-import { query, queryOne } from "@/lib/db";
+import { query, queryOne, resolveGuildId } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +12,7 @@ export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
-    const guildId =
-      searchParams.get("guildId") ||
-      user?.guildId ||
-      process.env.DEFAULT_GUILD_ID ||
-      "1520461877073674392";
+    const guildId = await resolveGuildId(searchParams.get("guildId") || user?.guildId);
 
     const actionFilter = searchParams.get("action");
     const searchQuery = searchParams.get("search")?.trim() || "";
@@ -87,12 +83,8 @@ export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
     const body = await request.json();
-    const { userId, action, reason, guildId: reqGuildId } = body;
-    const guildId =
-      reqGuildId ||
-      user?.guildId ||
-      process.env.DEFAULT_GUILD_ID ||
-      "1520461877073674392";
+    const { userId, action, reason, durationMins, guildId: reqGuildId } = body;
+    const guildId = await resolveGuildId(reqGuildId || user?.guildId);
 
     if (!userId || !action) {
       return NextResponse.json(
@@ -105,12 +97,36 @@ export async function POST(request: Request) {
     const cleanAction = String(action).toUpperCase().trim();
     const cleanReason = String(reason || "Action applied via Web Dashboard").trim();
     const modId = user?.id === "admin" ? 0 : (user?.id || 0);
+    const parsedMins = durationMins ? parseInt(durationMins, 10) : null;
 
     const result = await queryOne(
       `INSERT INTO mod_cases (guild_id, user_id, mod_id, action, reason)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING case_id, created_at`,
       [guildId, cleanUserId, modId, cleanAction, cleanReason]
+    );
+
+    // Queue action for live Discord bot execution
+    await query(`
+      CREATE TABLE IF NOT EXISTS pending_bot_actions (
+        id SERIAL PRIMARY KEY,
+        guild_id BIGINT NOT NULL,
+        user_id BIGINT NOT NULL,
+        action VARCHAR(50) NOT NULL,
+        mod_id BIGINT,
+        reason TEXT,
+        duration_mins INT,
+        status VARCHAR(20) DEFAULT 'PENDING',
+        error_message TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        processed_at TIMESTAMP
+      );
+    `).catch(() => {});
+
+    await query(
+      `INSERT INTO pending_bot_actions (guild_id, user_id, action, mod_id, reason, duration_mins)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [guildId, cleanUserId, cleanAction, modId, cleanReason, parsedMins]
     );
 
     // Also log incident in forensics
@@ -131,7 +147,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       caseId: result?.case_id,
-      message: `Successfully logged moderation case for ${cleanUserId} (${cleanAction}).`,
+      message: `Successfully executed moderation case for ${cleanUserId} (${cleanAction}). Bot is applying action in Discord.`,
     });
   } catch (error: any) {
     console.error("Moderation Post Error:", error);

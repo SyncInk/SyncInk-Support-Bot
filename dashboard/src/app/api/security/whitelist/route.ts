@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkRequestAuth, checkRequestAdminAuth, getCurrentUser } from "@/lib/auth";
-import { query } from "@/lib/db";
+import { query, resolveGuildId } from "@/lib/db";
 
 export async function GET(request: Request) {
   if (!checkRequestAuth(request)) {
@@ -10,11 +10,7 @@ export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
-    const guildId =
-      searchParams.get("guildId") ||
-      user?.guildId ||
-      process.env.DEFAULT_GUILD_ID ||
-      "1520461877073674392";
+    const guildId = await resolveGuildId(searchParams.get("guildId") || user?.guildId);
 
     const entries = await query(
       `SELECT id, guild_id, entity_type, entity_id_or_val, added_by, created_at 
@@ -39,11 +35,7 @@ export async function POST(request: Request) {
     const user = await getCurrentUser();
     const body = await request.json();
     const { type, value, guildId: reqGuildId } = body;
-    const guildId =
-      reqGuildId ||
-      user?.guildId ||
-      process.env.DEFAULT_GUILD_ID ||
-      "1520461877073674392";
+    const guildId = await resolveGuildId(reqGuildId || user?.guildId);
 
     if (!type || !value) {
       return NextResponse.json({ error: "Type and value are required" }, { status: 400 });

@@ -64,3 +64,37 @@ export async function queryOne<T = any>(text: string, params: any[] = []): Promi
   const rows = await query<T>(text, params);
   return rows.length > 0 ? rows[0] : null;
 }
+
+let cachedGuildId: string | null = null;
+let lastGuildFetch = 0;
+
+export async function resolveGuildId(providedGuildId?: string | null): Promise<string> {
+  if (
+    providedGuildId &&
+    providedGuildId.trim() &&
+    providedGuildId !== "null" &&
+    providedGuildId !== "undefined"
+  ) {
+    return providedGuildId.trim();
+  }
+
+  const now = Date.now();
+  if (cachedGuildId && now - lastGuildFetch < 60000) {
+    return cachedGuildId;
+  }
+
+  try {
+    const existing = await queryOne<{ guild_id: string | number }>(
+      "SELECT guild_id FROM guild_settings ORDER BY guild_id ASC LIMIT 1"
+    );
+    if (existing?.guild_id) {
+      cachedGuildId = String(existing.guild_id);
+      lastGuildFetch = now;
+      return cachedGuildId;
+    }
+  } catch (e) {
+    // ignore query error, fallback below
+  }
+
+  return process.env.DEFAULT_GUILD_ID || "1520457643842342912";
+}
