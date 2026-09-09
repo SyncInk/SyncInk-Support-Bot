@@ -3,6 +3,7 @@ from discord.ext import commands
 import os
 import aiohttp
 from utils.logger import log
+from utils.emojis import Emojis
 
 class ChatGPT(commands.Cog):
     def __init__(self, bot):
@@ -117,7 +118,7 @@ class ChatGPT(commands.Cog):
                 response = await self.get_ai_response(prompt)
                 
                 embed = discord.Embed(
-                    title="<:CharGPT:1544376850476826796> OpenAI Response",
+                    title=f"{Emojis.CHATGPT} OpenAI Response",
                     description=response,
                     color=0x2b2d31
                 )
@@ -137,7 +138,7 @@ class ChatGPT(commands.Cog):
             response = await self.get_ai_response(question)
             
             embed = discord.Embed(
-                title="<:CharGPT:1544376850476826796> OpenAI Response",
+                title=f"{Emojis.CHATGPT} OpenAI Response",
                 description=response,
                 color=0x2b2d31
             )

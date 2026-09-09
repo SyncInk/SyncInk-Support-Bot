@@ -1,9 +1,10 @@
-﻿import discord
+import discord
 from discord.ext import commands
 from discord import app_commands
 from services.settings_service import SettingsService
 from services.security_service import SecurityService
 from utils.ui import SyncInkEmbed, SuccessEmbed, ErrorEmbed, BRAND_ACCENT, SUCCESS_COLOR, WARNING_COLOR, ERROR_COLOR
+from utils.emojis import Emojis, EmojiPartials
 from utils.permissions import has_permission
 from utils.logger import log
 from database import db
@@ -14,7 +15,7 @@ class VerificationView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Verify Now", style=discord.ButtonStyle.primary, custom_id="persistent_verify_btn", emoji=discord.PartialEmoji(name="approved", id=1520913982678896670, animated=True))
+    @discord.ui.button(label="Verify Now", style=discord.ButtonStyle.primary, custom_id="persistent_verify_btn", emoji=EmojiPartials.APPROVED)
     async def verify_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         settings = await SettingsService.get_guild_settings(interaction.guild.id)
         role_id = settings.get("verification_role_id")
@@ -79,11 +80,11 @@ class VerificationView(discord.ui.View):
                         pass
 
             denied_embed = SyncInkEmbed(
-                title="<a:refused:1520914088568295564> **Verification Denied**",
+                title=f"{Emojis.REFUSED} **Verification Denied**",
                 color=ERROR_COLOR
             )
             denied_embed.description = (
-                f"<a:refused:1520914088568295564> **Access Denied: You are currently Quarantined / Jailed.**\n\n"
+                f"{Emojis.REFUSED} **Access Denied: You are currently Quarantined / Jailed.**\n\n"
                 f"You cannot complete verification or access the server while serving a disciplinary sentence.\n"
                 f"If you wish to appeal your penalty, please use the official appeal channel or contact the administration team."
             )
@@ -196,7 +197,7 @@ class Security(commands.Cog):
                                 ch = member.guild.get_channel(log_chan_id)
                                 if ch:
                                     alert_embed = SyncInkEmbed(
-                                        title="<a:syncalert:1520914681231839313> Unauthorized Bot Kicked",
+                                        title=f"{Emojis.ALERT} Unauthorized Bot Kicked",
                                         color=ERROR_COLOR
                                     )
                                     alert_embed.add_field(name="Bot", value=f"{member.mention} (`{member.id}`)", inline=True)
@@ -219,7 +220,7 @@ class Security(commands.Cog):
                 ch = member.guild.get_channel(log_chan_id)
                 if ch:
                     alert_embed = SyncInkEmbed(
-                        title="<a:syncalert:1520914681231839313> Anti-Raid Shield Triggered",
+                        title=f"{Emojis.ALERT} Anti-Raid Shield Triggered",
                         color=ERROR_COLOR
                     )
                     alert_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
@@ -358,10 +359,10 @@ class Security(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        embed = SyncInkEmbed(title="Security Checkpoint", color=BRAND_ACCENT)
-        embed.set_author(name="Server Security", icon_url="https://cdn.discordapp.com/emojis/1520914272908087436.png")
+        embed = SyncInkEmbed(title=f"{Emojis.RULES} Security Checkpoint", color=BRAND_ACCENT)
+        embed.set_author(name="Server Security", icon_url="https://cdn.discordapp.com/emojis/1547034265076760707.png")
         embed.description = "To protect our community from spam, automated accounts, malicious users, and unauthorized access, all members must complete verification before accessing the server."
-        embed.add_field(name="", value="> 🔒 Please click the button below to verify your account and instantly unlock server access.", inline=False)
+        embed.add_field(name="", value=f"> {Emojis.LOCK} Please click the button below to verify your account and instantly unlock server access.", inline=False)
         
         await ctx.channel.send(embed=embed, view=VerificationView())
         await ctx.send(embed=SuccessEmbed("The security checkpoint has been successfully deployed to this channel."))

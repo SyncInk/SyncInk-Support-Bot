@@ -4,6 +4,7 @@ from discord import app_commands
 from services.mod_service import ModService
 from services.settings_service import SettingsService
 from utils.ui import SuccessEmbed, ErrorEmbed, SyncInkEmbed, WARNING_COLOR, ERROR_COLOR
+from utils.emojis import Emojis
 from utils.permissions import has_permission
 from datetime import timedelta
 from utils.logger import log
@@ -31,7 +32,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=SuccessEmbed(f"Warning issued to {member.mention} for: `{reason}`"))
         
         # Dispatch log
-        log_embed = SyncInkEmbed(title="Member Warned", color=WARNING_COLOR)
+        log_embed = SyncInkEmbed(title=f"{Emojis.WARNING} Member Warned", color=WARNING_COLOR)
         log_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
         log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
         log_embed.add_field(name="Reason", value=reason, inline=False)
@@ -53,7 +54,7 @@ class Moderation(commands.Cog):
             await ctx.send(embed=embed)
             
             # Dispatch log
-            log_embed = SyncInkEmbed(title="Member Timed Out", color=WARNING_COLOR)
+            log_embed = SyncInkEmbed(title=f"{Emojis.WARNING} Member Timed Out", color=WARNING_COLOR)
             log_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
             log_embed.add_field(name="Duration", value=f"{duration_minutes} minutes", inline=True)
             log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
@@ -77,7 +78,7 @@ class Moderation(commands.Cog):
             
             await ctx.send(embed=SuccessEmbed(f"{member.mention} has been kicked."))
             
-            log_embed = SyncInkEmbed(title="Member Kicked", color=ERROR_COLOR)
+            log_embed = SyncInkEmbed(title=f"{Emojis.ALERT} Member Kicked", color=ERROR_COLOR)
             log_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
             log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
             log_embed.add_field(name="Reason", value=reason, inline=False)
@@ -95,7 +96,7 @@ class Moderation(commands.Cog):
             
             await ctx.send(embed=SuccessEmbed(f"{member.mention} has been banned."))
             
-            log_embed = SyncInkEmbed(title="Member Banned", color=ERROR_COLOR)
+            log_embed = SyncInkEmbed(title=f"{Emojis.REFUSED} Member Banned", color=ERROR_COLOR)
             log_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
             log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
             log_embed.add_field(name="Reason", value=reason, inline=False)
@@ -115,7 +116,7 @@ class Moderation(commands.Cog):
             await ctx.send(embed=SuccessEmbed(f"{user.mention} has been unbanned."))
             
             from utils.ui import SUCCESS_COLOR
-            log_embed = SyncInkEmbed(title="Member Unbanned", color=SUCCESS_COLOR)
+            log_embed = SyncInkEmbed(title=f"{Emojis.APPROVED} Member Unbanned", color=SUCCESS_COLOR)
             log_embed.set_author(name=f"{user} ({user.id})", icon_url=user.display_avatar.url)
             log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
             log_embed.add_field(name="Reason", value=reason, inline=False)

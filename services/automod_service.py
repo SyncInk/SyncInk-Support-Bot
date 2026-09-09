@@ -6,6 +6,7 @@ from services.settings_service import SettingsService
 from services.mod_service import ModService
 from utils.logger import log
 from utils.ui import ErrorEmbed, SyncInkEmbed, WARNING_COLOR, ERROR_COLOR
+from utils.emojis import Emojis
 
 class AutomodService:
     @staticmethod
@@ -80,7 +81,7 @@ class AutomodService:
                     case_id = await AutomodService.jail_user(guild, member, bot.user, f"CRITICAL Violation: {reason}")
                     action_taken = "Quarantined / Jailed (CRITICAL)"
                     jail_embed = SyncInkEmbed(
-                        description=f"<a:refused:1520914088568295564> {member.mention} **has been quarantined for a critical security violation.**",
+                        description=f"{Emojis.REFUSED} {member.mention} **has been quarantined for a critical security violation.**",
                         color=ERROR_COLOR
                     )
                     if message:
@@ -98,7 +99,7 @@ class AutomodService:
                 case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "TIMEOUT 30m (Automod High)", f"{reason} [HIGH]")
                 action_taken = "Timed Out (30m - HIGH)"
                 high_embed = SyncInkEmbed(
-                    description=f"<a:syncwarning:1520914584012328961> {member.mention} **Muted for 30 minutes** (High-Severity Infraction) — *{reason}*",
+                    description=f"{Emojis.WARNING} {member.mention} **Muted for 30 minutes** (High-Severity Infraction) — *{reason}*",
                     color=ERROR_COLOR
                 )
                 if message:
@@ -119,7 +120,7 @@ class AutomodService:
                     case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "WARN (Automod)", f"{reason} [Strike 1/5 (24h)]")
                     action_taken = "Warned (Strike 1/5)"
                     warn_embed = SyncInkEmbed(
-                        description=f"<a:syncwarning:1520914584012328961> {member.mention} **Warning:** Please follow server rules. Avoid inappropriate content. (Strike 1/5)",
+                        description=f"{Emojis.WARNING} {member.mention} **Warning:** Please follow server rules. Avoid inappropriate content. (Strike 1/5)",
                         color=WARNING_COLOR
                     )
                     if message:
@@ -145,7 +146,7 @@ class AutomodService:
 
                     final_notice = " • **Next strike will result in Jail!**" if strike_count == 5 else ""
                     mute_embed = SyncInkEmbed(
-                        description=f"<a:syncwarning:1520914584012328961> {member.mention} **Muted for {duration_label}** (Strike {strike_count}/5) — *{reason}*{final_notice}",
+                        description=f"{Emojis.WARNING} {member.mention} **Muted for {duration_label}** (Strike {strike_count}/5) — *{reason}*{final_notice}",
                         color=ERROR_COLOR
                     )
                     if message:
@@ -163,7 +164,7 @@ class AutomodService:
                         case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "TIMEOUT 2h (Jailed Repeat)", f"{reason} [Strike {strike_count} in 24h]")
                         action_taken = f"Timed Out 2h (Jailed Repeat - Strike {strike_count})"
                         repeat_embed = SyncInkEmbed(
-                            description=f"<a:syncalert:1520914681231839313> {member.mention} **Timed out for 2 hours** (Repeat violation while jailed).",
+                            description=f"{Emojis.ALERT} {member.mention} **Timed out for 2 hours** (Repeat violation while jailed).",
                             color=ERROR_COLOR
                         )
                         if message:
@@ -175,7 +176,7 @@ class AutomodService:
                         case_id = await AutomodService.jail_user(guild, member, bot.user, f"Automod Strike {strike_count} in 24h: {reason}")
                         action_taken = f"Jailed (Strike {strike_count} in 24h)"
                         jail_embed = SyncInkEmbed(
-                            description=f"<a:refused:1520914088568295564> {member.mention} **has been jailed for repeated server violations** (Strike {strike_count}).",
+                            description=f"{Emojis.REFUSED} {member.mention} **has been jailed for repeated server violations** (Strike {strike_count}).",
                             color=ERROR_COLOR
                         )
                         if message:
@@ -210,12 +211,12 @@ class AutomodService:
         risk_score, tier, _ = await RiskEngine.compute_risk(member)
         tier_badge = RiskEngine.get_tier_badge(tier)
 
-        embed = SyncInkEmbed(title="<a:syncalert:1520914681231839313> **Automod Security Incident**", color=ERROR_COLOR)
+        embed = SyncInkEmbed(title=f"{Emojis.ALERT} **Automod Security Incident**", color=ERROR_COLOR)
         embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
-        embed.add_field(name="<a:refused:1520914088568295564> **Action Taken**", value=f"**{action}**", inline=True)
-        embed.add_field(name="🛡️ **Detection**", value=f"**{detection}**", inline=True)
+        embed.add_field(name=f"{Emojis.REFUSED} **Action Taken**", value=f"**{action}**", inline=True)
+        embed.add_field(name=f"{Emojis.MODERATION} **Detection**", value=f"**{detection}**", inline=True)
         embed.add_field(name="🎯 **Risk Score**", value=f"**{risk_score}/100** ({tier_badge})", inline=True)
-        embed.add_field(name="<a:syncwarning:1520914584012328961> **24h Strikes**", value=f"**{strike_count} Violation(s)**", inline=True)
+        embed.add_field(name=f"{Emojis.WARNING} **24h Strikes**", value=f"**{strike_count} Violation(s)**", inline=True)
         embed.add_field(name="📜 **Reason**", value=f"**{reason}**", inline=False)
         
         if message_content:
@@ -285,7 +286,7 @@ class AutomodService:
                 description=f"You have been placed in jail in **{guild.name}**.\nThis is a strict disciplinary action.",
                 resolution="You have lost access to all standard channels. You may submit an appeal using the button below to be reviewed by the administration team."
             )
-            embed.title = "Official Jail Notice"
+            embed.title = f"{Emojis.LOCK} Official Jail Notice"
             embed.add_field(name="Infraction Reason", value=f"```\n{reason}\n```", inline=False)
             embed.add_field(name="Case ID", value=str(case_id), inline=False)
             embed.set_thumbnail(url="https://files.catbox.moe/74l9su.png")

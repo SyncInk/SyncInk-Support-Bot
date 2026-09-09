@@ -3,15 +3,16 @@ from discord.ext import commands
 from discord import app_commands
 from services.settings_service import SettingsService
 from utils.ui import SyncInkEmbed
+from utils.emojis import Emojis, EmojiPartials
 from utils.permissions import has_permission
 
 class CategorySelect(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="Automod", description="Security Engine & Punishments", emoji="🤖", value="automod"),
-            discord.SelectOption(label="Security", description="Verification System", emoji="🛡️", value="security"),
-            discord.SelectOption(label="Logging", description="Audit Logs", emoji="📜", value="logging"),
-            discord.SelectOption(label="Members", description="Welcome & Auto Roles", emoji="👋", value="members"),
+            discord.SelectOption(label="Automod", description="Security Engine & Punishments", emoji=EmojiPartials.ALERT, value="automod"),
+            discord.SelectOption(label="Security", description="Verification System", emoji=EmojiPartials.LOCK, value="security"),
+            discord.SelectOption(label="Logging", description="Audit Logs", emoji=EmojiPartials.RULES, value="logging"),
+            discord.SelectOption(label="Members", description="Welcome & Auto Roles", emoji=EmojiPartials.SETTINGS, value="members"),
         ]
         super().__init__(placeholder="Select a category to configure...", min_values=1, max_values=1, options=options, row=0)
 
@@ -204,10 +205,10 @@ class ConfigDashboardView(discord.ui.View):
             is_enabled = bool(settings.get('automod_enabled'))
             embed.description = "Configure the automated security engine and progressive punishments."
             
-            am_text = "<a:approved:1520913982678896670> Active" if is_enabled else "<a:refused:1520914088568295564> Offline"
-            raid_text = "🚨 **ACTIVE**" if settings.get('emergency_mode') else "Standby"
+            am_text = f"{Emojis.APPROVED} Active" if is_enabled else f"{Emojis.REFUSED} Offline"
+            raid_text = f"{Emojis.ALERT} **ACTIVE**" if settings.get('emergency_mode') else "Standby"
             jail_id = settings.get('jail_role_id')
-            jail_text = f"<@&{jail_id}>" if jail_id else "<a:refused:1520914088568295564> Missing"
+            jail_text = f"<@&{jail_id}>" if jail_id else f"{Emojis.REFUSED} Missing"
             
             embed.add_field(name="Engine Status", value=am_text, inline=True)
             embed.add_field(name="Anti-Raid Mode", value=raid_text, inline=True)
@@ -232,16 +233,16 @@ class ConfigDashboardView(discord.ui.View):
             vr_id = settings.get('verification_role_id')
             uv_id = settings.get('unverified_role_id')
             
-            verif_text = "<a:approved:1520913982678896670> Enabled" if is_enabled else "<a:refused:1520914088568295564> Disabled"
-            vr_text = f"<@&{vr_id}>" if vr_id else "<a:refused:1520914088568295564> Missing (Required)"
-            uv_text = f"<@&{uv_id}>" if uv_id else "<a:refused:1520914088568295564> Missing (Required)"
+            verif_text = f"{Emojis.APPROVED} Enabled" if is_enabled else f"{Emojis.REFUSED} Disabled"
+            vr_text = f"<@&{vr_id}>" if vr_id else f"{Emojis.REFUSED} Missing (Required)"
+            uv_text = f"<@&{uv_id}>" if uv_id else f"{Emojis.REFUSED} Missing (Required)"
             
             embed.add_field(name="Verification System", value=verif_text, inline=False)
             embed.add_field(name="Verified Role", value=vr_text, inline=True)
             embed.add_field(name="Unverified Role", value=uv_text, inline=True)
             
             vc_id = settings.get("verification_channel_id")
-            vc_text = f"<#{vc_id}>" if vc_id else "<a:syncwarning:1520914584012328961> Not configured"
+            vc_text = f"<#{vc_id}>" if vc_id else f"{Emojis.WARNING} Not configured"
             embed.add_field(name="Verification Channel", value=vc_text, inline=False)
             
             self.toggle_btn.is_enabled = is_enabled
@@ -268,14 +269,14 @@ class ConfigDashboardView(discord.ui.View):
         elif category == "members":
             embed.description = "Configure the onboarding experience for new members."
             embed.add_field(name="Welcome Channel", value=f"<#{settings['welcome_channel_id']}>" if settings.get('welcome_channel_id') else "Not configured", inline=True)
-            has_msg = "<a:approved:1520913982678896670> Configured" if settings.get('welcome_message') else "<a:refused:1520914088568295564> Not configured"
+            has_msg = f"{Emojis.APPROVED} Configured" if settings.get('welcome_message') else f"{Emojis.REFUSED} Not configured"
             embed.add_field(name="Welcome Message", value=has_msg, inline=True)
             
             self.add_item(self.welcome_channel)
             self.add_item(self.welcome_msg_btn)
 
         if success_msg:
-            embed.set_footer(text=f"<a:approved:1520913982678896670> {success_msg}")
+            embed.set_footer(text=f"{Emojis.APPROVED} {success_msg}")
             
         await interaction.response.edit_message(embed=embed, view=self)
 

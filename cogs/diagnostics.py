@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import time
 from utils.ui import SyncInkEmbed
+from utils.emojis import Emojis
 from utils.metrics import metrics
 from utils.version import PLATFORM_NAME, VERSION, BUILD_NUMBER, GIT_COMMIT, STARTUP_TIME
 from utils.permissions import has_permission
@@ -22,12 +23,12 @@ class Diagnostics(commands.Cog):
         minutes, seconds = divmod(remainder, 60)
         uptime_str = f"{hours}h {minutes}m {seconds}s"
         
-        embed = SyncInkEmbed(title="Platform Metrics")
-        embed.set_author(name="System Diagnostics", icon_url="https://syncink.xyz/assets/logo.png")
+        embed = SyncInkEmbed(title=f"{Emojis.SETTINGS} Platform Metrics")
+        embed.set_author(name="System Diagnostics", icon_url="https://cdn.discordapp.com/emojis/1547034265076760707.png")
         
         embed.add_field(name="Infrastructure", value=f"**Uptime:** {uptime_str}\n**Servers:** {total_guilds:,}\n**Users:** {total_users:,}", inline=True)
         embed.add_field(name="Performance", value=f"**Commands:** {metrics.commands_executed:,}\n**Latency:** {metrics.avg_command_time:.2f}ms\n**Errors:** {metrics.errors_raised:,}", inline=True)
-        embed.add_field(name="Ecosystem", value=f"**Mod Actions:** {metrics.moderation_actions:,}\n**Suggestions:** {metrics.suggestions_submitted:,}\n**Status:** <a:approved:1520913982678896670> Healthy", inline=False)
+        embed.add_field(name="Ecosystem", value=f"**Mod Actions:** {metrics.moderation_actions:,}\n**Suggestions:** {metrics.suggestions_submitted:,}\n**Status:** {Emojis.APPROVED} Healthy", inline=False)
         
         embed.set_footer(text=f"{PLATFORM_NAME} v{VERSION} | Build {BUILD_NUMBER} | Commit: {GIT_COMMIT}")
         

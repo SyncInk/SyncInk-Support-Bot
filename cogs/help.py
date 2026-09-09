@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from utils.ui import SyncInkEmbed, ERROR_COLOR
+from utils.emojis import Emojis
 
 HELP_COLOR = discord.Color(0xE74C3C)
 
@@ -117,7 +118,7 @@ class Help(commands.Cog):
                 if requires_mod and not is_mod:
                     # Regular members cannot see or query moderation commands
                     embed = SyncInkEmbed(
-                        title="<a:refused:1520914088568295564> Command Not Found",
+                        title=f"{Emojis.REFUSED} Command Not Found",
                         description=f"Could not find any command matching `{query}`.\nType `?help` to receive the full command guide in your DMs.",
                         color=ERROR_COLOR
                     )
@@ -133,7 +134,7 @@ class Help(commands.Cog):
                 return
 
             embed = SyncInkEmbed(
-                title="<a:refused:1520914088568295564> Command Not Found",
+                title=f"{Emojis.REFUSED} Command Not Found",
                 description=f"Could not find any command matching `{query}`.\nType `?help` to receive the full command guide in your DMs.",
                 color=ERROR_COLOR
             )
@@ -148,7 +149,7 @@ class Help(commands.Cog):
         # (If Administrator) Page 5: Administration & Setup
         raw_pages_data = [
             (
-                "💡 Suggestions & Feature Requests",
+                f"{Emojis.SUGGESTION} Suggestions & Feature Requests",
                 [
                     ("/suggest <title> <description>", "Submit an idea or feature request with community voting in #suggestions (Slash command)."),
                     ("/feature_request <title> <description>", "Submit a formal feature request with community voting in #suggestions (Slash command)."),
@@ -156,7 +157,7 @@ class Help(commands.Cog):
                 ]
             ),
             (
-                "📊 Platform & Utilities",
+                f"{Emojis.SETTINGS} Platform & Utilities",
                 [
                     ("?botstats", "View bot latency, uptime, and server count (Alias: `?ping`)."),
                     ("?status", "Check real-time operational status of the SyncInk platform."),
@@ -166,7 +167,7 @@ class Help(commands.Cog):
                 ]
             ),
             (
-                "🤖 AI Assistant",
+                f"{Emojis.CHATGPT} AI Assistant",
                 [
                     ("?ask <question>", "Ask any question to the integrated OpenAI assistant (Alias: `?ai`).")
                 ]
@@ -175,7 +176,7 @@ class Help(commands.Cog):
 
         if is_mod:
             raw_pages_data.append((
-                "🛡️ Moderator Actions (Staff Only)",
+                f"{Emojis.MODERATION} Moderator Actions (Staff Only)",
                 [
                     ("?warn <@member> [reason]", "Issue an official logged warning to a member."),
                     ("?timeout <@member> <minutes> [reason]", "Temporarily restrict chat access for a duration (Alias: `?mute`)."),
@@ -191,7 +192,7 @@ class Help(commands.Cog):
 
         if is_admin:
             raw_pages_data.append((
-                "⚙️ Administration & Security (Admin Only)",
+                f"{Emojis.LOCK} Administration & Security (Admin Only)",
                 [
                     ("?security", "Open the master security dashboard and anti-nuke control panel (Slash: `/security`)."),
                     ("?automod", "Open the automod overview and quick toggles (Slash: `/automod`)."),
@@ -224,6 +225,7 @@ class Help(commands.Cog):
             description="Commands in this server start with `?`",
             color=HELP_COLOR
         )
+        dm_embed.set_author(name="SyncInk Support", icon_url="https://cdn.discordapp.com/emojis/1547034265076760707.png")
         dm_embed.set_footer(text="SyncInk Support Server", icon_url="https://files.catbox.moe/74l9su.png")
         try:
             await member.send(embed=dm_embed)

@@ -1,4 +1,4 @@
-﻿import discord
+import discord
 import re
 import unicodedata
 from datetime import datetime, timedelta
@@ -11,6 +11,7 @@ from services.settings_service import SettingsService
 from services.cache_service import CacheService
 from utils.logger import log
 from utils.ui import SyncInkEmbed, WARNING_COLOR, ERROR_COLOR, SUCCESS_COLOR
+from utils.emojis import Emojis
 
 # Global Known Phishing Keywords & Patterns
 PHISHING_PATTERNS = [
@@ -274,7 +275,7 @@ class SecurityService:
             owner = guild.owner
             if owner:
                 emergency_embed = SyncInkEmbed(
-                    title="<a:syncalert:1520914681231839313> EMERGENCY: Anti-Nuke Shield Triggered!",
+                    title=f"{Emojis.ALERT} EMERGENCY: Anti-Nuke Shield Triggered!",
                     color=ERROR_COLOR
                 )
                 emergency_embed.description = (

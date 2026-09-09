@@ -1,5 +1,6 @@
 import discord
 from typing import Optional, Union, Any
+from utils.emojis import Emojis, EmojiPartials
 
 # SyncInk Brand Colors
 BRAND_PRIMARY = 0x2b2d31  # Modern dark color
@@ -19,12 +20,12 @@ class SyncInkEmbed(discord.Embed):
 class SuccessEmbed(SyncInkEmbed):
     def __init__(self, description: str, **kwargs):
         super().__init__(color=SUCCESS_COLOR, description=description, **kwargs)
-        self.title = "<a:approved:1520913982678896670> Action Successful"
+        self.title = f"{Emojis.APPROVED} Action Successful"
 
 class ErrorEmbed(SyncInkEmbed):
     def __init__(self, description: str, resolution: str = "Please contact a server administrator if the issue persists.", **kwargs):
         super().__init__(color=ERROR_COLOR, description=description, **kwargs)
-        self.title = "<a:refused:1520914088568295564> Action Required"
+        self.title = f"{Emojis.REFUSED} Action Required"
         self.add_field(name="How to fix this?", value=f"> {resolution}", inline=False)
 
 class BaseConfirmView(discord.ui.View):
@@ -33,12 +34,12 @@ class BaseConfirmView(discord.ui.View):
         super().__init__(timeout=timeout)
         self.value: Optional[bool] = None
 
-    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green, custom_id="confirm_btn")
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green, custom_id="confirm_btn", emoji=EmojiPartials.CHECK_YES)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.value = True
         self.stop()
         
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red, custom_id="cancel_btn")
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red, custom_id="cancel_btn", emoji=EmojiPartials.REFUSED)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.value = False
         self.stop()
@@ -46,12 +47,12 @@ class BaseConfirmView(discord.ui.View):
 class LoadingEmbed(SyncInkEmbed):
     def __init__(self, description: str = "Processing request...", **kwargs):
         super().__init__(color=BRAND_ACCENT, description=description, **kwargs)
-        self.title = "<a:syncalert:1520914681231839313> Please Wait"
+        self.title = f"{Emojis.ALERT} Please Wait"
 
 class EmptyStateEmbed(SyncInkEmbed):
     def __init__(self, title: str, description: str, **kwargs):
         super().__init__(color=BRAND_PRIMARY, description=description, **kwargs)
-        self.title = f"<a:refused:1520914088568295564> {title}"
+        self.title = f"{Emojis.REFUSED} {title}"
 
 class InfoCard(SyncInkEmbed):
     def __init__(self, title: str, description: str, **kwargs):
@@ -126,7 +127,7 @@ class JailAppealModal(discord.ui.Modal, title='Jail Appeal'):
                     super().__init__(timeout=None)
                     self.user_id = user_id
                     
-                @discord.ui.button(label="Accept & Unjail", style=discord.ButtonStyle.green)
+                @discord.ui.button(label="Accept & Unjail", style=discord.ButtonStyle.green, emoji=EmojiPartials.APPROVED)
                 async def accept(self, btn_interaction: discord.Interaction, button: discord.ui.Button):
                     from services.automod_service import AutomodService
                     guild = btn_interaction.guild
@@ -231,7 +232,7 @@ class JailAppealView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         
-    @discord.ui.button(label="Submit Appeal", style=discord.ButtonStyle.primary, custom_id="jail_appeal_btn")
+    @discord.ui.button(label="Submit Appeal", style=discord.ButtonStyle.primary, custom_id="jail_appeal_btn", emoji=EmojiPartials.RULES)
     async def appeal_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             footer_text = interaction.message.embeds[0].footer.text

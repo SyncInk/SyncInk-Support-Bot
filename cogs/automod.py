@@ -6,6 +6,7 @@ from services.settings_service import SettingsService
 from services.security_service import SecurityService
 from services.risk_service import RiskEngine
 from utils.ui import SyncInkEmbed, WARNING_COLOR, ERROR_COLOR
+from utils.emojis import Emojis
 from utils.permissions import has_permission
 from utils.logger import log
 import re
@@ -317,7 +318,7 @@ class Automod(commands.Cog):
                         pass
 
                     warn_embed = SyncInkEmbed(
-                        description=f"<a:syncwarning:1520914584012328961> **{message.author.mention}, please do not continuously mention other members to avoid disturbing them.**",
+                        description=f"{Emojis.WARNING} **{message.author.mention}, please do not continuously mention other members to avoid disturbing them.**",
                         color=WARNING_COLOR
                     )
                     try:
@@ -390,7 +391,7 @@ class Automod(commands.Cog):
                     pass
 
                 abuse_embed = SyncInkEmbed(
-                    description=f"<a:syncalert:1520914681231839313> {message.author.mention} **Timed out for 2 hours for continuous spamming.**",
+                    description=f"{Emojis.ALERT} {message.author.mention} **Timed out for 2 hours for continuous spamming.**",
                     color=ERROR_COLOR
                 )
                 try:
@@ -508,7 +509,7 @@ class Automod(commands.Cog):
                             ch = before.guild.get_channel(log_chan_id)
                             if ch:
                                 embed = SyncInkEmbed(
-                                    title="<a:syncalert:1520914681231839313> Ghost-Ping Edit Detected",
+                                    title=f"{Emojis.ALERT} Ghost-Ping Edit Detected",
                                     color=WARNING_COLOR
                                 )
                                 embed.set_author(name=f"{before.author} ({before.author.id})", icon_url=before.author.display_avatar.url)
@@ -542,7 +543,7 @@ class Automod(commands.Cog):
                 ch = message.guild.get_channel(log_chan_id)
                 if ch:
                     embed = SyncInkEmbed(
-                        title="<a:syncalert:1520914681231839313> Ghost-Ping Deletion Detected",
+                        title=f"{Emojis.ALERT} Ghost-Ping Deletion Detected",
                         color=WARNING_COLOR
                     )
                     embed.set_author(name=f"{message.author} ({message.author.id})", icon_url=message.author.display_avatar.url)

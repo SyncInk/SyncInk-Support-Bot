@@ -6,6 +6,7 @@ from utils.metrics import metrics
 from services.settings_service import SettingsService
 from database import db
 from utils.permissions import has_permission
+from utils.emojis import Emojis, EmojiPartials
 
 class SuggestionVoteView(discord.ui.View):
     def __init__(self, request_id: int, upvotes: int = 0, downvotes: int = 0):
@@ -23,11 +24,11 @@ class SuggestionVoteView(discord.ui.View):
                 elif child.custom_id and child.custom_id.startswith("vote_down"):
                     child.label = f"Downvote ({self.downvotes})"
 
-    @discord.ui.button(emoji="<a:approved:1520913982678896670>", label="Upvote (0)", style=discord.ButtonStyle.green, custom_id="vote_up")
+    @discord.ui.button(emoji=EmojiPartials.APPROVED, label="Upvote (0)", style=discord.ButtonStyle.green, custom_id="vote_up")
     async def upvote(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._handle_vote(interaction, "UP")
 
-    @discord.ui.button(emoji="<a:refused:1520914088568295564>", label="Downvote (0)", style=discord.ButtonStyle.red, custom_id="vote_down")
+    @discord.ui.button(emoji=EmojiPartials.REFUSED, label="Downvote (0)", style=discord.ButtonStyle.red, custom_id="vote_down")
     async def downvote(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._handle_vote(interaction, "DOWN")
 
@@ -83,7 +84,7 @@ class SuggestionVoteView(discord.ui.View):
                     embed.set_field_at(
                         i, 
                         name="🗳️ **Community Votes**", 
-                        value=f"<a:approved:1520913982678896670> **{self.upvotes}** Upvotes   •   <a:refused:1520914088568295564> **{self.downvotes}** Downvotes", 
+                        value=f"{Emojis.APPROVED} **{self.upvotes}** Upvotes   •   {Emojis.REFUSED} **{self.downvotes}** Downvotes", 
                         inline=False
                     )
                     break
@@ -140,7 +141,7 @@ class Feedback(commands.Cog):
         request_id = row['id']
 
         embed = SyncInkEmbed(
-            title=f"💡 **Feature Request #{request_id}: {title}**",
+            title=f"{Emojis.SUGGESTION} **Feature Request #{request_id}: {title}**",
             color=BRAND_ACCENT
         )
         embed.set_author(name=f"{author.display_name} ({author})", icon_url=author.display_avatar.url)
@@ -149,7 +150,7 @@ class Feedback(commands.Cog):
         embed.add_field(name="📊 **Status**", value="🟡 **Pending Review**", inline=True)
         embed.add_field(
             name="🗳️ **Community Votes**", 
-            value="<a:approved:1520913982678896670> **0** Upvotes   •   <a:refused:1520914088568295564> **0** Downvotes", 
+            value=f"{Emojis.APPROVED} **0** Upvotes   •   {Emojis.REFUSED} **0** Downvotes", 
             inline=False
         )
         embed.set_footer(text=f"SyncInk Platform • Request #{request_id}", icon_url="https://files.catbox.moe/74l9su.png")
@@ -177,7 +178,7 @@ class Feedback(commands.Cog):
     async def slash_suggest(self, interaction: discord.Interaction, title: str, description: str):
         if interaction.channel_id != REQUIRED_SUGGESTION_CHANNEL_ID:
             embed = SyncInkEmbed(
-                title="<a:refused:1520914088568295564> **Channel Restriction**",
+                title=f"{Emojis.REFUSED} **Channel Restriction**",
                 description=f"This command can only be used in <#{REQUIRED_SUGGESTION_CHANNEL_ID}>.",
                 color=ERROR_COLOR
             )
@@ -194,7 +195,7 @@ class Feedback(commands.Cog):
     async def suggest(self, ctx: commands.Context, *, text: str = None):
         if ctx.channel.id != REQUIRED_SUGGESTION_CHANNEL_ID:
             embed = SyncInkEmbed(
-                title="<a:refused:1520914088568295564> **Channel Restriction**",
+                title=f"{Emojis.REFUSED} **Channel Restriction**",
                 description=f"This command can only be used in <#{REQUIRED_SUGGESTION_CHANNEL_ID}>.",
                 color=ERROR_COLOR
             )

@@ -3,6 +3,7 @@ import asyncio
 from discord.ext import commands
 from services.settings_service import SettingsService
 from utils.ui import SyncInkEmbed, BRAND_ACCENT, SUCCESS_COLOR, ERROR_COLOR, WARNING_COLOR
+from utils.emojis import Emojis
 from utils.logger import log
 
 class AdvancedLogging(commands.Cog):
@@ -168,15 +169,15 @@ class AdvancedLogging(commands.Cog):
         if not added_roles and not removed_roles:
             return
 
-        embed = SyncInkEmbed(title="🛡️ **Member Roles Updated**", color=BRAND_ACCENT)
+        embed = SyncInkEmbed(title=f"{Emojis.MODERATION} **Member Roles Updated**", color=BRAND_ACCENT)
         embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
 
         if added_roles:
             added_roles.sort(key=lambda r: r.position, reverse=True)
-            embed.add_field(name="<a:approved:1520913982678896670> **Roles Added**", value=" ".join([r.mention for r in added_roles]), inline=False)
+            embed.add_field(name=f"{Emojis.APPROVED} **Roles Added**", value=" ".join([r.mention for r in added_roles]), inline=False)
         if removed_roles:
             removed_roles.sort(key=lambda r: r.position, reverse=True)
-            embed.add_field(name="<a:refused:1520914088568295564> **Roles Removed**", value=" ".join([r.mention for r in removed_roles]), inline=False)
+            embed.add_field(name=f"{Emojis.REFUSED} **Roles Removed**", value=" ".join([r.mention for r in removed_roles]), inline=False)
 
         await self._send_log(member.guild.id, "log_channel_server", embed)
 
@@ -192,11 +193,11 @@ class AdvancedLogging(commands.Cog):
         embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
         
         if before.channel is None and after.channel is not None:
-            embed.title = "<a:approved:1520913982678896670> **Joined Voice Channel**"
+            embed.title = f"{Emojis.APPROVED} **Joined Voice Channel**"
             embed.color = SUCCESS_COLOR
             embed.add_field(name="Channel", value=after.channel.mention, inline=False)
         elif before.channel is not None and after.channel is None:
-            embed.title = "<a:refused:1520914088568295564> **Left Voice Channel**"
+            embed.title = f"{Emojis.REFUSED} **Left Voice Channel**"
             embed.color = ERROR_COLOR
             embed.add_field(name="Channel", value=before.channel.mention, inline=False)
         else:
@@ -212,14 +213,14 @@ class AdvancedLogging(commands.Cog):
     # ==========================
     @commands.Cog.listener()
     async def on_guild_role_create(self, role: discord.Role):
-        embed = SyncInkEmbed(title="<a:approved:1520913982678896670> **Role Created**", color=SUCCESS_COLOR)
+        embed = SyncInkEmbed(title=f"{Emojis.APPROVED} **Role Created**", color=SUCCESS_COLOR)
         embed.add_field(name="Role", value=role.mention, inline=True)
         embed.add_field(name="ID", value=str(role.id), inline=True)
         await self._send_log(role.guild.id, "log_channel_server", embed)
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role: discord.Role):
-        embed = SyncInkEmbed(title="<a:refused:1520914088568295564> **Role Deleted**", color=ERROR_COLOR)
+        embed = SyncInkEmbed(title=f"{Emojis.REFUSED} **Role Deleted**", color=ERROR_COLOR)
         embed.add_field(name="Role Name", value=role.name, inline=True)
         embed.add_field(name="ID", value=str(role.id), inline=True)
         await self._send_log(role.guild.id, "log_channel_server", embed)
@@ -227,13 +228,13 @@ class AdvancedLogging(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel: discord.abc.GuildChannel):
         if isinstance(channel, discord.CategoryChannel):
-            embed = SyncInkEmbed(title="<a:approved:1520913982678896670> **Category Created**", color=SUCCESS_COLOR)
+            embed = SyncInkEmbed(title=f"{Emojis.APPROVED} **Category Created**", color=SUCCESS_COLOR)
             embed.add_field(name="Category Name", value=channel.name, inline=True)
             embed.add_field(name="Category ID", value=str(channel.id), inline=True)
             await self._send_log(channel.guild.id, "log_channel_server", embed)
             return
 
-        embed = SyncInkEmbed(title="<a:approved:1520913982678896670> **Channel Created**", color=SUCCESS_COLOR)
+        embed = SyncInkEmbed(title=f"{Emojis.APPROVED} **Channel Created**", color=SUCCESS_COLOR)
         embed.add_field(name="Channel", value=channel.mention, inline=True)
         embed.add_field(name="Category", value=channel.category.name if channel.category else "None", inline=True)
         embed.add_field(name="Channel Type", value=str(channel.type).capitalize(), inline=True)
@@ -242,13 +243,13 @@ class AdvancedLogging(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel: discord.abc.GuildChannel):
         if isinstance(channel, discord.CategoryChannel):
-            embed = SyncInkEmbed(title="<a:refused:1520914088568295564> **Category Deleted**", color=ERROR_COLOR)
+            embed = SyncInkEmbed(title=f"{Emojis.REFUSED} **Category Deleted**", color=ERROR_COLOR)
             embed.add_field(name="Category Name", value=channel.name, inline=True)
             embed.add_field(name="Category ID", value=str(channel.id), inline=True)
             await self._send_log(channel.guild.id, "log_channel_server", embed)
             return
 
-        embed = SyncInkEmbed(title="<a:refused:1520914088568295564> **Channel Deleted**", color=ERROR_COLOR)
+        embed = SyncInkEmbed(title=f"{Emojis.REFUSED} **Channel Deleted**", color=ERROR_COLOR)
         embed.add_field(name="Channel Name", value=channel.name, inline=True)
         embed.add_field(name="Category", value=channel.category.name if channel.category else "None", inline=True)
         embed.add_field(name="Channel Type", value=str(channel.type).capitalize(), inline=True)

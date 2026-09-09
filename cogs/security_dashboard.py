@@ -1,9 +1,10 @@
-﻿import discord
+import discord
 from discord.ext import commands
 from discord import app_commands
 from services.settings_service import SettingsService
 from services.security_service import SecurityService
 from utils.ui import SyncInkEmbed, SuccessEmbed, ErrorEmbed, BRAND_ACCENT, SUCCESS_COLOR, WARNING_COLOR, ERROR_COLOR
+from utils.emojis import Emojis, EmojiPartials
 from utils.logger import log
 from database import db
 from typing import Optional, Literal
@@ -84,7 +85,7 @@ class SecurityDashboardView(discord.ui.View):
             return False
         return True
 
-    @discord.ui.button(label="Toggle Anti-Spam", style=discord.ButtonStyle.secondary, row=0, custom_id="sec_toggle_spam")
+    @discord.ui.button(label="Anti-Spam", emoji=EmojiPartials.SETTINGS, style=discord.ButtonStyle.secondary, row=0, custom_id="sec_toggle_spam")
     async def toggle_spam(self, interaction: discord.Interaction, button: discord.ui.Button):
         settings = await SettingsService.get_guild_settings(self.guild.id)
         current = settings.get("automod_enabled", False)
@@ -93,7 +94,7 @@ class SecurityDashboardView(discord.ui.View):
         embed = await build_security_dashboard_embed(self.guild)
         await interaction.response.edit_message(embed=embed, view=self)
 
-    @discord.ui.button(label="Toggle Anti-Raid", style=discord.ButtonStyle.secondary, row=0, custom_id="sec_toggle_raid")
+    @discord.ui.button(label="Anti-Raid", emoji=EmojiPartials.ALERT, style=discord.ButtonStyle.secondary, row=0, custom_id="sec_toggle_raid")
     async def toggle_raid(self, interaction: discord.Interaction, button: discord.ui.Button):
         settings = await SettingsService.get_guild_settings(self.guild.id)
         current = settings.get("anti_raid_enabled", True)
@@ -102,7 +103,7 @@ class SecurityDashboardView(discord.ui.View):
         embed = await build_security_dashboard_embed(self.guild)
         await interaction.response.edit_message(embed=embed, view=self)
 
-    @discord.ui.button(label="Toggle Anti-Nuke", style=discord.ButtonStyle.secondary, row=0, custom_id="sec_toggle_nuke")
+    @discord.ui.button(label="Anti-Nuke", emoji=EmojiPartials.MODERATION, style=discord.ButtonStyle.secondary, row=0, custom_id="sec_toggle_nuke")
     async def toggle_nuke(self, interaction: discord.Interaction, button: discord.ui.Button):
         settings = await SettingsService.get_guild_settings(self.guild.id)
         current = settings.get("anti_nuke_enabled", True)
@@ -111,7 +112,7 @@ class SecurityDashboardView(discord.ui.View):
         embed = await build_security_dashboard_embed(self.guild)
         await interaction.response.edit_message(embed=embed, view=self)
 
-    @discord.ui.button(label="Phishing Shield", style=discord.ButtonStyle.secondary, row=0, custom_id="sec_toggle_phish")
+    @discord.ui.button(label="Phishing Shield", emoji=EmojiPartials.RULES, style=discord.ButtonStyle.secondary, row=0, custom_id="sec_toggle_phish")
     async def toggle_phishing(self, interaction: discord.Interaction, button: discord.ui.Button):
         settings = await SettingsService.get_guild_settings(self.guild.id)
         current = settings.get("anti_phishing_enabled", True)
@@ -120,7 +121,7 @@ class SecurityDashboardView(discord.ui.View):
         embed = await build_security_dashboard_embed(self.guild)
         await interaction.response.edit_message(embed=embed, view=self)
 
-    @discord.ui.button(label="🚨 Emergency Lockdown", style=discord.ButtonStyle.danger, row=1, custom_id="sec_lockdown_btn")
+    @discord.ui.button(label="Emergency Lockdown", emoji=EmojiPartials.LOCK, style=discord.ButtonStyle.danger, row=1, custom_id="sec_lockdown_btn")
     async def emergency_lockdown(self, interaction: discord.Interaction, button: discord.ui.Button):
         current_state = await SecurityService.get_raid_state(self.guild.id)
         if current_state == "LOCKDOWN":
@@ -134,12 +135,12 @@ class SecurityDashboardView(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
         await interaction.followup.send(content=msg, ephemeral=True)
 
-    @discord.ui.button(label="⚙️ Tune Thresholds", style=discord.ButtonStyle.primary, row=1, custom_id="sec_thresholds_btn")
+    @discord.ui.button(label="Tune Thresholds", emoji=EmojiPartials.SETTINGS, style=discord.ButtonStyle.primary, row=1, custom_id="sec_thresholds_btn")
     async def tune_thresholds(self, interaction: discord.Interaction, button: discord.ui.Button):
         settings = await SettingsService.get_guild_settings(self.guild.id)
         await interaction.response.send_modal(ThresholdModal(self.guild.id, settings))
 
-    @discord.ui.button(label="📋 View Whitelist", style=discord.ButtonStyle.secondary, row=1, custom_id="sec_whitelist_btn")
+    @discord.ui.button(label="View Whitelist", emoji=EmojiPartials.LOOKING, style=discord.ButtonStyle.secondary, row=1, custom_id="sec_whitelist_btn")
     async def view_whitelist(self, interaction: discord.Interaction, button: discord.ui.Button):
         entries = await SecurityService.get_whitelist_entries(self.guild.id)
         if not entries:
@@ -161,7 +162,7 @@ class SecurityDashboardView(discord.ui.View):
             lines.append(f"• **[{etype}]** {val}")
 
         w_embed = SyncInkEmbed(
-            title="🛡️ Server Security Whitelist",
+            title=f"{Emojis.MODERATION} Server Security Whitelist",
             description="\n".join(lines),
             color=BRAND_ACCENT
         )
@@ -180,10 +181,10 @@ async def build_security_dashboard_embed(guild: discord.Guild) -> discord.Embed:
 
     # State badges
     state_badges = {
-        "NORMAL": "🟢 **NORMAL** (Standard Monitoring)",
-        "WATCH": "🟡 **WATCH** (Elevated Join Velocity)",
-        "ALERT": "🔴 **ALERT** (Join Burst / Raid Active)",
-        "LOCKDOWN": "⛔ **LOCKDOWN** (Strict Quarantine Active)"
+        "NORMAL": f"{Emojis.APPROVED} **NORMAL** (Standard Monitoring)",
+        "WATCH": f"{Emojis.WARNING} **WATCH** (Elevated Join Velocity)",
+        "ALERT": f"{Emojis.ALERT} **ALERT** (Join Burst / Raid Active)",
+        "LOCKDOWN": f"{Emojis.LOCK} **LOCKDOWN** (Strict Quarantine Active)"
     }
     raid_badge = state_badges.get(raid_state, f"⚪ **{raid_state}**")
 
@@ -198,7 +199,7 @@ async def build_security_dashboard_embed(guild: discord.Guild) -> discord.Embed:
     incidents_count = incidents_rec['count'] if incidents_rec else 0
 
     embed = SyncInkEmbed(
-        title="🛡️ SyncInk Security & Defense System",
+        title=f"{Emojis.MODERATION} SyncInk Security & Defense System",
         color=BRAND_ACCENT
     )
     embed.set_author(name=f"{guild.name} Security Operations", icon_url=guild.icon.url if guild.icon else None)
@@ -209,18 +210,18 @@ async def build_security_dashboard_embed(guild: discord.Guild) -> discord.Embed:
 
     # Status Overview
     embed.add_field(
-        name="🚨 Active Raid State",
+        name=f"{Emojis.ALERT} Active Raid State",
         value=raid_badge,
         inline=False
     )
 
     # Modules Grid
-    nuke_on = "🟢 ON" if settings.get("anti_nuke_enabled", True) else "🔴 OFF"
-    raid_on = "🟢 ON" if settings.get("anti_raid_enabled", True) else "🔴 OFF"
-    spam_on = "🟢 ON" if settings.get("automod_enabled", False) else "🔴 OFF"
-    phish_on = "🟢 ON" if settings.get("anti_phishing_enabled", True) else "🔴 OFF"
-    mention_on = "🟢 ON" if settings.get("mention_guard_enabled", True) else "🔴 OFF"
-    content_on = "🟢 ON" if settings.get("content_filter_enabled", True) else "🔴 OFF"
+    nuke_on = f"{Emojis.APPROVED} ON" if settings.get("anti_nuke_enabled", True) else f"{Emojis.REFUSED} OFF"
+    raid_on = f"{Emojis.APPROVED} ON" if settings.get("anti_raid_enabled", True) else f"{Emojis.REFUSED} OFF"
+    spam_on = f"{Emojis.APPROVED} ON" if settings.get("automod_enabled", False) else f"{Emojis.REFUSED} OFF"
+    phish_on = f"{Emojis.APPROVED} ON" if settings.get("anti_phishing_enabled", True) else f"{Emojis.REFUSED} OFF"
+    mention_on = f"{Emojis.APPROVED} ON" if settings.get("mention_guard_enabled", True) else f"{Emojis.REFUSED} OFF"
+    content_on = f"{Emojis.APPROVED} ON" if settings.get("content_filter_enabled", True) else f"{Emojis.REFUSED} OFF"
 
     modules_desc = (
         f"• **Anti-Nuke Shield:** {nuke_on} (Limit: {settings.get('anti_nuke_threshold', 3)}/10s)\n"
@@ -230,7 +231,7 @@ async def build_security_dashboard_embed(guild: discord.Guild) -> discord.Embed:
         f"• **Mass Mention Guard:** {mention_on} (Limit: {settings.get('mention_threshold', 5)} pings)\n"
         f"• **Content & Word Filter:** {content_on}"
     )
-    embed.add_field(name="⚙️ Security Modules", value=modules_desc, inline=False)
+    embed.add_field(name=f"{Emojis.SETTINGS} Security Modules", value=modules_desc, inline=False)
 
     # Forensics & Quarantines
     forensics_desc = (
@@ -238,8 +239,8 @@ async def build_security_dashboard_embed(guild: discord.Guild) -> discord.Embed:
         f"• **Logged Incidents:** `{incidents_count}`\n"
         f"• **Whitelisted Entities:** `{whitelist_count}`"
     )
-    embed.add_field(name="📊 Forensics & Isolation", value=forensics_desc, inline=False)
-    embed.set_footer(text="SyncInk Security Shield • Inspired by Wick", icon_url="https://files.catbox.moe/74l9su.png")
+    embed.add_field(name=f"{Emojis.LOOKING} Forensics & Isolation", value=forensics_desc, inline=False)
+    embed.set_footer(text="SyncInk Security Shield • Inspired by Wick", icon_url="https://cdn.discordapp.com/emojis/1547034265076760707.png")
     return embed
 
 
@@ -297,7 +298,7 @@ class SecurityDashboard(commands.Cog):
             await SecurityService.set_raid_state(interaction.guild.id, "LOCKDOWN")
             await interaction.response.send_message(
                 embed=ErrorEmbed(
-                    description=f"🚨 **Server entered EMERGENCY LOCKDOWN.**\nReason: *{reason}*",
+                    description=f"{Emojis.LOCK} **Server entered EMERGENCY LOCKDOWN.**\nReason: *{reason}*",
                     resolution="All new incoming joins will be quarantined. Use `/lockdown lift` to restore normal state."
                 ),
                 ephemeral=True
@@ -306,7 +307,7 @@ class SecurityDashboard(commands.Cog):
             await SecurityService.set_raid_state(interaction.guild.id, "NORMAL")
             await interaction.response.send_message(
                 embed=SuccessEmbed(
-                    f"✅ **Lockdown lifted.** Server returned to **NORMAL** operations.\nReason: *{reason}*"
+                    f"{Emojis.APPROVED} **Lockdown lifted.** Server returned to **NORMAL** operations.\nReason: *{reason}*"
                 ),
                 ephemeral=True
             )
@@ -338,7 +339,7 @@ class SecurityDashboard(commands.Cog):
                 return
 
             lines = [f"• **[{e['entity_type'].upper()}]** `{e['entity_id_or_val']}`" for e in entries[:25]]
-            embed = SyncInkEmbed(title="Security Whitelist", description="\n".join(lines), color=BRAND_ACCENT)
+            embed = SyncInkEmbed(title=f"{Emojis.MODERATION} Security Whitelist", description="\n".join(lines), color=BRAND_ACCENT)
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
