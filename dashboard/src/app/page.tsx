@@ -308,8 +308,12 @@ export default function DashboardPage() {
       <header className="sticky top-0 z-40 border-b border-border/80 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-card border border-border shadow-glow">
-              <Shield className="h-5 w-5 text-brand-red" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-card border border-border shadow-glow overflow-hidden">
+              <img
+                src="https://files.catbox.moe/74l9su.png"
+                alt="SyncInk Logo"
+                className="h-7 w-7 object-contain"
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Shield, Lock, ArrowRight, AlertCircle, Key, ChevronDown, ChevronUp, CheckCircle2, ShieldCheck, Zap } from "lucide-react";
+import { Shield, ShieldAlert, Lock, ArrowRight, AlertCircle, Key, ChevronDown, ChevronUp, CheckCircle2, ShieldCheck, Zap } from "lucide-react";
 
 function LoginForm() {
   const [key, setKey] = useState("");
@@ -63,12 +63,11 @@ function LoginForm() {
             <img
               src="https://files.catbox.moe/74l9su.png"
               alt="SyncInk Logo"
-              className="h-10 w-10 object-contain drop-shadow-md"
+              className="h-11 w-11 object-contain drop-shadow-md"
               onError={(e) => {
                 (e.target as HTMLElement).style.display = "none";
               }}
             />
-            <Shield className="h-8 w-8 text-brand-red absolute opacity-30 pointer-events-none" />
           </div>
 
           <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
@@ -109,16 +108,19 @@ function LoginForm() {
             <span className="text-sm tracking-wide">Continue with Discord</span>
           </a>
 
-          {/* Micro Security Features Row */}
+          {/* Micro Security Features Row with SVG Icons */}
           <div className="grid grid-cols-3 gap-2 py-1 text-center">
-            <div className="rounded-lg bg-surface/50 border border-white/[0.04] py-1.5 px-2">
-              <p className="text-[10px] font-medium text-slate-400">🛡️ Anti-Nuke</p>
+            <div className="flex items-center justify-center gap-1.5 rounded-lg bg-surface/60 border border-white/[0.05] py-1.5 px-2">
+              <ShieldAlert className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+              <span className="text-[11px] font-medium text-slate-300">Anti-Nuke</span>
             </div>
-            <div className="rounded-lg bg-surface/50 border border-white/[0.04] py-1.5 px-2">
-              <p className="text-[10px] font-medium text-slate-400">⚡ Anti-Raid</p>
+            <div className="flex items-center justify-center gap-1.5 rounded-lg bg-surface/60 border border-white/[0.05] py-1.5 px-2">
+              <Zap className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+              <span className="text-[11px] font-medium text-slate-300">Anti-Raid</span>
             </div>
-            <div className="rounded-lg bg-surface/50 border border-white/[0.04] py-1.5 px-2">
-              <p className="text-[10px] font-medium text-slate-400">🔒 Quarantine</p>
+            <div className="flex items-center justify-center gap-1.5 rounded-lg bg-surface/60 border border-white/[0.05] py-1.5 px-2">
+              <Lock className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+              <span className="text-[11px] font-medium text-slate-300">Quarantine</span>
             </div>
           </div>
 
