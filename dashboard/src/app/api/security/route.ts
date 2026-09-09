@@ -25,7 +25,6 @@ export async function GET(request: Request) {
     );
 
     if (!settings) {
-      // Ensure row exists
       await query(
         "INSERT INTO guild_settings (guild_id) VALUES ($1) ON CONFLICT DO NOTHING",
         [guildId]
@@ -36,34 +35,42 @@ export async function GET(request: Request) {
       );
     }
 
-    // 2. Fetch counts
-    const jailCountRes = await queryOne(
-      "SELECT COUNT(*) as count FROM automod_jails WHERE guild_id = $1",
-      [guildId]
-    );
-    const jailedCount = parseInt(jailCountRes?.count || "0", 10);
+    // 2. Fetch counts with fallbacks
+    const [
+      jailRes,
+      whitelistRes,
+      incidentRes,
+      modRes,
+      suggestRes,
+      blacklistRes,
+      violationsRes
+    ] = await Promise.all([
+      queryOne("SELECT COUNT(*) as count FROM automod_jails WHERE guild_id = $1", [guildId]).catch(() => ({ count: "0" })),
+      queryOne("SELECT COUNT(*) as count FROM security_whitelist WHERE guild_id = $1", [guildId]).catch(() => ({ count: "0" })),
+      queryOne("SELECT COUNT(*) as count FROM security_incidents WHERE guild_id = $1", [guildId]).catch(() => ({ count: "0" })),
+      queryOne("SELECT COUNT(*) as count FROM mod_cases WHERE guild_id = $1", [guildId]).catch(() => ({ count: "0" })),
+      queryOne("SELECT COUNT(*) as count FROM feature_requests WHERE guild_id = $1", [guildId]).catch(() => ({ count: "0" })),
+      queryOne("SELECT COUNT(*) as count FROM automod_blacklist WHERE guild_id = $1", [guildId]).catch(() => ({ count: "0" })),
+      queryOne("SELECT COUNT(*) as count FROM automod_violations WHERE guild_id = $1 AND created_at >= NOW() - INTERVAL '24 HOURS'", [guildId]).catch(() => ({ count: "0" })),
+    ]);
 
-    const whitelistCountRes = await queryOne(
-      "SELECT COUNT(*) as count FROM security_whitelist WHERE guild_id = $1",
-      [guildId]
-    );
-    const whitelistCount = parseInt(whitelistCountRes?.count || "0", 10);
+    const jailedCount = parseInt(jailRes?.count || "0", 10);
+    const whitelistCount = parseInt(whitelistRes?.count || "0", 10);
+    const incidentCount = parseInt(incidentRes?.count || "0", 10);
+    const modCasesCount = parseInt(modRes?.count || "0", 10);
+    const suggestionsCount = parseInt(suggestRes?.count || "0", 10);
+    const blacklistCount = parseInt(blacklistRes?.count || "0", 10);
+    const violationsCount = parseInt(violationsRes?.count || "0", 10);
 
-    const incidentCountRes = await queryOne(
-      "SELECT COUNT(*) as count FROM security_incidents WHERE guild_id = $1",
-      [guildId]
-    );
-    const incidentCount = parseInt(incidentCountRes?.count || "0", 10);
-
-    // 3. Fetch recent 20 security incidents
+    // 3. Fetch recent 30 security incidents
     const incidents = await query(
       `SELECT id, user_id, module, action_taken, severity, risk_score, details, created_at 
        FROM security_incidents 
        WHERE guild_id = $1 
        ORDER BY created_at DESC 
-       LIMIT 20`,
+       LIMIT 30`,
       [guildId]
-    );
+    ).catch(() => []);
 
     return NextResponse.json({
       guildId,
@@ -73,8 +80,12 @@ export async function GET(request: Request) {
         jailedCount,
         whitelistCount,
         incidentCount,
+        modCasesCount,
+        suggestionsCount,
+        blacklistCount,
+        violationsCount,
       },
-      incidents,
+      incidents: incidents || [],
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
