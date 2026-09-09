@@ -22,6 +22,7 @@ import {
   Plus,
   Trash2,
   AlertOctagon,
+  AlertCircle,
   FileText,
   Download,
   Search,
@@ -342,7 +343,9 @@ export default function DashboardPage() {
 
   const fetchChannels = useCallback(async () => {
     try {
-      const res = await fetch("/api/channels");
+      const gid = currentUser?.guildId || data?.guildId;
+      const url = gid ? `/api/channels?guildId=${encodeURIComponent(gid)}` : "/api/channels";
+      const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
         setChannelData(json.channels || {});
@@ -358,7 +361,7 @@ export default function DashboardPage() {
     } catch (err) {
       console.error(err);
     }
-  }, []);
+  }, [currentUser?.guildId, data?.guildId]);
 
   const fetchSuggestions = useCallback(async () => {
     try {
@@ -767,14 +770,15 @@ export default function DashboardPage() {
     );
   };
 
-  const handleSaveChannels = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveChannels = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!canEdit) {
       showToast("warning", "Access Restricted", "Admin privileges required.");
       return;
     }
     setActionLoading("channels");
     try {
+      const gid = currentUser?.guildId || data?.guildId;
       const res = await fetch("/api/channels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -782,11 +786,13 @@ export default function DashboardPage() {
           channels: channelData,
           roles: roleData,
           welcome: welcomeData,
+          guildId: gid,
         }),
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
       showToast("success", "Routing Saved", result.message);
+      fetchChannels();
     } catch (err: any) {
       showToast("error", "Save Failed", err.message);
     } finally {
@@ -2322,61 +2328,138 @@ export default function DashboardPage() {
             <form onSubmit={handleSaveChannels} className="space-y-6">
               {/* Log Channels Grid */}
               <div className="glass-card rounded-2xl p-6 border border-border">
-                <div className="mb-5">
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <Hash className="h-5 w-5 text-brand-red" />
-                    Dedicated Logging Channel Destinations
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Route specific Discord security audit logs to dedicated text channels.
-                  </p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-border/60">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-bold text-white flex items-center gap-2">
+                        <Hash className="h-5 w-5 text-brand-red" />
+                        Dedicated Logging Channel Destinations
+                      </h2>
+                      <span className="rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Bot Sync Active
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Route specific Discord security audit logs to dedicated text channels. Paste Channel IDs or mentions (<code className="text-brand-red">#logs</code> or <code className="text-brand-red">&lt;#12345...&gt;</code>). Syncs directly with your Discord bot.
+                    </p>
+                  </div>
+
+                  {canEdit && (
+                    <button
+                      type="submit"
+                      disabled={actionLoading === "channels"}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-brand-red hover:bg-brand-crimson px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-glow transition-all active:scale-98 disabled:opacity-50 shrink-0"
+                    >
+                      <Check className="h-4 w-4" />
+                      <span>{actionLoading === "channels" ? "Saving..." : "Save Logging Channels"}</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {[
-                    { key: "log_channel_moderation", label: "Moderation Logs", desc: "Bans, kicks, timeouts, warnings" },
-                    { key: "log_channel_message", label: "Message Logs", desc: "Edits, deletions, purges" },
-                    { key: "log_channel_member", label: "Member Logs", desc: "Joins, leaves, kick notices" },
-                    { key: "log_channel_role", label: "Role Logs", desc: "Role creations, assignments, edits" },
-                    { key: "log_channel_channel", label: "Channel Logs", desc: "Channel creations, permission edits" },
-                    { key: "log_channel_voice", label: "Voice Logs", desc: "Voice channel joins, leaves, moves" },
-                    { key: "log_channel_verification", label: "Verification Logs", desc: "Captcha completes, gate failures" },
-                    { key: "log_channel_server", label: "Server Updates", desc: "Server name, icon, vanity edits" },
-                    { key: "log_channel_appeals", label: "Appeals Channel", desc: "Ban and quarantine appeal tickets" },
-                    { key: "welcome_channel_id", label: "Welcome Channel", desc: "Public member welcome messages" },
-                    { key: "suggestion_channel_id", label: "Suggestions Channel", desc: "Community feature requests feed" },
-                    { key: "jail_channel_id", label: "Quarantine Channel", desc: "Isolated channel for inmates" },
+                    { key: "log_channel_moderation", label: "Moderation Logs", desc: "Bans, kicks, timeouts, warnings", icon: <ShieldAlert className="h-4 w-4 text-red-400" /> },
+                    { key: "log_channel_message", label: "Message Logs", desc: "Edits, deletions, purges", icon: <MessageSquare className="h-4 w-4 text-amber-400" /> },
+                    { key: "log_channel_member", label: "Member Logs", desc: "Joins, leaves, kick notices", icon: <Users className="h-4 w-4 text-blue-400" /> },
+                    { key: "log_channel_role", label: "Role Logs", desc: "Role creations, assignments, edits", icon: <Key className="h-4 w-4 text-purple-400" /> },
+                    { key: "log_channel_channel", label: "Channel Logs", desc: "Channel creations, permission edits", icon: <Hash className="h-4 w-4 text-cyan-400" /> },
+                    { key: "log_channel_voice", label: "Voice Logs", desc: "Voice channel joins, leaves, moves", icon: <Radio className="h-4 w-4 text-emerald-400" /> },
+                    { key: "log_channel_verification", label: "Verification Logs", desc: "Captcha completes, gate failures", icon: <CheckCircle2 className="h-4 w-4 text-emerald-400" /> },
+                    { key: "log_channel_server", label: "Server Updates", desc: "Server name, icon, vanity edits", icon: <Settings className="h-4 w-4 text-orange-400" /> },
+                    { key: "log_channel_appeals", label: "Appeals Channel", desc: "Ban and quarantine appeal tickets", icon: <AlertCircle className="h-4 w-4 text-rose-400" /> },
+                    { key: "welcome_channel_id", label: "Welcome Channel", desc: "Public member welcome messages", icon: <Sparkles className="h-4 w-4 text-amber-400" /> },
+                    { key: "suggestion_channel_id", label: "Suggestions Channel", desc: "Community feature requests feed", icon: <ThumbsUp className="h-4 w-4 text-cyan-400" /> },
+                    { key: "jail_channel_id", label: "Quarantine Channel", desc: "Isolated channel for inmates", icon: <Lock className="h-4 w-4 text-indigo-400" /> },
                   ].map((field) => (
-                    <div key={field.key} className="glass-panel p-3.5 rounded-xl border border-border/80">
-                      <label className="block text-xs font-bold text-slate-200 mb-0.5">
-                        {field.label}
-                      </label>
-                      <p className="text-[10px] text-slate-500 mb-2">{field.desc}</p>
-                      <input
-                        type="text"
-                        placeholder="Channel ID (e.g. 1520462...)"
-                        value={channelData[field.key] || ""}
-                        onChange={(e) =>
-                          setChannelData({ ...channelData, [field.key]: e.target.value })
-                        }
-                        disabled={!canEdit}
-                        className="w-full rounded-xl border border-border bg-surface px-3 py-1.5 text-xs text-white outline-none focus:border-brand-red font-mono disabled:opacity-50"
-                      />
+                    <div key={field.key} className="glass-panel p-4 rounded-xl border border-border/80 flex flex-col justify-between hover:border-slate-600 transition-colors">
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-1.5">
+                            {field.icon}
+                            <label className="text-xs font-bold text-slate-200">
+                              {field.label}
+                            </label>
+                          </div>
+                          {channelData[field.key] ? (
+                            <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                              Configured
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              Not Set
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-400 mb-2.5">{field.desc}</p>
+                      </div>
+
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-slate-500 font-mono text-xs select-none">#</span>
+                        <input
+                          type="text"
+                          placeholder="Paste Channel ID or #mention..."
+                          value={channelData[field.key] || ""}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[<#>]/g, "").trim();
+                            setChannelData({ ...channelData, [field.key]: val });
+                          }}
+                          disabled={!canEdit}
+                          className="w-full rounded-xl border border-border bg-surface pl-7 pr-7 py-2 text-xs text-white outline-none focus:border-brand-red font-mono disabled:opacity-50 placeholder:text-slate-600"
+                        />
+                        {channelData[field.key] && canEdit && (
+                          <button
+                            type="button"
+                            onClick={() => setChannelData({ ...channelData, [field.key]: "" })}
+                            className="absolute right-2.5 text-slate-500 hover:text-white p-0.5 transition-colors"
+                            title="Clear Channel"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
+
+                {canEdit && (
+                  <div className="flex justify-end pt-5 mt-4 border-t border-border/50">
+                    <button
+                      type="submit"
+                      disabled={actionLoading === "channels"}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-brand-red hover:bg-brand-crimson px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-glow transition-all active:scale-98 disabled:opacity-50"
+                    >
+                      <Check className="h-4 w-4" />
+                      <span>{actionLoading === "channels" ? "Saving..." : "Save Logging Channels"}</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Special Security Roles */}
               <div className="glass-card rounded-2xl p-6 border border-border">
-                <div className="mb-5">
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <Key className="h-5 w-5 text-amber-400" />
-                    Security Roles Architecture
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Assign role IDs for automated verification gates, autoroles, and quarantine isolation.
-                  </p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-border/60">
+                  <div>
+                    <h2 className="text-base font-bold text-white flex items-center gap-2">
+                      <Key className="h-5 w-5 text-amber-400" />
+                      Security Roles Architecture
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Assign role IDs for automated verification gates, autoroles, and quarantine isolation.
+                    </p>
+                  </div>
+
+                  {canEdit && (
+                    <button
+                      type="submit"
+                      disabled={actionLoading === "channels"}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-surface-hover hover:bg-surface border border-border px-5 py-2 text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-98 disabled:opacity-50 shrink-0"
+                    >
+                      <Check className="h-4 w-4" />
+                      <span>{actionLoading === "channels" ? "Saving..." : "Save Roles"}</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2386,21 +2469,47 @@ export default function DashboardPage() {
                     { key: "verification_role_id", label: "Verified Member Role", desc: "Gate unlock role" },
                     { key: "unverified_role_id", label: "Unverified Gate Role", desc: "Assigned prior to captcha" },
                   ].map((field) => (
-                    <div key={field.key} className="glass-panel p-3.5 rounded-xl border border-border/80">
-                      <label className="block text-xs font-bold text-slate-200 mb-0.5">
-                        {field.label}
-                      </label>
-                      <p className="text-[10px] text-slate-500 mb-2">{field.desc}</p>
-                      <input
-                        type="text"
-                        placeholder="Role ID"
-                        value={roleData[field.key] || ""}
-                        onChange={(e) =>
-                          setRoleData({ ...roleData, [field.key]: e.target.value })
-                        }
-                        disabled={!canEdit}
-                        className="w-full rounded-xl border border-border bg-surface px-3 py-1.5 text-xs text-white outline-none focus:border-brand-red font-mono disabled:opacity-50"
-                      />
+                    <div key={field.key} className="glass-panel p-4 rounded-xl border border-border/80 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <label className="text-xs font-bold text-slate-200">
+                            {field.label}
+                          </label>
+                          {roleData[field.key] ? (
+                            <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                              Configured
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-500 font-mono">Not Set</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-400 mb-2.5">{field.desc}</p>
+                      </div>
+
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-slate-500 font-mono text-xs select-none">@</span>
+                        <input
+                          type="text"
+                          placeholder="Paste Role ID or @mention..."
+                          value={roleData[field.key] || ""}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[<@&>]/g, "").trim();
+                            setRoleData({ ...roleData, [field.key]: val });
+                          }}
+                          disabled={!canEdit}
+                          className="w-full rounded-xl border border-border bg-surface pl-7 pr-7 py-2 text-xs text-white outline-none focus:border-brand-red font-mono disabled:opacity-50 placeholder:text-slate-600"
+                        />
+                        {roleData[field.key] && canEdit && (
+                          <button
+                            type="button"
+                            onClick={() => setRoleData({ ...roleData, [field.key]: "" })}
+                            className="absolute right-2.5 text-slate-500 hover:text-white p-0.5 transition-colors"
+                            title="Clear Role"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -2408,31 +2517,47 @@ export default function DashboardPage() {
 
               {/* Welcome Message Automation */}
               <div className="glass-card rounded-2xl p-6 border border-border">
-                <div className="mb-4">
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-cyan-400" />
-                    Welcome Flow Automation
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Custom message sent to new members with optional direct message routing.
-                  </p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-border/60">
+                  <div>
+                    <h2 className="text-base font-bold text-white flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-cyan-400" />
+                      Welcome Flow Automation
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Custom message sent to new members with optional direct message routing.
+                    </p>
+                  </div>
+
+                  {canEdit && (
+                    <button
+                      type="submit"
+                      disabled={actionLoading === "channels"}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-surface-hover hover:bg-surface border border-border px-5 py-2 text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-98 disabled:opacity-50 shrink-0"
+                    >
+                      <Check className="h-4 w-4" />
+                      <span>{actionLoading === "channels" ? "Saving..." : "Save Welcome Flow"}</span>
+                    </button>
+                  )}
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5">
                       Welcome Message Template
                     </label>
                     <textarea
-                      rows={2}
-                      placeholder="Welcome {user} to {server}! Please read our rules."
+                      rows={3}
+                      placeholder="Welcome {user} to {server}! Please read our rules in #rules."
                       value={welcomeData.welcome_message || ""}
                       onChange={(e) =>
                         setWelcomeData({ ...welcomeData, welcome_message: e.target.value })
                       }
                       disabled={!canEdit}
-                      className="w-full rounded-xl border border-border bg-surface p-3 text-xs text-white outline-none focus:border-brand-red disabled:opacity-50"
+                      className="w-full rounded-xl border border-border bg-surface p-3.5 text-xs text-white outline-none focus:border-brand-red disabled:opacity-50 leading-relaxed"
                     />
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Available variables: <code className="text-brand-red font-mono">&#123;user&#125;</code> (mentions member), <code className="text-brand-red font-mono">&#123;server&#125;</code> (server name).
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap gap-6 pt-1">
@@ -2461,24 +2586,11 @@ export default function DashboardPage() {
                         disabled={!canEdit}
                         className="accent-brand-red h-4 w-4 rounded"
                       />
-                      <span>Auto-delete Welcome message after 60s</span>
+                      <span>Auto-delete Welcome message in channel after 60s</span>
                     </label>
                   </div>
                 </div>
               </div>
-
-              {canEdit && (
-                <div className="flex justify-end pt-2">
-                  <button
-                    type="submit"
-                    disabled={actionLoading === "channels"}
-                    className="flex items-center gap-2 rounded-xl bg-brand-red hover:bg-brand-crimson px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-glow transition-all active:scale-98 disabled:opacity-50"
-                  >
-                    <Check className="h-4 w-4" />
-                    <span>{actionLoading === "channels" ? "Saving..." : "Save Routing Configuration"}</span>
-                  </button>
-                </div>
-              )}
             </form>
           </div>
         )}

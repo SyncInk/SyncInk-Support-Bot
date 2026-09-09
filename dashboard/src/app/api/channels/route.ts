@@ -12,11 +12,15 @@ export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
-    const guildId =
-      searchParams.get("guildId") ||
-      user?.guildId ||
-      process.env.DEFAULT_GUILD_ID ||
-      "1520461877073674392";
+    
+    // Dynamic guild ID fallback - query database if not in query or session
+    let guildId = searchParams.get("guildId") || user?.guildId;
+    if (!guildId) {
+      const existing = await queryOne<{ guild_id: string }>(
+        "SELECT guild_id FROM guild_settings ORDER BY guild_id LIMIT 1"
+      ).catch(() => null);
+      guildId = existing?.guild_id ? String(existing.guild_id) : process.env.DEFAULT_GUILD_ID || "1520457643842342912";
+    }
 
     let settings = await queryOne(
       `SELECT 
@@ -52,14 +56,17 @@ export async function GET(request: Request) {
         "INSERT INTO guild_settings (guild_id) VALUES ($1) ON CONFLICT DO NOTHING",
         [guildId]
       );
-      settings = {};
+      settings = await queryOne(
+        "SELECT * FROM guild_settings WHERE guild_id = $1",
+        [guildId]
+      );
     }
 
     return NextResponse.json({
       guildId,
       channels: {
         log_channel_id: settings?.log_channel_id?.toString() || "",
-        log_channel_moderation: settings?.log_channel_moderation?.toString() || "",
+        log_channel_moderation: settings?.log_channel_moderation?.toString() || settings?.log_channel_id?.toString() || "",
         log_channel_message: settings?.log_channel_message?.toString() || "",
         log_channel_member: settings?.log_channel_member?.toString() || "",
         log_channel_role: settings?.log_channel_role?.toString() || "",
@@ -106,13 +113,16 @@ export async function POST(request: Request) {
     const user = await getCurrentUser();
     const body = await request.json();
     const { channels, roles, welcome, guildId: reqGuildId } = body;
-    const guildId =
-      reqGuildId ||
-      user?.guildId ||
-      process.env.DEFAULT_GUILD_ID ||
-      "1520461877073674392";
+    
+    let guildId = reqGuildId || user?.guildId;
+    if (!guildId) {
+      const existing = await queryOne<{ guild_id: string }>(
+        "SELECT guild_id FROM guild_settings ORDER BY guild_id LIMIT 1"
+      ).catch(() => null);
+      guildId = existing?.guild_id ? String(existing.guild_id) : process.env.DEFAULT_GUILD_ID || "1520457643842342912";
+    }
 
-    // Helper to sanitize discord mentions to pure BigInt string or null
+    // Helper to sanitize discord mentions (<#1234...>) to pure BigInt string or null
     const cleanSnowflake = (val: any): string | null => {
       if (!val) return null;
       const digits = String(val).replace(/[^0-9]/g, "");
@@ -120,7 +130,7 @@ export async function POST(request: Request) {
     };
 
     const cGeneral = cleanSnowflake(channels?.log_channel_id);
-    const cMod = cleanSnowflake(channels?.log_channel_moderation);
+    const cMod = cleanSnowflake(channels?.log_channel_moderation) || cGeneral;
     const cMsg = cleanSnowflake(channels?.log_channel_message);
     const cMem = cleanSnowflake(channels?.log_channel_member);
     const cRole = cleanSnowflake(channels?.log_channel_role);
@@ -171,7 +181,7 @@ export async function POST(request: Request) {
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
       )
       ON CONFLICT (guild_id) DO UPDATE SET
-        log_channel_id = EXCLUDED.log_channel_id,
+        log_channel_id = COALESCE(EXCLUDED.log_channel_id, guild_settings.log_channel_id),
         log_channel_moderation = EXCLUDED.log_channel_moderation,
         log_channel_message = EXCLUDED.log_channel_message,
         log_channel_member = EXCLUDED.log_channel_member,
@@ -218,9 +228,24 @@ export async function POST(request: Request) {
       ]
     );
 
+    // Also log incident in forensics
+    await query(
+      `INSERT INTO security_incidents (guild_id, user_id, module, action_taken, severity, risk_score, details)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        guildId,
+        user?.id === "admin" ? 0 : (user?.id || 0),
+        "Channel Routing",
+        "ROUTING SAVED",
+        "LOW",
+        0,
+        "Log channel destinations and roles updated via Web Dashboard."
+      ]
+    ).catch(() => {});
+
     return NextResponse.json({
       success: true,
-      message: "Channel & role routing configuration saved successfully.",
+      message: "Channel & role destinations saved successfully. Synced to bot.",
     });
   } catch (error: any) {
     console.error("Channels Save Error:", error);
