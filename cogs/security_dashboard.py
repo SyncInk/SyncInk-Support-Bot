@@ -240,7 +240,7 @@ async def build_security_dashboard_embed(guild: discord.Guild) -> discord.Embed:
         f"• **Whitelisted Entities:** `{whitelist_count}`"
     )
     embed.add_field(name=f"{Emojis.LOOKING} Forensics & Isolation", value=forensics_desc, inline=False)
-    embed.set_footer(text="SyncInk Security Shield • Inspired by Wick", icon_url="https://cdn.discordapp.com/emojis/1547034265076760707.png")
+    embed.set_footer(text="SyncInk Security Shield", icon_url="https://cdn.discordapp.com/emojis/1547034265076760707.png")
     return embed
 
 
@@ -369,20 +369,29 @@ class SecurityDashboard(commands.Cog):
     @commands.command(name="security", description="Open the interactive security dashboard.")
     @commands.has_permissions(administrator=True)
     async def prefix_security(self, ctx: commands.Context):
+        from utils.permissions import require_staff_channel
+        if not await require_staff_channel(ctx):
+            return
         embed = await build_security_dashboard_embed(ctx.guild)
         view = SecurityDashboardView(ctx.guild, ctx.author.id)
-        await ctx.send(embed=embed, view=view)
+        await ctx.send(embed=embed, view=view, delete_after=120)
 
     @commands.command(name="automod_panel", aliases=["automod"], description="Open the automod overview panel.")
     @commands.has_permissions(administrator=True)
     async def prefix_automod(self, ctx: commands.Context):
+        from utils.permissions import require_staff_channel
+        if not await require_staff_channel(ctx):
+            return
         embed = await build_security_dashboard_embed(ctx.guild)
         view = SecurityDashboardView(ctx.guild, ctx.author.id)
-        await ctx.send(embed=embed, view=view)
+        await ctx.send(embed=embed, view=view, delete_after=120)
 
     @commands.command(name="lockdown", description="Emergency lockdown or restore server channels.")
     @commands.has_permissions(administrator=True)
     async def prefix_lockdown(self, ctx: commands.Context, *, reason: str = "No reason provided"):
+        from utils.permissions import require_staff_channel
+        if not await require_staff_channel(ctx):
+            return
         current_state = await SecurityService.get_raid_state(ctx.guild.id)
         if current_state == "LOCKDOWN":
             await SecurityService.set_raid_state(ctx.guild.id, "NORMAL")
@@ -397,6 +406,9 @@ class SecurityDashboard(commands.Cog):
     @commands.command(name="whitelist", description="Manage security exemptions for roles, users, channels, or domains.")
     @commands.has_permissions(administrator=True)
     async def prefix_whitelist(self, ctx: commands.Context, action: str, entity_type: str = None, target: str = None):
+        from utils.permissions import require_staff_channel
+        if not await require_staff_channel(ctx):
+            return
         action_clean = action.lower()
         if action_clean == "list":
             entries = await SecurityService.get_whitelist_entries(ctx.guild.id, entity_type.lower() if entity_type else None)

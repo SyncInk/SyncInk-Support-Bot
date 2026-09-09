@@ -159,6 +159,12 @@ class Automod(commands.Cog):
             return
 
         # -------------------------------------------------------------
+        # Server Owner and Administrators: Strictly exempt from automod deletion
+        # -------------------------------------------------------------
+        if message.author.id == message.guild.owner_id or getattr(message.author.guild_permissions, 'administrator', False):
+            return
+
+        # -------------------------------------------------------------
         # Whitelist exemptions for User, Channel, or Roles
         # -------------------------------------------------------------
         if await SecurityService.is_whitelisted(message.guild.id, "channel", str(message.channel.id)):
@@ -588,6 +594,10 @@ class Automod(commands.Cog):
     @commands.command(name="jail", description="Manually jail/quarantine a user, restricting their server access.")
     @commands.has_permissions(moderate_members=True)
     async def jail(self, ctx: commands.Context, member: discord.Member, *args):
+        from utils.permissions import require_staff_channel
+        if not await require_staff_channel(ctx):
+            return
+
         # Role hierarchy check
         if member.top_role >= ctx.author.top_role and ctx.author.id != ctx.guild.owner_id:
             from utils.ui import ErrorEmbed
@@ -615,6 +625,10 @@ class Automod(commands.Cog):
     @commands.command(name="unjail", description="Release a user from quarantine/jail and restore their roles.")
     @commands.has_permissions(moderate_members=True)
     async def unjail(self, ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
+        from utils.permissions import require_staff_channel
+        if not await require_staff_channel(ctx):
+            return
+
         try:
             await AutomodService.unjail_user(ctx.guild, member, ctx.author, reason)
             from utils.ui import SuccessEmbed

@@ -59,9 +59,25 @@ GLOBAL_TRUSTED_DOMAINS = {
     "steampowered.com",
 }
 
+ADULT_DOMAINS = {
+    "pornhub.com", "xvideos.com", "xnxx.com", "xhamster.com", "redtube.com", "youporn.com",
+    "brazzers.com", "chaturbate.com", "onlyfans.com", "rule34.xxx", "rule34.paheal.net",
+    "e621.net", "nhentai.net", "hentaihaven.xxx", "stripchat.com", "cam4.com", "spankbang.com",
+    "eporner.com", "tnaflix.com", "beeg.com", "tube8.com", "bangbros.com", "fapello.com",
+    "leakgirls.com", "heavy-r.com", "motherless.com", "bravoteens.com", "hqporner.com",
+    "daftsex.com", "porn555.com", "txxx.com", "fuq.com", "hentai2read.com", "tsumino.com",
+    "luscious.net", "fakku.net", "gelbooru.com", "danbooru.donmai.us", "manyvids.com"
+}
+
+ADULT_PATTERNS = [
+    r'(?:^|\.)(?:pornhub|xvideos|xnxx|xhamster|redtube|youporn|chaturbate|onlyfans|rule34|nhentai|spankbang|fapello|bangbros|camgirls|hentai)\.',
+    r'porn(?:o|ography)?',
+    r'\bxxx\b',
+]
+
 class SecurityService:
     """
-    Central security coordinator inspired by Wick:
+    Central security coordinator for SyncInk:
     - Anti-Raid tracking & progressive states (NORMAL, WATCH, ALERT, LOCKDOWN)
     - Anti-Nuke audit log activity tracking & rogue admin containment
     - Phishing & lookalike domain detection with homoglyph normalization
@@ -393,6 +409,21 @@ class SecurityService:
                 continue
 
             normalized_domain = cls.normalize_domain(domain)
+
+            # Check for NSFW / Adult content domains
+            is_adult = False
+            for ad in ADULT_DOMAINS:
+                if domain == ad or domain.endswith(f".{ad}"):
+                    is_adult = True
+                    break
+            if not is_adult:
+                for pattern in ADULT_PATTERNS:
+                    if re.search(pattern, normalized_domain) or re.search(pattern, domain):
+                        is_adult = True
+                        break
+
+            if is_adult:
+                return True, "NSFW_LINK", f"NSFW / Adult content link detected: `{domain}`", "HIGH"
 
             # Check for known phishing patterns / typo-squatted lookalikes
             for pattern in PHISHING_PATTERNS:

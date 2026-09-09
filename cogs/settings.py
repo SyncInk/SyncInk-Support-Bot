@@ -288,6 +288,9 @@ class Settings(commands.Cog):
     @commands.command(name="config", description="Manage server settings via the interactive dashboard.")
     @commands.has_permissions(administrator=True)
     async def config(self, ctx: commands.Context):
+        from utils.permissions import require_staff_channel
+        if not await require_staff_channel(ctx):
+            return
         embed = SyncInkEmbed(title="Platform Dashboard")
         embed.set_author(name="SyncInk Administration", icon_url="https://syncink.xyz/assets/logo.png")
         embed.description = "Welcome to the control panel. Use the dropdown below to navigate and configure your server."
@@ -299,6 +302,9 @@ class Settings(commands.Cog):
     @commands.command(name="onboard", description="Initialize SyncInk and start the guided setup.")
     @commands.has_permissions(administrator=True)
     async def onboard(self, ctx: commands.Context):
+        from utils.permissions import require_staff_channel
+        if not await require_staff_channel(ctx):
+            return
         embed = SyncInkEmbed(title="Welcome to SyncInk")
         embed.description = "Thank you for trusting the SyncInk Support Platform. To secure your community, please complete the initial setup."
         embed.add_field(name="Setup Guide", value="1. Run the `?config` command.\n2. Navigate to **Security** and set Verified & Unverified roles.\n3. Enable Verification.\n4. Configure your Welcome channel.", inline=False)

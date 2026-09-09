@@ -117,6 +117,8 @@ class Help(commands.Cog):
         is_server_owner = (ctx.guild and ctx.author.id == ctx.guild.owner_id)
         is_bot_owner = await self.bot.is_owner(ctx.author)
         is_owner = is_server_owner or is_bot_owner
+        is_mod_channel = ctx.channel.id in {1520462320235577454, 1520879581400141856}
+        show_mod = is_owner and is_mod_channel
 
         # If user searched for a specific command via `?help <command>`
         if query:
@@ -129,9 +131,13 @@ class Help(commands.Cog):
                 "status": ("`?status`", "Check real-time operational status of the SyncInk platform.", False),
                 "products": ("`?products`", "Explore SyncInk products, hosting, and bot solutions.", False),
                 "links": ("`?links`", "View official website, dashboard, and community links.", False),
+                "pfp": ("`?pfp [@member/id]`", "Display a member's profile photo in full size (Alias: `?avatar`, `?av`).", False),
+                "avatar": ("`?avatar [@member/id]`", "Display a member's profile photo in full size.", False),
+                "banner": ("`?banner [@member/id]`", "Display a member's profile banner in full size.", False),
                 "cleanup": ("`?cleanup [amount]`", "Clean up recent bot responses in the current channel.", False),
                 "ask": ("`?ask <question>`", "Ask any question to the integrated OpenAI assistant (Alias: `?ai`).", False),
                 "ai": ("`?ai <question>`", "Ask any question to the integrated OpenAI assistant.", False),
+                # Owner only (visible in private staff channels):
                 "warn": ("`?warn <@member> [reason]`", "Issue an official logged warning to a member.", True),
                 "timeout": ("`?timeout <@member> <minutes> [reason]`", "Temporarily restrict chat access for a duration (Alias: `?mute`).", True),
                 "mute": ("`?mute <@member> <minutes> [reason]`", "Mute a member for a duration.", True),
@@ -156,7 +162,7 @@ class Help(commands.Cog):
 
             if query_clean in all_cmds:
                 syntax, desc, requires_owner = all_cmds[query_clean]
-                if requires_owner and not is_owner:
+                if requires_owner and not show_mod:
                     embed = SyncInkEmbed(
                         title=f"{Emojis.REFUSED} Command Not Found",
                         description=f"Could not find any command matching `{query}`.\nType `?help` to view available commands.",
@@ -230,6 +236,8 @@ class Help(commands.Cog):
                     ("?status", "Check real-time operational status of the SyncInk platform."),
                     ("?products", "Explore SyncInk products, hosting, and bot solutions."),
                     ("?links", "View official website, dashboard, and community links."),
+                    ("?pfp [@member/id]", "Display a member's profile photo in full size (Alias: `?avatar`, `?av`)."),
+                    ("?banner [@member/id]", "Display a member's custom profile banner in full size."),
                     ("?cleanup [amount]", "Clean up recent bot responses in the current channel.")
                 ]
             ),
@@ -241,7 +249,7 @@ class Help(commands.Cog):
             )
         ]
 
-        if is_owner:
+        if show_mod:
             overview_categories.append(
                 (Emojis.MODERATION, "Moderator Actions & Security", "Staff disciplinary actions, anti-nuke, and master config")
             )

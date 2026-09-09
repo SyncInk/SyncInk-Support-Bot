@@ -96,6 +96,70 @@ class SuggestionVoteView(discord.ui.View):
 
 
 REQUIRED_SUGGESTION_CHANNEL_ID = 1546548728721178724
+DEVELOPER_ROLE_ID = 1531882215795855511
+
+class FeatureRequestStaffView(discord.ui.View):
+    def __init__(self, request_id: int, message_id: int, channel_id: int):
+        super().__init__(timeout=None)
+        self.request_id = request_id
+        self.message_id = message_id
+        self.channel_id = channel_id
+
+    async def _check_perm(self, interaction: discord.Interaction) -> bool:
+        guild = interaction.guild
+        if not guild:
+            return False
+        is_owner = (interaction.user.id == guild.owner_id)
+        has_dev = any(r.id == DEVELOPER_ROLE_ID for r in getattr(interaction.user, 'roles', []))
+        is_admin = getattr(interaction.user.guild_permissions, 'administrator', False)
+        if not (is_owner or has_dev or is_admin):
+            await interaction.response.send_message(
+                f"{Emojis.REFUSED} Only the Server Owner and Developers can update request status.", 
+                ephemeral=True
+            )
+            return False
+        return True
+
+    async def _update_status(self, interaction: discord.Interaction, db_status: str, display_text: str):
+        if not await self._check_perm(interaction):
+            return
+
+        await db.execute("UPDATE feature_requests SET status = $1 WHERE id = $2", db_status, self.request_id)
+
+        channel = interaction.guild.get_channel(self.channel_id)
+        if channel:
+            try:
+                msg = await channel.fetch_message(self.message_id)
+                if msg and msg.embeds:
+                    embed = msg.embeds[0]
+                    for i, field in enumerate(embed.fields):
+                        if "Status" in field.name:
+                            embed.set_field_at(i, name=f"{Emojis.LOADING} **Status**", value=f"**{display_text}**", inline=True)
+                            break
+                    await msg.edit(embed=embed)
+            except Exception:
+                pass
+
+        await interaction.response.send_message(
+            embed=SuccessEmbed(f"Status updated to **{display_text}** by {interaction.user.mention}.")
+        )
+
+    @discord.ui.button(label="Approve", style=discord.ButtonStyle.green, emoji=EmojiPartials.APPROVED, custom_id="req_staff_approve")
+    async def approve_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._update_status(interaction, "APPROVED", f"{Emojis.APPROVED} Approved / Planned")
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red, emoji=EmojiPartials.CANCELLED, custom_id="req_staff_cancel")
+    async def cancel_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._update_status(interaction, "DECLINED", f"{Emojis.CANCELLED} Cancelled")
+
+    @discord.ui.button(label="Implemented", style=discord.ButtonStyle.primary, emoji=EmojiPartials.CHECK_YES, custom_id="req_staff_implemented")
+    async def implemented_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._update_status(interaction, "IMPLEMENTED", f"{Emojis.CHECK_YES} Implemented")
+
+    @discord.ui.button(label="Pending", style=discord.ButtonStyle.secondary, emoji=EmojiPartials.PENDING, custom_id="req_staff_pending")
+    async def pending_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._update_status(interaction, "PENDING", f"{Emojis.PENDING} Pending Review")
+
 
 class Feedback(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -146,8 +210,8 @@ class Feedback(commands.Cog):
         )
         embed.set_author(name=f"{author.display_name} ({author})", icon_url=author.display_avatar.url)
         embed.description = f"```\n{description}\n```"
-        embed.add_field(name="👤 **Submitted By**", value=author.mention, inline=True)
-        embed.add_field(name="📊 **Status**", value="🟡 **Pending Review**", inline=True)
+        embed.add_field(name=f"{Emojis.MEMBERS} **Submitted By**", value=author.mention, inline=True)
+        embed.add_field(name=f"{Emojis.LOADING} **Status**", value=f"{Emojis.PENDING} **Pending Review**", inline=True)
         embed.add_field(
             name="🗳️ **Community Votes**", 
             value=f"{Emojis.APPROVED} **0** Upvotes   •   {Emojis.REFUSED} **0** Downvotes", 
@@ -160,6 +224,50 @@ class Feedback(commands.Cog):
         try:
             sent_msg = await target_channel.send(embed=embed, view=view)
             await db.execute("UPDATE feature_requests SET message_id = $1 WHERE id = $2", sent_msg.id, request_id)
+
+            # Automatically create discussion thread
+            try:
+                thread = await sent_msg.create_thread(
+                    name=f"Request #{request_id}: {title[:35]}"
+                )
+                
+                # Add Server Owner
+                if guild.owner:
+                    try:
+                        await thread.add_user(guild.owner)
+                    except Exception:
+                        pass
+                elif guild.owner_id:
+                    owner_mem = guild.get_member(guild.owner_id)
+                    if owner_mem:
+                        try:
+                            await thread.add_user(owner_mem)
+                        except Exception:
+                            pass
+
+                # Add members with Developer role (1531882215795855511)
+                dev_role = guild.get_role(DEVELOPER_ROLE_ID)
+                if dev_role:
+                    for dev_mem in dev_role.members:
+                        try:
+                            await thread.add_user(dev_mem)
+                        except Exception:
+                            pass
+
+                # Post staff status control panel in thread
+                staff_view = FeatureRequestStaffView(request_id, sent_msg.id, target_channel.id)
+                staff_ctrl_embed = SyncInkEmbed(
+                    title="🛠️ Feature Request Controls",
+                    description=(
+                        f"**Feature Request #{request_id}: {title}**\n\n"
+                        f"Discussion thread created for this feature request.\n"
+                        f"Server Owner and Developers with <@&{DEVELOPER_ROLE_ID}> can update the status below."
+                    ),
+                    color=BRAND_ACCENT
+                )
+                await thread.send(embed=staff_ctrl_embed, view=staff_view)
+            except Exception:
+                pass
             
             resp = SuccessEmbed(f"Your feature request has been successfully posted in {target_channel.mention}!")
             if is_interaction:
@@ -248,17 +356,19 @@ class Feedback(commands.Cog):
             return
 
         STATUS_MAP = {
-            "pending": ("PENDING", "🟡 Pending Review"),
-            "approved": ("APPROVED", "🟢 Approved / Planned"),
-            "planned": ("APPROVED", "🟢 Approved / Planned"),
-            "implemented": ("IMPLEMENTED", "🟣 Implemented"),
-            "done": ("IMPLEMENTED", "🟣 Implemented"),
-            "declined": ("DECLINED", "🔴 Declined"),
-            "rejected": ("DECLINED", "🔴 Declined")
+            "pending": ("PENDING", f"{Emojis.PENDING} Pending Review"),
+            "approved": ("APPROVED", f"{Emojis.APPROVED} Approved / Planned"),
+            "planned": ("APPROVED", f"{Emojis.APPROVED} Approved / Planned"),
+            "implemented": ("IMPLEMENTED", f"{Emojis.CHECK_YES} Implemented"),
+            "done": ("IMPLEMENTED", f"{Emojis.CHECK_YES} Implemented"),
+            "declined": ("DECLINED", f"{Emojis.CANCELLED} Cancelled"),
+            "rejected": ("DECLINED", f"{Emojis.CANCELLED} Cancelled"),
+            "cancelled": ("DECLINED", f"{Emojis.CANCELLED} Cancelled"),
+            "canceled": ("DECLINED", f"{Emojis.CANCELLED} Cancelled")
         }
         status_key = status.lower().strip()
         if status_key not in STATUS_MAP:
-            valid_statuses = "pending, approved, implemented, declined"
+            valid_statuses = "pending, approved, implemented, declined, cancelled"
             await ctx.send(embed=ErrorEmbed(
                 description=f"Invalid status `{status}`.",
                 resolution=f"Valid options: `{valid_statuses}`\nUsage: `?set_suggestion_status <id> <status>`"
@@ -280,7 +390,7 @@ class Feedback(commands.Cog):
                     embed = msg.embeds[0]
                     for i, field in enumerate(embed.fields):
                         if "Status" in field.name:
-                            embed.set_field_at(i, name="📊 **Status**", value=f"**{display_name}**", inline=True)
+                            embed.set_field_at(i, name=f"{Emojis.LOADING} **Status**", value=f"**{display_name}**", inline=True)
                             break
                     await msg.edit(embed=embed)
             except Exception:

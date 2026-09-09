@@ -127,7 +127,14 @@ class ChatGPT(commands.Cog):
     @commands.command(name="ask", aliases=["ai"], description="Ask the AI a question")
     async def ask(self, ctx: commands.Context, *, question: str = None):
         if self.ai_channel_id and ctx.channel.id != self.ai_channel_id:
-            await ctx.send(f"This command can only be used in <#{self.ai_channel_id}>!")
+            try:
+                await ctx.message.delete()
+            except (discord.Forbidden, discord.NotFound):
+                pass
+            try:
+                await ctx.send(f"This command can only be used in <#{self.ai_channel_id}>!", delete_after=6)
+            except (discord.Forbidden, discord.HTTPException):
+                pass
             return
             
         if not question:

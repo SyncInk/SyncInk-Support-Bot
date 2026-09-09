@@ -13,6 +13,10 @@ class Moderation(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    async def cog_check(self, ctx: commands.Context) -> bool:
+        from utils.permissions import require_staff_channel
+        return await require_staff_channel(ctx)
+
     async def _dispatch_mod_log(self, guild: discord.Guild, embed: discord.Embed):
         settings = await SettingsService.get_guild_settings(guild.id)
         channel_id = settings.get("log_channel_moderation")

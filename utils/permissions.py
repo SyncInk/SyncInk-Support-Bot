@@ -21,3 +21,27 @@ def has_permission(**perms):
         raise UserFacingError(i18n.get("error_no_permission"))
         
     return app_commands.check(predicate)
+
+STAFF_MOD_CHANNEL_IDS = {1520462320235577454, 1520879581400141856}
+
+async def require_staff_channel(ctx) -> bool:
+    """Verifies that the command is run in one of the authorized staff private channels."""
+    if not ctx.guild or ctx.channel.id not in STAFF_MOD_CHANNEL_IDS:
+        try:
+            await ctx.message.delete()
+        except (discord.Forbidden, discord.NotFound):
+            pass
+        from utils.ui import SyncInkEmbed, ERROR_COLOR
+        from utils.emojis import Emojis
+        embed = SyncInkEmbed(
+            title=f"{Emojis.REFUSED} **Channel Restriction**",
+            description="Moderation commands can only be used in authorized staff channels (<#1520462320235577454>, <#1520879581400141856>).",
+            color=ERROR_COLOR
+        )
+        try:
+            await ctx.send(embed=embed, delete_after=6)
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+        return False
+    return True
+
