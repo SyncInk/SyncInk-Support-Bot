@@ -86,53 +86,67 @@ export async function GET(request: Request) {
 
     const discordUser = await userRes.json();
 
-    // 3. Permission & Role Verification:
-    // A) If user is explicitly in AUTHORIZED_DISCORD_IDS, grant immediately!
+    // 3. Permission & Accurate Role Detection:
+    let isOwner = false;
+    let isAdmin = false;
+    let isMember = false;
     let isAuthorized = authorizedIds.includes(discordUser.id);
 
-    // B) Check user's Discord guilds for Server Ownership or Administrator permission
-    if (!isAuthorized) {
-      const guildsRes = await fetch("https://discord.com/api/users/@me/guilds", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+    // Fetch user's Discord guilds
+    const guildsRes = await fetch("https://discord.com/api/users/@me/guilds", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
-      if (guildsRes.ok) {
-        const guilds: Array<{ id: string; owner: boolean; permissions: string }> =
-          await guildsRes.json();
-        const targetGuild = guilds.find((g) => g.id === targetGuildId);
+    if (guildsRes.ok) {
+      const guilds: Array<{ id: string; owner: boolean; permissions: string }> =
+        await guildsRes.json();
+      const targetGuild = guilds.find((g) => g.id === targetGuildId);
 
-        if (targetGuild) {
-          // If user owns the server, or has Administrator permission (0x8)
-          const perms = BigInt(targetGuild.permissions || "0");
-          const isAdmin = (perms & BigInt(0x8)) === BigInt(0x8);
-          if (targetGuild.owner || isAdmin) {
-            isAuthorized = true;
-          }
-        }
+      if (targetGuild) {
+        isMember = true;
+        isOwner = Boolean(targetGuild.owner);
+        const perms = BigInt(targetGuild.permissions || "0");
+        const hasAdminPerm = (perms & BigInt(0x8)) === BigInt(0x8);
+        const hasManageGuild = (perms & BigInt(0x20)) === BigInt(0x20);
+        isAdmin = isOwner || hasAdminPerm || hasManageGuild;
       }
     }
 
-    // C) Fallback: If no explicit restriction is set in env and user was found
-    if (!isAuthorized && authorizedIds.length === 0) {
-      // Allow access if no whitelist is configured, or check owner ID
+    if (authorizedIds.includes(discordUser.id)) {
+      isAdmin = true;
       isAuthorized = true;
     }
 
-    if (!isAuthorized) {
+    // Determine actual role title accurately
+    let roleLabel = "Server Member";
+    if (isOwner) {
+      roleLabel = "Server Owner";
+    } else if (isAdmin) {
+      roleLabel = "Server Admin";
+    } else if (isAuthorized) {
+      roleLabel = "Authorized Operator";
+    } else {
+      roleLabel = "Server Member";
+    }
+
+    // Check authorization: If AUTHORIZED_DISCORD_IDS is set, only allow those users or owner/admins
+    if (authorizedIds.length > 0 && !isAuthorized && !isAdmin && !isOwner) {
       return NextResponse.redirect(
         `${baseUrl}/login?error=Access+Denied:+Account+@${encodeURIComponent(
           discordUser.username
-        )}+is+not+an+authorized+administrator+or+server+owner.`
+        )}+is+not+authorized+on+this+dashboard.`
       );
     }
 
-    // 4. Create Discord session cookie
+    // 4. Create Discord session cookie with accurate role info
     const sessionToken = createDiscordSessionToken({
       id: discordUser.id,
       username: discordUser.username,
       global_name: discordUser.global_name || discordUser.username,
       avatar: discordUser.avatar,
-      isOwner: true,
+      isOwner,
+      isAdmin,
+      role: roleLabel,
     });
 
     const response = NextResponse.redirect(`${baseUrl}/`);

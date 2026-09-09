@@ -53,6 +53,8 @@ interface CurrentUser {
   global_name?: string | null;
   avatar?: string | null;
   isOwner?: boolean;
+  isAdmin?: boolean;
+  role?: string;
 }
 
 export default function DashboardPage() {
@@ -351,9 +353,25 @@ export default function DashboardPage() {
                   <span className="text-xs font-semibold text-white leading-tight">
                     {currentUser.global_name || currentUser.username}
                   </span>
-                  <span className="text-[10px] text-emerald-400 font-medium leading-tight flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" />
-                    {currentUser.isOwner ? "Server Owner" : "Admin"}
+                  <span
+                    className={`text-[10px] font-semibold leading-tight flex items-center gap-1 ${
+                      currentUser.isOwner
+                        ? "text-amber-400"
+                        : currentUser.isAdmin
+                        ? "text-emerald-400"
+                        : "text-blue-400"
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full inline-block ${
+                        currentUser.isOwner
+                          ? "bg-amber-400 animate-pulse"
+                          : currentUser.isAdmin
+                          ? "bg-emerald-400"
+                          : "bg-blue-400"
+                      }`}
+                    />
+                    {currentUser.role || (currentUser.isOwner ? "Server Owner" : currentUser.isAdmin ? "Server Admin" : "Server Member")}
                   </span>
                 </div>
               </div>

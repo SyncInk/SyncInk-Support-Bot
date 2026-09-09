@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { checkRequestAuth } from "@/lib/auth";
+import { checkRequestAdminAuth } from "@/lib/auth";
 import { query, queryOne } from "@/lib/db";
 
 export async function POST(request: Request) {
-  if (!checkRequestAuth(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!checkRequestAdminAuth(request)) {
+    return NextResponse.json({ error: "Access Denied: Only Server Owner & Administrators can modify security controls." }, { status: 403 });
   }
 
   try {

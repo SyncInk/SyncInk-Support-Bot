@@ -9,6 +9,8 @@ export interface DiscordUser {
   global_name?: string | null;
   avatar?: string | null;
   isOwner?: boolean;
+  isAdmin?: boolean;
+  role?: string;
 }
 
 export function getAdminKey(): string {
@@ -76,6 +78,40 @@ export function checkRequestAuth(request: Request): boolean {
   if (discordMatch) {
     const user = parseDiscordSession(discordMatch[1]);
     if (user && user.id) {
+      return true;
+    }
+  }
+
+  // Check Admin passkey cookie
+  const adminMatch = cookieHeader.match(new RegExp(`${AUTH_COOKIE_NAME}=([^;]+)`));
+  if (adminMatch) {
+    const expected = createSessionToken();
+    if (adminMatch[1] === expected) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function checkRequestAdminAuth(request: Request): boolean {
+  // 1. Check Authorization header
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader) {
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (isValidKey(token)) {
+      return true;
+    }
+  }
+
+  // 2. Check cookies
+  const cookieHeader = request.headers.get("cookie") || "";
+
+  // Check Discord OAuth cookie
+  const discordMatch = cookieHeader.match(new RegExp(`${DISCORD_COOKIE_NAME}=([^;]+)`));
+  if (discordMatch) {
+    const user = parseDiscordSession(discordMatch[1]);
+    if (user && (user.isOwner || user.isAdmin)) {
       return true;
     }
   }
