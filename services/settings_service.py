@@ -20,7 +20,7 @@ class SettingsService:
             record = await db.fetchrow("SELECT * FROM guild_settings WHERE guild_id = $1", guild_id)
             
         settings_dict = dict(record) if record else {}
-        await CacheService.set(cache_key, settings_dict)
+        await CacheService.set(cache_key, settings_dict, expire_seconds=10)
         return settings_dict
 
     @staticmethod

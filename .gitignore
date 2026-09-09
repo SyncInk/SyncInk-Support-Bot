@@ -3,3 +3,8 @@ __pycache__/
 *.pyc
 .vscode/
 .idea/
+node_modules/
+.next/
+dashboard/node_modules/
+dashboard/.next/
+
