@@ -9,8 +9,24 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPasskey, setShowPasskey] = useState(false);
+  const [redirectUri, setRedirectUri] = useState("");
+  const [copied, setCopied] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setRedirectUri(`${window.location.origin}/api/auth/discord/callback`);
+    }
+  }, []);
+
+  function copyRedirect() {
+    if (redirectUri) {
+      navigator.clipboard.writeText(redirectUri);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+  }
 
   useEffect(() => {
     const err = searchParams.get("error");
@@ -101,6 +117,30 @@ function LoginForm() {
             </svg>
             <span>Continue with Discord</span>
           </a>
+
+          {/* Exact Redirect URI Copy Helper */}
+          {redirectUri && (
+            <div className="rounded-xl border border-border/80 bg-surface/80 p-3 text-left shadow-sm">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="text-[11px] font-semibold text-slate-300">
+                  Exact OAuth2 Redirect URI:
+                </span>
+                <button
+                  type="button"
+                  onClick={copyRedirect}
+                  className="text-[10px] px-2 py-0.5 rounded bg-[#5865F2]/20 hover:bg-[#5865F2]/30 text-[#8ea1e1] font-semibold transition-colors"
+                >
+                  {copied ? "✓ Copied!" : "Copy"}
+                </button>
+              </div>
+              <code className="block rounded-lg bg-black/50 px-2.5 py-1.5 text-[11px] text-emerald-400 break-all select-all font-mono border border-border/60">
+                {redirectUri}
+              </code>
+              <p className="mt-1 text-[10px] text-slate-500 leading-normal">
+                Ensure this exact URL is saved in Discord Developer Portal ➔ OAuth2 ➔ Redirects.
+              </p>
+            </div>
+          )}
 
           {/* Divider */}
           <div className="relative my-4 flex items-center justify-center">

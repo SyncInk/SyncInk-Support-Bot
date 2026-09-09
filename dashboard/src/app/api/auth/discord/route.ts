@@ -19,8 +19,17 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const host = request.headers.get("x-forwarded-host") || url.host;
   const proto = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "");
-  const rawBaseUrl = process.env.NEXTAUTH_URL || `${proto}://${host}`;
-  const baseUrl = rawBaseUrl.replace(/\/+$/, "");
+  let baseUrl = `${proto}://${host}`;
+
+  const envUrl = process.env.NEXTAUTH_URL;
+  if (
+    envUrl &&
+    !envUrl.includes("your-dashboard") &&
+    !envUrl.includes("your-project") &&
+    !envUrl.includes("example.com")
+  ) {
+    baseUrl = envUrl.replace(/\/+$/, "");
+  }
 
   const redirectUri = `${baseUrl}/api/auth/discord/callback`;
 
