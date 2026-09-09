@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const clientId = process.env.DISCORD_CLIENT_ID;
+  const clientId = (process.env.DISCORD_CLIENT_ID || "").trim();
 
   if (!clientId) {
     return NextResponse.json(

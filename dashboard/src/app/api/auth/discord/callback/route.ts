@@ -16,9 +16,9 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${baseUrl}/login?error=No+authorization+code+provided`);
   }
 
-  const clientId = process.env.DISCORD_CLIENT_ID;
-  const clientSecret = process.env.DISCORD_CLIENT_SECRET;
-  const targetGuildId = process.env.DEFAULT_GUILD_ID || "1520461877073674392";
+  const clientId = (process.env.DISCORD_CLIENT_ID || "").trim();
+  const clientSecret = (process.env.DISCORD_CLIENT_SECRET || "").trim();
+  const targetGuildId = (process.env.DEFAULT_GUILD_ID || "1520461877073674392").trim();
   const authorizedIds = process.env.AUTHORIZED_DISCORD_IDS
     ? process.env.AUTHORIZED_DISCORD_IDS.split(",").map((s) => s.trim())
     : [];
@@ -46,7 +46,20 @@ export async function GET(request: Request) {
     if (!tokenRes.ok) {
       const errText = await tokenRes.text();
       console.error("Discord Token Exchange Failed:", errText);
-      return NextResponse.redirect(`${baseUrl}/login?error=Failed+to+exchange+Discord+token`);
+      let detail = "Failed to exchange Discord token";
+      try {
+        const parsed = JSON.parse(errText);
+        if (parsed.error_description) {
+          detail = `Discord: ${parsed.error_description}`;
+        } else if (parsed.error === "invalid_client") {
+          detail = "Invalid Client Secret or Client ID. Ensure DISCORD_CLIENT_SECRET in Vercel matches the OAuth2 Client Secret (not bot token).";
+        } else if (parsed.error) {
+          detail = `Discord OAuth error: ${parsed.error}`;
+        }
+      } catch {
+        detail = `Discord token exchange failed: ${errText.slice(0, 100)}`;
+      }
+      return NextResponse.redirect(`${baseUrl}/login?error=${encodeURIComponent(detail)}`);
     }
 
     const tokenData = await tokenRes.json();
