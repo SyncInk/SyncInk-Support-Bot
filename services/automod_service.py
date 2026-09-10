@@ -212,11 +212,11 @@ class AutomodService:
 
         embed = SyncInkEmbed(title=f"{Emojis.ALERT} **Automod Security Incident**", color=ERROR_COLOR)
         embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
-        embed.add_field(name=f"{Emojis.REFUSED} **Action Taken**", value=f"**{action}**", inline=True)
-        embed.add_field(name=f"{Emojis.MODERATION} **Detection**", value=f"**{detection}**", inline=True)
-        embed.add_field(name="🎯 **Risk Score**", value=f"**{risk_score}/100** ({tier_badge})", inline=True)
-        embed.add_field(name=f"{Emojis.WARNING} **24h Strikes**", value=f"**{strike_count} Violation(s)**", inline=True)
-        embed.add_field(name="📜 **Reason**", value=f"**{reason}**", inline=False)
+        embed.add_field(name=f"{Emojis.REFUSED} **Action Taken**", value=f"`{action}`", inline=True)
+        embed.add_field(name=f"{Emojis.MODERATION} **Detection**", value=f"`{detection}`", inline=True)
+        embed.add_field(name="🎯 **Risk Score**", value=f"`{risk_score}/100` ({tier_badge})", inline=True)
+        embed.add_field(name=f"{Emojis.WARNING} **24h Strikes**", value=f"`{strike_count} Violation(s)`", inline=True)
+        embed.add_field(name="📜 **Reason**", value=f"`{reason}`", inline=False)
         
         if message_content:
             embed.add_field(name="Original Message", value=f"```\n{message_content[:1000]}\n```", inline=False)
@@ -350,7 +350,50 @@ class AutomodService:
         except Exception:
             pass
 
+        # Asynchronously auto-purge user messages across channels (target channel + all channels)
+        asyncio.create_task(AutomodService.purge_jailed_user_messages(guild, member.id))
+
         return case_id
+
+    @staticmethod
+    async def purge_jailed_user_messages(guild: discord.Guild, user_id: int):
+        """
+        Auto-purges messages sent by a jailed user across server channels.
+        Specifically ensures 40-50 messages are purged in designated channel 1520895094629203989,
+        and clears recent messages across all accessible guild text channels.
+        """
+        try:
+            target_chan_id = 1520895094629203989
+            target_channel = guild.get_channel(target_chan_id)
+            if not target_channel:
+                try:
+                    target_channel = await guild.fetch_channel(target_chan_id)
+                except Exception:
+                    target_channel = None
+
+            def is_jailed_user(m: discord.Message) -> bool:
+                return m.author.id == user_id
+
+            if target_channel and isinstance(target_channel, discord.TextChannel):
+                try:
+                    deleted = await target_channel.purge(limit=60, check=is_jailed_user)
+                    log.info(f"Auto-purged {len(deleted)} messages for jailed user {user_id} in channel {target_chan_id}")
+                except Exception as e:
+                    log.warning(f"Could not purge target channel {target_chan_id}: {e}")
+
+            # Purge across all other text channels in guild (locked and unlocked)
+            for channel in guild.text_channels:
+                if channel.id == target_chan_id:
+                    continue
+                perms = channel.permissions_for(guild.me)
+                if not perms.manage_messages or not perms.read_message_history:
+                    continue
+                try:
+                    await channel.purge(limit=50, check=is_jailed_user)
+                except Exception:
+                    continue
+        except Exception as e:
+            log.error(f"Error during auto-purge for jailed user {user_id}: {e}")
 
     @staticmethod
     async def unjail_user(guild: discord.Guild, member: discord.Member, moderator: discord.Member, reason: str):

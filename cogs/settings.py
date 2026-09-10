@@ -300,6 +300,30 @@ class ConfigDashboardView(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
 
 
+class ConfigLauncherView(discord.ui.View):
+    def __init__(self, owner_id: int):
+        super().__init__(timeout=25)
+        self.owner_id = owner_id
+
+    @discord.ui.button(label="Open Configuration Panel", style=discord.ButtonStyle.primary, emoji="⚙️")
+    async def open_panel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        is_owner = (interaction.guild and interaction.user.id == interaction.guild.owner_id) or await interaction.client.is_owner(interaction.user)
+        if not is_owner or interaction.user.id != self.owner_id:
+            await interaction.response.send_message(
+                f"{Emojis.REFUSED} **Access Denied**: Only the Server Owner can access the configuration panel.",
+                ephemeral=True
+            )
+            return
+
+        embed = SyncInkEmbed(title="Platform Dashboard")
+        embed.set_author(name="SyncInk Administration", icon_url="https://syncink.xyz/assets/logo.png")
+        embed.description = "Welcome to the control panel. Use the dropdown below to navigate and configure your server."
+        embed.add_field(name="Status", value="All Systems Operational", inline=False)
+        
+        view = ConfigDashboardView().prepare_initial()
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+
 class Settings(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -311,13 +335,44 @@ class Settings(commands.Cog):
             return
         if not await require_server_owner(ctx):
             return
+            
+        try:
+            await ctx.message.delete()
+        except Exception:
+            pass
+
+        embed = SyncInkEmbed(
+            title="⚙️ Configuration Panel",
+            description="Click the button below to launch the private configuration dashboard.\n*(This launcher expires automatically in 25 seconds)*"
+        )
+        view = ConfigLauncherView(owner_id=ctx.author.id)
+        await ctx.send(embed=embed, view=view, delete_after=25)
+
+    @app_commands.command(name="config", description="Manage server settings via the private interactive dashboard (Server Owner only).")
+    async def slash_config(self, interaction: discord.Interaction):
+        from utils.permissions import STAFF_MOD_CHANNEL_IDS
+        if not interaction.guild or interaction.channel_id not in STAFF_MOD_CHANNEL_IDS:
+            await interaction.response.send_message(
+                f"{Emojis.REFUSED} **Channel Restriction**: The configuration dashboard can only be accessed in staff channels (<#1520462320235577454>, <#1520879581400141856>).",
+                ephemeral=True
+            )
+            return
+
+        is_owner = (interaction.guild and interaction.user.id == interaction.guild.owner_id) or await interaction.client.is_owner(interaction.user)
+        if not is_owner:
+            await interaction.response.send_message(
+                f"{Emojis.REFUSED} **Access Denied**: You do not have access to this command.",
+                ephemeral=True
+            )
+            return
+
         embed = SyncInkEmbed(title="Platform Dashboard")
         embed.set_author(name="SyncInk Administration", icon_url="https://syncink.xyz/assets/logo.png")
         embed.description = "Welcome to the control panel. Use the dropdown below to navigate and configure your server."
         embed.add_field(name="Status", value="All Systems Operational", inline=False)
         
         view = ConfigDashboardView().prepare_initial()
-        await ctx.send(embed=embed, view=view)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
         
     @commands.command(name="onboard", description="Initialize SyncInk and start the guided setup (Server Owner only).")
     async def onboard(self, ctx: commands.Context):
@@ -326,9 +381,15 @@ class Settings(commands.Cog):
             return
         if not await require_server_owner(ctx):
             return
+            
+        try:
+            await ctx.message.delete()
+        except Exception:
+            pass
+
         embed = SyncInkEmbed(title="Welcome to SyncInk")
         embed.description = "Thank you for trusting the SyncInk Support Platform. To secure your community, please complete the initial setup."
-        embed.add_field(name="Setup Guide", value="1. Run the `?config` command.\n2. Navigate to **Security** and set Verified & Unverified roles.\n3. Enable Verification.\n4. Configure your Welcome channel.", inline=False)
+        embed.add_field(name="Setup Guide", value="1. Run the `?config` or `/config` command.\n2. Navigate to **Security** and set Verified & Unverified roles.\n3. Enable Verification.\n4. Configure your Welcome channel.", inline=False)
         
         await ctx.send(embed=embed)
 

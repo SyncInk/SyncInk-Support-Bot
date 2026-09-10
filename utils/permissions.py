@@ -25,11 +25,45 @@ def has_permission(**perms):
 STAFF_MOD_CHANNEL_IDS = {1520462320235577454, 1520879581400141856}
 
 async def require_staff_channel(ctx) -> bool:
-    """Verifies that the command is run in one of the authorized staff private channels."""
-    if not ctx.guild or ctx.channel.id not in STAFF_MOD_CHANNEL_IDS:
+    """Verifies that the command is run by staff in one of the authorized staff private channels."""
+    if not ctx.guild:
+        return False
+
+    # 1. Check whether user has staff/moderator permissions
+    is_staff = (
+        ctx.author.id == ctx.guild.owner_id or 
+        await ctx.bot.is_owner(ctx.author) or
+        ctx.author.guild_permissions.moderate_members or
+        ctx.author.guild_permissions.kick_members or
+        ctx.author.guild_permissions.ban_members or
+        ctx.author.guild_permissions.manage_messages or
+        ctx.author.guild_permissions.manage_guild or
+        ctx.author.guild_permissions.administrator
+    )
+
+    if not is_staff:
         try:
             await ctx.message.delete()
-        except (discord.Forbidden, discord.NotFound):
+        except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+            pass
+        from utils.ui import SyncInkEmbed, ERROR_COLOR
+        from utils.emojis import Emojis
+        embed = SyncInkEmbed(
+            title=f"{Emojis.REFUSED} **Access Denied**",
+            description="You do not have access to this command.",
+            color=ERROR_COLOR
+        )
+        try:
+            await ctx.send(embed=embed, delete_after=6)
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+        return False
+
+    # 2. Staff user - check channel restriction
+    if ctx.channel.id not in STAFF_MOD_CHANNEL_IDS:
+        try:
+            await ctx.message.delete()
+        except (discord.Forbidden, discord.NotFound, discord.HTTPException):
             pass
         from utils.ui import SyncInkEmbed, ERROR_COLOR
         from utils.emojis import Emojis
@@ -51,13 +85,13 @@ async def require_server_owner(ctx) -> bool:
     if not is_owner:
         try:
             await ctx.message.delete()
-        except (discord.Forbidden, discord.NotFound):
+        except (discord.Forbidden, discord.NotFound, discord.HTTPException):
             pass
         from utils.ui import SyncInkEmbed, ERROR_COLOR
         from utils.emojis import Emojis
         embed = SyncInkEmbed(
             title=f"{Emojis.REFUSED} **Access Denied**",
-            description="Security and configuration controls are strictly restricted to the **Server Owner**.",
+            description="You do not have access to this command.",
             color=ERROR_COLOR
         )
         try:

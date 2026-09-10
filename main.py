@@ -93,9 +93,27 @@ class SyncInkBot(commands.Bot):
 
         if isinstance(error, commands.CommandNotFound):
             return
-            
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send(embed=ErrorEmbed(i18n.get("error_no_permission")), ephemeral=True)
+
+        if isinstance(error, (commands.MissingPermissions, commands.NotOwner)):
+            try:
+                await ctx.message.delete()
+            except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                pass
+            from utils.emojis import Emojis
+            from utils.ui import SyncInkEmbed, ERROR_COLOR
+            embed = SyncInkEmbed(
+                title=f"{Emojis.REFUSED} **Access Denied**",
+                description="You do not have access to this command.",
+                color=ERROR_COLOR
+            )
+            try:
+                await ctx.send(embed=embed, delete_after=6)
+            except (discord.Forbidden, discord.HTTPException):
+                pass
+            return
+
+        if isinstance(error, commands.CheckFailure):
+            # Check failures are handled directly within custom predicates
             return
             
         if hasattr(error, 'original') and isinstance(error.original, UserFacingError):

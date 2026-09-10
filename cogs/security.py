@@ -17,6 +17,9 @@ class VerificationView(discord.ui.View):
 
     @discord.ui.button(label="Verify Now", style=discord.ButtonStyle.primary, custom_id="persistent_verify_btn", emoji=EmojiPartials.APPROVED)
     async def verify_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # 1. Immediately defer to avoid Discord 3-second timeout ("didn't respond")
+        await interaction.response.defer(ephemeral=True)
+
         settings = await SettingsService.get_guild_settings(interaction.guild.id)
         role_id = settings.get("verification_role_id")
         unverified_id = settings.get("unverified_role_id")
@@ -27,7 +30,7 @@ class VerificationView(discord.ui.View):
                 resolution="A server administrator must enable verification via the `?config` or `/security` dashboard."
             )
             embed.title = "Verification Disabled"
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
             return
         
         if not role_id or not unverified_id:
@@ -36,18 +39,18 @@ class VerificationView(discord.ui.View):
                 resolution="A server administrator must select both roles via the `?config` or `/security` dashboard."
             )
             embed.title = "Configuration Error"
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
             return
             
-        role = interaction.guild.get_role(role_id)
-        unverified_role = interaction.guild.get_role(unverified_id)
+        role = interaction.guild.get_role(int(role_id))
+        unverified_role = interaction.guild.get_role(int(unverified_id))
         
         if not role or not unverified_role:
             embed = ErrorEmbed(
                 description="The designated verification roles could not be found.",
                 resolution="A server administrator must re-select valid roles via the `?config` or `/security` dashboard."
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
             return
             
         # Check if user is jailed or quarantined (Active jail in DB or possessing jail/quarantine role)
@@ -88,12 +91,12 @@ class VerificationView(discord.ui.View):
                 f"You cannot complete verification or access the server while serving a disciplinary sentence.\n"
                 f"If you wish to appeal your penalty, please use the official appeal channel or contact the administration team."
             )
-            await interaction.response.send_message(embed=denied_embed, ephemeral=True)
+            await interaction.followup.send(embed=denied_embed, ephemeral=True)
             return
 
         if role in interaction.user.roles:
             embed = SyncInkEmbed(title="Already Verified", description="You already possess the verification role and full access to the server.")
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
             return
 
         try:
@@ -108,12 +111,17 @@ class VerificationView(discord.ui.View):
                 "• You now have access to the entire server.\n"
                 "• If you need assistance, visit the Support channels."
             )
-            await interaction.response.send_message(embed=success_embed, ephemeral=True)
+            await interaction.followup.send(embed=success_embed, ephemeral=True)
 
             # Dispatch Verification Log
             log_channel_id = settings.get('log_channel_verification')
             if log_channel_id:
-                log_chan = interaction.guild.get_channel(log_channel_id)
+                log_chan = interaction.guild.get_channel(int(log_channel_id))
+                if not log_chan:
+                    try:
+                        log_chan = await interaction.guild.fetch_channel(int(log_channel_id))
+                    except Exception:
+                        log_chan = None
                 if log_chan:
                     log_embed = SyncInkEmbed(title="Member Verified", color=SUCCESS_COLOR)
                     log_embed.set_author(name=f"{interaction.user} ({interaction.user.id})", icon_url=interaction.user.display_avatar.url)
@@ -126,39 +134,64 @@ class VerificationView(discord.ui.View):
                     except discord.Forbidden:
                         pass
                         
-            # Send welcome message if configured
+            # Send welcome message reliably
             welcome_channel_id = settings.get('welcome_channel_id')
+            channel = None
             if welcome_channel_id:
-                channel = interaction.guild.get_channel(welcome_channel_id)
-                if channel:
-                    custom_msg = settings.get('welcome_message')
-                    if custom_msg:
-                        desc = custom_msg.replace("{user}", interaction.user.mention).replace("{server}", interaction.guild.name)
-                    else:
-                        desc = (
-                            f"Welcome to the {interaction.guild.name}, {interaction.user.mention}!\n\n"
-                            "We are thrilled to have you here. To get started, please check out our core channels:\n"
-                            "📢 **Announcements** - Stay updated with our latest news.\n"
-                            "💬 **Support Chat** - Get help from our dedicated team.\n"
-                            "💡 **Feature Requests** - Share your ideas for the platform.\n"
-                            "📦 **Products** - Explore what we have to offer."
-                        )
-                    
-                    w_embed = SyncInkEmbed(title=f"Welcome to {interaction.guild.name}", description=desc)
-                    w_embed.set_thumbnail(url=interaction.user.display_avatar.url)
+                channel = interaction.guild.get_channel(int(welcome_channel_id))
+                if not channel:
                     try:
-                        await channel.send(content=interaction.user.mention, embed=w_embed)
-                    except discord.Forbidden:
+                        channel = await interaction.guild.fetch_channel(int(welcome_channel_id))
+                    except Exception:
+                        channel = None
+            if not channel:
+                for c in interaction.guild.text_channels:
+                    if "welcome" in c.name.lower():
+                        channel = c
+                        break
+
+            if channel:
+                custom_msg = settings.get('welcome_message')
+                if custom_msg:
+                    desc = custom_msg.replace("{user}", interaction.user.mention).replace("{server}", interaction.guild.name)
+                else:
+                    desc = (
+                        f"Welcome to **{interaction.guild.name}**, {interaction.user.mention}!\n\n"
+                        "We are thrilled to have you here. To get started, please check out our core channels:\n"
+                        "📢 **Announcements** - Stay updated with our latest news.\n"
+                        "💬 **Support Chat** - Get help from our dedicated team.\n"
+                        "💡 **Feature Requests** - Share your ideas for the platform.\n"
+                        "📦 **Products** - Explore what we have to offer."
+                    )
+                
+                w_embed = SyncInkEmbed(title=f"Welcome to {interaction.guild.name}", description=desc)
+                w_embed.set_thumbnail(url=interaction.user.display_avatar.url)
+
+                auto_delete = bool(settings.get('auto_delete_welcome'))
+                delete_after = 60 if auto_delete else None
+
+                try:
+                    await channel.send(content=interaction.user.mention, embed=w_embed, delete_after=delete_after)
+                except discord.Forbidden:
+                    pass
+
+                # Optional Direct Message Welcome
+                if settings.get('dm_welcome'):
+                    try:
+                        dm_embed = SyncInkEmbed(title=f"Welcome to {interaction.guild.name}!", description=desc)
+                        await interaction.user.send(embed=dm_embed)
+                    except Exception:
                         pass
+
         except discord.Forbidden:
             embed = ErrorEmbed(
-                description="The bot lacks the necessary permissions to assign or remove roles.",
-                resolution="Ensure the bot's role is placed **above** the verified and unverified roles in the server settings."
+                description="The bot lacks permissions to assign or remove roles.",
+                resolution="Ensure the bot's highest role is placed **above** both the Verified and Unverified roles in Server Settings > Roles."
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         except Exception as e:
-            await interaction.response.send_message(embed=ErrorEmbed(description="An unexpected error occurred during verification.", resolution=f"Details: `{e}`"), ephemeral=True)
             log.error(f"Verification error: {e}")
+            await interaction.followup.send(embed=ErrorEmbed(description="An unexpected error occurred during verification.", resolution=f"Details: `{e}`"), ephemeral=True)
 
 class Security(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -352,22 +385,41 @@ class Security(commands.Cog):
         from utils.permissions import require_server_owner
         if not await require_server_owner(ctx):
             return
+
+        TARGET_VERIFICATION_CHANNEL_ID = 1520748219100041348
+        if ctx.channel.id != TARGET_VERIFICATION_CHANNEL_ID:
+            try:
+                await ctx.message.delete()
+            except Exception:
+                pass
+            embed = ErrorEmbed(
+                description=f"The security checkpoint can only be deployed in <#{TARGET_VERIFICATION_CHANNEL_ID}>.",
+                resolution=f"Please switch to <#{TARGET_VERIFICATION_CHANNEL_ID}> to run this command."
+            )
+            await ctx.send(embed=embed, delete_after=8)
+            return
+
+        try:
+            await ctx.message.delete()
+        except Exception:
+            pass
+
         settings = await SettingsService.get_guild_settings(ctx.guild.id)
         if not settings.get('verification_enabled') or not settings.get('verification_role_id') or not settings.get('unverified_role_id'):
             embed = ErrorEmbed(
                 description="The verification module must be fully configured before deployment.",
                 resolution="Use the `?config` or `/security` dashboard to assign both Verified and Unverified roles, then enable verification."
             )
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, delete_after=10)
             return
 
-        embed = SyncInkEmbed(title=f"{Emojis.RULES} Security Checkpoint", color=BRAND_ACCENT)
-        embed.set_author(name="Server Security", icon_url="https://cdn.discordapp.com/emojis/1547034265076760707.png")
+        embed = SyncInkEmbed(title="<:trusted_user:1547621146558730340> **Security Checkpoint**", color=BRAND_ACCENT)
+        embed.set_footer(text="SyncInk Platform | Server Security", icon_url="https://files.catbox.moe/74l9su.png")
         embed.description = "To protect our community from spam, automated accounts, malicious users, and unauthorized access, all members must complete verification before accessing the server."
         embed.add_field(name="", value=f"> {Emojis.LOCK} Please click the button below to verify your account and instantly unlock server access.", inline=False)
         
         await ctx.channel.send(embed=embed, view=VerificationView())
-        await ctx.send(embed=SuccessEmbed("The security checkpoint has been successfully deployed to this channel."))
+        await ctx.send(embed=SuccessEmbed("The security checkpoint has been successfully deployed to this channel."), delete_after=6)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Security(bot))
