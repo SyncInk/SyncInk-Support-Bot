@@ -9,9 +9,11 @@ from collections import defaultdict, deque
 from typing import Optional, List, Tuple
 from utils.logger import log
 from utils.emojis import Emojis
-from utils.ui import SyncInkEmbed, SuccessEmbed, BRAND_ACCENT, ERROR_COLOR
+from utils.ui import SyncInkEmbed, SuccessEmbed, BRAND_ACCENT, ERROR_COLOR, WARNING_COLOR
 from services.web_search_service import WebSearchService
 from services.settings_service import SettingsService
+
+DEFAULT_AI_CHANNEL_ID = 1544361954574073916
 
 def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = None) -> str:
     """Extracts structured server channel map and key locations for the AI assistant."""
@@ -88,12 +90,8 @@ class ChatGPT(commands.Cog):
         self.openrouter_key = os.getenv("OPENROUTER_API_KEY")
         self.gemini_key = os.getenv("GEMINI_API_KEY")
         self.openai_key = os.getenv("OPENAI_API_KEY")
-        self.ai_channel_id = os.getenv("AI_CHANNEL_ID")
-        if self.ai_channel_id:
-            try:
-                self.ai_channel_id = int(self.ai_channel_id)
-            except ValueError:
-                self.ai_channel_id = None
+        env_chan = os.getenv("AI_CHANNEL_ID")
+        self.ai_channel_id = int(env_chan) if env_chan and env_chan.isdigit() else DEFAULT_AI_CHANNEL_ID
         self.cached_model = None
         self.cached_gemini_model = None
         
@@ -444,10 +442,14 @@ class ChatGPT(commands.Cog):
         if self.ai_channel_id and ctx.channel.id != self.ai_channel_id:
             try:
                 await ctx.message.delete()
-            except (discord.Forbidden, discord.NotFound):
+            except (discord.Forbidden, discord.NotFound, discord.HTTPException):
                 pass
             try:
-                await ctx.send(f"This command can only be used in <#{self.ai_channel_id}>!", delete_after=6)
+                warning_embed = discord.Embed(
+                    description=f"<a:syncwarning:1547034231438319616> | **This command can only be used in <#{self.ai_channel_id}>!**",
+                    color=WARNING_COLOR
+                )
+                await ctx.send(embed=warning_embed, delete_after=6)
             except (discord.Forbidden, discord.HTTPException):
                 pass
             return
@@ -480,10 +482,11 @@ class ChatGPT(commands.Cog):
     @app_commands.describe(question="The question or server inquiry to ask the assistant")
     async def slash_ask(self, interaction: discord.Interaction, question: str):
         if self.ai_channel_id and interaction.channel_id != self.ai_channel_id:
-            await interaction.response.send_message(
-                f"This command can only be used in <#{self.ai_channel_id}>!",
-                ephemeral=True
+            warning_embed = discord.Embed(
+                description=f"<a:syncwarning:1547034231438319616> | **This command can only be used in <#{self.ai_channel_id}>!**",
+                color=WARNING_COLOR
             )
+            await interaction.response.send_message(embed=warning_embed, ephemeral=True)
             return
 
         await interaction.response.defer()
@@ -508,6 +511,21 @@ class ChatGPT(commands.Cog):
 
     @commands.command(name="resetai", aliases=["clearai"], description="Reset your AI conversation history to start a new topic.")
     async def reset_ai(self, ctx: commands.Context):
+        if self.ai_channel_id and ctx.channel.id != self.ai_channel_id:
+            try:
+                await ctx.message.delete()
+            except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                pass
+            try:
+                warning_embed = discord.Embed(
+                    description=f"<a:syncwarning:1547034231438319616> | **This command can only be used in <#{self.ai_channel_id}>!**",
+                    color=WARNING_COLOR
+                )
+                await ctx.send(embed=warning_embed, delete_after=6)
+            except (discord.Forbidden, discord.HTTPException):
+                pass
+            return
+
         if ctx.guild:
             self.conversation_memory.pop((ctx.guild.id, ctx.author.id), None)
         try:
@@ -519,6 +537,14 @@ class ChatGPT(commands.Cog):
 
     @app_commands.command(name="resetai", description="Reset your AI conversation memory and start fresh.")
     async def slash_reset_ai(self, interaction: discord.Interaction):
+        if self.ai_channel_id and interaction.channel_id != self.ai_channel_id:
+            warning_embed = discord.Embed(
+                description=f"<a:syncwarning:1547034231438319616> | **This command can only be used in <#{self.ai_channel_id}>!**",
+                color=WARNING_COLOR
+            )
+            await interaction.response.send_message(embed=warning_embed, ephemeral=True)
+            return
+
         if interaction.guild:
             self.conversation_memory.pop((interaction.guild.id, interaction.user.id), None)
         embed = SuccessEmbed("Your AI conversation history has been cleared. You are starting a fresh conversation!")
