@@ -1,11 +1,30 @@
 import os
 import sys
 import asyncio
+import subprocess
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
 from utils.ui import SyncInkEmbed, SuccessEmbed
 from utils.logger import log
+
+def restart_process():
+    """Cleanly restarts the bot process across Termux, Linux, and Windows."""
+    log.info("[SyncInk] Initiating bot restart...")
+    if os.getenv("SYNCINK_RUNNER") == "1":
+        log.info("[SyncInk] Runner script (start.sh) detected. Exiting process so runner can pull and relaunch...")
+        os._exit(0)
+    else:
+        log.info("[SyncInk] Spawning new process before terminating current process...")
+        try:
+            subprocess.Popen([sys.executable] + sys.argv)
+        except Exception as e:
+            log.warning(f"subprocess.Popen failed ({e}), falling back to os.execv...")
+            try:
+                os.execv(sys.executable, [sys.executable] + sys.argv)
+            except Exception as e2:
+                log.error(f"os.execv failed: {e2}")
+        os._exit(0)
 
 class Admin(commands.Cog):
     """Administrative tools, server management, and auto-update system."""
@@ -66,10 +85,7 @@ class Admin(commands.Cog):
                 )
                 out_log, _ = await proc_log.communicate()
                 commit_title = out_log.decode().strip() or "Updated repository"
-                log.info(f"[AutoUpdater] Successfully pulled: {commit_title}. Restarting process...")
-
-                await self.bot.close()
-                os.execv(sys.executable, [sys.executable] + sys.argv)
+                restart_process()
         except Exception as e:
             log.warning(f"[AutoUpdater] Check failed: {e}")
 
@@ -137,8 +153,7 @@ class Admin(commands.Cog):
 
             await msg.edit(content=f"🚀 **Successfully updated!**\n> Applied commit: `{latest}`\n\n*Restarting bot now...*")
             await asyncio.sleep(1)
-            await self.bot.close()
-            os.execv(sys.executable, [sys.executable] + sys.argv)
+            restart_process()
         except Exception as e:
             log.error(f"Manual update failed: {e}")
             await msg.edit(content=f"❌ **Failed to update from GitHub:** `{e}`")
@@ -203,8 +218,7 @@ class Admin(commands.Cog):
 
             await interaction.followup.send(f"🚀 **Successfully updated!**\n> Applied commit: `{latest}`\n\n*Restarting bot now...*")
             await asyncio.sleep(1)
-            await self.bot.close()
-            os.execv(sys.executable, [sys.executable] + sys.argv)
+            restart_process()
         except Exception as e:
             log.error(f"Manual slash update failed: {e}")
             await interaction.followup.send(f"❌ **Failed to update from GitHub:** `{e}`")

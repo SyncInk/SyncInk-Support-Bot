@@ -5,6 +5,8 @@ echo "=================================================="
 echo "    Starting SyncInk Support Bot (Termux Runner)  "
 echo "=================================================="
 
+export SYNCINK_RUNNER=1
+
 # Acquire Termux wake-lock to prevent Android battery optimization from pausing the bot
 if command -v termux-wake-lock >/dev/null 2>&1; then
     termux-wake-lock
