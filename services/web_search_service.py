@@ -15,7 +15,11 @@ class WebSearchService:
         "rule", "rules", "verify", "verification", "unverified", "quarantine",
         "jail", "server", "channel", "channels", "mod", "admin", "owner",
         "welcome", "general", "chat", "where to talk", "how to talk", "talk here",
-        "ticket", "tickets", "support", "roles", "role", "checkpoint"
+        "ticket", "tickets", "support", "roles", "role", "checkpoint",
+        "developer", "dev", "staff", "apply", "application", "form",
+        "suggestion", "suggest", "feature_request", "media", "showcase", "nsfw",
+        "vc", "voice", "voice chat", "join to create", "product", "products",
+        "bot updates", "announcement", "announcements", "faq", "discussion"
     }
 
     WEB_INTENT_KEYWORDS = {

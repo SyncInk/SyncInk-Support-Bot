@@ -56,70 +56,127 @@ def sanitize_ai_identity(text: str) -> str:
     return res
 
 def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = None) -> str:
-    """Extracts structured server channel map and key locations for the AI assistant."""
-    if not guild:
-        return ""
-
-    channel_map = {}
-
-    # 1. Verification Checkpoint
-    target_verification_id = 1520748219100041348
-    if settings and settings.get('verification_channel_id'):
-        try:
-            target_verification_id = int(settings['verification_channel_id'])
-        except (ValueError, TypeError):
-            pass
-
-    verif_chan = guild.get_channel(target_verification_id)
-    if verif_chan:
-        channel_map["Verification Checkpoint"] = f"<#{verif_chan.id}>"
-    else:
-        for c in guild.text_channels:
-            if any(k in c.name.lower() for k in ("verify", "verification", "checkpoint")):
-                channel_map["Verification Checkpoint"] = f"<#{c.id}>"
-                break
-
-    # 2. Welcome Channel
-    if settings and settings.get('welcome_channel_id'):
-        try:
-            w_chan = guild.get_channel(int(settings['welcome_channel_id']))
-            if w_chan:
-                channel_map["Welcome Channel"] = f"<#{w_chan.id}>"
-        except (ValueError, TypeError):
-            pass
-
-    # 3. Suggestions Channel
-    if settings and settings.get('suggestion_channel_id'):
-        try:
-            s_chan = guild.get_channel(int(settings['suggestion_channel_id']))
-            if s_chan:
-                channel_map["Suggestions & Feature Requests"] = f"<#{s_chan.id}>"
-        except (ValueError, TypeError):
-            pass
-
-    # 4. Scan channels for Rules, General Chat, Support, Announcements
-    for ch in guild.text_channels:
-        name = ch.name.lower()
-        if "Rules & Guidelines" not in channel_map and any(k in name for k in ("rule", "guideline")):
-            channel_map["Rules & Guidelines"] = f"<#{ch.id}>"
-        elif "General Chat (Where to talk)" not in channel_map and any(k in name for k in ("general", "chat", "lounge", "main", "talk")):
-            channel_map["General Chat (Where to talk)"] = f"<#{ch.id}>"
-        elif "Support & Assistance" not in channel_map and any(k in name for k in ("support", "help", "ticket", "assist")):
-            channel_map["Support & Assistance"] = f"<#{ch.id}>"
-        elif "Announcements" not in channel_map and any(k in name for k in ("announcement", "updates", "news")):
-            channel_map["Announcements"] = f"<#{ch.id}>"
-        elif "Bot Commands" not in channel_map and any(k in name for k in ("bot-command", "commands", "bot")):
-            channel_map["Bot Commands"] = f"<#{ch.id}>"
-
-    guide_lines = [
-        f"Server Name: {guild.name}",
-        f"Server Owner: {guild.owner.name if guild.owner else 'Server Owner'}",
-        "Available Server Channels (CRITICAL: When directing users to a channel, always format it as a Discord channel mention <#channel_id>):"
+    """Builds the comprehensive official server channel and guide knowledge base."""
+    g_name = guild.name if guild else "SyncInk Support"
+    lines = [
+        f"Server Name: {g_name}",
+        "--- OFFICIAL SYNCINK SERVER KNOWLEDGE BASE & DIRECTORY ---",
+        "1. Welcome Channel: <#1520460456181891102> (Where new arrivals land and are greeted)",
+        "2. Bot Updates Channel: <#1520460505196662836> (Official changelogs, patches, and releases for SyncInk bots)",
+        "3. Important Announcements Channel: <#1520460544811859968> (Key server news, updates, and announcements)",
+        "4. Guides / Rules Channel: <#1520460587522330634> (Server rules, policies, and community guidelines)",
+        "5. FAQ Channel: <#1520460624864350218> (Frequently asked questions and answers)",
+        "6. Verification Checkpoint: <#1520748219100041348> (Where unverified members verify to access the server)",
+        "7. Support Ticket Channel: <#1520460764937322566> (Open a private support ticket with staff)",
+        "8. Support Chat Channel: <#1520460808499363840> (Public support discussion and help channel)",
+        "9. Discussion Channel: <#1520477097494057041> (General discussions, ideas, and debates)",
+        "10. Feature Suggestions Channel: <#1546548728721178724> (Submit feature suggestions using `/feature_request` or `?feature_request` ONLY in <#1546548728721178724>)",
+        "11. Official SyncInk Products Channel: <#1520461321689104486>",
+        "    - Public Service Bots (<@&1521166171523780688>): Ticket Bot (<@1513075101992747158>), Voice Bot (<@1516578887109181520>)",
+        "    - Private Bot (<@&1520533971476156469>): SyncInk Security Bot (<@1520522990280769727>) - protects community from spam and deletes blacklisted messages",
+        "12. General Chat: <#1520461481857122485> (Main chat where members talk, hang out, and chat)",
+        "13. Media Showcase Channel: <#1520461517093343232> (Share images, media, clips. STRICT NOTE: Any NSFW content will be permanently banned!)",
+        "14. Join to Create VC: <#1520749464569253998> (Join this voice channel to automatically generate your own temporary private voice channel)",
+        "15. Apply for Developer Channel: <#1539301185423413398> (Form: [Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer) - check requirements in <#1539301185423413398>)",
+        "16. Apply for Staff Channel: <#1539319001673367604> (Form: [Apply for Staff](https://discord.com/channels/1520457643842342912/1539319001673367604/1539371523188596916) - check requirements in <#1539319001673367604>)",
+        "17. Ask AI Channel: <#1544361954574073916> (Dedicated channel for AI questions)"
     ]
-    for label, mention in channel_map.items():
-        guide_lines.append(f"- {label}: {mention}")
+    return "\n".join(lines)
 
-    return "\n".join(guide_lines)
+
+def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Optional[str]:
+    """
+    Directly answers specific server channel and action queries with 100% precision.
+    Follows the strict rule: Tell ONLY that specific thing without dumping unrelated channels.
+    """
+    p = prompt.lower().strip().rstrip("?!. ")
+
+    # 1. Developer Application
+    if any(k in p for k in ("apply for dev", "apply for developer", "developer application", "become a developer", "how to apply developer", "dev application", "dev form", "apply dev")):
+        return (
+            "If you are willing to apply as a developer to contribute to SyncInk, please fill out the form here:\n"
+            "👉 **[Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer)**\n\n"
+            "You can check all developer requirements in <#1539301185423413398>."
+        )
+
+    # 2. Staff Application
+    if any(k in p for k in ("apply for staff", "staff application", "become staff", "become a staff", "how to apply staff", "staff form", "apply staff")):
+        return (
+            "If you are willing to become a staff member on this support server, please fill out the form here:\n"
+            "👉 **[Apply for Staff](https://discord.com/channels/1520457643842342912/1539319001673367604/1539371523188596916)**\n\n"
+            "You can check all staff requirements in <#1539319001673367604>."
+        )
+
+    # 3. Feature Suggestions
+    if any(k in p for k in ("suggest a feature", "feature suggestion", "feature request", "submit a suggestion", "where to suggest", "how to suggest", "suggest feature", "suggestion channel")):
+        return (
+            "You can submit feature suggestions using the `/feature_request` or `?feature_request` command "
+            "exclusively in <#1546548728721178724>."
+        )
+
+    # 4. Rules & Guidelines
+    if any(k in p for k in ("where are the rules", "what are the rules", "rules channel", "server rules", "read the rules", "community rules", "guides channel", "guidelines")):
+        return "You can read the server guides, rules, and community guidelines in <#1520460587522330634>."
+
+    # 5. General Chat / Where to talk
+    if any(k in p for k in ("where to talk", "where can i talk", "where can we talk", "where to chat", "where is general chat", "where is general", "general chat")):
+        return "You can chat, talk, and hang out with everyone in general chat at <#1520461481857122485>."
+
+    # 6. Verification
+    if any(k in p for k in ("how to verify", "where to verify", "verification channel", "how do i get verified", "verify channel", "verification checkpoint")):
+        return "You can verify your account at the verification checkpoint in <#1520748219100041348>."
+
+    # 7. Support & Tickets
+    if any(k in p for k in ("open a ticket", "create a ticket", "support ticket", "ticket channel", "support chat", "how to get support", "need staff help", "talk to staff")):
+        return (
+            "For assistance from the SyncInk support team:\n"
+            "• Open a private ticket in <#1520460764937322566>\n"
+            "• Or ask publicly in support chat at <#1520460808499363840>"
+        )
+
+    # 8. Media Showcase
+    if any(k in p for k in ("media showcase", "where to post media", "share images", "post pictures", "media channel", "showcase channel")):
+        return (
+            "You can share and showcase your media in <#1520461517093343232>.\n"
+            "⚠️ **Strict Rule:** Any NSFW content will result in an immediate permanent ban!"
+        )
+
+    # 9. Voice Channel / Join to Create VC
+    if any(k in p for k in ("join to create", "create vc", "voice channel", "voice chat", "join vc", "where is vc", "how to join vc")):
+        return "You can join <#1520749464569253998> to automatically generate your own temporary private voice channel."
+
+    # 10. Official Products & Bots
+    if any(k in p for k in ("official product", "official products", "what are your products", "what bots", "list of bots", "syncink bots", "product channel")):
+        return (
+            "You can explore all official SyncInk products and bots in <#1520461321689104486>:\n\n"
+            "**Public Service Bots** (<@&1521166171523780688>):\n"
+            "• **Ticket Bot** — <@1513075101992747158>\n"
+            "• **Voice Bot** — <@1516578887109181520>\n\n"
+            "**Private Bot** (<@&1520533971476156469>):\n"
+            "• **SyncInk Security Bot** — <@1520522990280769727>\n"
+            "> *SyncInk Security protects the community from spam and deletes blacklisted messages.*"
+        )
+
+    # 11. Announcements & Updates
+    if any(k in p for k in ("where are announcements", "important announcements", "announcements channel")):
+        return "Official server announcements and platform updates are posted in <#1520460544811859968>."
+
+    if any(k in p for k in ("bot updates", "where are bot updates", "bot changelog")):
+        return "You can check all bot updates, releases, and changelogs in <#1520460505196662836>."
+
+    # 12. FAQ
+    if any(k in p for k in ("where is faq", "faq channel", "frequently asked questions")):
+        return "You can browse frequently asked questions and answers in <#1520460624864350218>."
+
+    # 13. Discussion
+    if any(k in p for k in ("discussion channel", "where to discuss", "discuss topics", "topic discussion")):
+        return "You can discuss topics, share ideas, and engage in deeper conversations in <#1520477097494057041>."
+
+    # 14. Welcome
+    if any(k in p for k in ("where is welcome", "welcome channel")):
+        return "New members arrive and are welcomed in <#1520460456181891102>."
+
+    return None
 
 
 class ChatGPT(commands.Cog):
@@ -417,6 +474,13 @@ class ChatGPT(commands.Cog):
                 self.record_exchange(guild.id, user_id, prompt, res)
             return res, False
 
+        # 0.1 Direct Specific Server Channel & Action Resolution
+        specific_faq = resolve_server_faq(prompt, guild)
+        if specific_faq:
+            if guild and user_id:
+                self.record_exchange(guild.id, user_id, prompt, specific_faq)
+            return specific_faq, False
+
         if not self.has_any_api_key():
             msg = (
                 "**SyncInk AI Assistant requires an API key in your `.env` file!**\n\n"
@@ -452,12 +516,16 @@ class ChatGPT(commands.Cog):
         guild_name = guild.name if guild else "the server"
         system_prompt = (
             f"You are SyncInk Assistant, the official AI helper and server guide for {guild_name}.\n\n"
-            "GUIDELINES:\n"
-            "1. IDENTITY & CREATOR (STRICT & CRITICAL): You were created and developed strictly and exclusively by the **SyncInk Development Team**.\n"
+            "CRITICAL GUIDELINES:\n"
+            "1. IDENTITY & CREATOR (STRICT): You were created and developed strictly and exclusively by the **SyncInk Development Team**.\n"
             "   - If anyone asks who made you, created you, developed you, or who your creator is, you must STRICTLY say you were made by the SyncInk Development Team.\n"
             "   - Under NO circumstances should you state, suggest, or mention that you were made by Google, OpenAI, ChatGPT, Anthropic, or any third party.\n"
-            "2. When guiding members to rules, verification, chat, or support channels, ALWAYS use Discord clickable channel mentions in the format <#channel_id>.\n"
-            "3. Maintain conversational continuity and remember what was discussed previously in this conversation.\n"
+            "2. SPECIFICITY (CRITICAL RULE): When a user asks about a specific thing (e.g. where are rules, where to talk, how to apply for staff/developer, where to suggest a feature, where is vc):\n"
+            "   - Tell them THAT SPECIFIC THING ONLY! Do NOT list a bunch of other unrelated channels or dump the whole server directory.\n"
+            "   - Always format channel mentions as clickable Discord mentions like <#channel_id>.\n"
+            "   - Always format role mentions as <@&role_id> and bot mentions as <@bot_id>.\n"
+            "   - Only provide a full channel directory if the user explicitly asks for 'all channels', 'server directory', or 'list of channels'.\n"
+            "3. Maintain conversational continuity and remember past turns.\n"
             "4. Be concise, polite, helpful, and well-structured using markdown formatting (bullet points, bold text).\n"
             "5. If real-time internet search results are provided below, prioritize them to provide up-to-date and accurate information.\n\n"
         )
