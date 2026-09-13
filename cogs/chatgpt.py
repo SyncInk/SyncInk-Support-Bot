@@ -136,6 +136,21 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
     """
     p = prompt.lower().strip().rstrip("?!. ")
 
+    # 0. Contribute to SyncInk / Join the Team
+    if any(k in p for k in (
+        "contribute", "contribution", "contributing",
+        "join team", "join the team", "join syncink", "join syncink team",
+        "work with syncink", "work with team", "help syncink", "how can i help",
+        "how to contribute", "way to contribute", "ways to contribute"
+    )):
+        return (
+            "Here are the primary ways you can contribute to the **SyncInk** team and server:\n\n"
+            "• 💻 **Developer**: Apply to build SyncInk bots and platform tools via the [Developer Application](https://syncink.github.io/syncink-portfolio/apply-developer) (check requirements in <#1539301185423413398>).\n"
+            "• 🛡️ **Staff Member**: Apply to help moderate and support our community via the [Staff Application](https://discord.com/channels/1520457643842342912/1539319001673367604/1539371523188596916) (check requirements in <#1539319001673367604>).\n"
+            "• 💡 **Feature Suggestions**: Propose new features or improvements using `/feature_request` or `?feature_request` in <#1546548728721178724>.\n"
+            "• 💬 **Community & Support**: Help answer other members' questions in <#1520460808499363840> or hang out in <#1520461481857122485>!"
+        )
+
     # 1. Developer Application
     if any(k in p for k in ("apply for dev", "apply for developer", "developer application", "become a developer", "how to apply developer", "dev application", "dev form", "apply dev")):
         return (
@@ -248,8 +263,32 @@ class ChatGPT(commands.Cog):
         self.conversation_memory = defaultdict(lambda: deque(maxlen=10))
         self.MEMORY_TTL_SECONDS = 3600  # 1 hour active conversation memory window
 
+        # Response cache for repeated queries: normalized_query -> (response_text, used_web, timestamp)
+        self.response_cache = {}
+        self.CACHE_TTL_SECONDS = 180  # 3 minutes cache TTL
+
     def has_any_api_key(self) -> bool:
         return bool(self.openrouter_key or self.gemini_key or self.openai_key)
+
+    def get_cached_response(self, prompt: str) -> Optional[Tuple[str, bool]]:
+        """Returns cached response if the identical question was asked recently."""
+        norm = prompt.lower().strip().rstrip("?!. ")
+        if norm in self.response_cache:
+            res, used_web, ts = self.response_cache[norm]
+            if (time.time() - ts) <= self.CACHE_TTL_SECONDS:
+                return res, used_web
+            else:
+                del self.response_cache[norm]
+        return None
+
+    def cache_response(self, prompt: str, response: str, used_web: bool):
+        """Caches a successful answer to absorb burst identical questions without consuming quota."""
+        norm = prompt.lower().strip().rstrip("?!. ")
+        self.response_cache[norm] = (response, used_web, time.time())
+        # Keep cache size bounded
+        if len(self.response_cache) > 200:
+            cutoff = time.time() - self.CACHE_TTL_SECONDS
+            self.response_cache = {k: v for k, v in self.response_cache.items() if v[2] > cutoff}
 
     def get_valid_history(self, guild_id: int, user_id: int) -> List[Tuple[str, str]]:
         """Extracts active recent conversational turns for a user within the TTL window."""
@@ -327,32 +366,27 @@ class ChatGPT(commands.Cog):
         if use_web_plugin:
             payload["plugins"] = [{"id": "web"}]
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=20)) as response:
-                if response.status != 200:
-                    text = await response.text()
-                    log.error(f"OpenRouter API Error ({response.status}): {text}")
-                    if response.status == 401:
-                        return "Error 401: Unauthorized. Please check that your `OPENROUTER_API_KEY` is valid."
-                    elif response.status == 402:
-                        return "Error 402: Insufficient credits on OpenRouter. Please select a free model or recharge."
-                    elif response.status == 429:
-                        return "Error 429: Rate limited or model overloaded. Please retry in a few seconds."
-                    return f"AI provider returned HTTP {response.status}."
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=20)) as response:
+                    if response.status != 200:
+                        text = await response.text()
+                        log.warning(f"OpenRouter API Error (HTTP {response.status}): {text}")
+                        return None
 
-                data = await response.json()
-                return data["choices"][0]["message"]["content"]
+                    data = await response.json()
+                    return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            log.warning(f"OpenRouter connection failed: {e}")
+            return None
 
     async def get_gemini_models(self) -> List[str]:
         fallback_candidates = [
             "models/gemini-2.0-flash",
-            "models/gemini-1.5-flash",
-            "models/gemini-1.5-flash-latest",
-            "models/gemini-2.0-flash-exp",
             "models/gemini-2.0-flash-lite",
+            "models/gemini-1.5-flash",
             "models/gemini-1.5-flash-8b",
             "models/gemini-1.5-pro",
-            "models/gemini-pro"
         ]
 
         if self.cached_gemini_model:
@@ -368,8 +402,12 @@ class ChatGPT(commands.Cog):
                         data = await resp.json()
                         available = data.get("models", [])
                         
-                        # Disallowed terms: Audio/TTS/Embedding/Vision-only/Robotics
-                        excluded_terms = ["tts", "audio", "embed", "imagen", "transcription", "realtime", "aqa", "robotics", "computer-use"]
+                        # Disallowed terms: Audio/TTS/Embedding/Vision-only/Robotics and deprecated models
+                        excluded_terms = [
+                            "tts", "audio", "embed", "imagen", "transcription",
+                            "realtime", "aqa", "robotics", "computer-use",
+                            "gemini-pro", "gemini-1.0-pro"
+                        ]
                         
                         gen_models = []
                         for m in available:
@@ -377,7 +415,7 @@ class ChatGPT(commands.Cog):
                             # Must support generateContent
                             if "generateContent" not in m.get("supportedGenerationMethods", []):
                                 continue
-                            # Exclude specialized modalities (audio/TTS/embedding)
+                            # Exclude specialized or deprecated endpoints
                             if any(term in name.lower() for term in excluded_terms):
                                 continue
                             # If output modalities specified, ensure TEXT is supported
@@ -392,24 +430,22 @@ class ChatGPT(commands.Cog):
                                 n = m_name.lower()
                                 if "gemini-2.0-flash" in n and "lite" not in n and "exp" not in n:
                                     return 0
-                                if "gemini-1.5-flash" in n and "8b" not in n:
-                                    return 1
-                                if "gemini-2.0-flash-exp" in n:
-                                    return 2
                                 if "gemini-2.0-flash-lite" in n:
-                                    return 3
+                                    return 1
+                                if "gemini-1.5-flash" in n and "8b" not in n:
+                                    return 2
                                 if "gemini-1.5-flash-8b" in n:
+                                    return 3
+                                if "gemini-2.0-flash-exp" in n:
                                     return 4
                                 if "gemini-1.5-pro" in n:
                                     return 5
                                 if "gemini-2.0-pro" in n:
                                     return 6
-                                if "gemini-pro" in n:
-                                    return 7
                                 if "flash" in n:
-                                    return 8
+                                    return 7
                                 if "pro" in n:
-                                    return 9
+                                    return 8
                                 return 15
 
                             sorted_models = sorted(gen_models, key=score_model)
@@ -422,7 +458,7 @@ class ChatGPT(commands.Cog):
 
         return fallback_candidates
 
-    async def call_gemini(self, system_prompt: str, user_prompt: str, history: List[Tuple[str, str]]) -> str:
+    async def call_gemini(self, system_prompt: str, user_prompt: str, history: List[Tuple[str, str]]) -> Optional[str]:
         models_to_try = await self.get_gemini_models()
 
         # Build contents with alternating turns
@@ -451,8 +487,13 @@ class ChatGPT(commands.Cog):
         }
 
         last_error = "No response received"
+        rate_limited_count = 0
         async with aiohttp.ClientSession(headers=headers) as session:
             for model_name in models_to_try:
+                # Disallow deprecated endpoints strictly
+                if "gemini-pro" in model_name.lower() or "gemini-1.0-pro" in model_name.lower():
+                    continue
+
                 clean_model = model_name if model_name.startswith("models/") else f"models/{model_name}"
                 url = f"https://generativelanguage.googleapis.com/v1beta/{clean_model}:generateContent?key={self.gemini_key}"
                 try:
@@ -463,7 +504,17 @@ class ChatGPT(commands.Cog):
                             try:
                                 return data["candidates"][0]["content"]["parts"][0]["text"]
                             except (KeyError, IndexError):
-                                return "No response content received from Gemini."
+                                return None
+                        elif response.status == 429:
+                            rate_limited_count += 1
+                            log.warning(f"Gemini candidate {clean_model} hit rate limit (HTTP 429).")
+                            if self.cached_gemini_model == clean_model:
+                                self.cached_gemini_model = None
+                            if rate_limited_count >= 2:
+                                log.warning("Gemini rate limit threshold reached across models. Yielding for fallback provider.")
+                                return None
+                            await asyncio.sleep(0.5)
+                            continue
                         else:
                             text = await response.text()
                             try:
@@ -481,9 +532,13 @@ class ChatGPT(commands.Cog):
                         self.cached_gemini_model = None
                     continue
 
-        return f"Gemini Error: Could not connect to an active model. ({last_error})"
+        log.warning(f"All Gemini candidates exhausted. Last error: {last_error}")
+        return None
 
-    async def call_openai(self, system_prompt: str, user_prompt: str, history: List[Tuple[str, str]]) -> str:
+    async def call_openai(self, system_prompt: str, user_prompt: str, history: List[Tuple[str, str]]) -> Optional[str]:
+        if not self.openai_key:
+            return None
+
         headers = {
             "Authorization": f"Bearer {self.openai_key}",
             "Content-Type": "application/json"
@@ -499,19 +554,23 @@ class ChatGPT(commands.Cog):
             "max_tokens": 1500,
             "temperature": 0.7
         }
-        async with aiohttp.ClientSession() as session:
-            async with session.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=20)) as response:
-                if response.status != 200:
-                    text = await response.text()
-                    log.error(f"OpenAI API Error ({response.status}): {text}")
-                    return f"OpenAI error (HTTP {response.status})."
-                data = await response.json()
-                return data["choices"][0]["message"]["content"]
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=20)) as response:
+                    if response.status != 200:
+                        text = await response.text()
+                        log.warning(f"OpenAI API Error (HTTP {response.status}): {text}")
+                        return None
+                    data = await response.json()
+                    return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            log.warning(f"OpenAI call failed: {e}")
+            return None
 
     async def get_ai_response(self, prompt: str, guild: Optional[discord.Guild] = None, user_id: Optional[int] = None) -> tuple[str, bool]:
         """
         Coordinates server context mapping, conversation history memory,
-        real-time web search grounding, and AI response generation.
+        real-time web search grounding, response caching, and AI response generation.
         Returns (response_text, used_web_search).
         """
         # 0. Direct Creator & Identity Resolution
@@ -538,6 +597,14 @@ class ChatGPT(commands.Cog):
             if guild and user_id:
                 self.record_exchange(guild.id, user_id, prompt, specific_faq)
             return specific_faq, False
+
+        # 0.3 Check Response Cache for identical recent queries
+        cached = self.get_cached_response(prompt)
+        if cached:
+            cached_res, cached_used_web = cached
+            if guild and user_id:
+                self.record_exchange(guild.id, user_id, prompt, cached_res)
+            return cached_res, cached_used_web
 
         if not self.has_any_api_key():
             msg = (
@@ -594,27 +661,50 @@ class ChatGPT(commands.Cog):
         if search_prompt_context:
             system_prompt += f"--- LIVE INTERNET SEARCH GROUNDING ---\n{search_prompt_context}\n\n"
 
-        # 5. Dispatch to Available AI Provider
+        # 5. Dispatch to Available AI Providers with Multi-Tier Fallback
+        res = None
         try:
+            # Tier 1: Google Gemini (if configured)
             if self.gemini_key:
                 res = await self.call_gemini(system_prompt, prompt, history)
-            elif self.openrouter_key:
-                res = await self.call_openrouter(system_prompt, prompt, history, use_web_plugin=False)
-            elif self.openai_key:
-                res = await self.call_openai(system_prompt, prompt, history)
-            else:
-                res = "No configured AI provider found."
 
-            # 6. Sanitize identity and record conversation memory
-            if not res.startswith("Error") and not res.startswith("AI provider") and not res.startswith("Gemini Error"):
-                res = sanitize_ai_identity(res)
-                if guild and user_id:
-                    self.record_exchange(guild.id, user_id, prompt, res)
+            # Tier 2: OpenRouter (Fallback if Gemini was unavailable or rate-limited)
+            if not res and self.openrouter_key:
+                log.info("Gemini unavailable or rate-limited; falling back to OpenRouter...")
+                res = await self.call_openrouter(system_prompt, prompt, history, use_web_plugin=False)
+
+            # Tier 3: OpenAI (Fallback if Gemini & OpenRouter are unavailable)
+            if not res and self.openai_key:
+                log.info("Falling back to OpenAI...")
+                res = await self.call_openai(system_prompt, prompt, history)
+
+            # Polite busy fallback if all providers are rate-limited or busy
+            if not res:
+                busy_msg = (
+                    "I'm currently receiving a high volume of questions and my capacity is temporarily busy. ⏳\n\n"
+                    "Please try asking again in a few seconds! In the meantime, you can check:\n"
+                    "• 📜 Server Rules & Guidelines: <#1520460587522330634>\n"
+                    "• ❓ Frequently Asked Questions: <#1520460624864350218>\n"
+                    "• 💬 General Chat: <#1520461481857122485>\n"
+                    "• 🎫 Support Tickets: <#1520460764937322566>"
+                )
+                return busy_msg, False
+
+            # 6. Sanitize identity, record conversation memory, and cache response
+            res = sanitize_ai_identity(res)
+            if guild and user_id:
+                self.record_exchange(guild.id, user_id, prompt, res)
+
+            self.cache_response(prompt, res, used_web)
 
             return res, used_web
         except Exception as e:
             log.error(f"Error executing AI query: {e}")
-            return f"An unexpected error occurred while processing your request: `{e}`", False
+            fallback_msg = (
+                "I'm currently handling a lot of inquiries right now. ⏳\n\n"
+                "Please try asking again in a few seconds! If you need immediate assistance, feel free to check <#1520460624864350218> (FAQ) or open a ticket in <#1520460764937322566>."
+            )
+            return fallback_msg, False
 
     # -------------------------------------------------------------
     # LISTENERS & COMMANDS
