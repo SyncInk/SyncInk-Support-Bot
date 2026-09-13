@@ -4,6 +4,7 @@ from discord import app_commands
 import os
 import aiohttp
 import time
+import json
 from collections import defaultdict, deque
 from typing import Optional, List, Tuple
 from utils.logger import log
@@ -94,6 +95,7 @@ class ChatGPT(commands.Cog):
             except ValueError:
                 self.ai_channel_id = None
         self.cached_model = None
+        self.cached_gemini_model = None
         
         # Conversation memory buffer: (guild_id, user_id) -> deque of (role, text, timestamp)
         # Keeps up to 10 previous conversational turns so the bot never forgets context
@@ -195,9 +197,51 @@ class ChatGPT(commands.Cog):
                 data = await response.json()
                 return data["choices"][0]["message"]["content"]
 
+    async def get_gemini_models(self) -> List[str]:
+        if self.cached_gemini_model:
+            return [self.cached_gemini_model]
+
+        # 1. Try dynamic auto-discovery from Google API
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models?key={self.gemini_key}"
+            headers = {"x-goog-api-key": self.gemini_key}
+            async with aiohttp.ClientSession(headers=headers) as session:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        available = data.get("models", [])
+                        gen_models = [
+                            m["name"] for m in available 
+                            if "generateContent" in m.get("supportedGenerationMethods", [])
+                        ]
+                        if gen_models:
+                            sorted_models = sorted(
+                                gen_models,
+                                key=lambda x: (
+                                    0 if "flash" in x.lower() and "2.0" in x.lower() else
+                                    1 if "flash" in x.lower() and "1.5" in x.lower() else
+                                    2 if "flash" in x.lower() else
+                                    3 if "pro" in x.lower() else 4
+                                )
+                            )
+                            self.cached_gemini_model = sorted_models[0]
+                            return sorted_models
+        except Exception as e:
+            log.warning(f"Could not auto-list Gemini models: {e}")
+
+        # 2. Resilient fallback candidates
+        return [
+            "models/gemini-2.0-flash",
+            "models/gemini-1.5-flash",
+            "models/gemini-1.5-flash-latest",
+            "models/gemini-2.0-flash-exp",
+            "models/gemini-1.5-pro",
+            "models/gemini-pro"
+        ]
+
     async def call_gemini(self, system_prompt: str, user_prompt: str, history: List[Tuple[str, str]]) -> str:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
-        
+        models_to_try = await self.get_gemini_models()
+
         # Build contents with alternating turns
         contents = []
         for role, text in history:
@@ -218,17 +262,42 @@ class ChatGPT(commands.Cog):
             },
             "contents": contents
         }
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=20)) as response:
-                if response.status != 200:
-                    text = await response.text()
-                    log.error(f"Gemini API Error ({response.status}): {text}")
-                    return f"Gemini API error (HTTP {response.status})."
-                data = await response.json()
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": self.gemini_key
+        }
+
+        last_error = "No response received"
+        async with aiohttp.ClientSession(headers=headers) as session:
+            for model_name in models_to_try:
+                clean_model = model_name if model_name.startswith("models/") else f"models/{model_name}"
+                url = f"https://generativelanguage.googleapis.com/v1beta/{clean_model}:generateContent?key={self.gemini_key}"
                 try:
-                    return data["candidates"][0]["content"]["parts"][0]["text"]
-                except (KeyError, IndexError):
-                    return "No response received from Gemini."
+                    async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=20)) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            self.cached_gemini_model = clean_model
+                            try:
+                                return data["candidates"][0]["content"]["parts"][0]["text"]
+                            except (KeyError, IndexError):
+                                return "No response content received from Gemini."
+                        elif response.status == 404:
+                            log.warning(f"Gemini model {clean_model} returned 404, falling back to next candidate...")
+                            continue
+                        else:
+                            text = await response.text()
+                            log.error(f"Gemini API Error ({response.status}) on {clean_model}: {text}")
+                            try:
+                                err_data = json.loads(text)
+                                last_error = err_data.get("error", {}).get("message", text)
+                            except Exception:
+                                last_error = text
+                            return f"Gemini Error ({response.status}): {last_error}"
+                except Exception as e:
+                    last_error = str(e)
+                    continue
+
+        return f"Gemini Error: Could not connect to an active model. ({last_error})"
 
     async def call_openai(self, system_prompt: str, user_prompt: str, history: List[Tuple[str, str]]) -> str:
         headers = {
@@ -356,7 +425,7 @@ class ChatGPT(commands.Cog):
                     desc = response[:4000] + "..." if len(response) > 4000 else response
 
                     embed = SyncInkEmbed(
-                        title="<:trusted_user:1547621146558730340> **SyncInk Assistant**",
+                        title="<:syncinkmainlogo:1529117858859061331> **SyncInk Assistant**",
                         description=desc,
                         color=BRAND_ACCENT
                     )
@@ -393,7 +462,7 @@ class ChatGPT(commands.Cog):
                 desc = response[:4000] + "..." if len(response) > 4000 else response
 
                 embed = SyncInkEmbed(
-                    title="<:trusted_user:1547621146558730340> **SyncInk Assistant**",
+                    title="<:syncinkmainlogo:1529117858859061331> **SyncInk Assistant**",
                     description=desc,
                     color=BRAND_ACCENT
                 )
@@ -423,7 +492,7 @@ class ChatGPT(commands.Cog):
             desc = response[:4000] + "..." if len(response) > 4000 else response
 
             embed = SyncInkEmbed(
-                title="<:trusted_user:1547621146558730340> **SyncInk Assistant**",
+                title="<:syncinkmainlogo:1529117858859061331> **SyncInk Assistant**",
                 description=desc,
                 color=BRAND_ACCENT
             )
