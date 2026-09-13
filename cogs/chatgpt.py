@@ -38,7 +38,7 @@ def is_creator_query(prompt: str) -> bool:
     return any(p in clean for p in patterns)
 
 def sanitize_ai_identity(text: str) -> str:
-    """Ensures AI never leaks third-party vendor names as its creator."""
+    """Ensures AI never leaks third-party vendor names or confuses support chat with general chat."""
     replacements = [
         ("I was trained by Google", "I was developed by the SyncInk Development Team"),
         ("I am a large language model trained by Google", "I am SyncInk Assistant, developed by the SyncInk Development Team"),
@@ -53,6 +53,32 @@ def sanitize_ai_identity(text: str) -> str:
     res = text
     for old, new in replacements:
         res = re.sub(re.escape(old), new, res, flags=re.IGNORECASE)
+
+    # Prevent AI from associating hanging out/talking with support chat
+    res = re.sub(
+        r"(hang out.*?(?:talk|chat).*?in\s+)<#1520460808499363840>",
+        r"\1<#1520461481857122485>",
+        res,
+        flags=re.IGNORECASE
+    )
+    res = re.sub(
+        r"(talk with everyone in\s+)<#1520460808499363840>",
+        r"\1<#1520461481857122485>",
+        res,
+        flags=re.IGNORECASE
+    )
+    res = re.sub(
+        r"(talk with everyone in\s+)#?\s*💬?\s*・?\s*support-chat",
+        r"\1<#1520461481857122485>",
+        res,
+        flags=re.IGNORECASE
+    )
+    res = re.sub(
+        r"(hang out.*?(?:talk|chat).*?in\s+)#?\s*💬?\s*・?\s*support-chat",
+        r"\1<#1520461481857122485>",
+        res,
+        flags=re.IGNORECASE
+    )
     return res
 
 def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = None) -> str:
@@ -68,13 +94,13 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "5. FAQ Channel: <#1520460624864350218> (Frequently asked questions and answers)",
         "6. Verification Checkpoint: <#1520748219100041348> (Where unverified members verify to access the server)",
         "7. Support Ticket Channel: <#1520460764937322566> (Open a private support ticket with staff)",
-        "8. Support Chat Channel: <#1520460808499363840> (Public support discussion and help channel)",
+        "8. Support Chat Channel: <#1520460808499363840> (STRICTLY for asking support questions, getting technical assistance, and troubleshooting. NOTE: Support Chat is NOT for hanging out, casual chatting, or general talking!)",
         "9. Discussion Channel: <#1520477097494057041> (General discussions, ideas, and debates)",
         "10. Feature Suggestions Channel: <#1546548728721178724> (Submit feature suggestions using `/feature_request` or `?feature_request` ONLY in <#1546548728721178724>)",
         "11. Official SyncInk Products Channel: <#1520461321689104486>",
         "    - Public Service Bots (<@&1521166171523780688>): Ticket Bot (<@1513075101992747158>), Voice Bot (<@1516578887109181520>)",
         "    - Private Bot (<@&1520533971476156469>): SyncInk Security Bot (<@1520522990280769727>) - protects community from spam and deletes blacklisted messages",
-        "12. General Chat: <#1520461481857122485> (Main chat where members talk, hang out, and chat)",
+        "12. General Chat: <#1520461481857122485> (The designated channel where members hang out, talk, and have casual conversation. All general talking belongs here!)",
         "13. Media Showcase Channel: <#1520461517093343232> (Share images, media, clips. STRICT NOTE: Any NSFW content will be permanently banned!)",
         "14. Join to Create VC: <#1520749464569253998> (Join this voice channel to automatically generate your own temporary private voice channel)",
         "15. Apply for Developer Channel: <#1539301185423413398> (Form: [Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer) - check requirements in <#1539301185423413398>)",
@@ -82,6 +108,25 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "17. Ask AI Channel: <#1544361954574073916> (Dedicated channel for AI questions)"
     ]
     return "\n".join(lines)
+
+
+def resolve_greeting(prompt: str, guild: Optional[discord.Guild] = None) -> Optional[str]:
+    """Provides a standardized welcome greeting that correctly points to General Chat for hanging out."""
+    clean = prompt.lower().strip().rstrip("?!. ")
+    greetings = {"hi", "hello", "hey", "hii", "heyy", "sup", "yo", "start", "get started"}
+    if clean in greetings or any(clean.startswith(g + " ") for g in ("hi", "hello", "hey")):
+        g_name = guild.name if guild else "SyncInk Support"
+        return (
+            f"Hello! Welcome to **{g_name}**! 👋\n\n"
+            "I'm the **SyncInk Assistant**, here to help you navigate the server and answer any questions you might have.\n\n"
+            "Here are a few quick places to get started:\n"
+            "• Complete verification in <#1520748219100041348> if you haven't yet.\n"
+            "• Read the rules and guidelines in <#1520460587522330634>.\n"
+            "• Hang out and talk with everyone in <#1520461481857122485> (General Chat).\n"
+            "• Need help? Head over to <#1520460764937322566> (Support Ticket) or ask in <#1520460808499363840> (Support Chat).\n\n"
+            "How can I assist you today?"
+        )
+    return None
 
 
 def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Optional[str]:
@@ -118,20 +163,26 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
     if any(k in p for k in ("where are the rules", "what are the rules", "rules channel", "server rules", "read the rules", "community rules", "guides channel", "guidelines")):
         return "You can read the server guides, rules, and community guidelines in <#1520460587522330634>."
 
-    # 5. General Chat / Where to talk
-    if any(k in p for k in ("where to talk", "where can i talk", "where can we talk", "where to chat", "where is general chat", "where is general", "general chat")):
-        return "You can chat, talk, and hang out with everyone in general chat at <#1520461481857122485>."
+    # 5. General Chat / Where to talk & hang out
+    if any(k in p for k in ("where to talk", "where can i talk", "where can we talk", "where to chat", "where is general chat", "where is general", "general chat", "hang out", "where to hang out", "where can i hang out")):
+        return "You can hang out, talk, and chat with everyone in general chat at <#1520461481857122485>."
 
     # 6. Verification
     if any(k in p for k in ("how to verify", "where to verify", "verification channel", "how do i get verified", "verify channel", "verification checkpoint")):
         return "You can verify your account at the verification checkpoint in <#1520748219100041348>."
 
     # 7. Support & Tickets
-    if any(k in p for k in ("open a ticket", "create a ticket", "support ticket", "ticket channel", "support chat", "how to get support", "need staff help", "talk to staff")):
+    if any(k in p for k in ("open a ticket", "create a ticket", "support ticket", "ticket channel", "how to get support", "need staff help", "talk to staff")):
         return (
             "For assistance from the SyncInk support team:\n"
             "• Open a private ticket in <#1520460764937322566>\n"
             "• Or ask publicly in support chat at <#1520460808499363840>"
+        )
+
+    if any(k in p for k in ("support chat", "what is support chat", "where is support chat", "can i chat in support")):
+        return (
+            "You can ask support questions and get assistance in <#1520460808499363840>.\n"
+            "*(Note: <#1520460808499363840> is strictly for support, not for hanging out or casual talking. To hang out and chat with members, head over to <#1520461481857122485>!)*"
         )
 
     # 8. Media Showcase
@@ -474,7 +525,14 @@ class ChatGPT(commands.Cog):
                 self.record_exchange(guild.id, user_id, prompt, res)
             return res, False
 
-        # 0.1 Direct Specific Server Channel & Action Resolution
+        # 0.1 Direct Greeting Resolution
+        greeting = resolve_greeting(prompt, guild)
+        if greeting:
+            if guild and user_id:
+                self.record_exchange(guild.id, user_id, prompt, greeting)
+            return greeting, False
+
+        # 0.2 Direct Specific Server Channel & Action Resolution
         specific_faq = resolve_server_faq(prompt, guild)
         if specific_faq:
             if guild and user_id:
@@ -522,6 +580,8 @@ class ChatGPT(commands.Cog):
             "   - Under NO circumstances should you state, suggest, or mention that you were made by Google, OpenAI, ChatGPT, Anthropic, or any third party.\n"
             "2. SPECIFICITY (CRITICAL RULE): When a user asks about a specific thing (e.g. where are rules, where to talk, how to apply for staff/developer, where to suggest a feature, where is vc):\n"
             "   - Tell them THAT SPECIFIC THING ONLY! Do NOT list a bunch of other unrelated channels or dump the whole server directory.\n"
+            "   - HANGING OUT & CASUAL TALKING: The ONLY channel to hang out, chat, and talk with everyone is General Chat (<#1520461481857122485>).\n"
+            "   - Support Chat (<#1520460808499363840>) is STRICTLY for support inquiries and technical help. NEVER tell users to hang out or talk in Support Chat!\n"
             "   - Always format channel mentions as clickable Discord mentions like <#channel_id>.\n"
             "   - Always format role mentions as <@&role_id> and bot mentions as <@bot_id>.\n"
             "   - Only provide a full channel directory if the user explicitly asks for 'all channels', 'server directory', or 'list of channels'.\n"
