@@ -3,10 +3,12 @@ from discord.ext import commands
 from discord import app_commands
 import os
 import aiohttp
-from typing import Optional
+import time
+from collections import defaultdict, deque
+from typing import Optional, List, Tuple
 from utils.logger import log
 from utils.emojis import Emojis
-from utils.ui import SyncInkEmbed, BRAND_ACCENT, ERROR_COLOR
+from utils.ui import SyncInkEmbed, SuccessEmbed, BRAND_ACCENT, ERROR_COLOR
 from services.web_search_service import WebSearchService
 from services.settings_service import SettingsService
 
@@ -78,7 +80,7 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
 
 
 class ChatGPT(commands.Cog):
-    """SyncInk AI Assistant: Server Guide, FAQ Resolver & Web-Connected Intelligence."""
+    """SyncInk AI Assistant: Server Guide, FAQ Resolver, Web-Connected & Conversational Memory."""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -92,9 +94,34 @@ class ChatGPT(commands.Cog):
             except ValueError:
                 self.ai_channel_id = None
         self.cached_model = None
+        
+        # Conversation memory buffer: (guild_id, user_id) -> deque of (role, text, timestamp)
+        # Keeps up to 10 previous conversational turns so the bot never forgets context
+        self.conversation_memory = defaultdict(lambda: deque(maxlen=10))
+        self.MEMORY_TTL_SECONDS = 3600  # 1 hour active conversation memory window
 
     def has_any_api_key(self) -> bool:
         return bool(self.openrouter_key or self.gemini_key or self.openai_key)
+
+    def get_valid_history(self, guild_id: int, user_id: int) -> List[Tuple[str, str]]:
+        """Extracts active recent conversational turns for a user within the TTL window."""
+        now = time.time()
+        raw_deque = self.conversation_memory.get((guild_id, user_id))
+        if not raw_deque:
+            return []
+
+        valid = []
+        for role, text, ts in raw_deque:
+            if (now - ts) <= self.MEMORY_TTL_SECONDS:
+                valid.append((role, text))
+        return valid
+
+    def record_exchange(self, guild_id: int, user_id: int, user_text: str, assistant_text: str):
+        """Saves user question and assistant answer into memory buffer."""
+        now = time.time()
+        buf = self.conversation_memory[(guild_id, user_id)]
+        buf.append(("user", user_text, now))
+        buf.append(("assistant", assistant_text, now))
 
     async def get_model(self) -> str:
         """Fetch an optimal free/available model from OpenRouter."""
@@ -111,7 +138,6 @@ class ChatGPT(commands.Cog):
                     if response.status == 200:
                         data = await response.json()
                         if "data" in data and len(data["data"]) > 0:
-                            # Prefer high performance free models
                             preferred = ["google/gemini-2.0-flash-exp:free", "meta-llama/llama-3.3-70b-instruct:free", "google/gemma-4-26b-a4b-it:free"]
                             available_ids = [m["id"] for m in data["data"]]
                             for pref in preferred:
@@ -130,7 +156,7 @@ class ChatGPT(commands.Cog):
 
         return "google/gemini-2.0-flash-exp:free"
 
-    async def call_openrouter(self, system_prompt: str, user_prompt: str, use_web_plugin: bool = False) -> str:
+    async def call_openrouter(self, system_prompt: str, user_prompt: str, history: List[Tuple[str, str]], use_web_plugin: bool = False) -> str:
         model_id = await self.get_model()
         headers = {
             "Authorization": f"Bearer {self.openrouter_key}",
@@ -138,12 +164,15 @@ class ChatGPT(commands.Cog):
             "HTTP-Referer": "https://github.com/SyncInk/SyncInk-Support-Bot",
             "X-Title": "SyncInk Support Bot"
         }
+
+        messages = [{"role": "system", "content": system_prompt}]
+        for role, text in history:
+            messages.append({"role": "user" if role == "user" else "assistant", "content": text})
+        messages.append({"role": "user", "content": user_prompt})
+
         payload = {
             "model": model_id,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
+            "messages": messages,
             "max_tokens": 1500,
             "temperature": 0.7
         }
@@ -166,15 +195,28 @@ class ChatGPT(commands.Cog):
                 data = await response.json()
                 return data["choices"][0]["message"]["content"]
 
-    async def call_gemini(self, system_prompt: str, user_prompt: str) -> str:
+    async def call_gemini(self, system_prompt: str, user_prompt: str, history: List[Tuple[str, str]]) -> str:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
+        
+        # Build contents with alternating turns
+        contents = []
+        for role, text in history:
+            gemini_role = "user" if role == "user" else "model"
+            if contents and contents[-1]["role"] == gemini_role:
+                contents[-1]["parts"][0]["text"] += f"\n{text}"
+            else:
+                contents.append({"role": gemini_role, "parts": [{"text": text}]})
+
+        if not contents or contents[-1]["role"] != "user":
+            contents.append({"role": "user", "parts": [{"text": user_prompt}]})
+        else:
+            contents[-1]["parts"][0]["text"] += f"\n{user_prompt}"
+
         payload = {
             "system_instruction": {
                 "parts": [{"text": system_prompt}]
             },
-            "contents": [
-                {"role": "user", "parts": [{"text": user_prompt}]}
-            ]
+            "contents": contents
         }
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=20)) as response:
@@ -188,17 +230,19 @@ class ChatGPT(commands.Cog):
                 except (KeyError, IndexError):
                     return "No response received from Gemini."
 
-    async def call_openai(self, system_prompt: str, user_prompt: str) -> str:
+    async def call_openai(self, system_prompt: str, user_prompt: str, history: List[Tuple[str, str]]) -> str:
         headers = {
             "Authorization": f"Bearer {self.openai_key}",
             "Content-Type": "application/json"
         }
+        messages = [{"role": "system", "content": system_prompt}]
+        for role, text in history:
+            messages.append({"role": "user" if role == "user" else "assistant", "content": text})
+        messages.append({"role": "user", "content": user_prompt})
+
         payload = {
             "model": "gpt-4o-mini",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
+            "messages": messages,
             "max_tokens": 1500,
             "temperature": 0.7
         }
@@ -211,17 +255,18 @@ class ChatGPT(commands.Cog):
                 data = await response.json()
                 return data["choices"][0]["message"]["content"]
 
-    async def get_ai_response(self, prompt: str, guild: Optional[discord.Guild] = None) -> tuple[str, bool]:
+    async def get_ai_response(self, prompt: str, guild: Optional[discord.Guild] = None, user_id: Optional[int] = None) -> tuple[str, bool]:
         """
-        Coordinates server context mapping, real-time web search grounding,
-        and AI response generation. Returns (response_text, used_web_search).
+        Coordinates server context mapping, conversation history memory,
+        real-time web search grounding, and AI response generation.
+        Returns (response_text, used_web_search).
         """
         if not self.has_any_api_key():
             msg = (
                 "**SyncInk AI Assistant requires an API key in your `.env` file!**\n\n"
                 "Please configure one of the following in Termux `.env`:\n"
-                "• `OPENROUTER_API_KEY=your_key` *(Free models available at https://openrouter.ai/)*\n"
-                "• OR `GEMINI_API_KEY=your_key` *(Free keys at https://aistudio.google.com/)*\n"
+                "• `GEMINI_API_KEY=your_key` *(Free keys at https://aistudio.google.com/)*\n"
+                "• OR `OPENROUTER_API_KEY=your_key` *(Free models at https://openrouter.ai/)*\n"
                 "• OR `OPENAI_API_KEY=your_key`\n\n"
                 "After adding the key, restart the bot to activate AI features."
             )
@@ -233,7 +278,12 @@ class ChatGPT(commands.Cog):
             settings = await SettingsService.get_guild_settings(guild.id)
             server_context = build_server_guide_context(guild, settings)
 
-        # 2. Live Internet Search Grounding
+        # 2. Conversation Memory History
+        history = []
+        if guild and user_id:
+            history = self.get_valid_history(guild.id, user_id)
+
+        # 3. Live Internet Search Grounding
         used_web = False
         search_prompt_context = ""
         if WebSearchService.should_search_web(prompt):
@@ -242,30 +292,35 @@ class ChatGPT(commands.Cog):
                 used_web = True
                 search_prompt_context = WebSearchService.format_for_prompt(search_results, prompt)
 
-        # 3. Assemble System Prompt
+        # 4. Assemble System Prompt
         guild_name = guild.name if guild else "the server"
         system_prompt = (
             f"You are SyncInk Assistant, the official AI helper and server guide for {guild_name}.\n\n"
             "GUIDELINES:\n"
             "1. When guiding members to rules, verification, chat, or support channels, ALWAYS use Discord clickable channel mentions in the format <#channel_id>.\n"
-            "2. Be concise, polite, helpful, and well-structured using markdown formatting (bullet points, bold text).\n"
-            "3. If real-time internet search results are provided below, prioritize them to provide up-to-date and accurate information.\n\n"
+            "2. Maintain conversational continuity and remember what was discussed previously in this conversation.\n"
+            "3. Be concise, polite, helpful, and well-structured using markdown formatting (bullet points, bold text).\n"
+            "4. If real-time internet search results are provided below, prioritize them to provide up-to-date and accurate information.\n\n"
         )
         if server_context:
             system_prompt += f"--- SERVER STRUCTURE & CHANNELS ---\n{server_context}\n\n"
         if search_prompt_context:
             system_prompt += f"--- LIVE INTERNET SEARCH GROUNDING ---\n{search_prompt_context}\n\n"
 
-        # 4. Dispatch to Available AI Provider
+        # 5. Dispatch to Available AI Provider
         try:
-            if self.openrouter_key:
-                res = await self.call_openrouter(system_prompt, prompt, use_web_plugin=False)
-            elif self.gemini_key:
-                res = await self.call_gemini(system_prompt, prompt)
+            if self.gemini_key:
+                res = await self.call_gemini(system_prompt, prompt, history)
+            elif self.openrouter_key:
+                res = await self.call_openrouter(system_prompt, prompt, history, use_web_plugin=False)
             elif self.openai_key:
-                res = await self.call_openai(system_prompt, prompt)
+                res = await self.call_openai(system_prompt, prompt, history)
             else:
                 res = "No configured AI provider found."
+
+            # 6. Record conversation memory
+            if guild and user_id and not res.startswith("Error") and not res.startswith("AI provider"):
+                self.record_exchange(guild.id, user_id, prompt, res)
 
             return res, used_web
         except Exception as e:
@@ -297,7 +352,7 @@ class ChatGPT(commands.Cog):
 
             try:
                 async with message.channel.typing():
-                    response, used_web = await self.get_ai_response(prompt, message.guild)
+                    response, used_web = await self.get_ai_response(prompt, message.guild, message.author.id)
                     desc = response[:4000] + "..." if len(response) > 4000 else response
 
                     embed = SyncInkEmbed(
@@ -334,7 +389,7 @@ class ChatGPT(commands.Cog):
 
         try:
             async with ctx.typing():
-                response, used_web = await self.get_ai_response(question, ctx.guild)
+                response, used_web = await self.get_ai_response(question, ctx.guild, ctx.author.id)
                 desc = response[:4000] + "..." if len(response) > 4000 else response
 
                 embed = SyncInkEmbed(
@@ -364,7 +419,7 @@ class ChatGPT(commands.Cog):
 
         await interaction.response.defer()
         try:
-            response, used_web = await self.get_ai_response(question, interaction.guild)
+            response, used_web = await self.get_ai_response(question, interaction.guild, interaction.user.id)
             desc = response[:4000] + "..." if len(response) > 4000 else response
 
             embed = SyncInkEmbed(
@@ -381,6 +436,24 @@ class ChatGPT(commands.Cog):
         except Exception as e:
             log.error(f"Error handling /ask command: {e}")
             await interaction.followup.send(f"An error occurred while generating a response: `{e}`", ephemeral=True)
+
+    @commands.command(name="resetai", aliases=["clearai"], description="Reset your AI conversation history to start a new topic.")
+    async def reset_ai(self, ctx: commands.Context):
+        if ctx.guild:
+            self.conversation_memory.pop((ctx.guild.id, ctx.author.id), None)
+        try:
+            await ctx.message.delete()
+        except Exception:
+            pass
+        embed = SuccessEmbed("Your AI conversation history has been cleared. You are starting a fresh conversation!")
+        await ctx.send(embed=embed, delete_after=6)
+
+    @app_commands.command(name="resetai", description="Reset your AI conversation memory and start fresh.")
+    async def slash_reset_ai(self, interaction: discord.Interaction):
+        if interaction.guild:
+            self.conversation_memory.pop((interaction.guild.id, interaction.user.id), None)
+        embed = SuccessEmbed("Your AI conversation history has been cleared. You are starting a fresh conversation!")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
