@@ -267,8 +267,24 @@ class ChatGPT(commands.Cog):
         self.response_cache = {}
         self.CACHE_TTL_SECONDS = 180  # 3 minutes cache TTL
 
+        # 1-minute AI cooldown per user: user_id -> timestamp
+        self.user_cooldowns = {}
+        self.COOLDOWN_SECONDS = 60
+
     def has_any_api_key(self) -> bool:
         return bool(self.openrouter_key or self.gemini_key or self.openai_key)
+
+    def get_remaining_cooldown(self, user_id: int) -> Optional[float]:
+        """Returns remaining cooldown seconds if user is within the 1-minute window, else None."""
+        now = time.time()
+        last = self.user_cooldowns.get(user_id)
+        if last is not None and (now - last) < self.COOLDOWN_SECONDS:
+            return self.COOLDOWN_SECONDS - (now - last)
+        return None
+
+    def trigger_cooldown(self, user_id: int):
+        """Records the timestamp when user requested AI assistance."""
+        self.user_cooldowns[user_id] = time.time()
 
     def get_cached_response(self, prompt: str) -> Optional[Tuple[str, bool]]:
         """Returns cached response if the identical question was asked recently."""
@@ -729,6 +745,25 @@ class ChatGPT(commands.Cog):
             if not prompt:
                 return
 
+            remaining = self.get_remaining_cooldown(message.author.id)
+            if remaining is not None:
+                try:
+                    await message.delete()
+                except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                    pass
+                try:
+                    rem_str = "1min" if remaining >= 55 else f"{int(remaining)}s"
+                    warning_embed = discord.Embed(
+                        description=f"<a:syncwarning:1547034231438319616> **Cooldown: `{rem_str}`**",
+                        color=WARNING_COLOR
+                    )
+                    await message.channel.send(embed=warning_embed, delete_after=5)
+                except (discord.Forbidden, discord.HTTPException):
+                    pass
+                return
+
+            self.trigger_cooldown(message.author.id)
+
             try:
                 async with message.channel.typing():
                     response, used_web = await self.get_ai_response(prompt, message.guild, message.author.id)
@@ -770,6 +805,25 @@ class ChatGPT(commands.Cog):
             await ctx.send("Please provide a question for the assistant! Usage: `?ask <question>`")
             return
 
+        remaining = self.get_remaining_cooldown(ctx.author.id)
+        if remaining is not None:
+            try:
+                await ctx.message.delete()
+            except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                pass
+            try:
+                rem_str = "1min" if remaining >= 55 else f"{int(remaining)}s"
+                warning_embed = discord.Embed(
+                    description=f"<a:syncwarning:1547034231438319616> **Cooldown: `{rem_str}`**",
+                    color=WARNING_COLOR
+                )
+                await ctx.send(embed=warning_embed, delete_after=5)
+            except (discord.Forbidden, discord.HTTPException):
+                pass
+            return
+
+        self.trigger_cooldown(ctx.author.id)
+
         try:
             async with ctx.typing():
                 response, used_web = await self.get_ai_response(question, ctx.guild, ctx.author.id)
@@ -800,6 +854,18 @@ class ChatGPT(commands.Cog):
             )
             await interaction.response.send_message(embed=warning_embed, ephemeral=True)
             return
+
+        remaining = self.get_remaining_cooldown(interaction.user.id)
+        if remaining is not None:
+            rem_str = "1min" if remaining >= 55 else f"{int(remaining)}s"
+            warning_embed = discord.Embed(
+                description=f"<a:syncwarning:1547034231438319616> **Cooldown: `{rem_str}`**",
+                color=WARNING_COLOR
+            )
+            await interaction.response.send_message(embed=warning_embed, ephemeral=True)
+            return
+
+        self.trigger_cooldown(interaction.user.id)
 
         await interaction.response.defer()
         try:
