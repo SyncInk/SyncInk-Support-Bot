@@ -459,6 +459,35 @@ class Automod(commands.Cog):
                     )
                     return
 
+            # ---------------------------------------------------------
+            # 1.1 GEMINI AI SWEAR & PROFANITY FILTER
+            # Catches disguised swear words, leetspeak bypasses, and vulgarity
+            # ---------------------------------------------------------
+            if settings.get('ai_moderation_enabled', True):
+                try:
+                    from services.ai_moderation_service import AIModerationService
+                    is_swear, detected_word, confidence = await AIModerationService.scan_message(content)
+                    if is_swear and confidence in ("high", "medium"):
+                        try:
+                            await message.delete()
+                        except (discord.NotFound, discord.Forbidden):
+                            pass
+
+                        if message.author.id == message.guild.owner_id:
+                            return
+
+                        reason = f"Inappropriate language / Swear word detected by AI: {detected_word or 'Vulgar language'}"
+                        await AutomodService.add_violation(
+                            self.bot, message.guild, message.author,
+                            reason,
+                            "AI Content Filter",
+                            message=message,
+                            severity="MEDIUM"
+                        )
+                        return
+                except Exception as e:
+                    log.warning(f"AI moderation scan failed: {e}")
+
         # -------------------------------------------------------------
         # 2. PHISHING & SUSPICIOUS LINK DETECTION
         # -------------------------------------------------------------

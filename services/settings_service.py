@@ -41,7 +41,7 @@ class SettingsService:
             "anti_nuke_enabled", "anti_nuke_threshold", "anti_nuke_window_seconds",
             "anti_raid_enabled", "anti_raid_threshold", "anti_raid_window_seconds",
             "anti_raid_state", "anti_phishing_enabled", "mention_guard_enabled",
-            "content_filter_enabled", "mass_bot_protection_enabled",
+            "content_filter_enabled", "ai_moderation_enabled", "mass_bot_protection_enabled",
             "ghost_ping_detection_enabled", "quarantine_role_id", "lockdown_channels"
         ]
         if key not in allowed_keys:
