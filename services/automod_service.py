@@ -50,8 +50,19 @@ class AutomodService:
         detection_type: str, message: discord.Message = None, points: int = None,
         severity: str = "MEDIUM"
     ):
-        if member.id == guild.owner_id:
-            return  # Server owner is strictly immune to warnings, strikes, timeouts, and jail
+        if member.id == guild.owner_id or getattr(member.guild_permissions, 'administrator', False):
+            # Server owner and admins are strictly exempt from strikes, timeouts, and jail
+            # Send temporary warning embed so they get visual feedback during testing
+            if message:
+                try:
+                    warn_embed = SyncInkEmbed(
+                        description=f"{Emojis.WARNING} | {member.mention} **Inappropriate language is not allowed in this server!**",
+                        color=WARNING_COLOR
+                    )
+                    await message.channel.send(content=member.mention, embed=warn_embed, delete_after=10)
+                except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                    pass
+            return
 
         # 1. Record violation into persistent history table
         await db.execute("""
@@ -119,13 +130,13 @@ class AutomodService:
                     case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "WARN (Automod)", f"{reason} [Strike 1/5 (24h)]")
                     action_taken = "Warned (Strike 1/5)"
                     warn_embed = SyncInkEmbed(
-                        description=f"{Emojis.WARNING} {member.mention} **Warning:** Please follow server rules. Avoid inappropriate content. (Strike 1/5)",
+                        description=f"{Emojis.WARNING} | {member.mention} **Inappropriate language is not allowed in this server! (Strike 1/5)**",
                         color=WARNING_COLOR
                     )
                     if message:
                         try:
                             await message.channel.send(content=member.mention, embed=warn_embed, delete_after=10)
-                        except discord.Forbidden:
+                        except (discord.Forbidden, discord.NotFound, discord.HTTPException):
                             pass
 
                 elif strike_count in (2, 3, 4, 5):

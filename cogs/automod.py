@@ -362,14 +362,11 @@ class Automod(commands.Cog):
         )
 
         settings = await SettingsService.get_guild_settings(message.guild.id)
-        if not settings.get('automod_enabled'):
-            return
 
-        # -------------------------------------------------------------
-        # Server Owner and Administrators: Strictly exempt from automod deletion
-        # -------------------------------------------------------------
-        if message.author.id == message.guild.owner_id or getattr(message.author.guild_permissions, 'administrator', False):
-            return
+        is_admin_or_owner = (
+            message.author.id == message.guild.owner_id or 
+            getattr(message.author.guild_permissions, 'administrator', False)
+        )
 
         # -------------------------------------------------------------
         # Whitelist exemptions for User, Channel, or Roles
@@ -389,7 +386,8 @@ class Automod(commands.Cog):
         # -------------------------------------------------------------
         # 1. UNIVERSAL FILTER: Bad Words & DB Blacklist
         # Runs for EVERYONE (including server owner and staff).
-        # Server owner is exempt from disciplinary actions, but message is deleted.
+        # Server owner/admins receive immediate deletion and temporary warning,
+        # but are strictly exempt from disciplinary strikes/timeouts/jail.
         # -------------------------------------------------------------
         if settings.get('content_filter_enabled', True):
             from utils.bad_words import BAD_WORDS
@@ -403,11 +401,19 @@ class Automod(commands.Cog):
             if bad_word_hit:
                 try:
                     await message.delete()
-                except (discord.NotFound, discord.Forbidden):
+                except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                     pass
 
-                # Server Owner exemption: delete message without warning/timeout/jail
-                if message.author.id == message.guild.owner_id:
+                # Server Owner & Admin test exemption: send temporary warning embed without disciplinary penalty
+                if is_admin_or_owner:
+                    try:
+                        warn_embed = SyncInkEmbed(
+                            description=f"{Emojis.WARNING} | {message.author.mention} **Inappropriate language is not allowed in this server!**",
+                            color=WARNING_COLOR
+                        )
+                        await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
+                    except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                        pass
                     return
 
                 await AutomodService.add_violation(
@@ -444,10 +450,18 @@ class Automod(commands.Cog):
                 if matched:
                     try:
                         await message.delete()
-                    except (discord.NotFound, discord.Forbidden):
+                    except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                         pass
 
-                    if message.author.id == message.guild.owner_id:
+                    if is_admin_or_owner:
+                        try:
+                            warn_embed = SyncInkEmbed(
+                                description=f"{Emojis.WARNING} | {message.author.mention} **Inappropriate language is not allowed in this server!**",
+                                color=WARNING_COLOR
+                            )
+                            await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
+                        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                            pass
                         return
 
                     await AutomodService.add_violation(
@@ -470,10 +484,18 @@ class Automod(commands.Cog):
                     if is_swear and confidence in ("high", "medium"):
                         try:
                             await message.delete()
-                        except (discord.NotFound, discord.Forbidden):
+                        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                             pass
 
-                        if message.author.id == message.guild.owner_id:
+                        if is_admin_or_owner:
+                            try:
+                                warn_embed = SyncInkEmbed(
+                                    description=f"{Emojis.WARNING} | {message.author.mention} **Inappropriate language is not allowed in this server!**",
+                                    color=WARNING_COLOR
+                                )
+                                await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
+                            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                                pass
                             return
 
                         reason = f"Inappropriate language / Swear word detected by AI: {detected_word or 'Vulgar language'}"
@@ -498,10 +520,18 @@ class Automod(commands.Cog):
             if is_threat:
                 try:
                     await message.delete()
-                except (discord.NotFound, discord.Forbidden):
+                except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                     pass
 
-                if message.author.id == message.guild.owner_id:
+                if is_admin_or_owner:
+                    try:
+                        warn_embed = SyncInkEmbed(
+                            description=f"{Emojis.WARNING} | {message.author.mention} **Suspicious / Phishing link detected and removed.**",
+                            color=WARNING_COLOR
+                        )
+                        await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
+                    except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                        pass
                     return
 
                 await AutomodService.add_violation(
@@ -513,7 +543,7 @@ class Automod(commands.Cog):
         # -------------------------------------------------------------
         # 3. STAFF BYPASS: For general spam, mentions, and caps
         # -------------------------------------------------------------
-        if message.author.guild_permissions.manage_messages:
+        if is_admin_or_owner or message.author.guild_permissions.manage_messages:
             return
 
         now = datetime.utcnow()
@@ -803,7 +833,7 @@ class Automod(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         settings = await SettingsService.get_guild_settings(member.guild.id)
-        if not settings.get('automod_enabled'):
+        if not settings.get('automod_enabled', True):
             return
 
         # Jail / Quarantine Evasion Protection
