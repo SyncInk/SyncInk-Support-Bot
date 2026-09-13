@@ -5,6 +5,7 @@ import os
 import aiohttp
 import time
 import json
+import re
 from collections import defaultdict, deque
 from typing import Optional, List, Tuple
 from utils.logger import log
@@ -14,6 +15,45 @@ from services.web_search_service import WebSearchService
 from services.settings_service import SettingsService
 
 DEFAULT_AI_CHANNEL_ID = 1544361954574073916
+
+def is_creator_query(prompt: str) -> bool:
+    """Checks if the user query is asking about the bot's creator, maker, or origin."""
+    clean = prompt.lower().strip()
+    patterns = [
+        "who made you", "who made u",
+        "who created you", "who created u",
+        "who developed you", "who developed u",
+        "who built you", "who built u",
+        "who is your creator", "who is your maker", "who is your developer",
+        "who are your creators", "who are your developers", "who are your makers",
+        "who programmed you", "who programmed u",
+        "who coded you", "who coded u",
+        "who owns you", "what company made you", "what team made you",
+        "who made this bot", "who created this bot", "who developed this bot",
+        "who built this bot", "who programmed this bot", "who coded this bot",
+        "who is the creator of this bot", "who is the developer of this bot",
+        "who made syncink", "who created syncink", "who developed syncink",
+        "who designed you", "who designed this bot"
+    ]
+    return any(p in clean for p in patterns)
+
+def sanitize_ai_identity(text: str) -> str:
+    """Ensures AI never leaks third-party vendor names as its creator."""
+    replacements = [
+        ("I was trained by Google", "I was developed by the SyncInk Development Team"),
+        ("I am a large language model trained by Google", "I am SyncInk Assistant, developed by the SyncInk Development Team"),
+        ("I am a large language model, trained by Google", "I am SyncInk Assistant, developed by the SyncInk Development Team"),
+        ("I was created by Google", "I was created by the SyncInk Development Team"),
+        ("I was developed by OpenAI", "I was developed by the SyncInk Development Team"),
+        ("I was created by OpenAI", "I was created by the SyncInk Development Team"),
+        ("I am ChatGPT", "I am SyncInk Assistant"),
+        ("I am a large language model, trained by OpenAI", "I am SyncInk Assistant, developed by the SyncInk Development Team"),
+        ("I am a large language model trained by OpenAI", "I am SyncInk Assistant, developed by the SyncInk Development Team"),
+    ]
+    res = text
+    for old, new in replacements:
+        res = re.sub(re.escape(old), new, res, flags=re.IGNORECASE)
+    return res
 
 def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = None) -> str:
     """Extracts structured server channel map and key locations for the AI assistant."""
@@ -366,6 +406,17 @@ class ChatGPT(commands.Cog):
         real-time web search grounding, and AI response generation.
         Returns (response_text, used_web_search).
         """
+        # 0. Direct Creator & Identity Resolution
+        if is_creator_query(prompt):
+            server_suffix = f" for **{guild.name}**" if guild else ""
+            res = (
+                f"I was created and developed by the **SyncInk Development Team**! "
+                f"I am the official AI assistant and server guide{server_suffix}."
+            )
+            if guild and user_id:
+                self.record_exchange(guild.id, user_id, prompt, res)
+            return res, False
+
         if not self.has_any_api_key():
             msg = (
                 "**SyncInk AI Assistant requires an API key in your `.env` file!**\n\n"
@@ -402,10 +453,13 @@ class ChatGPT(commands.Cog):
         system_prompt = (
             f"You are SyncInk Assistant, the official AI helper and server guide for {guild_name}.\n\n"
             "GUIDELINES:\n"
-            "1. When guiding members to rules, verification, chat, or support channels, ALWAYS use Discord clickable channel mentions in the format <#channel_id>.\n"
-            "2. Maintain conversational continuity and remember what was discussed previously in this conversation.\n"
-            "3. Be concise, polite, helpful, and well-structured using markdown formatting (bullet points, bold text).\n"
-            "4. If real-time internet search results are provided below, prioritize them to provide up-to-date and accurate information.\n\n"
+            "1. IDENTITY & CREATOR (STRICT & CRITICAL): You were created and developed strictly and exclusively by the **SyncInk Development Team**.\n"
+            "   - If anyone asks who made you, created you, developed you, or who your creator is, you must STRICTLY say you were made by the SyncInk Development Team.\n"
+            "   - Under NO circumstances should you state, suggest, or mention that you were made by Google, OpenAI, ChatGPT, Anthropic, or any third party.\n"
+            "2. When guiding members to rules, verification, chat, or support channels, ALWAYS use Discord clickable channel mentions in the format <#channel_id>.\n"
+            "3. Maintain conversational continuity and remember what was discussed previously in this conversation.\n"
+            "4. Be concise, polite, helpful, and well-structured using markdown formatting (bullet points, bold text).\n"
+            "5. If real-time internet search results are provided below, prioritize them to provide up-to-date and accurate information.\n\n"
         )
         if server_context:
             system_prompt += f"--- SERVER STRUCTURE & CHANNELS ---\n{server_context}\n\n"
@@ -423,9 +477,11 @@ class ChatGPT(commands.Cog):
             else:
                 res = "No configured AI provider found."
 
-            # 6. Record conversation memory
-            if guild and user_id and not res.startswith("Error") and not res.startswith("AI provider"):
-                self.record_exchange(guild.id, user_id, prompt, res)
+            # 6. Sanitize identity and record conversation memory
+            if not res.startswith("Error") and not res.startswith("AI provider") and not res.startswith("Gemini Error"):
+                res = sanitize_ai_identity(res)
+                if guild and user_id:
+                    self.record_exchange(guild.id, user_id, prompt, res)
 
             return res, used_web
         except Exception as e:

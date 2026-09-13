@@ -34,6 +34,15 @@ class WebSearchService:
         if any(w in p_lower for w in ("search the web", "search internet", "search online", "look up online", "search for")):
             return True
 
+        # Bot identity or creator queries should never search web
+        if any(w in p_lower for w in (
+            "who made you", "who made u", "who created you", "who created u",
+            "who developed you", "who developed u", "who built you", "who built u",
+            "who is your creator", "who is your maker", "who is your developer",
+            "who are you", "what are you", "who made this bot", "who created this bot"
+        )):
+            return False
+
         # If it's purely a server guide question, skip web search
         has_server_intent = any(w in p_lower for w in WebSearchService.SERVER_INTENT_KEYWORDS)
         if has_server_intent and not any(w in p_lower for w in ("search", "google", "crypto", "price", "news")):
