@@ -196,8 +196,19 @@ class ChatGPT(commands.Cog):
                 return data["choices"][0]["message"]["content"]
 
     async def get_gemini_models(self) -> List[str]:
+        fallback_candidates = [
+            "models/gemini-2.0-flash",
+            "models/gemini-1.5-flash",
+            "models/gemini-1.5-flash-latest",
+            "models/gemini-2.0-flash-exp",
+            "models/gemini-2.0-flash-lite",
+            "models/gemini-1.5-flash-8b",
+            "models/gemini-1.5-pro",
+            "models/gemini-pro"
+        ]
+
         if self.cached_gemini_model:
-            return [self.cached_gemini_model]
+            return [self.cached_gemini_model] + [m for m in fallback_candidates if m != self.cached_gemini_model]
 
         # 1. Try dynamic auto-discovery from Google API
         try:
@@ -208,34 +219,60 @@ class ChatGPT(commands.Cog):
                     if resp.status == 200:
                         data = await resp.json()
                         available = data.get("models", [])
-                        gen_models = [
-                            m["name"] for m in available 
-                            if "generateContent" in m.get("supportedGenerationMethods", [])
-                        ]
+                        
+                        # Disallowed terms: Audio/TTS/Embedding/Vision-only/Robotics
+                        excluded_terms = ["tts", "audio", "embed", "imagen", "transcription", "realtime", "aqa", "robotics", "computer-use"]
+                        
+                        gen_models = []
+                        for m in available:
+                            name = m.get("name", "")
+                            # Must support generateContent
+                            if "generateContent" not in m.get("supportedGenerationMethods", []):
+                                continue
+                            # Exclude specialized modalities (audio/TTS/embedding)
+                            if any(term in name.lower() for term in excluded_terms):
+                                continue
+                            # If output modalities specified, ensure TEXT is supported
+                            if "outputModalities" in m:
+                                upper_modalities = [mod.upper() for mod in m["outputModalities"]]
+                                if "TEXT" not in upper_modalities:
+                                    continue
+                            gen_models.append(name)
+                        
                         if gen_models:
-                            sorted_models = sorted(
-                                gen_models,
-                                key=lambda x: (
-                                    0 if "flash" in x.lower() and "2.0" in x.lower() else
-                                    1 if "flash" in x.lower() and "1.5" in x.lower() else
-                                    2 if "flash" in x.lower() else
-                                    3 if "pro" in x.lower() else 4
-                                )
-                            )
-                            self.cached_gemini_model = sorted_models[0]
-                            return sorted_models
+                            def score_model(m_name: str) -> int:
+                                n = m_name.lower()
+                                if "gemini-2.0-flash" in n and "lite" not in n and "exp" not in n:
+                                    return 0
+                                if "gemini-1.5-flash" in n and "8b" not in n:
+                                    return 1
+                                if "gemini-2.0-flash-exp" in n:
+                                    return 2
+                                if "gemini-2.0-flash-lite" in n:
+                                    return 3
+                                if "gemini-1.5-flash-8b" in n:
+                                    return 4
+                                if "gemini-1.5-pro" in n:
+                                    return 5
+                                if "gemini-2.0-pro" in n:
+                                    return 6
+                                if "gemini-pro" in n:
+                                    return 7
+                                if "flash" in n:
+                                    return 8
+                                if "pro" in n:
+                                    return 9
+                                return 15
+
+                            sorted_models = sorted(gen_models, key=score_model)
+                            # Append fallbacks to guarantee robust options
+                            combined = sorted_models + [fb for fb in fallback_candidates if fb not in sorted_models]
+                            self.cached_gemini_model = combined[0]
+                            return combined
         except Exception as e:
             log.warning(f"Could not auto-list Gemini models: {e}")
 
-        # 2. Resilient fallback candidates
-        return [
-            "models/gemini-2.0-flash",
-            "models/gemini-1.5-flash",
-            "models/gemini-1.5-flash-latest",
-            "models/gemini-2.0-flash-exp",
-            "models/gemini-1.5-pro",
-            "models/gemini-pro"
-        ]
+        return fallback_candidates
 
     async def call_gemini(self, system_prompt: str, user_prompt: str, history: List[Tuple[str, str]]) -> str:
         models_to_try = await self.get_gemini_models()
@@ -279,20 +316,21 @@ class ChatGPT(commands.Cog):
                                 return data["candidates"][0]["content"]["parts"][0]["text"]
                             except (KeyError, IndexError):
                                 return "No response content received from Gemini."
-                        elif response.status == 404:
-                            log.warning(f"Gemini model {clean_model} returned 404, falling back to next candidate...")
-                            continue
                         else:
                             text = await response.text()
-                            log.error(f"Gemini API Error ({response.status}) on {clean_model}: {text}")
                             try:
                                 err_data = json.loads(text)
                                 last_error = err_data.get("error", {}).get("message", text)
                             except Exception:
                                 last_error = text
-                            return f"Gemini Error ({response.status}): {last_error}"
+                            log.warning(f"Gemini candidate {clean_model} failed (HTTP {response.status}): {last_error}. Falling back to next candidate...")
+                            if self.cached_gemini_model == clean_model:
+                                self.cached_gemini_model = None
+                            continue
                 except Exception as e:
                     last_error = str(e)
+                    if self.cached_gemini_model == clean_model:
+                        self.cached_gemini_model = None
                     continue
 
         return f"Gemini Error: Could not connect to an active model. ({last_error})"
