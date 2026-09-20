@@ -9,6 +9,52 @@ SUCCESS_COLOR = 0x57F287  # Green
 ERROR_COLOR = 0xED4245    # Red
 WARNING_COLOR = 0xFEE75C  # Yellow
 
+def check_bot_online_status(bot: Any, guild: Optional[discord.Guild], bot_id: int) -> tuple[str, str]:
+    """
+    Returns (emoji, status_text) for a tracked ecosystem bot.
+    Checks guild cache first, then all available bot guilds.
+    """
+    member = None
+    if guild:
+        member = guild.get_member(bot_id)
+        
+    if not member and hasattr(bot, 'guilds'):
+        for g in bot.guilds:
+            m = g.get_member(bot_id)
+            if m:
+                member = m
+                break
+
+    if member:
+        if member.status in (discord.Status.online, discord.Status.idle, discord.Status.dnd):
+            return Emojis.CONNECTION_GOOD, "Operational"
+        else:
+            return Emojis.CONNECTION_NONE, "Offline"
+    return Emojis.CONNECTION_NONE, "Not in Server"
+
+def get_latency_badge(latency_ms: float) -> tuple[str, str]:
+    """Returns (emoji, quality_label) based on gateway websocket latency."""
+    if latency_ms <= 0:
+        return Emojis.CONNECTION_NONE, "Offline"
+    elif latency_ms <= 120:
+        return Emojis.CONNECTION_GOOD, "Good"
+    elif latency_ms <= 250:
+        return Emojis.CONNECTION_MODERATE, "Moderate"
+    else:
+        return Emojis.CONNECTION_LOW, "High Latency"
+
+async def send_clean_v2_message(destination: Any, layout_view: discord.ui.LayoutView, fallback_embed: Optional[discord.Embed] = None):
+    """
+    Sends a message using Discord Components V2 (flags: 32768, Container, Separator).
+    If Components V2 fails in a specific context or client, gracefully falls back to fallback_embed.
+    """
+    try:
+        return await destination.send(view=layout_view)
+    except Exception as e:
+        if fallback_embed is not None:
+            return await destination.send(embed=fallback_embed)
+        raise e
+
 class SyncInkEmbed(discord.Embed):
     """Premium Base Embed class for the SyncInk Ecosystem."""
     

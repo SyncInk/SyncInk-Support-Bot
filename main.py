@@ -17,11 +17,13 @@ from database import db
 load_dotenv()
 
 class SyncInkBot(commands.Bot):
-    def __init__(self):
+    def __init__(self, enable_presences: bool = True):
         intents = discord.Intents.default()
         intents.message_content = True
         intents.members = True
         intents.guilds = True
+        if enable_presences:
+            intents.presences = True
         
         super().__init__(
             command_prefix="?",
@@ -132,28 +134,36 @@ def main():
     validate_environment()
     
     token = os.getenv("DISCORD_TOKEN")
-    bot = SyncInkBot()
     
-    # Global error handler for app commands (slash commands)
-    @bot.tree.error
-    async def on_app_command_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
-        if hasattr(error, 'original') and isinstance(error.original, UserFacingError):
-            if not interaction.response.is_done():
-                await interaction.response.send_message(embed=ErrorEmbed(error.original.message), ephemeral=True)
-            return
-            
-        log.error(f"Ignoring exception in app command {interaction.command}: {error}")
-        traceback.print_exception(type(error), error, error.__traceback__)
+    def run_bot(enable_presences: bool):
+        bot = SyncInkBot(enable_presences=enable_presences)
         
-        try:
-            if interaction.response.is_done():
-                await interaction.followup.send(embed=ErrorEmbed(i18n.get("error_generic")), ephemeral=True)
-            else:
-                await interaction.response.send_message(embed=ErrorEmbed(i18n.get("error_generic")), ephemeral=True)
-        except discord.HTTPException:
-            pass
+        # Global error handler for app commands (slash commands)
+        @bot.tree.error
+        async def on_app_command_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
+            if hasattr(error, 'original') and isinstance(error.original, UserFacingError):
+                if not interaction.response.is_done():
+                    await interaction.response.send_message(embed=ErrorEmbed(error.original.message), ephemeral=True)
+                return
+                
+            log.error(f"Ignoring exception in app command {interaction.command}: {error}")
+            traceback.print_exception(type(error), error, error.__traceback__)
+            
+            try:
+                if interaction.response.is_done():
+                    await interaction.followup.send(embed=ErrorEmbed(i18n.get("error_generic")), ephemeral=True)
+                else:
+                    await interaction.response.send_message(embed=ErrorEmbed(i18n.get("error_generic")), ephemeral=True)
+            except discord.HTTPException:
+                pass
 
-    bot.run(token, log_handler=None)
+        bot.run(token, log_handler=None)
+
+    try:
+        run_bot(enable_presences=True)
+    except discord.errors.PrivilegedIntentsRequired:
+        log.warning("Privileged Presence Intent is not enabled in Discord Developer Portal. Running with standard intents...")
+        run_bot(enable_presences=False)
 
 if __name__ == "__main__":
     main()

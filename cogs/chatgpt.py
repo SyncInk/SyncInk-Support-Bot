@@ -105,7 +105,13 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "14. Join to Create VC: <#1520749464569253998> (Join this voice channel to automatically generate your own temporary private voice channel)",
         "15. Apply for Developer Channel: <#1539301185423413398> (Form: [Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer) - check requirements in <#1539301185423413398>)",
         "16. Apply for Staff Channel: <#1539319001673367604> (Form: [Apply for Staff](https://discord.com/channels/1520457643842342912/1539319001673367604/1539371523188596916) - check requirements in <#1539319001673367604>)",
-        "17. Ask AI Channel: <#1544361954574073916> (Dedicated channel for AI questions)"
+        "17. Ask AI Channel: <#1544361954574073916> (Dedicated channel for AI questions)",
+        "--- OFFICIAL SYNCINK SERVER ROLES ---",
+        "• Owner Role: <@&1520856232460550194> (Server Owner & Creator of SyncInk)",
+        "• Manager Role: <@&1520854378192572546> (Management leadership overseeing server operations and team members)",
+        "• Developer Role: <@&1531882215795855511> (Technical developers building SyncInk bots & platforms; apply in <#1539301185423413398>)",
+        "• Staff Role: <@&1520466655321522486> (Support and moderation staff keeping community safe and assisting members; apply in <#1539319001673367604>)",
+        "• Verified Members Role: <@&1520871574088056952> (Community members who completed verification checkpoint in <#1520748219100041348>)"
     ]
     return "\n".join(lines)
 
@@ -241,6 +247,51 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
     # 14. Welcome
     if any(k in p for k in ("where is welcome", "welcome channel")):
         return "New members arrive and are welcomed in <#1520460456181891102>."
+
+    # 15. Server Roles & Specific Role Inquiries
+    if any(k in p for k in (
+        "what roles", "what are the roles", "server roles", "roles list", "list of roles",
+        "list roles", "tell me roles", "show roles", "who runs the server", "leadership roles"
+    )):
+        return (
+            "Here are the official server roles and their responsibilities:\n\n"
+            "• 👑 **Owner**: <@&1520856232460550194> — Founder and lead owner of the SyncInk platform.\n"
+            "• 💼 **Manager**: <@&1520854378192572546> — Management team overseeing server operations and team members.\n"
+            "• 💻 **Developer**: <@&1531882215795855511> — Engineers and bot creators who build SyncInk tools (Apply in <#1539301185423413398>).\n"
+            "• 🛡️ **Staff**: <@&1520466655321522486> — Support and moderation team helping users and enforcing rules (Apply in <#1539319001673367604>).\n"
+            "• ✅ **Verified Members**: <@&1520871574088056952> — Verified community members (Verify in <#1520748219100041348>)."
+        )
+
+    if any(k in p for k in ("staff role", "who are staff", "who is staff", "staff team", "moderator role", "mod role")):
+        return (
+            "The **Staff** role is <@&1520466655321522486>.\n"
+            "Staff members assist the community with support inquiries and enforce server rules.\n"
+            "👉 To apply for staff, check requirements in <#1539319001673367604> and submit your form!"
+        )
+
+    if any(k in p for k in ("manager role", "who is manager", "who are managers", "management role", "who manages")):
+        return (
+            "The **Manager** role is <@&1520854378192572546>.\n"
+            "Managers oversee server administration, operations, and leadership within the SyncInk ecosystem."
+        )
+
+    if any(k in p for k in ("developer role", "dev role", "who is developer", "who are developers", "dev team")):
+        return (
+            "The **Developer** role is <@&1531882215795855511>.\n"
+            "Developers program and build the SyncInk bots and platform tools.\n"
+            "👉 To apply as a developer, check requirements in <#1539301185423413398> and submit the form at [Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer)!"
+        )
+
+    if any(k in p for k in ("owner role", "who is owner", "who owns the server", "founder role", "server owner")):
+        return (
+            "The **Owner** role is <@&1520856232460550194>, representing the founder and owner of the SyncInk platform and server."
+        )
+
+    if any(k in p for k in ("verified role", "verified members role", "member role", "how to get member role", "how to get verified role")):
+        return (
+            "The **Verified Members** role is <@&1520871574088056952>.\n"
+            "You can obtain this role by completing the verification gate in <#1520748219100041348>."
+        )
 
     return None
 
@@ -670,7 +721,13 @@ class ChatGPT(commands.Cog):
             "   - Only provide a full channel directory if the user explicitly asks for 'all channels', 'server directory', or 'list of channels'.\n"
             "3. Maintain conversational continuity and remember past turns.\n"
             "4. Be concise, polite, helpful, and well-structured using markdown formatting (bullet points, bold text).\n"
-            "5. If real-time internet search results are provided below, prioritize them to provide up-to-date and accurate information.\n\n"
+            "5. If real-time internet search results are provided below, prioritize them to provide up-to-date and accurate information.\n"
+            "6. ROLES & PERMISSIONS: When asked about roles, leadership, or server staff, refer to these exact roles with <@&role_id>:\n"
+            "   - Owner: <@&1520856232460550194> (Server Owner & SyncInk Founder)\n"
+            "   - Manager: <@&1520854378192572546> (Management & Operations)\n"
+            "   - Developer: <@&1531882215795855511> (Bot & Web Developers, apply in <#1539301185423413398>)\n"
+            "   - Staff: <@&1520466655321522486> (Moderation & Support Staff, apply in <#1539319001673367604>)\n"
+            "   - Verified Members: <@&1520871574088056952> (Verified Community, verify in <#1520748219100041348>)\n\n"
         )
         if server_context:
             system_prompt += f"--- SERVER STRUCTURE & CHANNELS ---\n{server_context}\n\n"
@@ -770,7 +827,7 @@ class ChatGPT(commands.Cog):
                     desc = response[:4000] + "..." if len(response) > 4000 else response
 
                     embed = SyncInkEmbed(
-                        title="<:syncinkmainlogo:1529117858859061331> **SyncInk Assistant**",
+                        title=f"{Emojis.AI} **SyncInk Assistant**",
                         description=desc,
                         color=BRAND_ACCENT
                     )
@@ -830,7 +887,7 @@ class ChatGPT(commands.Cog):
                 desc = response[:4000] + "..." if len(response) > 4000 else response
 
                 embed = SyncInkEmbed(
-                    title="<:syncinkmainlogo:1529117858859061331> **SyncInk Assistant**",
+                    title=f"{Emojis.AI} **SyncInk Assistant**",
                     description=desc,
                     color=BRAND_ACCENT
                 )
@@ -873,7 +930,7 @@ class ChatGPT(commands.Cog):
             desc = response[:4000] + "..." if len(response) > 4000 else response
 
             embed = SyncInkEmbed(
-                title="<:syncinkmainlogo:1529117858859061331> **SyncInk Assistant**",
+                title=f"{Emojis.AI} **SyncInk Assistant**",
                 description=desc,
                 color=BRAND_ACCENT
             )

@@ -11,6 +11,14 @@ class Emojis:
     CHECK_YES = "<a:check_yes:1547034079076032512>"
 
     # Static application emojis (<:name:id>) verified via Discord CDN
+    AI = "<:SyncInkAI:1549154093421826058>"
+    CHATGPT = AI
+    CONNECTION_GOOD = "<:goodconnection:1551311911948394697>"
+    CONNECTION_MODERATE = "<:moderateconnection:1551311891173740644>"
+    CONNECTION_LOW = "<:lowconnection:1551311863675879494>"
+    CONNECTION_NONE = "<:noconnection:1551311810223931484>"
+    CONNECTION_PING = "<a:connectionping:1551311432392646737>"
+    CPU = "<:CPU:1551310556038701118>"
     MODERATION = "<:moderation:1547035031275573289>"
     LOOKING = "<:looking:1547034317018898552>"
     LOGO = "<:syncinkmainlogo:1547034265076760707>"
@@ -18,7 +26,6 @@ class Emojis:
     LOCK = "<:syncink_lock:1547034002689491025>"
     SUGGESTION = "<:syncinksuggestion:1547033969646903437>"
     QUESTION = "<:syncinkquestion:1547033451029594222>"
-    CHATGPT = "<:CharGPT:1544376850476826796>"
     SYNCINK_LOGO = "<:syncinkmainlogo:1529117858859061331>"
     # Feature request custom emojis
     LOADING = "<a:Loading:1547095365679849492>"
@@ -37,8 +44,16 @@ class EmojiPartials:
     CHECK_YES = discord.PartialEmoji(name="check_yes", id=1547034079076032512, animated=True)
     LOADING = discord.PartialEmoji(name="Loading", id=1547095365679849492, animated=True)
     PENDING = discord.PartialEmoji(name="pending", id=1547110867466985532, animated=True)
+    CONNECTION_PING = discord.PartialEmoji(name="connectionping", id=1551311432392646737, animated=True)
 
     # Static partials
+    AI = discord.PartialEmoji(name="SyncInkAI", id=1549154093421826058, animated=False)
+    CHATGPT = AI
+    CONNECTION_GOOD = discord.PartialEmoji(name="goodconnection", id=1551311911948394697, animated=False)
+    CONNECTION_MODERATE = discord.PartialEmoji(name="moderateconnection", id=1551311891173740644, animated=False)
+    CONNECTION_LOW = discord.PartialEmoji(name="lowconnection", id=1551311863675879494, animated=False)
+    CONNECTION_NONE = discord.PartialEmoji(name="noconnection", id=1551311810223931484, animated=False)
+    CPU = discord.PartialEmoji(name="CPU", id=1551310556038701118, animated=False)
     MODERATION = discord.PartialEmoji(name="moderation", id=1547035031275573289, animated=False)
     LOOKING = discord.PartialEmoji(name="looking", id=1547034317018898552, animated=False)
     LOGO = discord.PartialEmoji(name="syncinkmainlogo", id=1547034265076760707, animated=False)
@@ -46,6 +61,5 @@ class EmojiPartials:
     LOCK = discord.PartialEmoji(name="syncink_lock", id=1547034002689491025, animated=False)
     SUGGESTION = discord.PartialEmoji(name="syncinksuggestion", id=1547033969646903437, animated=False)
     QUESTION = discord.PartialEmoji(name="syncinkquestion", id=1547033451029594222, animated=False)
-    CHATGPT = discord.PartialEmoji(name="CharGPT", id=1544376850476826796, animated=False)
     MEMBERS = discord.PartialEmoji(name="members", id=1547109992212205608, animated=False)
     CANCELLED = discord.PartialEmoji(name="cancelled", id=1547111776267804692, animated=False)

@@ -190,7 +190,7 @@ class Help(commands.Cog):
         overview_categories = [
             (Emojis.SUGGESTION, "Suggestions & Feature Requests", "Submit and vote on ideas in #suggestions"),
             (Emojis.SETTINGS, "Platform & Utilities", "Bot latency, operational status, products, and links"),
-            (Emojis.CHATGPT, "AI Assistant", "Ask questions to the integrated OpenAI assistant"),
+            (Emojis.AI, "AI Assistant", "Ask questions to the integrated SyncInk AI assistant"),
         ]
 
         select_options = [
@@ -215,8 +215,8 @@ class Help(commands.Cog):
             discord.SelectOption(
                 label="AI Assistant",
                 value="3",
-                description="Ask questions to the OpenAI assistant",
-                emoji=EmojiPartials.CHATGPT
+                description="Ask questions to the SyncInk AI assistant",
+                emoji=EmojiPartials.AI
             )
         ]
 
@@ -242,9 +242,9 @@ class Help(commands.Cog):
                 ]
             ),
             (
-                f"{Emojis.CHATGPT} **AI Assistant**",
+                f"{Emojis.AI} **AI Assistant**",
                 [
-                    ("?ask <question>", "Ask any question to the integrated OpenAI assistant (Alias: `?ai`).")
+                    ("?ask <question>", "Ask any question to the integrated SyncInk AI assistant (Alias: `?ai`).")
                 ]
             )
         ]
