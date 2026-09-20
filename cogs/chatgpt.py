@@ -106,12 +106,16 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "15. Apply for Developer Channel: <#1539301185423413398> (Form: [Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer) - check requirements in <#1539301185423413398>)",
         "16. Apply for Staff Channel: <#1539319001673367604> (Form: [Apply for Staff](https://discord.com/channels/1520457643842342912/1539319001673367604/1539371523188596916) - check requirements in <#1539319001673367604>)",
         "17. Ask AI Channel: <#1544361954574073916> (Dedicated channel for AI questions)",
-        "--- OFFICIAL SYNCINK SERVER ROLES ---",
-        "• Owner Role: <@&1520856232460550194> (Server Owner & Creator of SyncInk)",
-        "• Manager Role: <@&1520854378192572546> (Management leadership overseeing server operations and team members)",
-        "• Developer Role: <@&1531882215795855511> (Technical developers building SyncInk bots & platforms; apply in <#1539301185423413398>)",
-        "• Staff Role: <@&1520466655321522486> (Support and moderation staff keeping community safe and assisting members; apply in <#1539319001673367604>)",
-        "• Verified Members Role: <@&1520871574088056952> (Community members who completed verification checkpoint in <#1520748219100041348>)"
+        "--- OFFICIAL SYNCINK SERVER ROLES (CATEGORY-WISE) ---",
+        "• Leadership & Administration:",
+        "  - Owner: <:sync_owner:1513803214674464788> <@&1520856232460550194> (Server Owner & Creator of SyncInk)",
+        "  - Manager: <:sync_admin:1513805305492799508> <@&1520854378192572546> (Management leadership overseeing server operations and team members)",
+        "• Development & Support Team:",
+        "  - Developer: <:VerifiedBotDeveloper:754668951232839772> <@&1531882215795855511> (Technical developers building SyncInk bots & platforms; apply in <#1539301185423413398>)",
+        "  - Staff: <:sync_moderator:1518924931482779809> <@&1520466655321522486> (Support and moderation staff keeping community safe; apply in <#1539319001673367604>)",
+        "• Community & Partnerships:",
+        "  - Partner: <:partnered:1551337413660381255> <@&1551337053185114242> (Official server partners and affiliated communities)",
+        "  - Verified: <:verified:1551336293017845822> <@&1520871574088056952> (Community members who completed verification checkpoint in <#1520748219100041348>)"
     ]
     return "\n".join(lines)
 
@@ -251,46 +255,64 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
     # 15. Server Roles & Specific Role Inquiries
     if any(k in p for k in (
         "what roles", "what are the roles", "server roles", "roles list", "list of roles",
-        "list roles", "tell me roles", "show roles", "who runs the server", "leadership roles"
+        "list roles", "tell me roles", "show roles", "who runs the server", "leadership roles", "roles here"
     )):
         return (
-            "Here are the official server roles and their responsibilities:\n\n"
-            "• 👑 **Owner**: <@&1520856232460550194> — Founder and lead owner of the SyncInk platform.\n"
-            "• 💼 **Manager**: <@&1520854378192572546> — Management team overseeing server operations and team members.\n"
-            "• 💻 **Developer**: <@&1531882215795855511> — Engineers and bot creators who build SyncInk tools (Apply in <#1539301185423413398>).\n"
-            "• 🛡️ **Staff**: <@&1520466655321522486> — Support and moderation team helping users and enforcing rules (Apply in <#1539319001673367604>).\n"
-            "• ✅ **Verified Members**: <@&1520871574088056952> — Verified community members (Verify in <#1520748219100041348>)."
+            "Here is the official server role structure and responsibilities:\n\n"
+            "**👑 Leadership & Administration**\n"
+            "• <:sync_owner:1513803214674464788> **Owner**: <@&1520856232460550194>\n"
+            "╰ Founder & lead owner of the SyncInk platform and server.\n"
+            "• <:sync_admin:1513805305492799508> **Manager**: <@&1520854378192572546>\n"
+            "╰ Executive management team overseeing community operations, moderation, and team coordination.\n\n"
+            "**🛠️ Development & Support Team**\n"
+            "• <:VerifiedBotDeveloper:754668951232839772> **Developer**: <@&1531882215795855511>\n"
+            "╰ Software engineers creating and maintaining SyncInk bots and platforms. *(Apply in <#1539301185423413398>)*\n"
+            "• <:sync_moderator:1518924931482779809> **Staff**: <@&1520466655321522486>\n"
+            "╰ Dedicated support & moderation team assisting members and keeping the community safe. *(Apply in <#1539319001673367604>)*\n\n"
+            "**🌟 Community & Partnerships**\n"
+            "• <:partnered:1551337413660381255> **Partner**: <@&1551337053185114242>\n"
+            "╰ Official community partners and affiliated platform collaborations.\n"
+            "• <:verified:1551336293017845822> **Verified**: <@&1520871574088056952>\n"
+            "╰ Community members who completed verification in <#1520748219100041348>."
         )
 
     if any(k in p for k in ("staff role", "who are staff", "who is staff", "staff team", "moderator role", "mod role")):
         return (
-            "The **Staff** role is <@&1520466655321522486>.\n"
-            "Staff members assist the community with support inquiries and enforce server rules.\n"
-            "👉 To apply for staff, check requirements in <#1539319001673367604> and submit your form!"
+            "• <:sync_moderator:1518924931482779809> **Staff**: <@&1520466655321522486>\n"
+            "╰ Dedicated support and moderation team assisting members and enforcing server rules.\n\n"
+            "👉 **Want to apply?** Check requirements in <#1539319001673367604> and submit your application!"
         )
 
     if any(k in p for k in ("manager role", "who is manager", "who are managers", "management role", "who manages")):
         return (
-            "The **Manager** role is <@&1520854378192572546>.\n"
-            "Managers oversee server administration, operations, and leadership within the SyncInk ecosystem."
+            "• <:sync_admin:1513805305492799508> **Manager**: <@&1520854378192572546>\n"
+            "╰ Executive management leadership overseeing server administration, community operations, and team coordination."
         )
 
     if any(k in p for k in ("developer role", "dev role", "who is developer", "who are developers", "dev team")):
         return (
-            "The **Developer** role is <@&1531882215795855511>.\n"
-            "Developers program and build the SyncInk bots and platform tools.\n"
-            "👉 To apply as a developer, check requirements in <#1539301185423413398> and submit the form at [Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer)!"
+            "• <:VerifiedBotDeveloper:754668951232839772> **Developer**: <@&1531882215795855511>\n"
+            "╰ Software engineers and creators building the SyncInk bots and platform tools.\n\n"
+            "👉 **Want to apply?** Check requirements in <#1539301185423413398> and submit the form at [Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer)!"
         )
 
     if any(k in p for k in ("owner role", "who is owner", "who owns the server", "founder role", "server owner")):
         return (
-            "The **Owner** role is <@&1520856232460550194>, representing the founder and owner of the SyncInk platform and server."
+            "• <:sync_owner:1513803214674464788> **Owner**: <@&1520856232460550194>\n"
+            "╰ Founder and lead owner of the SyncInk platform and server."
         )
 
-    if any(k in p for k in ("verified role", "verified members role", "member role", "how to get member role", "how to get verified role")):
+    if any(k in p for k in ("partner role", "partnered role", "who is partner", "how to get partner", "partnership")):
         return (
-            "The **Verified Members** role is <@&1520871574088056952>.\n"
-            "You can obtain this role by completing the verification gate in <#1520748219100041348>."
+            "• <:partnered:1551337413660381255> **Partner**: <@&1551337053185114242>\n"
+            "╰ Granted to official server partners and affiliated communities collaborating with SyncInk."
+        )
+
+    if any(k in p for k in ("verified role", "verified members role", "member role", "how to get member role", "how to get verified role", "verify role")):
+        return (
+            "• <:verified:1551336293017845822> **Verified**: <@&1520871574088056952>\n"
+            "╰ Granted to all community members upon verifying at the security checkpoint.\n\n"
+            "👉 Complete verification in <#1520748219100041348> to unlock server access!"
         )
 
     return None
@@ -722,12 +744,17 @@ class ChatGPT(commands.Cog):
             "3. Maintain conversational continuity and remember past turns.\n"
             "4. Be concise, polite, helpful, and well-structured using markdown formatting (bullet points, bold text).\n"
             "5. If real-time internet search results are provided below, prioritize them to provide up-to-date and accurate information.\n"
-            "6. ROLES & PERMISSIONS: When asked about roles, leadership, or server staff, refer to these exact roles with <@&role_id>:\n"
-            "   - Owner: <@&1520856232460550194> (Server Owner & SyncInk Founder)\n"
-            "   - Manager: <@&1520854378192572546> (Management & Operations)\n"
-            "   - Developer: <@&1531882215795855511> (Bot & Web Developers, apply in <#1539301185423413398>)\n"
-            "   - Staff: <@&1520466655321522486> (Moderation & Support Staff, apply in <#1539319001673367604>)\n"
-            "   - Verified Members: <@&1520871574088056952> (Verified Community, verify in <#1520748219100041348>)\n\n"
+            "6. ROLES & PERMISSIONS: When explaining server roles, ALWAYS present them category-wise with custom emojis and <@&role_id>:\n"
+            "   • Leadership & Administration:\n"
+            "     - Owner: <:sync_owner:1513803214674464788> <@&1520856232460550194> (Server Owner & SyncInk Founder)\n"
+            "     - Manager: <:sync_admin:1513805305492799508> <@&1520854378192572546> (Management & Operations)\n"
+            "   • Development & Support Team:\n"
+            "     - Developer: <:VerifiedBotDeveloper:754668951232839772> <@&1531882215795855511> (Apply in <#1539301185423413398>)\n"
+            "     - Staff: <:sync_moderator:1518924931482779809> <@&1520466655321522486> (Apply in <#1539319001673367604>)\n"
+            "   • Community & Partnerships:\n"
+            "     - Partner: <:partnered:1551337413660381255> <@&1551337053185114242> (Partnered servers & collabs)\n"
+            "     - Verified: <:verified:1551336293017845822> <@&1520871574088056952> (Verify in <#1520748219100041348>)\n"
+            "   Always format role listings neatly in category groups so they are clean, readable, and never look messy.\n\n"
         )
         if server_context:
             system_prompt += f"--- SERVER STRUCTURE & CHANNELS ---\n{server_context}\n\n"

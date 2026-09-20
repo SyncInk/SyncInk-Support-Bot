@@ -35,9 +35,8 @@ class SyncInkIntegration(commands.Cog):
             ),
             discord.ui.Separator(),
             discord.ui.TextDisplay(
-                f"**Infrastructure & Network**\n"
-                f"{Emojis.CPU} **Host Latency:** {ping_badge} `{latency_ms}ms` ({ping_quality})\n"
-                f"{Emojis.SETTINGS} **Active Guilds:** `{len(self.bot.guilds)}`"
+                f"**Network Latency**\n"
+                f"{ping_badge} **Gateway Ping:** `{latency_ms}ms` ({ping_quality})"
             ),
             discord.ui.Separator(),
             discord.ui.TextDisplay("-# SyncInk Platform • Real-time Ecosystem Telemetry"),
@@ -52,8 +51,7 @@ class SyncInkIntegration(commands.Cog):
         fallback.add_field(name="Ticket System", value=f"{ticket_emoji} {ticket_status}", inline=True)
         fallback.add_field(name="Voice Services", value=f"{voice_emoji} {voice_status}", inline=True)
         fallback.add_field(name="SyncInk AI", value=f"{Emojis.AI} Active", inline=True)
-        fallback.add_field(name="Infrastructure", value=f"{Emojis.CPU} {ping_badge} `{latency_ms}ms` ({ping_quality})", inline=True)
-        fallback.add_field(name="Active Guilds", value=f"{Emojis.SETTINGS} `{len(self.bot.guilds)}`", inline=True)
+        fallback.add_field(name="Network Health", value=f"{ping_badge} `{latency_ms}ms` ({ping_quality})", inline=False)
 
         return layout, fallback
 

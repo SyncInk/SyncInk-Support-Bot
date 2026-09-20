@@ -28,9 +28,7 @@ class Stats(commands.Cog):
             discord.ui.Separator(),
             discord.ui.TextDisplay(
                 f"**Network Latency**\n"
-                f"{ping_badge} **Gateway Ping:** `{latency_ms}ms` ({ping_quality})\n"
-                f"{Emojis.CPU} **Engine:** Python / discord.py v{discord.__version__}\n"
-                f"{Emojis.SETTINGS} **Active Guilds:** `{len(self.bot.guilds)}`"
+                f"{ping_badge} **Gateway Ping:** `{latency_ms}ms` ({ping_quality})"
             ),
             discord.ui.Separator(),
             discord.ui.TextDisplay(
@@ -48,9 +46,8 @@ class Stats(commands.Cog):
         # 2. Clean fallback embed (No duplicate author, permanent footer only, no manual ASCII lines)
         fallback = SyncInkEmbed(title=f"{Emojis.CONNECTION_PING} Bot Statistics")
         fallback.description = "Real-time gateway latency and ecosystem cluster status."
-        fallback.add_field(name="Latency (Ping)", value=f"{ping_badge} `{latency_ms}ms` ({ping_quality})", inline=True)
-        fallback.add_field(name="Active Guilds", value=f"{Emojis.SETTINGS} `{len(self.bot.guilds)}`", inline=True)
-        fallback.add_field(name="Engine", value=f"{Emojis.CPU} discord.py v{discord.__version__}", inline=True)
+        fallback.add_field(name="Gateway Latency", value=f"{ping_badge} `{latency_ms}ms` ({ping_quality})", inline=False)
+        fallback.add_field(name="Support Bot", value=f"{Emojis.CONNECTION_GOOD} Operational", inline=True)
         fallback.add_field(name="Ticket Bot", value=f"{ticket_emoji} {ticket_status}", inline=True)
         fallback.add_field(name="Voice Bot", value=f"{voice_emoji} {voice_status}", inline=True)
 
