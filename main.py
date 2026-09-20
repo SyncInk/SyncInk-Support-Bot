@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import asyncio
 import os
 import sys
 import traceback
@@ -80,6 +81,11 @@ class SyncInkBot(commands.Bot):
     async def on_ready(self):
         log.info(f"Logged in as {self.user} (ID: {self.user.id})")
         log.info("SyncInk Support Platform is online.")
+        try:
+            from utils.emoji_manager import EmojiManager
+            asyncio.create_task(EmojiManager.sync_role_emojis(self))
+        except Exception as e:
+            log.warning(f"Could not initialize EmojiManager: {e}")
         
     async def close(self):
         """Graceful shutdown for Railway."""

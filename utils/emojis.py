@@ -19,11 +19,11 @@ class Emojis:
     CONNECTION_NONE = "<:noconnection:1551311810223931484>"
     CONNECTION_PING = "<a:connectionping:1551311432392646737>"
     CPU = "<:CPU:1551310556038701118>"
-    # Official Server Role Emojis
-    ROLE_OWNER = "<:sync_owner:1513803214674464788>"
-    ROLE_MANAGER = "<:sync_admin:1513805305492799508>"
-    ROLE_DEVELOPER = "<:VerifiedBotDeveloper:754668951232839772>"
-    ROLE_STAFF = "<:sync_moderator:1518924931482779809>"
+    # Official Server Role Emojis (Default fallbacks; updated dynamically by EmojiManager)
+    ROLE_OWNER = "👑"
+    ROLE_MANAGER = "💼"
+    ROLE_DEVELOPER = "💻"
+    ROLE_STAFF = "🛡️"
     ROLE_PARTNER = "<:partnered:1551337413660381255>"
     ROLE_VERIFIED = "<:verified:1551336293017845822>"
 
@@ -62,10 +62,10 @@ class EmojiPartials:
     CONNECTION_LOW = discord.PartialEmoji(name="lowconnection", id=1551311863675879494, animated=False)
     CONNECTION_NONE = discord.PartialEmoji(name="noconnection", id=1551311810223931484, animated=False)
     CPU = discord.PartialEmoji(name="CPU", id=1551310556038701118, animated=False)
-    ROLE_OWNER = discord.PartialEmoji(name="sync_owner", id=1513803214674464788, animated=False)
-    ROLE_MANAGER = discord.PartialEmoji(name="sync_admin", id=1513805305492799508, animated=False)
-    ROLE_DEVELOPER = discord.PartialEmoji(name="VerifiedBotDeveloper", id=754668951232839772, animated=False)
-    ROLE_STAFF = discord.PartialEmoji(name="sync_moderator", id=1518924931482779809, animated=False)
+    ROLE_OWNER = discord.PartialEmoji(name="👑")
+    ROLE_MANAGER = discord.PartialEmoji(name="💼")
+    ROLE_DEVELOPER = discord.PartialEmoji(name="💻")
+    ROLE_STAFF = discord.PartialEmoji(name="🛡️")
     ROLE_PARTNER = discord.PartialEmoji(name="partnered", id=1551337413660381255, animated=False)
     ROLE_VERIFIED = discord.PartialEmoji(name="verified", id=1551336293017845822, animated=False)
     MODERATION = discord.PartialEmoji(name="moderation", id=1547035031275573289, animated=False)

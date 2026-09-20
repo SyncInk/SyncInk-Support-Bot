@@ -10,6 +10,7 @@ from collections import defaultdict, deque
 from typing import Optional, List, Tuple
 from utils.logger import log
 from utils.emojis import Emojis
+from utils.emoji_manager import EmojiManager
 from utils.ui import SyncInkEmbed, SuccessEmbed, BRAND_ACCENT, ERROR_COLOR, WARNING_COLOR
 from services.web_search_service import WebSearchService
 from services.settings_service import SettingsService
@@ -108,14 +109,14 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "17. Ask AI Channel: <#1544361954574073916> (Dedicated channel for AI questions)",
         "--- OFFICIAL SYNCINK SERVER ROLES (CATEGORY-WISE) ---",
         "• Leadership & Administration:",
-        "  - Owner: <:sync_owner:1513803214674464788> <@&1520856232460550194> (Server Owner & Creator of SyncInk)",
-        "  - Manager: <:sync_admin:1513805305492799508> <@&1520854378192572546> (Management leadership overseeing server operations and team members)",
+        f"  - Owner: {EmojiManager.get_role_emoji(guild, 'owner')} <@&1520856232460550194> (Server Owner & Creator of SyncInk)",
+        f"  - Manager: {EmojiManager.get_role_emoji(guild, 'manager')} <@&1520854378192572546> (Management leadership overseeing server operations and team members)",
         "• Development & Support Team:",
-        "  - Developer: <:VerifiedBotDeveloper:754668951232839772> <@&1531882215795855511> (Technical developers building SyncInk bots & platforms; apply in <#1539301185423413398>)",
-        "  - Staff: <:sync_moderator:1518924931482779809> <@&1520466655321522486> (Support and moderation staff keeping community safe; apply in <#1539319001673367604>)",
+        f"  - Developer: {EmojiManager.get_role_emoji(guild, 'developer')} <@&1531882215795855511> (Technical developers building SyncInk bots & platforms; apply in <#1539301185423413398>)",
+        f"  - Staff: {EmojiManager.get_role_emoji(guild, 'staff')} <@&1520466655321522486> (Support and moderation staff keeping community safe; apply in <#1539319001673367604>)",
         "• Community & Partnerships:",
-        "  - Partner: <:partnered:1551337413660381255> <@&1551337053185114242> (Official server partners and affiliated communities)",
-        "  - Verified: <:verified:1551336293017845822> <@&1520871574088056952> (Community members who completed verification checkpoint in <#1520748219100041348>)"
+        f"  - Partner: {EmojiManager.get_role_emoji(guild, 'partner')} <@&1551337053185114242> (Official server partners and affiliated communities)",
+        f"  - Verified: {EmojiManager.get_role_emoji(guild, 'verified')} <@&1520871574088056952> (Community members who completed verification checkpoint in <#1520748219100041348>)"
     ]
     return "\n".join(lines)
 
@@ -255,62 +256,76 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
     # 15. Server Roles & Specific Role Inquiries
     if any(k in p for k in (
         "what roles", "what are the roles", "server roles", "roles list", "list of roles",
-        "list roles", "tell me roles", "show roles", "who runs the server", "leadership roles", "roles here"
-    )):
+        "list roles", "tell me roles", "show roles", "who runs the server", "leadership roles",
+        "roles here", "what are roles", "roles of the server", "server role structure"
+    )) or p == "roles":
+        owner_emoji = EmojiManager.get_role_emoji(guild, "owner")
+        manager_emoji = EmojiManager.get_role_emoji(guild, "manager")
+        dev_emoji = EmojiManager.get_role_emoji(guild, "developer")
+        staff_emoji = EmojiManager.get_role_emoji(guild, "staff")
+        partner_emoji = EmojiManager.get_role_emoji(guild, "partner")
+        verified_emoji = EmojiManager.get_role_emoji(guild, "verified")
+
         return (
             "Here is the official server role structure and responsibilities:\n\n"
             "**👑 Leadership & Administration**\n"
-            "• <:sync_owner:1513803214674464788> **Owner**: <@&1520856232460550194>\n"
+            f"• {owner_emoji} **Owner**: <@&1520856232460550194>\n"
             "╰ Founder & lead owner of the SyncInk platform and server.\n"
-            "• <:sync_admin:1513805305492799508> **Manager**: <@&1520854378192572546>\n"
+            f"• {manager_emoji} **Manager**: <@&1520854378192572546>\n"
             "╰ Executive management team overseeing community operations, moderation, and team coordination.\n\n"
             "**🛠️ Development & Support Team**\n"
-            "• <:VerifiedBotDeveloper:754668951232839772> **Developer**: <@&1531882215795855511>\n"
+            f"• {dev_emoji} **Developer**: <@&1531882215795855511>\n"
             "╰ Software engineers creating and maintaining SyncInk bots and platforms. *(Apply in <#1539301185423413398>)*\n"
-            "• <:sync_moderator:1518924931482779809> **Staff**: <@&1520466655321522486>\n"
+            f"• {staff_emoji} **Staff**: <@&1520466655321522486>\n"
             "╰ Dedicated support & moderation team assisting members and keeping the community safe. *(Apply in <#1539319001673367604>)*\n\n"
             "**🌟 Community & Partnerships**\n"
-            "• <:partnered:1551337413660381255> **Partner**: <@&1551337053185114242>\n"
+            f"• {partner_emoji} **Partner**: <@&1551337053185114242>\n"
             "╰ Official community partners and affiliated platform collaborations.\n"
-            "• <:verified:1551336293017845822> **Verified**: <@&1520871574088056952>\n"
+            f"• {verified_emoji} **Verified**: <@&1520871574088056952>\n"
             "╰ Community members who completed verification in <#1520748219100041348>."
         )
 
     if any(k in p for k in ("staff role", "who are staff", "who is staff", "staff team", "moderator role", "mod role")):
+        staff_emoji = EmojiManager.get_role_emoji(guild, "staff")
         return (
-            "• <:sync_moderator:1518924931482779809> **Staff**: <@&1520466655321522486>\n"
+            f"• {staff_emoji} **Staff**: <@&1520466655321522486>\n"
             "╰ Dedicated support and moderation team assisting members and enforcing server rules.\n\n"
             "👉 **Want to apply?** Check requirements in <#1539319001673367604> and submit your application!"
         )
 
     if any(k in p for k in ("manager role", "who is manager", "who are managers", "management role", "who manages")):
+        manager_emoji = EmojiManager.get_role_emoji(guild, "manager")
         return (
-            "• <:sync_admin:1513805305492799508> **Manager**: <@&1520854378192572546>\n"
+            f"• {manager_emoji} **Manager**: <@&1520854378192572546>\n"
             "╰ Executive management leadership overseeing server administration, community operations, and team coordination."
         )
 
     if any(k in p for k in ("developer role", "dev role", "who is developer", "who are developers", "dev team")):
+        dev_emoji = EmojiManager.get_role_emoji(guild, "developer")
         return (
-            "• <:VerifiedBotDeveloper:754668951232839772> **Developer**: <@&1531882215795855511>\n"
+            f"• {dev_emoji} **Developer**: <@&1531882215795855511>\n"
             "╰ Software engineers and creators building the SyncInk bots and platform tools.\n\n"
             "👉 **Want to apply?** Check requirements in <#1539301185423413398> and submit the form at [Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer)!"
         )
 
     if any(k in p for k in ("owner role", "who is owner", "who owns the server", "founder role", "server owner")):
+        owner_emoji = EmojiManager.get_role_emoji(guild, "owner")
         return (
-            "• <:sync_owner:1513803214674464788> **Owner**: <@&1520856232460550194>\n"
+            f"• {owner_emoji} **Owner**: <@&1520856232460550194>\n"
             "╰ Founder and lead owner of the SyncInk platform and server."
         )
 
     if any(k in p for k in ("partner role", "partnered role", "who is partner", "how to get partner", "partnership")):
+        partner_emoji = EmojiManager.get_role_emoji(guild, "partner")
         return (
-            "• <:partnered:1551337413660381255> **Partner**: <@&1551337053185114242>\n"
+            f"• {partner_emoji} **Partner**: <@&1551337053185114242>\n"
             "╰ Granted to official server partners and affiliated communities collaborating with SyncInk."
         )
 
     if any(k in p for k in ("verified role", "verified members role", "member role", "how to get member role", "how to get verified role", "verify role")):
+        verified_emoji = EmojiManager.get_role_emoji(guild, "verified")
         return (
-            "• <:verified:1551336293017845822> **Verified**: <@&1520871574088056952>\n"
+            f"• {verified_emoji} **Verified**: <@&1520871574088056952>\n"
             "╰ Granted to all community members upon verifying at the security checkpoint.\n\n"
             "👉 Complete verification in <#1520748219100041348> to unlock server access!"
         )
@@ -728,6 +743,13 @@ class ChatGPT(commands.Cog):
 
         # 4. Assemble System Prompt
         guild_name = guild.name if guild else "the server"
+        owner_emoji = EmojiManager.get_role_emoji(guild, "owner")
+        manager_emoji = EmojiManager.get_role_emoji(guild, "manager")
+        dev_emoji = EmojiManager.get_role_emoji(guild, "developer")
+        staff_emoji = EmojiManager.get_role_emoji(guild, "staff")
+        partner_emoji = EmojiManager.get_role_emoji(guild, "partner")
+        verified_emoji = EmojiManager.get_role_emoji(guild, "verified")
+
         system_prompt = (
             f"You are SyncInk Assistant, the official AI helper and server guide for {guild_name}.\n\n"
             "CRITICAL GUIDELINES:\n"
@@ -746,14 +768,14 @@ class ChatGPT(commands.Cog):
             "5. If real-time internet search results are provided below, prioritize them to provide up-to-date and accurate information.\n"
             "6. ROLES & PERMISSIONS: When explaining server roles, ALWAYS present them category-wise with custom emojis and <@&role_id>:\n"
             "   • Leadership & Administration:\n"
-            "     - Owner: <:sync_owner:1513803214674464788> <@&1520856232460550194> (Server Owner & SyncInk Founder)\n"
-            "     - Manager: <:sync_admin:1513805305492799508> <@&1520854378192572546> (Management & Operations)\n"
+            f"     - Owner: {owner_emoji} <@&1520856232460550194> (Server Owner & SyncInk Founder)\n"
+            f"     - Manager: {manager_emoji} <@&1520854378192572546> (Management & Operations)\n"
             "   • Development & Support Team:\n"
-            "     - Developer: <:VerifiedBotDeveloper:754668951232839772> <@&1531882215795855511> (Apply in <#1539301185423413398>)\n"
-            "     - Staff: <:sync_moderator:1518924931482779809> <@&1520466655321522486> (Apply in <#1539319001673367604>)\n"
+            f"     - Developer: {dev_emoji} <@&1531882215795855511> (Apply in <#1539301185423413398>)\n"
+            f"     - Staff: {staff_emoji} <@&1520466655321522486> (Apply in <#1539319001673367604>)\n"
             "   • Community & Partnerships:\n"
-            "     - Partner: <:partnered:1551337413660381255> <@&1551337053185114242> (Partnered servers & collabs)\n"
-            "     - Verified: <:verified:1551336293017845822> <@&1520871574088056952> (Verify in <#1520748219100041348>)\n"
+            f"     - Partner: {partner_emoji} <@&1551337053185114242> (Partnered servers & collabs)\n"
+            f"     - Verified: {verified_emoji} <@&1520871574088056952> (Verify in <#1520748219100041348>)\n"
             "   Always format role listings neatly in category groups so they are clean, readable, and never look messy.\n\n"
         )
         if server_context:
