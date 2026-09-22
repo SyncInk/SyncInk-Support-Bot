@@ -1,4 +1,5 @@
 import discord
+import asyncio
 from discord.ext import commands
 from discord import app_commands
 from typing import Optional
@@ -8,11 +9,12 @@ from services.mod_service import ModService
 from utils.logger import log
 
 try:
-    from services.stats_image_service import StatsImageService, PILLOW_AVAILABLE
+    from services.stats_image_service import StatsImageService, PILLOW_AVAILABLE, format_relative_time
 except Exception as e:
     log.warning(f"StatsImageService could not be initialized: {e}")
     StatsImageService = None
     PILLOW_AVAILABLE = False
+    format_relative_time = lambda dt: "recently"
 
 TICKET_BOT_ID = 1513075101992747158
 VOICE_BOT_ID = 1516578887109181520
@@ -77,8 +79,12 @@ class Stats(commands.Cog):
             await ctx.send("This command can only be used within a server.")
             return
 
+        # Attempt on-demand Pillow install if missing
+        if StatsImageService is not None and not getattr(StatsImageService, 'PILLOW_AVAILABLE', False):
+            await asyncio.to_thread(StatsImageService.ensure_pillow_installed)
+
         buf = None
-        if PILLOW_AVAILABLE and StatsImageService is not None:
+        if StatsImageService is not None:
             try:
                 buf = await StatsImageService.generate_server_stats_card(ctx.guild)
             except Exception as e:
@@ -93,10 +99,11 @@ class Stats(commands.Cog):
             except Exception as e:
                 log.error(f"Failed to send server stats image file: {e}")
 
-        # Rich Fallback Embed (guaranteed to always display even if Pillow is uninstalled or file upload fails)
+        # Fallback Embed (shows full server creation time and counts)
         try:
             member_count = ctx.guild.member_count or len(ctx.guild.members)
             online_count = sum(1 for m in ctx.guild.members if getattr(m, 'status', None) and getattr(m.status, 'name', str(m.status)) in ('online', 'idle', 'dnd'))
+            created_ts = int(ctx.guild.created_at.timestamp())
             embed = SyncInkEmbed(
                 title=f"📊 Server Analytics — {ctx.guild.name}",
                 color=BRAND_ACCENT
@@ -107,11 +114,14 @@ class Stats(commands.Cog):
                 except Exception:
                     pass
             embed.add_field(name="Members", value=f"• Total: `{member_count:,}`\n• Online: `{online_count:,}`", inline=True)
-            embed.add_field(name="Created", value=f"<t:{int(ctx.guild.created_at.timestamp())}:R>", inline=True)
+            embed.add_field(name="Created", value=f"<t:{created_ts}:D>\n(<t:{created_ts}:R>)", inline=True)
             text_cnt = len(ctx.guild.text_channels) if hasattr(ctx.guild, 'text_channels') else 0
             voice_cnt = len(ctx.guild.voice_channels) if hasattr(ctx.guild, 'voice_channels') else 0
             embed.add_field(name="Channels", value=f"• Text: `{text_cnt}`\n• Voice: `{voice_cnt}`", inline=True)
-            embed.set_footer(text="SyncInk Analytics • Server Telemetry Report", icon_url="https://files.catbox.moe/74l9su.png")
+            embed.set_footer(
+                text="SyncInk Analytics • Run '?installpillow' or 'pkg install python-pillow' in Termux for HD images",
+                icon_url="https://files.catbox.moe/74l9su.png"
+            )
             await ctx.send(embed=embed)
         except Exception as e:
             log.error(f"Error sending fallback server stats embed: {e}")
@@ -125,6 +135,10 @@ class Stats(commands.Cog):
             await ctx.send("This command can only be used within a server.")
             return
 
+        # Attempt on-demand Pillow install if missing
+        if StatsImageService is not None and not getattr(StatsImageService, 'PILLOW_AVAILABLE', False):
+            await asyncio.to_thread(StatsImageService.ensure_pillow_installed)
+
         buf = None
         mod_counts = {"WARN": 0, "TIMEOUT": 0, "JAIL": 0}
         try:
@@ -132,7 +146,7 @@ class Stats(commands.Cog):
         except Exception as e:
             log.warning(f"Could not fetch user mod cases: {e}")
 
-        if PILLOW_AVAILABLE and StatsImageService is not None:
+        if StatsImageService is not None:
             try:
                 buf = await StatsImageService.generate_user_stats_card(target, mod_counts)
             except Exception as e:
@@ -147,7 +161,7 @@ class Stats(commands.Cog):
             except Exception as e:
                 log.error(f"Failed to send user stats image file: {e}")
 
-        # Rich Fallback Embed
+        # Fallback Embed with comprehensive Account Creation Time (ac time)
         try:
             warn_cnt = mod_counts.get("WARN", 0)
             timeout_cnt = mod_counts.get("TIMEOUT", 0)
@@ -164,12 +178,21 @@ class Stats(commands.Cog):
                 pass
             embed.add_field(name="Disciplinary Standing", value="`Clean Record`" if total_inf == 0 else f"`{total_inf} Active Cases`", inline=True)
             embed.add_field(name="Security Infractions", value=f"• Warns: `{warn_cnt}`\n• Timeouts: `{timeout_cnt}`\n• Jails: `{jail_cnt}`", inline=True)
+            
+            created_ts = int(target.created_at.timestamp())
             joined_str = f"<t:{int(target.joined_at.timestamp())}:R>" if target.joined_at else "Unknown"
-            created_str = f"<t:{int(target.created_at.timestamp())}:R>"
-            embed.add_field(name="Account Details", value=f"• Joined: {joined_str}\n• Created: {created_str}", inline=False)
+            embed.add_field(
+                name="Account Details (ac time)", 
+                value=f"• **Created (ac time):** <t:{created_ts}:D> (<t:{created_ts}:R>)\n• **Joined Server:** {joined_str}", 
+                inline=False
+            )
+            
             top_role = target.top_role.name if target.top_role.name != "@everyone" else "Member"
             embed.add_field(name="Roles & Hierarchy", value=f"• Top Role: `{top_role}`\n• Total Roles: `{len(target.roles) - 1}`", inline=False)
-            embed.set_footer(text="SyncInk Analytics • Member Telemetry Report", icon_url="https://files.catbox.moe/74l9su.png")
+            embed.set_footer(
+                text="SyncInk Analytics • Run '?installpillow' or 'pkg install python-pillow' in Termux for HD images",
+                icon_url="https://files.catbox.moe/74l9su.png"
+            )
             await ctx.send(embed=embed)
         except Exception as e:
             log.error(f"Error sending fallback user stats embed: {e}")
@@ -205,7 +228,7 @@ class Stats(commands.Cog):
 
         await interaction.response.defer()
         buf = None
-        if PILLOW_AVAILABLE and StatsImageService is not None:
+        if StatsImageService is not None:
             try:
                 buf = await StatsImageService.generate_server_stats_card(interaction.guild)
             except Exception as e:
@@ -219,11 +242,11 @@ class Stats(commands.Cog):
             except Exception as e:
                 log.error(f"Error sending file in slash_serverstats: {e}")
 
-        # Fallback Embed for slash command
         member_count = interaction.guild.member_count or 1
+        created_ts = int(interaction.guild.created_at.timestamp())
         embed = SyncInkEmbed(title=f"📊 Server Analytics — {interaction.guild.name}")
         embed.add_field(name="Members", value=f"`{member_count:,}`", inline=True)
-        embed.add_field(name="Created", value=f"<t:{int(interaction.guild.created_at.timestamp())}:R>", inline=True)
+        embed.add_field(name="Created", value=f"<t:{created_ts}:D> (<t:{created_ts}:R>)", inline=True)
         await interaction.followup.send(embed=embed)
 
     @app_commands.command(name="userstats", description="Generate a visual analytics dashboard for a user.")
@@ -241,7 +264,7 @@ class Stats(commands.Cog):
         except Exception:
             pass
 
-        if PILLOW_AVAILABLE and StatsImageService is not None:
+        if StatsImageService is not None:
             try:
                 buf = await StatsImageService.generate_user_stats_card(target, mod_counts)
             except Exception as e:
@@ -255,9 +278,10 @@ class Stats(commands.Cog):
             except Exception as e:
                 log.error(f"Error sending file in slash_userstats: {e}")
 
-        # Fallback Embed for slash command
+        created_ts = int(target.created_at.timestamp())
         embed = SyncInkEmbed(title=f"👤 Member Analytics — {target.display_name}")
         embed.add_field(name="Account", value=f"ID: `{target.id}`", inline=True)
+        embed.add_field(name="Created (ac time)", value=f"<t:{created_ts}:D> (<t:{created_ts}:R>)", inline=False)
         await interaction.followup.send(embed=embed)
 
 async def setup(bot: commands.Bot):

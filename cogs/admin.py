@@ -244,6 +244,17 @@ class Admin(commands.Cog):
             log.error(f"Manual slash update failed: {e}")
             await interaction.followup.send(f"❌ **Failed to update from GitHub:** `{e}`")
 
+    @commands.command(name="installpillow", aliases=["pillow", "fixpillow"], description="Install python-pillow package on Termux for visual stats graphics.")
+    @commands.has_permissions(administrator=True)
+    async def install_pillow_cmd(self, ctx: commands.Context):
+        msg = await ctx.send("⏳ **Checking and installing Pillow graphics library...**")
+        from services.stats_image_service import ensure_pillow_installed
+        success = await asyncio.to_thread(ensure_pillow_installed)
+        if success:
+            await msg.edit(content="✅ **Pillow is installed and operational!** Visual stats image cards (`?serverstats` & `?userstats`) are now active.")
+        else:
+            await msg.edit(content="❌ **Auto-install could not complete.** Please run `pkg install -y python-pillow` directly in your Termux app.")
+
     @commands.command(name="create_button_role", description="Generate a persistent role-toggle button.")
     @commands.has_permissions(administrator=True)
     async def create_button_role(self, ctx: commands.Context, role: discord.Role, *, message: str = "Click the button below to toggle role:"):
