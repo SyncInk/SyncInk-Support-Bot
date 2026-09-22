@@ -97,20 +97,16 @@ class Moderation(commands.Cog):
         # 3. Log case to database
         case_id = await ModService.log_case(ctx.guild.id, member.id, ctx.author.id, "WARN", reason)
 
-        # 4. DM the member with warning message & moderator stated reason
+        # 4. DM the member with warning message & moderator stated reason (confidential)
         from utils.ui import send_warn_dm
-        dm_delivered = await send_warn_dm(member, reason=reason, server_name=ctx.guild.name, moderator=ctx.author.name)
+        dm_delivered = await send_warn_dm(member, reason=reason, server_name=ctx.guild.name)
 
-        # 5. In-channel warning notification pinging the warned member
+        # 5. In-channel warning notification pinging the warned member (simple & direct)
         warn_embed = SyncInkEmbed(
-            title=f"{Emojis.WARNING} **Official Warning Issued**",
+            title=f"{Emojis.WARNING} **Warning**",
             color=WARNING_COLOR
         )
-        warn_embed.description = (
-            f"{member.mention}, you have received an official warning from the moderation team.\n\n"
-            f"**Reason:** {reason}\n\n"
-            f"Please adhere to the server rules in <#1520460587522330634> to avoid further actions."
-        )
+        warn_embed.description = f"• **Reason:** {reason}"
         footer_text = f"Case ID: {case_id}"
         if not dm_delivered:
             footer_text += " • ⚠️ Notice could not be delivered via DM (DMs disabled)"
@@ -118,8 +114,8 @@ class Moderation(commands.Cog):
 
         await ctx.send(content=member.mention, embed=warn_embed)
         
-        # 6. Dispatch log embed to moderation log channel (matching exact user screenshot format)
-        log_embed = SyncInkEmbed(title=f"❗ Member Warned", color=WARNING_COLOR)
+        # 6. Dispatch log embed to moderation log channel with animated syncwarning emoji
+        log_embed = SyncInkEmbed(title=f"{Emojis.WARNING} **Member Warned**", color=WARNING_COLOR)
         log_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
         log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
         log_embed.add_field(name="Reason", value=reason, inline=False)

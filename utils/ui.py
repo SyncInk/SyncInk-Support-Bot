@@ -316,7 +316,7 @@ async def send_mute_dm(member: discord.Member, reason: str = "No reason provided
 _recent_warn_dms = {}
 
 async def send_warn_dm(member: discord.Member, reason: str = "No reason provided", server_name: str = None, moderator: str = None) -> bool:
-    """Sends a standardized official warning notification DM to a member. Returns True if successfully sent."""
+    """Sends a standardized official warning notification DM to a member (moderator identity kept confidential). Returns True if successfully sent."""
     now = time.time()
     last_sent = _recent_warn_dms.get(member.id, 0)
     if now - last_sent < 3:
@@ -327,14 +327,13 @@ async def send_warn_dm(member: discord.Member, reason: str = "No reason provided
     clean_reason = reason.strip() if reason else "No reason provided"
 
     embed = SyncInkEmbed(
-        title=f"{Emojis.WARNING} Official Server Warning",
+        title=f"{Emojis.WARNING} Official Warning",
         color=WARNING_COLOR
     )
-    embed.description = f"You have received a formal warning in **{s_name}**."
-    embed.add_field(name="Reason", value=clean_reason, inline=False)
-    if moderator:
-        embed.add_field(name="Moderator", value=moderator, inline=True)
-    embed.add_field(name="Server Guidelines", value="Please review our server rules in <#1520460587522330634> to avoid further moderation actions.", inline=False)
+    embed.description = (
+        f"You have received an official warning in **{s_name}**.\n\n"
+        f"• **Reason:** {clean_reason}"
+    )
 
     try:
         await member.send(embed=embed)
