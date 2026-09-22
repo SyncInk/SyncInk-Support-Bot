@@ -860,14 +860,26 @@ class Automod(commands.Cog):
     @commands.command(name="jail", description="Manually jail/quarantine a user, restricting their server access.")
     @commands.has_permissions(moderate_members=True)
     async def jail(self, ctx: commands.Context, member: discord.Member, *args):
-        from utils.permissions import require_staff_channel
-        if not await require_staff_channel(ctx):
-            return
+        try:
+            await ctx.message.delete()
+        except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+            pass
 
-        # Role hierarchy check
+        from utils.ui import ErrorEmbed, SyncInkEmbed, WARNING_COLOR
+        from utils.emojis import Emojis
+
+        # Safety & role hierarchy checks
+        if member.id == ctx.guild.owner_id or await self.bot.is_owner(member):
+            err = await ctx.send(embed=ErrorEmbed("Cannot moderate the server owner."))
+            await err.delete(delay=5)
+            return
+        if member.id == self.bot.user.id or member.id == ctx.author.id:
+            err = await ctx.send(embed=ErrorEmbed("Cannot perform moderation actions against this member."))
+            await err.delete(delay=5)
+            return
         if member.top_role >= ctx.author.top_role and ctx.author.id != ctx.guild.owner_id:
-            from utils.ui import ErrorEmbed
-            await ctx.send(embed=ErrorEmbed("Cannot moderate a member with equal or higher role hierarchy."))
+            err = await ctx.send(embed=ErrorEmbed("Cannot moderate a member with equal or higher role hierarchy."))
+            await err.delete(delay=5)
             return
 
         duration_mins = None
@@ -881,31 +893,100 @@ class Automod(commands.Cog):
                 reason = " ".join(args)
 
         try:
-            await AutomodService.jail_user(ctx.guild, member, ctx.author, reason, duration_mins)
-            from utils.ui import SuccessEmbed
-            await ctx.send(embed=SuccessEmbed(f"Successfully quarantined {member.mention}."))
+            case_id = await AutomodService.jail_user(ctx.guild, member, ctx.author, reason, duration_mins)
+            
+            # In-channel notification pinging the warned/jailed member
+            duration_str = f" for **{duration_mins} minutes**" if duration_mins else ""
+            jail_embed = SyncInkEmbed(
+                title=f"{Emojis.LOCK} **Member Quarantined / Jailed**",
+                color=WARNING_COLOR
+            )
+            jail_embed.description = (
+                f"{member.mention} has been isolated and placed into quarantine{duration_str}.\n\n"
+                f"**Reason:** {reason}"
+            )
+            jail_embed.set_footer(text=f"Case ID: {case_id}")
+            await ctx.send(content=member.mention, embed=jail_embed)
+
+            # Dispatch audit log embed to moderation log channel
+            log_embed = SyncInkEmbed(title=f"🔒 Member Quarantined", color=WARNING_COLOR)
+            log_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
+            log_embed.add_field(name="Duration", value=f"{duration_mins} minutes" if duration_mins else "Indefinite", inline=True)
+            log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
+            log_embed.add_field(name="Reason", value=reason, inline=False)
+            log_embed.set_footer(text=f"Case ID: {case_id} • Today at {discord.utils.utcnow().strftime('%H:%M')}")
+            log_embed.timestamp = discord.utils.utcnow()
+
+            settings = await SettingsService.get_guild_settings(ctx.guild.id)
+            log_chan_id = settings.get("log_channel_moderation") or settings.get("automod_log_channel_id") or settings.get("log_channel_id")
+            if log_chan_id:
+                chan = ctx.guild.get_channel(int(log_chan_id))
+                if not chan:
+                    try:
+                        chan = await ctx.guild.fetch_channel(int(log_chan_id))
+                    except Exception:
+                        chan = None
+                if chan:
+                    try:
+                        await chan.send(embed=log_embed)
+                    except discord.Forbidden:
+                        pass
+
         except Exception as e:
-            from utils.ui import ErrorEmbed
-            await ctx.send(embed=ErrorEmbed(description="Failed to quarantine member.", resolution=str(e)))
+            err = await ctx.send(embed=ErrorEmbed(description="Failed to quarantine member.", resolution=str(e)))
+            await err.delete(delay=6)
 
     @commands.command(name="unjail", description="Release a user from quarantine/jail and restore their roles.")
     @commands.has_permissions(moderate_members=True)
     async def unjail(self, ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
-        from utils.permissions import require_staff_channel
-        if not await require_staff_channel(ctx):
-            return
+        try:
+            await ctx.message.delete()
+        except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+            pass
+
+        from utils.ui import ErrorEmbed, SyncInkEmbed, SUCCESS_COLOR
+        from utils.emojis import Emojis
 
         try:
             await AutomodService.unjail_user(ctx.guild, member, ctx.author, reason)
-            from utils.ui import SuccessEmbed
-            await ctx.send(embed=SuccessEmbed(f"Successfully released {member.mention} from quarantine."))
-        except Exception as e:
-            from utils.ui import ErrorEmbed
-            await ctx.send(embed=ErrorEmbed(description="Failed to release member.", resolution=str(e)))
+            
+            unjail_embed = SyncInkEmbed(
+                title=f"{Emojis.APPROVED} **Member Unjailed**",
+                color=SUCCESS_COLOR
+            )
+            unjail_embed.description = f"{member.mention} has been released from quarantine isolation.\n\n**Reason:** {reason}"
+            await ctx.send(content=member.mention, embed=unjail_embed)
 
-    @commands.command(name="history", description="Get a text file of a user's last 30 messages.")
+            # Dispatch audit log embed to moderation log channel
+            log_embed = SyncInkEmbed(title=f"🔓 Member Released from Jail", color=SUCCESS_COLOR)
+            log_embed.set_author(name=f"{member} ({member.id})", icon_url=member.display_avatar.url)
+            log_embed.add_field(name="Moderator", value=ctx.author.mention, inline=True)
+            log_embed.add_field(name="Reason", value=reason, inline=False)
+            log_embed.set_footer(text=f"SyncInk Moderation Logs • Today at {discord.utils.utcnow().strftime('%H:%M')}")
+            log_embed.timestamp = discord.utils.utcnow()
+
+            settings = await SettingsService.get_guild_settings(ctx.guild.id)
+            log_chan_id = settings.get("log_channel_moderation") or settings.get("automod_log_channel_id") or settings.get("log_channel_id")
+            if log_chan_id:
+                chan = ctx.guild.get_channel(int(log_chan_id))
+                if not chan:
+                    try:
+                        chan = await ctx.guild.fetch_channel(int(log_chan_id))
+                    except Exception:
+                        chan = None
+                if chan:
+                    try:
+                        await chan.send(embed=log_embed)
+                    except discord.Forbidden:
+                        pass
+
+        except Exception as e:
+            err = await ctx.send(embed=ErrorEmbed(description="Failed to release member.", resolution=str(e)))
+            await err.delete(delay=6)
+
+    @commands.command(name="chat_history", aliases=["message_history"], description="Get a text file of a user's last 30 messages.")
     @commands.has_permissions(moderate_members=True)
-    async def history(self, ctx: commands.Context, member: discord.Member):
+    async def chat_history(self, ctx: commands.Context, member: discord.Member):
         msgs = self.user_history.get(member.id, [])
         if not msgs:
             await ctx.send("No recent messages found for this user in memory.")
