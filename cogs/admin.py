@@ -77,6 +77,17 @@ class Admin(commands.Cog):
                 )
                 await proc_pull.communicate()
 
+                # Sync dependencies if new packages were introduced
+                try:
+                    proc_pip = await asyncio.create_subprocess_exec(
+                        sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--quiet",
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    await proc_pip.communicate()
+                except Exception as pip_err:
+                    log.warning(f"[AutoUpdater] pip install failed: {pip_err}")
+
                 # Get latest commit summary
                 proc_log = await asyncio.create_subprocess_exec(
                     "git", "log", "-1", "--pretty=format:%s",
@@ -142,6 +153,16 @@ class Admin(commands.Cog):
                 stderr=asyncio.subprocess.PIPE
             )
             await proc_pull.communicate()
+
+            try:
+                proc_pip = await asyncio.create_subprocess_exec(
+                    sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--quiet",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                await proc_pip.communicate()
+            except Exception:
+                pass
 
             proc_log = await asyncio.create_subprocess_exec(
                 "git", "log", "-1", "--pretty=format:%s (%h by %an)",

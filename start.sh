@@ -17,6 +17,14 @@ while true; do
     echo ""
     echo "[SyncInk] Checking GitHub for updates..."
     git pull origin main
+    echo "[SyncInk] Checking dependencies..."
+    if ! python -c "import PIL" >/dev/null 2>&1; then
+        echo "[SyncInk] Installing Pillow library..."
+        if command -v pkg >/dev/null 2>&1; then
+            pkg install -y python-pillow >/dev/null 2>&1 || true
+        fi
+        python -m pip install -r requirements.txt --quiet >/dev/null 2>&1 || true
+    fi
     echo "[SyncInk] Launching bot..."
     python main.py
     EXIT_CODE=$?
