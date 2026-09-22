@@ -94,7 +94,7 @@ class Stats(commands.Cog):
         if buf is not None:
             try:
                 file = discord.File(fp=buf, filename=f"serverstats_{ctx.guild.id}.png")
-                await ctx.send(file=file)
+                await ctx.send(content=ctx.author.mention, file=file)
                 return
             except Exception as e:
                 log.error(f"Failed to send server stats image file: {e}")
@@ -122,10 +122,10 @@ class Stats(commands.Cog):
                 text="SyncInk Analytics • Run '?installpillow' or 'pkg install python-pillow' in Termux for HD images",
                 icon_url="https://files.catbox.moe/74l9su.png"
             )
-            await ctx.send(embed=embed)
+            await ctx.send(content=ctx.author.mention, embed=embed)
         except Exception as e:
             log.error(f"Error sending fallback server stats embed: {e}")
-            await ctx.send(f"📊 **{ctx.guild.name}** has `{getattr(ctx.guild, 'member_count', 'unknown')}` members.")
+            await ctx.send(f"{ctx.author.mention} 📊 **{ctx.guild.name}** has `{getattr(ctx.guild, 'member_count', 'unknown')}` members.")
 
     @commands.command(name="userstats", aliases=["stats", "ustats"], description="Generate a visual analytics dashboard for a user.")
     async def userstats(self, ctx: commands.Context, *, member: Optional[discord.Member] = None):
@@ -156,7 +156,7 @@ class Stats(commands.Cog):
         if buf is not None:
             try:
                 file = discord.File(fp=buf, filename=f"userstats_{target.id}.png")
-                await ctx.send(file=file)
+                await ctx.send(content=ctx.author.mention, file=file)
                 return
             except Exception as e:
                 log.error(f"Failed to send user stats image file: {e}")
@@ -193,10 +193,10 @@ class Stats(commands.Cog):
                 text="SyncInk Analytics • Run '?installpillow' or 'pkg install python-pillow' in Termux for HD images",
                 icon_url="https://files.catbox.moe/74l9su.png"
             )
-            await ctx.send(embed=embed)
+            await ctx.send(content=ctx.author.mention, embed=embed)
         except Exception as e:
             log.error(f"Error sending fallback user stats embed: {e}")
-            await ctx.send(f"👤 **{target.display_name}** | ID: `{target.id}`")
+            await ctx.send(f"{ctx.author.mention} 👤 **{target.display_name}** | ID: `{target.id}`")
 
     @app_commands.command(name="ping", description="View bot latency and ecosystem connectivity.")
     async def slash_ping(self, interaction: discord.Interaction):
