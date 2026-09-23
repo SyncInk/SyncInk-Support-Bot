@@ -147,51 +147,65 @@ def resolve_greeting(prompt: str, guild: Optional[discord.Guild] = None) -> Opti
     return None
 
 TRUTH_QUESTIONS = [
-    "What is the most embarrassing thing you've ever typed in a Discord channel and instantly tried to delete? 🫣",
-    "If you could ban one person from Discord forever without anyone knowing it was you, who would it be? 🤐",
-    "What's a weird obsession or habit you have that none of your online friends know about? 🧐",
-    "Have you ever pretended to be AFK or offline just to avoid talking to someone in voice chat? 🤫",
-    "What is the worst video game you secretly spent way too many hours playing? 🎮",
-    "If your Discord search history was projected onto a giant screen, how cooked would you be from 1 to 10? 💀",
-    "What's the pettiest reason you've ever left a Discord server or unfriended someone? 😂",
-    "Have you ever blamed 'bad ping' or 'lag' when you simply choked in a game? 📶",
-    "What's one song on your playlist that you would never play out loud around other people? 🎶",
-    "If you had to trade places with any staff member in this server for 24 hours, who would it be and why? 🛡️"
+    "What is the most embarrassing thing you've ever typed in a Discord channel and instantly scrambled to delete?",
+    "If your Discord search history was projected onto a giant screen in this server, what would be the hardest thing to explain?",
+    "Have you ever pretended to be AFK, laggy, or offline just to avoid talking to someone in voice chat?",
+    "What is the pettiest reason you've ever left a Discord server, unfriended someone, or blocked a user?",
+    "What is the worst or most embarrassing video game you secretly spent hundreds of hours playing?",
+    "Have you ever blamed 'terrible ping' or 'server lag' when in reality you simply choked an easy play?",
+    "What is one song, artist, or playlist you love that you would never play out loud in a Discord voice channel?",
+    "If you had to trade roles with any staff member in this server for 24 hours, who would it be and why?",
+    "What is a controversial gaming or tech opinion you hold that you know almost everyone here would argue against?",
+    "Have you ever sent a screenshot of a Discord chat to another friend to talk about it behind someone's back?",
+    "What is the weirdest or most cringe username you ever used when you first created your online accounts?",
+    "What is the longest continuous gaming or Discord session you have ever pulled without leaving your chair?",
+    "If you could give yourself any custom role or permission on this server right now, what would it be?",
+    "What is one server rule that you secretly think is hilarious or unnecessary?",
+    "Have you ever accidentally sent a private message into a public server channel? What happened next?",
+    "If you had to pick one member in this server to survive a zombie apocalypse with, who would you choose?",
+    "What is the most expensive in-game cosmetic or microtransaction you deeply regret purchasing?",
+    "Have you ever stayed up past 4:00 AM talking about completely nonsensical topics in voice chat?",
+    "What is your biggest pet peeve when chatting with people on Discord?",
+    "If someone gave you 10,000 Discord Nitro credits right now, what is the first thing you would do with them?"
 ]
 
 DARE_CHALLENGES = [
-    "Change your Discord status to 'I ❤️ SyncInk' for the next 20 minutes! ✨",
-    "Send a random animal noise in <#1520461481857122485> (General Chat) with zero explanation! 🦆",
-    "Ping the person directly above you in chat and tell them they dropped their crown 👑!",
-    "Speak only in rhymes for your next 3 messages in General Chat! 🎤",
-    "React with 🤡 to the last message sent in General Chat! 🎪",
-    "Type out your username using only your elbow in chat! 🦾"
+    "Speak strictly in rhymes for your next 3 messages in General Chat (<#1520461481857122485>)!",
+    "Set your Discord custom status to 'Certified SyncInk Fan 👑' for the next 30 minutes!",
+    "Ping the person directly above you in General Chat and tell them their Discord avatar is legendary!",
+    "Send a random animal sound in General Chat (<#1520461481857122485>) and refuse to provide any context!",
+    "Type out your full Discord username using only your elbow or chin in chat!",
+    "React with 👑 to the last 5 messages sent in General Chat (<#1520461481857122485>)!",
+    "Write a short, dramatic 2-line poem about your favorite video game in chat!",
+    "Change your Discord nickname on this server to something hilarious chosen by the next person who speaks!",
+    "Use only GIF reactions for the next 10 minutes in General Chat!",
+    "Give an overly formal, dramatic review of the last food or snack you ate in chat!"
 ]
 
 def resolve_fun_interactive(prompt: str) -> Optional[str]:
     """Provides fun, interactive community games (Truth or Dare, playful prompts)."""
     p = prompt.lower().strip().rstrip("?!. ")
-    if p in ("truth", "ask truth", "give me a truth", "truth question", "t"):
+    if p in ("truth", "ask truth", "give me a truth", "truth question", "t", "give truth", "play truth"):
         q = random.choice(TRUTH_QUESTIONS)
         return (
             f"🎲 **Truth Time!** Here is your question:\n\n"
-            f"> **\"{q}\"**\n\n"
-            f"Be 100% honest! Tell us right here in chat. 😏"
+            f"> *\"{q}\"*\n\n"
+            f"Be 100% honest and drop your answer right here in chat!"
         )
-    if p in ("dare", "ask dare", "give me a dare", "dare challenge", "d"):
+    if p in ("dare", "ask dare", "give me a dare", "dare challenge", "d", "give dare", "play dare"):
         d = random.choice(DARE_CHALLENGES)
         return (
-            f"⚡ **Dare Accepted!** Here is your challenge:\n\n"
-            f"> **\"{d}\"**\n\n"
-            f"No backing out now! Let's see you do it. 🔥"
+            f"⚡ **Dare Challenge!** Here is your task:\n\n"
+            f"> *\"{d}\"*\n\n"
+            f"No backing out now! Let's see you do it."
         )
-    if p in ("truth or dare", "tod", "play truth or dare"):
+    if p in ("truth or dare", "tod", "play truth or dare", "truth and dare", "t or d"):
         return (
             f"🎮 **Truth or Dare!**\n\n"
             f"Choose your fate:\n"
-            f"• Type `?ai truth` if you have the guts to confess.\n"
+            f"• Type `?ai truth` if you're ready to confess an honest truth.\n"
             f"• Type `?ai dare` if you're ready for a challenge!\n\n"
-            f"What will it be? 👀"
+            f"What will it be?"
         )
     return None
 
@@ -814,32 +828,42 @@ class ChatGPT(commands.Cog):
         verified_emoji = EmojiManager.get_role_emoji(guild, "verified")
 
         system_prompt = (
-            f"You are **SyncInk Assistant**, the official AI companion and server assistant for {guild_name}.\n\n"
-            "CORE PERSONALITY & TONE (MAKE IT ENJOYABLE & LIVELY, BUT IN LIMIT):\n"
-            "1. **Engaging, Charismatic & Fun (In Limit)**: Be vibrant, witty, and fun to interact with! Use a modern, charismatic Discord persona with humor, enthusiasm, and personality. Have fun with the community, but strictly keep it 'in limit'—always respectful, clean (PG-13, strictly no NSFW, no toxicity, no offensive language), and never spammy or obnoxious.\n"
-            "2. **REPLY TO THE SPECIFIC QUESTION DIRECTLY**:\n"
-            "   - Always directly address the exact query or topic the user brings up.\n"
-            "   - If a user asks for 'TRUTH': They are playing Truth or Dare! Give them an entertaining, juicy (PG-13), fun truth question (e.g. funny Discord secrets, gaming confessions, silly fears) and invite them to answer!\n"
-            "   - If a user asks for 'DARE': Give them a hilarious, creative, server-friendly dare!\n"
-            "   - If a user asks general questions (gaming like GTA, coding, science, movies, jokes, advice, trivia): Provide an engaging, accurate, and interesting answer directly on that topic!\n"
-            "   - **NEVER** recite generic server navigation introductions ('I am SyncInk Assistant, here to navigate...') unless the user explicitly asks for server navigation or help with channels.\n"
-            "3. **IDENTITY & ORIGIN**: If (and ONLY if) someone explicitly asks who created or made you ('who made you', 'who created you', 'who is your developer'): proudly state that you were created and developed by the **SyncInk Development Team**! Do NOT inject this creator disclaimer into unrelated questions like 'TRUTH' or general conversation.\n"
-            "4. **SERVER GUIDELINES & NAVIGATION (WHEN ASKED)**:\n"
-            "   - When asked where to do something in {guild_name}, mention ONLY that specific channel with clickable Discord format (`<#channel_id>`).\n"
-            "   - To chat, hang out, or talk: Always mention General Chat (<#1520461481857122485>).\n"
-            "   - For technical support, bugs, or troubleshooting: Mention Support Chat (<#1520460808499363840>) or Support Ticket (<#1520460764937322566>).\n"
-            "   - Rules and guidelines: <#1520460587522330634>.\n"
-            "   - Do not dump the whole channel directory unless explicitly asked for 'all channels' or 'server directory'.\n"
-            "5. **ROLES PRESENTATION**: When explaining server roles, format them cleanly in category groups with custom emojis:\n"
-            "   • Leadership & Administration:\n"
-            f"     - Owner: {owner_emoji} <@&1520856232460550194> (Server Owner & SyncInk Founder)\n"
-            f"     - Manager: {manager_emoji} <@&1520854378192572546> (Management & Operations)\n"
-            "   • Development & Support Team:\n"
-            f"     - Developer: {dev_emoji} <@&1531882215795855511> (Apply in <#1539301185423413398>)\n"
-            f"     - Staff: {staff_emoji} <@&1520466655321522486> (Apply in <#1539319001673367604>)\n"
-            "   • Community & Partnerships:\n"
-            f"     - Partner: {partner_emoji} <@&1551337053185114242> (Partnered servers & collabs)\n"
-            f"     - Verified: {verified_emoji} <@&1520871574088056952> (Verify in <#1520748219100041348>)\n"
+            f"You are **SyncInk Assistant**, the official AI companion and intelligence assistant for {guild_name}.\n\n"
+            "CORE INSTRUCTIONS & ADAPTIVE INTELLIGENCE:\n"
+            "1. **ANSWER EVERY QUESTION DIRECTLY & ACCURATELY**:\n"
+            "   - You MUST answer every question asked by users. Never refuse, avoid, or deflect inquiries.\n"
+            "   - Whether the query is about programming, algorithms, software development, Discord bot design, server administration, mathematics, physics, science, gaming (e.g. GTA 6), movies, tech, history, life advice, or general trivia, deliver a high-quality, comprehensive, and accurate response directly addressing what was asked.\n"
+            "   - **NEVER** recite generic server navigation introductions ('I am SyncInk Assistant, here to navigate...') unless the user explicitly asks for server navigation or channel help.\n"
+            "2. **PROFESSIONAL TONE FOR PROFESSIONAL & TECHNICAL QUESTIONS**:\n"
+            "   - When answering professional, technical, educational, coding, or server administration inquiries:\n"
+            "     • Respond with high professionalism, executive clarity, and technical precision.\n"
+            "     • Use well-structured Markdown: clear headings, bullet points, numbered steps, and properly formatted code blocks with language syntax highlighting.\n"
+            "     • Be thorough, objective, and authoritative—do not use childish slang or inappropriate humor when addressing professional or technical topics.\n"
+            "3. **CHARISMATIC & ENJOYABLE TONE FOR CASUAL & COMMUNITY INQUIRIES**:\n"
+            "   - When engaging in casual conversation, banter, gaming chats, or community games (like Truth or Dare):\n"
+            "     • Be friendly, charismatic, and fun to interact with, keeping community energy high!\n"
+            "     • Strictly keep it 'in limit': always clean, respectful, PG-13, no toxicity, no offensive language, no spam.\n"
+            "4. **IDENTITY & ORIGIN**:\n"
+            "   - If (and ONLY if) someone explicitly asks who created, built, or developed you ('who made you', 'who created you', 'who is your developer'): proudly state that you were created and developed by the **SyncInk Development Team**!\n"
+            "   - Do NOT inject this creator disclaimer into unrelated questions or general discussions.\n"
+            "5. **SERVER GUIDELINES & NAVIGATION (ONLY WHEN EXPLICITLY ASKED)**:\n"
+            "   - When asked where to do something in {guild_name}, specify ONLY that relevant channel with clickable Discord format (`<#channel_id>`):\n"
+            "     • Casual chat & hanging out: General Chat (<#1520461481857122485>).\n"
+            "     • Technical support & assistance: Support Chat (<#1520460808499363840>) or Support Ticket (<#1520460764937322566>).\n"
+            "     • Rules and policies: <#1520460587522330634>.\n"
+            "     • Feature suggestions: <#1546548728721178724>.\n"
+            "   - Do not dump the entire server channel directory unless explicitly asked for 'all channels' or 'server directory'.\n"
+            "6. **ROLES PRESENTATION (WHEN ASKED)**:\n"
+            "   - When asked about server roles, format them cleanly in category groups with custom emojis:\n"
+            "     • Leadership & Administration:\n"
+            f"       - Owner: {owner_emoji} <@&1520856232460550194> (Server Owner & SyncInk Founder)\n"
+            f"       - Manager: {manager_emoji} <@&1520854378192572546> (Management & Operations)\n"
+            "     • Development & Support Team:\n"
+            f"       - Developer: {dev_emoji} <@&1531882215795855511> (Apply in <#1539301185423413398>)\n"
+            f"       - Staff: {staff_emoji} <@&1520466655321522486> (Apply in <#1539319001673367604>)\n"
+            "     • Community & Partnerships:\n"
+            f"       - Partner: {partner_emoji} <@&1551337053185114242> (Partnered servers & collabs)\n"
+            f"       - Verified: {verified_emoji} <@&1520871574088056952> (Verify in <#1520748219100041348>)\n"
         )
         if server_context:
             system_prompt += f"--- SERVER STRUCTURE & CHANNELS ---\n{server_context}\n\n"
