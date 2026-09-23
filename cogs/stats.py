@@ -44,12 +44,27 @@ class Stats(commands.Cog):
         latency_ms = round(self.bot.latency * 1000) if self.bot.latency else 0
         ping_badge, ping_quality = get_latency_badge(latency_ms)
 
-        # 2. REST API Roundtrip Latency
+        # 2. REST API Roundtrip Latency (True HTTP roundtrip to Discord API)
         rest_latency_ms = None
-        if message_created_at is not None:
-            if message_created_at.tzinfo is None:
-                message_created_at = message_created_at.replace(tzinfo=timezone.utc)
-            rest_latency_ms = max(1, round((datetime.now(timezone.utc) - message_created_at).total_seconds() * 1000))
+        try:
+            t0 = asyncio.get_event_loop().time()
+            await self.bot.http.get_gateway()
+            rest_latency_ms = max(5, round((asyncio.get_event_loop().time() - t0) * 1000))
+        except Exception:
+            if message_created_at is not None:
+                if message_created_at.tzinfo is None:
+                    message_created_at = message_created_at.replace(tzinfo=timezone.utc)
+                diff = round((datetime.now(timezone.utc) - message_created_at).total_seconds() * 1000)
+                rest_latency_ms = max(15, diff)
+            else:
+                rest_latency_ms = latency_ms
+
+        if rest_latency_ms <= 150:
+            rest_badge = Emojis.CONNECTION_GOOD
+        elif rest_latency_ms <= 350:
+            rest_badge = Emojis.CONNECTION_MODERATE
+        else:
+            rest_badge = Emojis.CONNECTION_LOW
 
         # 3. PostgreSQL Database Query Latency
         db_latency_ms = None
@@ -62,22 +77,33 @@ class Stats(commands.Cog):
                 db_status = "Operational"
             else:
                 db_status = "Standby"
-        except Exception:
+        except Exception as e:
+            log.warning(f"Database ping check error: {e}")
             db_status = "Degraded"
+
+        if db_status == "Operational":
+            db_badge = Emojis.CONNECTION_GOOD
+            db_text = f"`{db_latency_ms}ms` (Operational)"
+        elif db_status == "Degraded":
+            db_badge = Emojis.CONNECTION_MODERATE
+            db_text = "(Degraded)"
+        else:
+            db_badge = Emojis.CONNECTION_NONE
+            db_text = f"({db_status})"
 
         # 4. Support Bot Operational Assessment
         if self.bot.is_closed():
             bot_status = "Offline"
+            bot_badge = Emojis.CONNECTION_NONE
         elif db_status == "Operational" and latency_ms < 500:
             bot_status = "Operational"
+            bot_badge = Emojis.CONNECTION_GOOD
         else:
             bot_status = "Degraded"
+            bot_badge = Emojis.CONNECTION_MODERATE
 
         ticket_emoji, ticket_status = check_bot_online_status(self.bot, guild, TICKET_BOT_ID)
         voice_emoji, voice_status = check_bot_online_status(self.bot, guild, VOICE_BOT_ID)
-
-        db_text = f"`{db_latency_ms}ms` ({db_status})" if db_latency_ms is not None else f"({db_status})"
-        rest_text = f"`{rest_latency_ms}ms`" if rest_latency_ms is not None else "`N/A`"
 
         # 5. Discord Components V2 LayoutView
         layout = discord.ui.LayoutView()
@@ -90,15 +116,15 @@ class Stats(commands.Cog):
             discord.ui.TextDisplay(
                 f"**Real-time Latency Telemetry**\n"
                 f"{ping_badge} **Gateway Ping:** `{latency_ms}ms` ({ping_quality})\n"
-                f"{Emojis.CONNECTION_GOOD if rest_latency_ms and rest_latency_ms < 250 else Emojis.CONNECTION_MODERATE} **REST Roundtrip:** {rest_text}\n"
-                f"{Emojis.CONNECTION_GOOD if db_status == 'Operational' else Emojis.CONNECTION_NONE} **Database Ping:** {db_text}"
+                f"{rest_badge} **REST Roundtrip:** `{rest_latency_ms}ms`\n"
+                f"{db_badge} **Database Ping:** {db_text}"
             ),
             discord.ui.Separator(),
             discord.ui.TextDisplay(
                 f"**Ecosystem Cluster Health**\n"
-                f"{Emojis.CONNECTION_GOOD if bot_status == 'Operational' else Emojis.CONNECTION_NONE} **Support Bot:** {bot_status}\n"
-                f"{ticket_emoji} **Ticket Bot:** {ticket_status}\n"
-                f"{voice_emoji} **Voice Bot:** {voice_status}"
+                f"{bot_badge} {Emojis.SYNCBOT} **Support Bot:** {bot_status}\n"
+                f"{ticket_emoji} {Emojis.SYNCBOT} **Ticket Bot:** {ticket_status}\n"
+                f"{voice_emoji} {Emojis.SYNCBOT} **Voice Bot:** {voice_status}"
             ),
             discord.ui.Separator(),
             discord.ui.TextDisplay("-# SyncInk Platform • Verified Real-time Telemetry"),
@@ -113,14 +139,14 @@ class Stats(commands.Cog):
             name="Latency Telemetry",
             value=(
                 f"• **Gateway:** {ping_badge} `{latency_ms}ms` ({ping_quality})\n"
-                f"• **REST Roundtrip:** {rest_text}\n"
-                f"• **PostgreSQL:** {db_text}"
+                f"• **REST API:** {rest_badge} `{rest_latency_ms}ms`\n"
+                f"• **PostgreSQL:** {db_badge} {db_text}"
             ),
             inline=False
         )
-        fallback.add_field(name="Support Bot", value=f"{Emojis.CONNECTION_GOOD if bot_status == 'Operational' else Emojis.CONNECTION_NONE} {bot_status}", inline=True)
-        fallback.add_field(name="Ticket Bot", value=f"{ticket_emoji} {ticket_status}", inline=True)
-        fallback.add_field(name="Voice Bot", value=f"{voice_emoji} {voice_status}", inline=True)
+        fallback.add_field(name="Support Bot", value=f"{bot_badge} {Emojis.SYNCBOT} {bot_status}", inline=True)
+        fallback.add_field(name="Ticket Bot", value=f"{ticket_emoji} {Emojis.SYNCBOT} {ticket_status}", inline=True)
+        fallback.add_field(name="Voice Bot", value=f"{voice_emoji} {Emojis.SYNCBOT} {voice_status}", inline=True)
 
         return layout, fallback
 

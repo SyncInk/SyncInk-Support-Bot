@@ -36,9 +36,9 @@ def get_latency_badge(latency_ms: float) -> tuple[str, str]:
     """Returns (emoji, quality_label) based on gateway websocket latency."""
     if latency_ms <= 0:
         return Emojis.CONNECTION_NONE, "Offline"
-    elif latency_ms <= 120:
-        return Emojis.CONNECTION_GOOD, "Good"
-    elif latency_ms <= 250:
+    elif latency_ms <= 150:
+        return Emojis.CONNECTION_GOOD, "Optimal"
+    elif latency_ms <= 350:
         return Emojis.CONNECTION_MODERATE, "Moderate"
     else:
         return Emojis.CONNECTION_LOW, "High Latency"

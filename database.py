@@ -97,6 +97,21 @@ class DatabaseManager:
             log.error(f"DB FetchRow Error: {e} | Query: {query}")
             raise DatabaseError(str(e))
 
+    async def fetchval(self, query: str, *args) -> Any:
+        """Fetch a single value with automatic self-healing reconnect."""
+        await self.ensure_connected()
+        try:
+            async with self.pool.acquire() as conn:
+                return await conn.fetchval(query, *args)
+        except Exception as e:
+            if "closed" in str(e).lower() or "connection" in str(e).lower():
+                log.warning(f"DB connection lost during fetchval ({e}). Self-healing reconnect and retrying...")
+                await self.connect()
+                async with self.pool.acquire() as conn:
+                    return await conn.fetchval(query, *args)
+            log.error(f"DB FetchVal Error: {e} | Query: {query}")
+            raise DatabaseError(str(e))
+
     async def execute(self, query: str, *args) -> str:
         """Execute a query without returning rows with automatic self-healing reconnect."""
         await self.ensure_connected()

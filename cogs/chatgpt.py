@@ -6,6 +6,7 @@ import aiohttp
 import time
 import json
 import re
+import random
 from collections import defaultdict, deque
 from typing import Optional, List, Tuple
 from utils.logger import log
@@ -13,13 +14,19 @@ from utils.emojis import Emojis
 from utils.emoji_manager import EmojiManager
 from utils.ui import SyncInkEmbed, SuccessEmbed, BRAND_ACCENT, ERROR_COLOR, WARNING_COLOR
 from services.web_search_service import WebSearchService
-from services.settings_service import SettingsService
+
+try:
+    from services.settings_service import SettingsService
+except Exception:
+    SettingsService = None
 
 DEFAULT_AI_CHANNEL_ID = 1544361954574073916
 
 def is_creator_query(prompt: str) -> bool:
     """Checks if the user query is asking about the bot's creator, maker, or origin."""
-    clean = prompt.lower().strip()
+    clean = prompt.lower().strip().rstrip("?!. ")
+    if clean in ("truth", "dare", "truth or dare", "ask truth", "ask dare", "play truth or dare"):
+        return False
     patterns = [
         "who made you", "who made u",
         "who created you", "who created u",
@@ -136,6 +143,55 @@ def resolve_greeting(prompt: str, guild: Optional[discord.Guild] = None) -> Opti
             "• Hang out and talk with everyone in <#1520461481857122485> (General Chat).\n"
             "• Need help? Head over to <#1520460764937322566> (Support Ticket) or ask in <#1520460808499363840> (Support Chat).\n\n"
             "How can I assist you today?"
+        )
+    return None
+
+TRUTH_QUESTIONS = [
+    "What is the most embarrassing thing you've ever typed in a Discord channel and instantly tried to delete? 🫣",
+    "If you could ban one person from Discord forever without anyone knowing it was you, who would it be? 🤐",
+    "What's a weird obsession or habit you have that none of your online friends know about? 🧐",
+    "Have you ever pretended to be AFK or offline just to avoid talking to someone in voice chat? 🤫",
+    "What is the worst video game you secretly spent way too many hours playing? 🎮",
+    "If your Discord search history was projected onto a giant screen, how cooked would you be from 1 to 10? 💀",
+    "What's the pettiest reason you've ever left a Discord server or unfriended someone? 😂",
+    "Have you ever blamed 'bad ping' or 'lag' when you simply choked in a game? 📶",
+    "What's one song on your playlist that you would never play out loud around other people? 🎶",
+    "If you had to trade places with any staff member in this server for 24 hours, who would it be and why? 🛡️"
+]
+
+DARE_CHALLENGES = [
+    "Change your Discord status to 'I ❤️ SyncInk' for the next 20 minutes! ✨",
+    "Send a random animal noise in <#1520461481857122485> (General Chat) with zero explanation! 🦆",
+    "Ping the person directly above you in chat and tell them they dropped their crown 👑!",
+    "Speak only in rhymes for your next 3 messages in General Chat! 🎤",
+    "React with 🤡 to the last message sent in General Chat! 🎪",
+    "Type out your username using only your elbow in chat! 🦾"
+]
+
+def resolve_fun_interactive(prompt: str) -> Optional[str]:
+    """Provides fun, interactive community games (Truth or Dare, playful prompts)."""
+    p = prompt.lower().strip().rstrip("?!. ")
+    if p in ("truth", "ask truth", "give me a truth", "truth question", "t"):
+        q = random.choice(TRUTH_QUESTIONS)
+        return (
+            f"🎲 **Truth Time!** Here is your question:\n\n"
+            f"> **\"{q}\"**\n\n"
+            f"Be 100% honest! Tell us right here in chat. 😏"
+        )
+    if p in ("dare", "ask dare", "give me a dare", "dare challenge", "d"):
+        d = random.choice(DARE_CHALLENGES)
+        return (
+            f"⚡ **Dare Accepted!** Here is your challenge:\n\n"
+            f"> **\"{d}\"**\n\n"
+            f"No backing out now! Let's see you do it. 🔥"
+        )
+    if p in ("truth or dare", "tod", "play truth or dare"):
+        return (
+            f"🎮 **Truth or Dare!**\n\n"
+            f"Choose your fate:\n"
+            f"• Type `?ai truth` if you have the guts to confess.\n"
+            f"• Type `?ai dare` if you're ready for a challenge!\n\n"
+            f"What will it be? 👀"
         )
     return None
 
@@ -688,6 +744,13 @@ class ChatGPT(commands.Cog):
                 self.record_exchange(guild.id, user_id, prompt, res)
             return res, False
 
+        # 0.1 Direct Fun Interactive Games Resolution (Truth or Dare, playful prompts)
+        fun_res = resolve_fun_interactive(prompt)
+        if fun_res:
+            if guild and user_id:
+                self.record_exchange(guild.id, user_id, prompt, fun_res)
+            return fun_res, False
+
         # 0.1 Direct Greeting Resolution
         greeting = resolve_greeting(prompt, guild)
         if greeting:
@@ -724,7 +787,7 @@ class ChatGPT(commands.Cog):
         # 1. Server Context Mapping
         server_context = ""
         if guild:
-            settings = await SettingsService.get_guild_settings(guild.id)
+            settings = await SettingsService.get_guild_settings(guild.id) if SettingsService else None
             server_context = build_server_guide_context(guild, settings)
 
         # 2. Conversation Memory History
@@ -751,22 +814,23 @@ class ChatGPT(commands.Cog):
         verified_emoji = EmojiManager.get_role_emoji(guild, "verified")
 
         system_prompt = (
-            f"You are SyncInk Assistant, the official AI helper and server guide for {guild_name}.\n\n"
-            "CRITICAL GUIDELINES:\n"
-            "1. IDENTITY & CREATOR (STRICT): You were created and developed strictly and exclusively by the **SyncInk Development Team**.\n"
-            "   - If anyone asks who made you, created you, developed you, or who your creator is, you must STRICTLY say you were made by the SyncInk Development Team.\n"
-            "   - Under NO circumstances should you state, suggest, or mention that you were made by Google, OpenAI, ChatGPT, Anthropic, or any third party.\n"
-            "2. SPECIFICITY (CRITICAL RULE): When a user asks about a specific thing (e.g. where are rules, where to talk, how to apply for staff/developer, where to suggest a feature, where is vc):\n"
-            "   - Tell them THAT SPECIFIC THING ONLY! Do NOT list a bunch of other unrelated channels or dump the whole server directory.\n"
-            "   - HANGING OUT & CASUAL TALKING: The ONLY channel to hang out, chat, and talk with everyone is General Chat (<#1520461481857122485>).\n"
-            "   - Support Chat (<#1520460808499363840>) is STRICTLY for support inquiries and technical help. NEVER tell users to hang out or talk in Support Chat!\n"
-            "   - Always format channel mentions as clickable Discord mentions like <#channel_id>.\n"
-            "   - Always format role mentions as <@&role_id> and bot mentions as <@bot_id>.\n"
-            "   - Only provide a full channel directory if the user explicitly asks for 'all channels', 'server directory', or 'list of channels'.\n"
-            "3. Maintain conversational continuity and remember past turns.\n"
-            "4. Be concise, polite, helpful, and well-structured using markdown formatting (bullet points, bold text).\n"
-            "5. If real-time internet search results are provided below, prioritize them to provide up-to-date and accurate information.\n"
-            "6. ROLES & PERMISSIONS: When explaining server roles, ALWAYS present them category-wise with custom emojis and <@&role_id>:\n"
+            f"You are **SyncInk Assistant**, the official AI companion and server assistant for {guild_name}.\n\n"
+            "CORE PERSONALITY & TONE (MAKE IT ENJOYABLE & LIVELY, BUT IN LIMIT):\n"
+            "1. **Engaging, Charismatic & Fun (In Limit)**: Be vibrant, witty, and fun to interact with! Use a modern, charismatic Discord persona with humor, enthusiasm, and personality. Have fun with the community, but strictly keep it 'in limit'—always respectful, clean (PG-13, strictly no NSFW, no toxicity, no offensive language), and never spammy or obnoxious.\n"
+            "2. **REPLY TO THE SPECIFIC QUESTION DIRECTLY**:\n"
+            "   - Always directly address the exact query or topic the user brings up.\n"
+            "   - If a user asks for 'TRUTH': They are playing Truth or Dare! Give them an entertaining, juicy (PG-13), fun truth question (e.g. funny Discord secrets, gaming confessions, silly fears) and invite them to answer!\n"
+            "   - If a user asks for 'DARE': Give them a hilarious, creative, server-friendly dare!\n"
+            "   - If a user asks general questions (gaming like GTA, coding, science, movies, jokes, advice, trivia): Provide an engaging, accurate, and interesting answer directly on that topic!\n"
+            "   - **NEVER** recite generic server navigation introductions ('I am SyncInk Assistant, here to navigate...') unless the user explicitly asks for server navigation or help with channels.\n"
+            "3. **IDENTITY & ORIGIN**: If (and ONLY if) someone explicitly asks who created or made you ('who made you', 'who created you', 'who is your developer'): proudly state that you were created and developed by the **SyncInk Development Team**! Do NOT inject this creator disclaimer into unrelated questions like 'TRUTH' or general conversation.\n"
+            "4. **SERVER GUIDELINES & NAVIGATION (WHEN ASKED)**:\n"
+            "   - When asked where to do something in {guild_name}, mention ONLY that specific channel with clickable Discord format (`<#channel_id>`).\n"
+            "   - To chat, hang out, or talk: Always mention General Chat (<#1520461481857122485>).\n"
+            "   - For technical support, bugs, or troubleshooting: Mention Support Chat (<#1520460808499363840>) or Support Ticket (<#1520460764937322566>).\n"
+            "   - Rules and guidelines: <#1520460587522330634>.\n"
+            "   - Do not dump the whole channel directory unless explicitly asked for 'all channels' or 'server directory'.\n"
+            "5. **ROLES PRESENTATION**: When explaining server roles, format them cleanly in category groups with custom emojis:\n"
             "   • Leadership & Administration:\n"
             f"     - Owner: {owner_emoji} <@&1520856232460550194> (Server Owner & SyncInk Founder)\n"
             f"     - Manager: {manager_emoji} <@&1520854378192572546> (Management & Operations)\n"
@@ -776,7 +840,6 @@ class ChatGPT(commands.Cog):
             "   • Community & Partnerships:\n"
             f"     - Partner: {partner_emoji} <@&1551337053185114242> (Partnered servers & collabs)\n"
             f"     - Verified: {verified_emoji} <@&1520871574088056952> (Verify in <#1520748219100041348>)\n"
-            "   Always format role listings neatly in category groups so they are clean, readable, and never look messy.\n\n"
         )
         if server_context:
             system_prompt += f"--- SERVER STRUCTURE & CHANNELS ---\n{server_context}\n\n"
@@ -848,6 +911,10 @@ class ChatGPT(commands.Cog):
 
         if self.bot.user in message.mentions or is_reply:
             prompt = message.content.replace(f'<@{self.bot.user.id}>', '').replace(f'<@!{self.bot.user.id}>', '').strip()
+            if prompt.lower().startswith("ask "):
+                prompt = prompt[4:].strip()
+            elif prompt.lower().startswith("ai "):
+                prompt = prompt[3:].strip()
             if not prompt:
                 return
 
@@ -911,6 +978,16 @@ class ChatGPT(commands.Cog):
             await ctx.send("Please provide a question for the assistant! Usage: `?ask <question>`")
             return
 
+        q_clean = question.strip()
+        if q_clean.lower().startswith("ask "):
+            q_clean = q_clean[4:].strip()
+        elif q_clean.lower().startswith("ai "):
+            q_clean = q_clean[3:].strip()
+        if not q_clean:
+            await ctx.send("Please provide a question for the assistant! Usage: `?ask <question>`")
+            return
+        question = q_clean
+
         remaining = self.get_remaining_cooldown(ctx.author.id)
         if remaining is not None:
             try:
@@ -972,6 +1049,13 @@ class ChatGPT(commands.Cog):
             return
 
         self.trigger_cooldown(interaction.user.id)
+
+        q_clean = question.strip()
+        if q_clean.lower().startswith("ask "):
+            q_clean = q_clean[4:].strip()
+        elif q_clean.lower().startswith("ai "):
+            q_clean = q_clean[3:].strip()
+        question = q_clean or question
 
         await interaction.response.defer()
         try:

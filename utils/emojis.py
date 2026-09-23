@@ -18,6 +18,8 @@ class Emojis:
     CONNECTION_LOW = "<:lowconnection:1551311863675879494>"
     CONNECTION_NONE = "<:noconnection:1551311810223931484>"
     CONNECTION_PING = "<a:connectionping:1551311432392646737>"
+    SYNCBOT = "<:syncbot:1552437282059980810>"
+    BOT = SYNCBOT
     CPU = "<:CPU:1551310556038701118>"
     # Official Server Role Emojis (Default fallbacks; updated dynamically by EmojiManager)
     ROLE_OWNER = "👑"
@@ -61,6 +63,8 @@ class EmojiPartials:
     CONNECTION_MODERATE = discord.PartialEmoji(name="moderateconnection", id=1551311891173740644, animated=False)
     CONNECTION_LOW = discord.PartialEmoji(name="lowconnection", id=1551311863675879494, animated=False)
     CONNECTION_NONE = discord.PartialEmoji(name="noconnection", id=1551311810223931484, animated=False)
+    SYNCBOT = discord.PartialEmoji(name="syncbot", id=1552437282059980810, animated=False)
+    BOT = SYNCBOT
     CPU = discord.PartialEmoji(name="CPU", id=1551310556038701118, animated=False)
     ROLE_OWNER = discord.PartialEmoji(name="👑")
     ROLE_MANAGER = discord.PartialEmoji(name="💼")
