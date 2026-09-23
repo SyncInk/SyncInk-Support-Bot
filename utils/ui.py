@@ -59,12 +59,18 @@ async def send_clean_v2_message(destination: Any, layout_view: discord.ui.Layout
             except Exception:
                 pass
 
-    try:
-        return await destination.send(view=layout_view)
-    except Exception as e:
-        if fallback_embed is not None:
-            return await destination.send(embed=fallback_embed)
-        raise e
+    send_func = getattr(destination, 'send', None)
+    if not send_func and hasattr(destination, 'channel'):
+        send_func = getattr(destination.channel, 'send', None)
+
+    if send_func:
+        try:
+            return await send_func(view=layout_view)
+        except Exception as e:
+            if fallback_embed is not None:
+                return await send_func(embed=fallback_embed)
+            raise e
+    raise ValueError(f"Destination {destination} does not support sending messages.")
 
 
 class SyncInkEmbed(discord.Embed):
