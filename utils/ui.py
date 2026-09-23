@@ -43,17 +43,29 @@ def get_latency_badge(latency_ms: float) -> tuple[str, str]:
     else:
         return Emojis.CONNECTION_LOW, "High Latency"
 
-async def send_clean_v2_message(destination: Any, layout_view: discord.ui.LayoutView, fallback_embed: Optional[discord.Embed] = None):
+async def send_clean_v2_message(destination: Any, layout_view: discord.ui.LayoutView, fallback_embed: Optional[discord.Embed] = None, reply: bool = False):
     """
     Sends a message using Discord Components V2 (flags: 32768, Container, Separator).
     If Components V2 fails in a specific context or client, gracefully falls back to fallback_embed.
     """
+    if reply and hasattr(destination, 'reply'):
+        try:
+            return await destination.reply(view=layout_view, mention_author=False)
+        except Exception:
+            pass
+        if fallback_embed is not None:
+            try:
+                return await destination.reply(embed=fallback_embed, mention_author=False)
+            except Exception:
+                pass
+
     try:
         return await destination.send(view=layout_view)
     except Exception as e:
         if fallback_embed is not None:
             return await destination.send(embed=fallback_embed)
         raise e
+
 
 class SyncInkEmbed(discord.Embed):
     """Premium Base Embed class for the SyncInk Ecosystem."""

@@ -1,12 +1,25 @@
 import discord
 import asyncio
+import os
+from datetime import datetime, timezone
 from discord.ext import commands
 from discord import app_commands
 from typing import Optional
-from utils.ui import SyncInkEmbed, BRAND_ACCENT, check_bot_online_status, get_latency_badge, send_clean_v2_message
+from utils.ui import SyncInkEmbed, BRAND_ACCENT, ERROR_COLOR, check_bot_online_status, get_latency_badge, send_clean_v2_message
 from utils.emojis import Emojis
-from services.mod_service import ModService
 from utils.logger import log
+
+try:
+    from services.mod_service import ModService
+except Exception as e:
+    log.warning(f"ModService could not be imported in stats cog: {e}")
+    ModService = None
+
+try:
+    from database import db
+except Exception as e:
+    log.warning(f"Database module could not be imported in stats cog: {e}")
+    db = None
 
 try:
     from services.stats_image_service import StatsImageService, PILLOW_AVAILABLE, format_relative_time
@@ -18,6 +31,7 @@ except Exception as e:
 
 TICKET_BOT_ID = 1513075101992747158
 VOICE_BOT_ID = 1516578887109181520
+SYNCINK_SUPPORT_GUILD_ID = int(os.getenv("SUPPORT_GUILD_ID", 1520457643842342912))
 
 class Stats(commands.Cog):
     """Ecosystem performance telemetry and high-definition visual server & user analytics."""
@@ -25,43 +39,86 @@ class Stats(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    def _build_stats_payload(self, guild: discord.Guild = None):
+    async def _build_stats_payload(self, guild: Optional[discord.Guild] = None, message_created_at: Optional[datetime] = None):
+        # 1. Gateway WebSocket Ping
         latency_ms = round(self.bot.latency * 1000) if self.bot.latency else 0
         ping_badge, ping_quality = get_latency_badge(latency_ms)
+
+        # 2. REST API Roundtrip Latency
+        rest_latency_ms = None
+        if message_created_at is not None:
+            if message_created_at.tzinfo is None:
+                message_created_at = message_created_at.replace(tzinfo=timezone.utc)
+            rest_latency_ms = max(1, round((datetime.now(timezone.utc) - message_created_at).total_seconds() * 1000))
+
+        # 3. PostgreSQL Database Query Latency
+        db_latency_ms = None
+        db_status = "Disconnected"
+        try:
+            if db is not None and db.is_connected():
+                t0 = asyncio.get_event_loop().time()
+                await db.fetchval("SELECT 1")
+                db_latency_ms = round((asyncio.get_event_loop().time() - t0) * 1000, 1)
+                db_status = "Operational"
+            else:
+                db_status = "Standby"
+        except Exception:
+            db_status = "Degraded"
+
+        # 4. Support Bot Operational Assessment
+        if self.bot.is_closed():
+            bot_status = "Offline"
+        elif db_status == "Operational" and latency_ms < 500:
+            bot_status = "Operational"
+        else:
+            bot_status = "Degraded"
 
         ticket_emoji, ticket_status = check_bot_online_status(self.bot, guild, TICKET_BOT_ID)
         voice_emoji, voice_status = check_bot_online_status(self.bot, guild, VOICE_BOT_ID)
 
-        # 1. Discord Components V2 LayoutView
+        db_text = f"`{db_latency_ms}ms` ({db_status})" if db_latency_ms is not None else f"({db_status})"
+        rest_text = f"`{rest_latency_ms}ms`" if rest_latency_ms is not None else "`N/A`"
+
+        # 5. Discord Components V2 LayoutView
         layout = discord.ui.LayoutView()
         container = discord.ui.Container(
             discord.ui.TextDisplay(
                 f"### {Emojis.CONNECTION_PING} **Bot Statistics & Network Health**\n"
-                "Real-time gateway latency and ecosystem cluster status."
+                "Real-time gateway latency, database query time, and ecosystem health."
             ),
             discord.ui.Separator(),
             discord.ui.TextDisplay(
-                f"**Network Latency**\n"
-                f"{ping_badge} **Gateway Ping:** `{latency_ms}ms` ({ping_quality})"
+                f"**Real-time Latency Telemetry**\n"
+                f"{ping_badge} **Gateway Ping:** `{latency_ms}ms` ({ping_quality})\n"
+                f"{Emojis.CONNECTION_GOOD if rest_latency_ms and rest_latency_ms < 250 else Emojis.CONNECTION_MODERATE} **REST Roundtrip:** {rest_text}\n"
+                f"{Emojis.CONNECTION_GOOD if db_status == 'Operational' else Emojis.CONNECTION_NONE} **Database Ping:** {db_text}"
             ),
             discord.ui.Separator(),
             discord.ui.TextDisplay(
-                f"**Ecosystem Cluster**\n"
-                f"{Emojis.CONNECTION_GOOD} **Support Bot:** Operational\n"
+                f"**Ecosystem Cluster Health**\n"
+                f"{Emojis.CONNECTION_GOOD if bot_status == 'Operational' else Emojis.CONNECTION_NONE} **Support Bot:** {bot_status}\n"
                 f"{ticket_emoji} **Ticket Bot:** {ticket_status}\n"
                 f"{voice_emoji} **Voice Bot:** {voice_status}"
             ),
             discord.ui.Separator(),
-            discord.ui.TextDisplay("-# SyncInk Platform • Performance Telemetry"),
+            discord.ui.TextDisplay("-# SyncInk Platform • Verified Real-time Telemetry"),
             accent_color=BRAND_ACCENT
         )
         layout.add_item(container)
 
-        # 2. Clean fallback embed
-        fallback = SyncInkEmbed(title=f"{Emojis.CONNECTION_PING} Bot Statistics")
-        fallback.description = "Real-time gateway latency and ecosystem cluster status."
-        fallback.add_field(name="Gateway Latency", value=f"{ping_badge} `{latency_ms}ms` ({ping_quality})", inline=False)
-        fallback.add_field(name="Support Bot", value=f"{Emojis.CONNECTION_GOOD} Operational", inline=True)
+        # 6. Clean fallback embed
+        fallback = SyncInkEmbed(title=f"{Emojis.CONNECTION_PING} Bot Statistics & Health")
+        fallback.description = "Real-time gateway latency, database query time, and ecosystem health."
+        fallback.add_field(
+            name="Latency Telemetry",
+            value=(
+                f"• **Gateway:** {ping_badge} `{latency_ms}ms` ({ping_quality})\n"
+                f"• **REST Roundtrip:** {rest_text}\n"
+                f"• **PostgreSQL:** {db_text}"
+            ),
+            inline=False
+        )
+        fallback.add_field(name="Support Bot", value=f"{Emojis.CONNECTION_GOOD if bot_status == 'Operational' else Emojis.CONNECTION_NONE} {bot_status}", inline=True)
         fallback.add_field(name="Ticket Bot", value=f"{ticket_emoji} {ticket_status}", inline=True)
         fallback.add_field(name="Voice Bot", value=f"{voice_emoji} {voice_status}", inline=True)
 
@@ -69,14 +126,27 @@ class Stats(commands.Cog):
 
     @commands.command(name="botstats", aliases=["ping"], description="View public bot performance and ping statistics.")
     async def botstats(self, ctx: commands.Context):
-        layout, fallback = self._build_stats_payload(ctx.guild)
-        await send_clean_v2_message(ctx, layout, fallback_embed=fallback)
+        created_at = getattr(ctx.message, 'created_at', None)
+        layout, fallback = await self._build_stats_payload(ctx.guild, message_created_at=created_at)
+        await send_clean_v2_message(ctx, layout, fallback_embed=fallback, reply=True)
 
     @commands.command(name="serverstats", aliases=["guildstats", "sstats"], description="Generate a visual analytics dashboard for the server.")
     async def serverstats(self, ctx: commands.Context):
-        """Generates and uploads a high-definition visual analytics card for the current server."""
+        """Generates and uploads a high-definition visual analytics card for the SyncInk Support Server."""
         if not ctx.guild:
-            await ctx.send("This command can only be used within a server.")
+            await ctx.send("This command can only be used within the SyncInk Support Server.")
+            return
+
+        if ctx.guild.id != SYNCINK_SUPPORT_GUILD_ID:
+            embed = SyncInkEmbed(
+                title=f"{Emojis.REFUSED} **Support Server Exclusive**",
+                description="Server analytics dashboards are exclusively configured for the official **SyncInk Support Server**.",
+                color=ERROR_COLOR
+            )
+            try:
+                await ctx.reply(content=ctx.author.mention, embed=embed, mention_author=True)
+            except Exception:
+                await ctx.send(content=ctx.author.mention, embed=embed)
             return
 
         # Attempt on-demand Pillow install if missing
@@ -94,7 +164,10 @@ class Stats(commands.Cog):
         if buf is not None:
             try:
                 file = discord.File(fp=buf, filename=f"serverstats_{ctx.guild.id}.png")
-                await ctx.send(content=ctx.author.mention, file=file)
+                try:
+                    await ctx.reply(content=ctx.author.mention, file=file, mention_author=True)
+                except Exception:
+                    await ctx.send(content=ctx.author.mention, file=file)
                 return
             except Exception as e:
                 log.error(f"Failed to send server stats image file: {e}")
@@ -122,7 +195,10 @@ class Stats(commands.Cog):
                 text="SyncInk Analytics • Run '?installpillow' or 'pkg install python-pillow' in Termux for HD images",
                 icon_url="https://files.catbox.moe/74l9su.png"
             )
-            await ctx.send(content=ctx.author.mention, embed=embed)
+            try:
+                await ctx.reply(content=ctx.author.mention, embed=embed, mention_author=True)
+            except Exception:
+                await ctx.send(content=ctx.author.mention, embed=embed)
         except Exception as e:
             log.error(f"Error sending fallback server stats embed: {e}")
             await ctx.send(f"{ctx.author.mention} 📊 **{ctx.guild.name}** has `{getattr(ctx.guild, 'member_count', 'unknown')}` members.")
@@ -130,10 +206,23 @@ class Stats(commands.Cog):
     @commands.command(name="userstats", aliases=["stats", "ustats"], description="Generate a visual analytics dashboard for a user.")
     async def userstats(self, ctx: commands.Context, *, member: Optional[discord.Member] = None):
         """Generates and uploads a high-definition visual analytics card for a member."""
-        target = member or ctx.author
         if not ctx.guild:
-            await ctx.send("This command can only be used within a server.")
+            await ctx.send("This command can only be used within the SyncInk Support Server.")
             return
+
+        if ctx.guild.id != SYNCINK_SUPPORT_GUILD_ID:
+            embed = SyncInkEmbed(
+                title=f"{Emojis.REFUSED} **Support Server Exclusive**",
+                description="User analytics dashboards are exclusively configured for the official **SyncInk Support Server**.",
+                color=ERROR_COLOR
+            )
+            try:
+                await ctx.reply(content=ctx.author.mention, embed=embed, mention_author=True)
+            except Exception:
+                await ctx.send(content=ctx.author.mention, embed=embed)
+            return
+
+        target = member or ctx.author
 
         # Attempt on-demand Pillow install if missing
         if StatsImageService is not None and not getattr(StatsImageService, 'PILLOW_AVAILABLE', False):
@@ -141,10 +230,11 @@ class Stats(commands.Cog):
 
         buf = None
         mod_counts = {"WARN": 0, "TIMEOUT": 0, "JAIL": 0}
-        try:
-            mod_counts = await ModService.count_user_cases(ctx.guild.id, target.id)
-        except Exception as e:
-            log.warning(f"Could not fetch user mod cases: {e}")
+        if ModService is not None:
+            try:
+                mod_counts = await ModService.count_user_cases(ctx.guild.id, target.id)
+            except Exception as e:
+                log.warning(f"Could not fetch user mod cases: {e}")
 
         if StatsImageService is not None:
             try:
@@ -156,7 +246,10 @@ class Stats(commands.Cog):
         if buf is not None:
             try:
                 file = discord.File(fp=buf, filename=f"userstats_{target.id}.png")
-                await ctx.send(content=ctx.author.mention, file=file)
+                try:
+                    await ctx.reply(content=ctx.author.mention, file=file, mention_author=True)
+                except Exception:
+                    await ctx.send(content=ctx.author.mention, file=file)
                 return
             except Exception as e:
                 log.error(f"Failed to send user stats image file: {e}")
@@ -193,14 +286,17 @@ class Stats(commands.Cog):
                 text="SyncInk Analytics • Run '?installpillow' or 'pkg install python-pillow' in Termux for HD images",
                 icon_url="https://files.catbox.moe/74l9su.png"
             )
-            await ctx.send(content=ctx.author.mention, embed=embed)
+            try:
+                await ctx.reply(content=ctx.author.mention, embed=embed, mention_author=True)
+            except Exception:
+                await ctx.send(content=ctx.author.mention, embed=embed)
         except Exception as e:
             log.error(f"Error sending fallback user stats embed: {e}")
             await ctx.send(f"{ctx.author.mention} 👤 **{target.display_name}** | ID: `{target.id}`")
 
     @app_commands.command(name="ping", description="View bot latency and ecosystem connectivity.")
     async def slash_ping(self, interaction: discord.Interaction):
-        layout, fallback = self._build_stats_payload(interaction.guild)
+        layout, fallback = await self._build_stats_payload(interaction.guild, message_created_at=interaction.created_at)
         try:
             await interaction.response.send_message(view=layout)
         except Exception:
@@ -211,7 +307,7 @@ class Stats(commands.Cog):
 
     @app_commands.command(name="botstats", description="View bot latency, performance, and server counts.")
     async def slash_botstats(self, interaction: discord.Interaction):
-        layout, fallback = self._build_stats_payload(interaction.guild)
+        layout, fallback = await self._build_stats_payload(interaction.guild, message_created_at=interaction.created_at)
         try:
             await interaction.response.send_message(view=layout)
         except Exception:
@@ -223,7 +319,16 @@ class Stats(commands.Cog):
     @app_commands.command(name="serverstats", description="Generate a visual analytics dashboard for the server.")
     async def slash_serverstats(self, interaction: discord.Interaction):
         if not interaction.guild:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message("This command can only be used within the SyncInk Support Server.", ephemeral=True)
+            return
+
+        if interaction.guild.id != SYNCINK_SUPPORT_GUILD_ID:
+            embed = SyncInkEmbed(
+                title=f"{Emojis.REFUSED} **Support Server Exclusive**",
+                description="Server analytics dashboards are exclusively configured for the official **SyncInk Support Server**.",
+                color=ERROR_COLOR
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
         await interaction.response.defer()
@@ -252,17 +357,27 @@ class Stats(commands.Cog):
     @app_commands.command(name="userstats", description="Generate a visual analytics dashboard for a user.")
     async def slash_userstats(self, interaction: discord.Interaction, member: Optional[discord.Member] = None):
         if not interaction.guild:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message("This command can only be used within the SyncInk Support Server.", ephemeral=True)
+            return
+
+        if interaction.guild.id != SYNCINK_SUPPORT_GUILD_ID:
+            embed = SyncInkEmbed(
+                title=f"{Emojis.REFUSED} **Support Server Exclusive**",
+                description="User analytics dashboards are exclusively configured for the official **SyncInk Support Server**.",
+                color=ERROR_COLOR
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
         target = member or interaction.user
         await interaction.response.defer()
         buf = None
         mod_counts = {"WARN": 0, "TIMEOUT": 0, "JAIL": 0}
-        try:
-            mod_counts = await ModService.count_user_cases(interaction.guild.id, target.id)
-        except Exception:
-            pass
+        if ModService is not None:
+            try:
+                mod_counts = await ModService.count_user_cases(interaction.guild.id, target.id)
+            except Exception:
+                pass
 
         if StatsImageService is not None:
             try:
