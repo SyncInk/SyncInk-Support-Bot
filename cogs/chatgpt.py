@@ -12,7 +12,7 @@ from typing import Optional, List, Tuple
 from utils.logger import log
 from utils.emojis import Emojis
 from utils.emoji_manager import EmojiManager
-from utils.ui import SyncInkEmbed, SuccessEmbed, BRAND_ACCENT, ERROR_COLOR, WARNING_COLOR, send_clean_v2_message
+from utils.ui import SyncInkEmbed, SuccessEmbed, BRAND_ACCENT, ERROR_COLOR, WARNING_COLOR
 from services.web_search_service import WebSearchService
 
 try:
@@ -147,316 +147,53 @@ def resolve_greeting(prompt: str, guild: Optional[discord.Guild] = None) -> Opti
     return None
 
 TRUTH_QUESTIONS = [
-    "What is the most embarrassing thing you've ever typed in a Discord channel and instantly scrambled to delete?",
-    "If your Discord search history was projected onto a giant screen in this server, what would be the hardest thing to explain?",
-    "Have you ever pretended to be AFK, laggy, or offline just to avoid talking to someone in voice chat?",
-    "What is the pettiest reason you've ever left a Discord server, unfriended someone, or blocked a user?",
-    "What is the worst or most embarrassing video game you secretly spent hundreds of hours playing?",
-    "Have you ever blamed 'terrible ping' or 'server lag' when in reality you simply choked an easy play?",
-    "What is one song, artist, or playlist you love that you would never play out loud in a Discord music channel?",
-    "If you had to trade roles with any staff member in this server for 24 hours, who would it be and why?",
-    "What is a controversial gaming or tech opinion you hold that you know almost everyone here would argue against?",
-    "Have you ever sent a screenshot of a Discord chat to another friend to talk about it behind someone's back?",
-    "What is the weirdest or most cringe username you ever used when you first created your online accounts?",
-    "What is the longest continuous gaming or Discord session you have ever pulled without leaving your chair?",
-    "If you could give yourself any custom role or permission on this server right now, what would it be?",
-    "What is one server rule that you secretly think is hilarious or unnecessary?",
-    "Have you ever accidentally sent a private message into a public server channel? What happened next?",
-    "If you had to pick one member in this server to survive a zombie apocalypse with, who would you choose?",
-    "What is the most expensive in-game cosmetic or microtransaction you deeply regret purchasing?",
-    "Have you ever stayed up past 4:00 AM talking about completely nonsensical topics in voice chat?",
-    "What is your biggest pet peeve when chatting with people on Discord?",
-    "If someone gave you 10,000 Discord Nitro credits right now, what is the first thing you would do with them?"
+    "What is the most embarrassing thing you've ever typed in a Discord channel and instantly tried to delete? 🫣",
+    "If you could ban one person from Discord forever without anyone knowing it was you, who would it be? 🤐",
+    "What's a weird obsession or habit you have that none of your online friends know about? 🧐",
+    "Have you ever pretended to be AFK or offline just to avoid talking to someone in voice chat? 🤫",
+    "What is the worst video game you secretly spent way too many hours playing? 🎮",
+    "If your Discord search history was projected onto a giant screen, how cooked would you be from 1 to 10? 💀",
+    "What's the pettiest reason you've ever left a Discord server or unfriended someone? 😂",
+    "Have you ever blamed 'bad ping' or 'lag' when you simply choked in a game? 📶",
+    "What's one song on your playlist that you would never play out loud around other people? 🎶",
+    "If you had to trade places with any staff member in this server for 24 hours, who would it be and why? 🛡️"
 ]
 
 DARE_CHALLENGES = [
-    "Speak strictly in rhymes for your next 3 messages in General Chat (<#1520461481857122485>)!",
-    "Set your Discord custom status to 'Certified SyncInk Fan 👑' for the next 30 minutes!",
-    "Ping the person directly above you in General Chat and tell them their Discord avatar is legendary!",
-    "Send a random animal sound in General Chat (<#1520461481857122485>) and refuse to provide any context!",
-    "Type out your full Discord username using only your elbow or chin in chat!",
-    "React with 👑 to the last 5 messages sent in General Chat (<#1520461481857122485>)!",
-    "Write a short, dramatic 2-line poem about your favorite video game in chat!",
-    "Change your Discord nickname on this server to something hilarious chosen by the next person who speaks!",
-    "Use only GIF reactions for the next 10 minutes in General Chat!",
-    "Give an overly formal, dramatic review of the last food or snack you ate in chat!"
+    "Change your Discord status to 'I ❤️ SyncInk' for the next 20 minutes! ✨",
+    "Send a random animal noise in <#1520461481857122485> (General Chat) with zero explanation! 🦆",
+    "Ping the person directly above you in chat and tell them they dropped their crown 👑!",
+    "Speak only in rhymes for your next 3 messages in General Chat! 🎤",
+    "React with 🤡 to the last message sent in General Chat! 🎪",
+    "Type out your username using only your elbow in chat! 🦾"
 ]
 
-def get_interactive_game_mode(prompt: str) -> Optional[str]:
-    """Detects if the user query is asking for Truth, Dare, or Truth or Dare game."""
-    p = prompt.lower().strip().rstrip("?!. ")
-    if p in ("truth", "ask truth", "give me a truth", "truth question", "t", "give truth", "play truth"):
-        return "truth"
-    if p in ("dare", "ask dare", "give me a dare", "dare challenge", "d", "give dare", "play dare"):
-        return "dare"
-    if p in ("truth or dare", "tod", "play truth or dare", "truth and dare", "t or d"):
-        return "tod"
-    return None
-
 def resolve_fun_interactive(prompt: str) -> Optional[str]:
-    """Provides fun, interactive community games formatted with executive polish."""
-    mode = get_interactive_game_mode(prompt)
-    if mode == "truth":
+    """Provides fun, interactive community games (Truth or Dare, playful prompts)."""
+    p = prompt.lower().strip().rstrip("?!. ")
+    if p in ("truth", "ask truth", "give me a truth", "truth question", "t"):
         q = random.choice(TRUTH_QUESTIONS)
         return (
-            f"**Community Truth Challenge:**\n"
-            f"> *{q}*\n\n"
-            f"-# 💬 Share your honest confession below in chat!"
+            f"🎲 **Truth Time!** Here is your question:\n\n"
+            f"> **\"{q}\"**\n\n"
+            f"Be 100% honest! Tell us right here in chat. 😏"
         )
-    if mode == "dare":
+    if p in ("dare", "ask dare", "give me a dare", "dare challenge", "d"):
         d = random.choice(DARE_CHALLENGES)
         return (
-            f"**Community Dare Challenge:**\n"
-            f"> *{d}*\n\n"
-            f"-# ⚡ Complete the challenge in chat or forfeit!"
+            f"⚡ **Dare Accepted!** Here is your challenge:\n\n"
+            f"> **\"{d}\"**\n\n"
+            f"No backing out now! Let's see you do it. 🔥"
         )
-    if mode == "tod":
+    if p in ("truth or dare", "tod", "play truth or dare"):
         return (
-            "**Community Truth or Dare:**\n\n"
-            "> *Choose your path: Select Truth to confess, or Dare to take on a challenge!*\n\n"
-            "-# Use the interactive buttons below or type `?ai truth` / `?ai dare` to reveal your challenge."
+            f"🎮 **Truth or Dare!**\n\n"
+            f"Choose your fate:\n"
+            f"• Type `?ai truth` if you have the guts to confess.\n"
+            f"• Type `?ai dare` if you're ready for a challenge!\n\n"
+            f"What will it be? 👀"
         )
     return None
-
-class InteractiveGameView(discord.ui.LayoutView):
-    """
-    Discord Components V2 interactive game view for Truth or Dare.
-    Supports in-place question swapping, mode transitions, and debouncing.
-    """
-    def __init__(self, mode: str = "truth", author_id: Optional[int] = None):
-        super().__init__(timeout=300)
-        self.mode = mode
-        self.author_id = author_id
-        self.current_prompt = ""
-        self.message: Optional[discord.Message] = None
-        self._last_click: float = 0.0
-        self._build_components()
-
-    def _get_random_prompt(self) -> str:
-        pool = TRUTH_QUESTIONS if self.mode == "truth" else DARE_CHALLENGES
-        candidates = [p for p in pool if p != self.current_prompt]
-        return random.choice(candidates or pool)
-
-    def _build_components(self):
-        self.clear_items()
-        if not self.current_prompt and self.mode in ("truth", "dare"):
-            self.current_prompt = self._get_random_prompt()
-
-        if self.mode == "truth":
-            title = f"### {Emojis.AI} **SyncInk Assistant** • **Community Truth**"
-            body = (
-                f"**Truth Challenge:**\n"
-                f"> *{self.current_prompt}*\n\n"
-                f"-# 💬 Share your honest confession below in chat! • React or reply to pass the turn."
-            )
-            btn_next = discord.ui.Button(
-                label="Next Truth",
-                style=discord.ButtonStyle.primary,
-                emoji="🎲",
-                custom_id="game_btn_next"
-            )
-            btn_switch = discord.ui.Button(
-                label="Take a Dare",
-                style=discord.ButtonStyle.secondary,
-                emoji="⚡",
-                custom_id="game_btn_switch"
-            )
-            btn_next.callback = self.on_next
-            btn_switch.callback = self.on_switch
-            action_row = discord.ui.ActionRow(btn_next, btn_switch)
-
-        elif self.mode == "dare":
-            title = f"### {Emojis.AI} **SyncInk Assistant** • **Community Dare**"
-            body = (
-                f"**Dare Challenge:**\n"
-                f"> *{self.current_prompt}*\n\n"
-                f"-# ⚡ Challenge issued • Complete it in chat or forfeit!"
-            )
-            btn_next = discord.ui.Button(
-                label="Next Dare",
-                style=discord.ButtonStyle.primary,
-                emoji="⚡",
-                custom_id="game_btn_next"
-            )
-            btn_switch = discord.ui.Button(
-                label="Take a Truth",
-                style=discord.ButtonStyle.secondary,
-                emoji="🎲",
-                custom_id="game_btn_switch"
-            )
-            btn_next.callback = self.on_next
-            btn_switch.callback = self.on_switch
-            action_row = discord.ui.ActionRow(btn_next, btn_switch)
-
-        else:  # 'tod'
-            title = f"### {Emojis.AI} **SyncInk Assistant** • **Truth or Dare**"
-            body = (
-                "**Choose your path:**\n"
-                "> *Select Truth to confess a secret, or Dare to take on a challenge!*\n\n"
-                "-# Click one of the buttons below to reveal your fate."
-            )
-            btn_t = discord.ui.Button(
-                label="Choose Truth",
-                style=discord.ButtonStyle.primary,
-                emoji="🎲",
-                custom_id="game_btn_t"
-            )
-            btn_d = discord.ui.Button(
-                label="Choose Dare",
-                style=discord.ButtonStyle.secondary,
-                emoji="⚡",
-                custom_id="game_btn_d"
-            )
-            btn_t.callback = lambda i: self.on_choose(i, "truth")
-            btn_d.callback = lambda i: self.on_choose(i, "dare")
-            action_row = discord.ui.ActionRow(btn_t, btn_d)
-
-        container = discord.ui.Container(
-            discord.ui.TextDisplay(title),
-            discord.ui.Separator(),
-            discord.ui.TextDisplay(body),
-            discord.ui.Separator(),
-            discord.ui.TextDisplay("-# SyncInk Platform • Community Interactive • Verified AI"),
-            action_row,
-            accent_color=BRAND_ACCENT
-        )
-        self.add_item(container)
-
-    async def on_next(self, interaction: discord.Interaction):
-        now = time.time()
-        if now - self._last_click < 0.8:
-            await interaction.response.defer()
-            return
-        self._last_click = now
-
-        self.current_prompt = self._get_random_prompt()
-        self._build_components()
-        fallback = self.get_fallback_embed()
-        try:
-            await interaction.response.edit_message(view=self)
-        except Exception:
-            try:
-                await interaction.response.edit_message(view=self, embed=fallback)
-            except Exception:
-                await interaction.response.defer()
-
-    async def on_switch(self, interaction: discord.Interaction):
-        now = time.time()
-        if now - self._last_click < 0.8:
-            await interaction.response.defer()
-            return
-        self._last_click = now
-
-        self.mode = "dare" if self.mode == "truth" else "truth"
-        self.current_prompt = self._get_random_prompt()
-        self._build_components()
-        fallback = self.get_fallback_embed()
-        try:
-            await interaction.response.edit_message(view=self)
-        except Exception:
-            try:
-                await interaction.response.edit_message(view=self, embed=fallback)
-            except Exception:
-                await interaction.response.defer()
-
-    async def on_choose(self, interaction: discord.Interaction, mode: str):
-        now = time.time()
-        if now - self._last_click < 0.8:
-            await interaction.response.defer()
-            return
-        self._last_click = now
-
-        self.mode = mode
-        self.current_prompt = self._get_random_prompt()
-        self._build_components()
-        fallback = self.get_fallback_embed()
-        try:
-            await interaction.response.edit_message(view=self)
-        except Exception:
-            try:
-                await interaction.response.edit_message(view=self, embed=fallback)
-            except Exception:
-                await interaction.response.defer()
-
-    def get_fallback_embed(self) -> SyncInkEmbed:
-        if self.mode == "truth":
-            title = f"{Emojis.AI} SyncInk Assistant • Community Truth"
-            desc = (
-                f"**Truth Challenge:**\n"
-                f"> *{self.current_prompt}*\n\n"
-                f"-# 💬 Share your honest confession below in chat!"
-            )
-        elif self.mode == "dare":
-            title = f"{Emojis.AI} SyncInk Assistant • Community Dare"
-            desc = (
-                f"**Dare Challenge:**\n"
-                f"> *{self.current_prompt}*\n\n"
-                f"-# ⚡ Complete the challenge in chat or forfeit!"
-            )
-        else:
-            title = f"{Emojis.AI} SyncInk Assistant • Truth or Dare"
-            desc = (
-                "**Choose your path:**\n"
-                "> *Select Truth to confess a secret, or Dare to take on a challenge!*\n\n"
-                "-# Type `?ai truth` or `?ai dare` to reveal your fate!"
-            )
-
-        embed = SyncInkEmbed(title=title, description=desc, color=BRAND_ACCENT)
-        embed.set_footer(text="SyncInk Platform | Community Interactive", icon_url="https://files.catbox.moe/74l9su.png")
-        return embed
-
-    async def on_timeout(self):
-        for child in self.walk_children():
-            if isinstance(child, discord.ui.Button):
-                child.disabled = True
-        try:
-            if self.message:
-                await self.message.edit(view=self)
-        except Exception:
-            pass
-
-def build_ai_general_payload(prompt: str, response: str, used_web: bool = False) -> tuple[discord.ui.LayoutView, SyncInkEmbed]:
-    """
-    Builds the ultra-clean Discord Components V2 LayoutView and fallback SyncInkEmbed
-    for general AI responses, server queries, and web answers.
-    """
-    clean_p = prompt.strip().replace("\n", " ")
-    if len(clean_p) > 75:
-        clean_p = clean_p[:72] + "..."
-
-    footer_text = "-# SyncInk Platform • Grounded with Live Web Search 🌐" if used_web else "-# SyncInk Platform • Grounded AI • Real-time Assistance"
-
-    layout = discord.ui.LayoutView()
-    container_items = [
-        discord.ui.TextDisplay(
-            f"### {Emojis.AI} **SyncInk Assistant**\n"
-            f"-# 💬 Query: \"*{clean_p}*\""
-        ),
-        discord.ui.Separator()
-    ]
-
-    desc = response.strip()
-    if len(desc) <= 1900:
-        container_items.append(discord.ui.TextDisplay(desc))
-    else:
-        for i in range(0, min(len(desc), 3800), 1900):
-            container_items.append(discord.ui.TextDisplay(desc[i:i+1900]))
-
-    container_items.append(discord.ui.Separator())
-    container_items.append(discord.ui.TextDisplay(footer_text))
-
-    container = discord.ui.Container(*container_items, accent_color=BRAND_ACCENT)
-    layout.add_item(container)
-
-    fallback = SyncInkEmbed(color=BRAND_ACCENT)
-    fallback.set_author(name="SyncInk Assistant", icon_url="https://files.catbox.moe/74l9su.png")
-    fallback.description = f"**Query:** \"*{clean_p}*\"\n\n{desc[:3900]}"
-    if used_web:
-        fallback.set_footer(text="SyncInk Platform | Grounded with Live Web Search 🌐", icon_url="https://files.catbox.moe/74l9su.png")
-    else:
-        fallback.set_footer(text="SyncInk Platform | Grounded AI Engine", icon_url="https://files.catbox.moe/74l9su.png")
-
-    return layout, fallback
 
 
 def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Optional[str]:
@@ -1201,20 +938,21 @@ class ChatGPT(commands.Cog):
             self.trigger_cooldown(message.author.id)
 
             try:
-                game_mode = get_interactive_game_mode(prompt)
-                if game_mode:
-                    view = InteractiveGameView(mode=game_mode, author_id=message.author.id)
-                    fallback = view.get_fallback_embed()
-                    msg = await send_clean_v2_message(message, view, fallback_embed=fallback, reply=True)
-                    view.message = msg
-                    if message.guild:
-                        self.record_exchange(message.guild.id, message.author.id, prompt, view.current_prompt or game_mode)
-                    return
-
                 async with message.channel.typing():
                     response, used_web = await self.get_ai_response(prompt, message.guild, message.author.id)
-                    layout, fallback = build_ai_general_payload(prompt, response, used_web=used_web)
-                    await send_clean_v2_message(message, layout, fallback_embed=fallback, reply=True)
+                    desc = response[:4000] + "..." if len(response) > 4000 else response
+
+                    embed = SyncInkEmbed(
+                        title=f"{Emojis.AI} **SyncInk Assistant**",
+                        description=desc,
+                        color=BRAND_ACCENT
+                    )
+                    if used_web:
+                        embed.set_footer(text="SyncInk Platform | Grounded with Live Web Search 🌐", icon_url="https://files.catbox.moe/74l9su.png")
+                    else:
+                        embed.set_footer(text="SyncInk Platform | Server Guide & AI Assistant", icon_url="https://files.catbox.moe/74l9su.png")
+
+                    await message.reply(embed=embed, mention_author=False)
             except Exception as e:
                 log.error(f"Error handling AI mention: {e}")
                 await message.reply(f"An error occurred while generating a response: `{e}`", mention_author=False)
@@ -1270,20 +1008,21 @@ class ChatGPT(commands.Cog):
         self.trigger_cooldown(ctx.author.id)
 
         try:
-            game_mode = get_interactive_game_mode(question)
-            if game_mode:
-                view = InteractiveGameView(mode=game_mode, author_id=ctx.author.id)
-                fallback = view.get_fallback_embed()
-                msg = await send_clean_v2_message(ctx, view, fallback_embed=fallback, reply=True)
-                view.message = msg
-                if ctx.guild:
-                    self.record_exchange(ctx.guild.id, ctx.author.id, question, view.current_prompt or game_mode)
-                return
-
             async with ctx.typing():
                 response, used_web = await self.get_ai_response(question, ctx.guild, ctx.author.id)
-                layout, fallback = build_ai_general_payload(question, response, used_web=used_web)
-                await send_clean_v2_message(ctx, layout, fallback_embed=fallback, reply=True)
+                desc = response[:4000] + "..." if len(response) > 4000 else response
+
+                embed = SyncInkEmbed(
+                    title=f"{Emojis.AI} **SyncInk Assistant**",
+                    description=desc,
+                    color=BRAND_ACCENT
+                )
+                if used_web:
+                    embed.set_footer(text="SyncInk Platform | Grounded with Live Web Search 🌐", icon_url="https://files.catbox.moe/74l9su.png")
+                else:
+                    embed.set_footer(text="SyncInk Platform | Server Guide & AI Assistant", icon_url="https://files.catbox.moe/74l9su.png")
+
+                await ctx.reply(embed=embed, mention_author=False)
         except Exception as e:
             log.error(f"Error handling ?ask command: {e}")
             await ctx.reply(f"An error occurred while generating a response: `{e}`", mention_author=False)
@@ -1320,19 +1059,20 @@ class ChatGPT(commands.Cog):
 
         await interaction.response.defer()
         try:
-            game_mode = get_interactive_game_mode(question)
-            if game_mode:
-                view = InteractiveGameView(mode=game_mode, author_id=interaction.user.id)
-                fallback = view.get_fallback_embed()
-                msg = await send_clean_v2_message(interaction.followup, view, fallback_embed=fallback)
-                view.message = msg
-                if interaction.guild:
-                    self.record_exchange(interaction.guild.id, interaction.user.id, question, view.current_prompt or game_mode)
-                return
-
             response, used_web = await self.get_ai_response(question, interaction.guild, interaction.user.id)
-            layout, fallback = build_ai_general_payload(question, response, used_web=used_web)
-            await send_clean_v2_message(interaction.followup, layout, fallback_embed=fallback)
+            desc = response[:4000] + "..." if len(response) > 4000 else response
+
+            embed = SyncInkEmbed(
+                title=f"{Emojis.AI} **SyncInk Assistant**",
+                description=desc,
+                color=BRAND_ACCENT
+            )
+            if used_web:
+                embed.set_footer(text="SyncInk Platform | Grounded with Live Web Search 🌐", icon_url="https://files.catbox.moe/74l9su.png")
+            else:
+                embed.set_footer(text="SyncInk Platform | Server Guide & AI Assistant", icon_url="https://files.catbox.moe/74l9su.png")
+
+            await interaction.followup.send(embed=embed)
         except Exception as e:
             log.error(f"Error handling /ask command: {e}")
             await interaction.followup.send(f"An error occurred while generating a response: `{e}`", ephemeral=True)
