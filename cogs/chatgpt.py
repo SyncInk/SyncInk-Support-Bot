@@ -135,14 +135,19 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "--- SYNCINK TICKET BOT KNOWLEDGE BASE ---",
         "• Bot: SyncInk Ticket Bot (<@1513075101992747158>)",
         "• Ticket Creation Panel: <#1520460764937322566> (Support Requests dropdown menu)",
-        "• Ticket Categories:",
-        "  1. User Report (`user_report`): For reporting members who break rules (NSFW in chat, harassment, toxicity, unauthorized ads, scam). Routes directly to Admins & Moderation team. Submitting reports: Users can draft incident reports and paste them in this ticket with screenshot proof.",
-        "  2. General Request (`general_request`): General server & bot inquiries answered by Staff team (<@&1520466655321522486>).",
-        "  3. Bug Report (`bug_report`): Reporting software bugs, bot glitches, or platform issues directly to Developers (<@&1531882215795855511>).",
-        "  4. Staff Abuse (`staff_abuse`): Confidential reports of moderator or staff misconduct sent directly to Admins and Server Owner (<@&1520856232460550194>).",
-        "  5. Owner Contact (`owner_contact`): Partnerships and executive matters with Server Owner.",
-        "  6. Other (`other_request`): Miscellaneous support requests.",
-        "• Ticket Features: Private channel generated per ticket, `🔒 Close Ticket` button with confirmation modal, `✋ Claim Ticket` button, and automated HTML transcript saved on close.",
+        "• Support Categories & Emojis:",
+        "  1. <:SyncProductSupport:1522287691792912394> Product Support (Primary): Get help with any SyncInk product, setup, configuration, or troubleshooting.",
+        "  2. <:userreport:1513336966681460856> Account & Server: Appeals, account-related issues, verification problems, user reports (reporting rule breakers, NSFW in chat, harassment), or server concerns.",
+        "  3. <:bugreport:1513337174148513892> Bug Report: Report a bug to the developers.",
+        "  4. <:staffabuse:1513337285024677899> Staff Abuse: Report a misbehaving staff member to the admins.",
+        "  5. <:others~1:1513337572078911488> Other: Something else that is not listed above.",
+        "  6. <:SyncPartnership:1522289808599290006> Partnership / Business: Business inquiries, collaborations, sponsorships, or partnership requests.",
+        "• Ticket Creation Workflow (Exact Process):",
+        "  - Step 1: User selects their matching category from the dropdown in <#1520460764937322566>.",
+        "  - Step 2: A modal window opens where the user MUST write their issue / description in detail.",
+        "  - Step 3: The bot creates a Private Thread inside <#1520460764937322566> specifically for the user and staff.",
+        "  - Step 4: The user must wait patiently until any staff member claims it using the 📝 Claim button.",
+        "• In-Thread Features: Claimers embed, Reason embed, Action buttons (🔒 Close, 🔄 Transfer, 📝 Claim), and automated HTML transcripts upon closing.",
         "• Ticket Commands: `/ticket-panel`, `/ticket-add @user`, `/ticket-remove @user`, `/ticket-rename <name>`, `/ticket-config`, `/ticket-logs`.",
         "",
         "--- SYNCINK VOICE BOT KNOWLEDGE BASE ---",
@@ -351,32 +356,41 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
         return "You can verify your account at the verification checkpoint in <#1520748219100041348>."
 
     # 7. Support & Tickets
-    if p in ("ticket bot", "syncink ticket bot", "how does ticket bot work", "how to use ticket bot", "ticket categories"):
+    if p in ("ticket bot", "syncink ticket bot", "how does ticket bot work", "how to use ticket bot", "ticket categories", "ticket options", "categories"):
         return (
             "**SyncInk Ticket Bot** (<@1513075101992747158>) Guide:\n\n"
-            "Open private tickets in <#1520460764937322566> using the select menu:\n"
-            "• **User Report**: Report rule violations (NSFW, harassment, spam) directly to Admins.\n"
-            "• **General Request**: General support and questions handled by Staff.\n"
-            "• **Bug Report**: Technical bot bugs and platform issues routed to Developers.\n"
-            "• **Staff Abuse**: Confidential reporting of staff misconduct to Owner & Admins.\n"
-            "• **Owner Contact**: Partnerships and executive matters with Server Owner.\n"
-            "• **Other**: Inquiries not listed above."
+            "Open tickets in <#1520460764937322566> (**Support Requests**) by selecting a category:\n"
+            "• <:SyncProductSupport:1522287691792912394> **Product Support (Primary)** — Setup, configuration, or troubleshooting.\n"
+            "• <:userreport:1513336966681460856> **Account & Server** — Appeals, account issues, verification, or reporting rule breakers / bad behavior.\n"
+            "• <:bugreport:1513337174148513892> **Bug Report** — Report a bug to developers.\n"
+            "• <:staffabuse:1513337285024677899> **Staff Abuse** — Report misbehaving staff to admins & owner.\n"
+            "• <:others~1:1513337572078911488> **Other** — Inquiries not listed above.\n"
+            "• <:SyncPartnership:1522289808599290006> **Partnership / Business** — Business inquiries, sponsorships, or partnerships.\n\n"
+            "**Ticket Workflow:**\n"
+            "1. Choose your category in <#1520460764937322566>.\n"
+            "2. A modal will pop up — **write your issue / reason**.\n"
+            "3. The bot creates a **Private Thread** specifically for you and staff.\n"
+            "4. **Wait patiently until a staff member claims it** (`📝 Claim`)!"
         )
 
     if p in ("how to report", "how do i report", "how to report someone", "report someone", "report user", "how to report a user", "report nsfw"):
         return (
-            "To report a rule violation (such as NSFW, harassment, or spam):\n\n"
-            "1. Go to <#1520460764937322566> (**Support Requests**).\n"
-            "2. Select **User Report** from the dropdown menu.\n"
-            "3. Provide the reported user's name/ID, channel, and screenshot evidence.\n\n"
-            "Our Admin & Moderation team will handle the matter confidentially."
+            "To report a rule violation (such as NSFW, harassment, or bad behavior):\n\n"
+            "1. Head to <#1520460764937322566> (**Support Requests**).\n"
+            "2. Select <:userreport:1513336966681460856> **Account & Server** from the category menu.\n"
+            "3. A modal will pop up — write your report details and submit.\n"
+            "4. The bot will create a **Private Thread** for your ticket.\n"
+            "5. Attach your screenshot evidence in the thread, and **wait patiently until a staff member claims it** (`📝 Claim`)."
         )
 
     if p in ("open a ticket", "create a ticket", "support ticket", "ticket channel", "how to get support", "need staff help", "talk to staff"):
         return (
-            "For assistance from the SyncInk support team:\n"
-            "• Open a private ticket in <#1520460764937322566>\n"
-            "• Or ask publicly in support chat at <#1520460808499363840>"
+            "For assistance from the SyncInk support team:\n\n"
+            "1. Go to <#1520460764937322566> and choose your category from the menu.\n"
+            "2. Write your issue in the modal window that pops up.\n"
+            "3. The bot will create a **Private Thread** for you and staff.\n"
+            "4. **Wait patiently until a staff member claims it** (`📝 Claim`)!\n\n"
+            "*(You can also ask general public questions in <#1520460808499363840>)*"
         )
 
     if any(k in p for k in ("support chat", "what is support chat", "where is support chat", "can i chat in support")):
@@ -955,17 +969,32 @@ class ChatGPT(commands.Cog):
             "     • Cite the official violated rule: **Rule 8 (Enforcement Policy & Zero Tolerance)** and **Media Showcase Policy (Strictly NO NSFW)**.\n"
             "     • Provide a clean, structured incident report template ready for copy-pasting:\n"
             "       📋 **Incident Report**\n"
-            "       • **Category:** User Report (<#1520460764937322566>)\n"
+            "       • **Category:** Account & Server (<:userreport:1513336966681460856>)\n"
             "       • **Reported User:** `[User Mention / Username / User ID]`\n"
             "       • **Channel:** <#1520461481857122485> (General Chat)\n"
             "       • **Rule Violated:** Rule 8 & Zero-Tolerance NSFW Policy\n"
             "       • **Details:** `[User posted unauthorized/NSFW images in chat]`\n"
-            "       • **Evidence:** `[Attach screenshot or message link]`\n"
-            "     • Direct them clearly to open <#1520460764937322566> (**Support Requests**), select **User Report** from the dropdown menu, and submit this report with evidence for the Admin team.\n"
-            "4. **SYNCINK TICKET BOT KNOWLEDGE**:\n"
-            "   - Ticket Bot (<@1513075101992747158>) manages support tickets via <#1520460764937322566>.\n"
-            "   - Categories: `user_report` (reports of rule violations -> Admins), `general_request` (general support -> Staff), `bug_report` (bugs -> Developers), `staff_abuse` (staff misconduct -> Admins & Owner), `owner_contact` (executive matters -> Owner), `other_request`.\n"
-            "   - Features: `🔒 Close Ticket`, `✋ Claim Ticket`, confirmation modal, and HTML transcripts generated upon ticket closure.\n"
+            "       • **Evidence:** `[Attach screenshot or message link in thread]`\n"
+            "     • Direct them clearly through the exact ticket process:\n"
+            "       1. Head to <#1520460764937322566> (**Support Requests**).\n"
+            "       2. Select <:userreport:1513336966681460856> **Account & Server** from the category menu.\n"
+            "       3. A modal window pops up where they **MUST write their issue / description**.\n"
+            "       4. The bot creates a **Private Thread** inside <#1520460764937322566> for them and staff.\n"
+            "       5. Post screenshots/evidence in the thread, and **wait patiently until any staff member claims it** (`📝 Claim`).\n"
+            "4. **SYNCINK TICKET BOT KNOWLEDGE & CATEGORIES**:\n"
+            "   - Ticket Bot (<@1513075101992747158>) manages support tickets in <#1520460764937322566>.\n"
+            "   - Support Categories & Custom Emojis:\n"
+            "     • <:SyncProductSupport:1522287691792912394> **Product Support (Primary)**: Help with any SyncInk product, setup, configuration, or troubleshooting.\n"
+            "     • <:userreport:1513336966681460856> **Account & Server**: Appeals, account issues, verification problems, user reports (e.g. reporting NSFW in chat, toxicity, rule breaks), or server concerns.\n"
+            "     • <:bugreport:1513337174148513892> **Bug Report**: Report bugs to developers.\n"
+            "     • <:staffabuse:1513337285024677899> **Staff Abuse**: Report misbehaving staff to admins & owner.\n"
+            "     • <:others~1:1513337572078911488> **Other**: Inquiries not listed above.\n"
+            "     • <:SyncPartnership:1522289808599290006> **Partnership / Business**: Business inquiries, collaborations, sponsorships, or partnership requests.\n"
+            "   - Ticket Flow:\n"
+            "     • Selecting a category opens a modal where the user **MUST write their issue**.\n"
+            "     • The bot generates a **Private Thread** specifically for the user and staff.\n"
+            "     • The user must **wait patiently until any staff claims it** (via the `📝 Claim` button).\n"
+            "     • Controls: `🔒 Close` (with modal and HTML transcript), `🔄 Transfer`, `📝 Claim`.\n"
             "5. **SYNCINK VOICE BOT KNOWLEDGE**:\n"
             "   - Voice Bot (<@1516578887109181520>) powers temporary voice rooms via <#1520749464569253998>.\n"
             "   - Room Settings: Rename, Limit (0-99), Status topic, Game sync, LFM broadcast, Bitrate, Region, Text chat, NSFW, Claim.\n"
