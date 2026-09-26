@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import os
 import aiohttp
+import asyncio
 import time
 import json
 import re
@@ -90,7 +91,7 @@ def sanitize_ai_identity(text: str) -> str:
     return res
 
 def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = None) -> str:
-    """Builds the comprehensive official server channel and guide knowledge base."""
+    """Builds the comprehensive official server channel, bot ecosystem, and guide knowledge base."""
     g_name = guild.name if guild else "SyncInk Support"
     lines = [
         f"Server Name: {g_name}",
@@ -109,11 +110,67 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "    - Public Service Bots (<@&1521166171523780688>): Ticket Bot (<@1513075101992747158>), Voice Bot (<@1516578887109181520>)",
         "    - Private Bot (<@&1520533971476156469>): SyncInk Security Bot (<@1520522990280769727>) - protects community from spam and deletes blacklisted messages",
         "12. General Chat: <#1520461481857122485> (The designated channel where members hang out, talk, and have casual conversation. All general talking belongs here!)",
-        "13. Media Showcase Channel: <#1520461517093343232> (Share images, media, clips. STRICT NOTE: Any NSFW content will be permanently banned!)",
+        "13. Media Showcase Channel: <#1520461517093343232> (Share images, media, clips. STRICT NOTE: Any NSFW content will result in an immediate permanent ban!)",
         "14. Join to Create VC: <#1520749464569253998> (Join this voice channel to automatically generate your own temporary private voice channel)",
         "15. Apply for Developer Channel: <#1539301185423413398> (Form: [Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer) - check requirements in <#1539301185423413398>)",
         "16. Apply for Staff Channel: <#1539319001673367604> (Form: [Apply for Staff](https://discord.com/channels/1520457643842342912/1539319001673367604/1539371523188596916) - check requirements in <#1539319001673367604>)",
         "17. Ask AI Channel: <#1544361954574073916> (Dedicated channel for AI questions)",
+        "",
+        "--- OFFICIAL SUPPORT SERVER RULES (<#1520460587522330634>) ---",
+        "Reference Post: https://discord.com/channels/1520457643842342912/1520460587522330634/1539582756001161238",
+        "• Rule 1: Verification Required — All members must complete verification in <#1520748219100041348> before gaining access to the rest of the server.",
+        "• Rule 2: Professional Conduct & Respect — Treat all members, staff, and developers with respect. Strictly prohibited: harassment, bullying, hate speech, discrimination, personal attacks, toxic behavior, provoking arguments.",
+        "• Rule 3: Keep Discussions Relevant — Keep conversations in proper channels:",
+        "  - General Chat: <#1520461481857122485> (Casual & off-topic discussions)",
+        "  - Support Requests: <#1520460764937322566> (Private support tickets)",
+        "  - Support Chat: <#1520460808499363840> (General questions and public help)",
+        "  - Feature Suggestions: <#1546548728721178724> (Submit feature suggestions)",
+        "• Rule 4: Zero Tolerance for Spam — Prohibited: Repeated messages, unsolicited mentions/pings, mass emojis/GIFs/stickers, bot command spam.",
+        "• Rule 5: No Advertising or Self-Promotion — Direct advertising of external servers, products, bots, or DM advertising without explicit approval is strictly forbidden.",
+        "• Rule 6: Security & Responsible Use — No exploiting bugs, security bypassing, malware, or phishing. Report security issues privately via ticket in <#1520460764937322566>.",
+        "• Rule 7: Respect Staff Decisions — Comply with staff instructions. Appeals or questions must go privately through a ticket in <#1520460764937322566>, never argued publicly in chat.",
+        "• Rule 8: Enforcement Policy — Escalation: Warnings -> Message Deletion -> Timeouts -> Kicks -> Permanent Bans. Severe violations (such as NSFW content, malicious attacks, hate speech) result in an immediate permanent ban without warning!",
+        "• Media Showcase Policy (<#1520461517093343232>): Absolutely NO NSFW content. Posting NSFW results in an immediate permanent ban!",
+        "",
+        "--- SYNCINK TICKET BOT KNOWLEDGE BASE ---",
+        "• Bot: SyncInk Ticket Bot (<@1513075101992747158>)",
+        "• Ticket Creation Panel: <#1520460764937322566> (Support Requests dropdown menu)",
+        "• Ticket Categories:",
+        "  1. User Report (`user_report`): For reporting members who break rules (NSFW in chat, harassment, toxicity, unauthorized ads, scam). Routes directly to Admins & Moderation team. Submitting reports: Users can draft incident reports and paste them in this ticket with screenshot proof.",
+        "  2. General Request (`general_request`): General server & bot inquiries answered by Staff team (<@&1520466655321522486>).",
+        "  3. Bug Report (`bug_report`): Reporting software bugs, bot glitches, or platform issues directly to Developers (<@&1531882215795855511>).",
+        "  4. Staff Abuse (`staff_abuse`): Confidential reports of moderator or staff misconduct sent directly to Admins and Server Owner (<@&1520856232460550194>).",
+        "  5. Owner Contact (`owner_contact`): Partnerships and executive matters with Server Owner.",
+        "  6. Other (`other_request`): Miscellaneous support requests.",
+        "• Ticket Features: Private channel generated per ticket, `🔒 Close Ticket` button with confirmation modal, `✋ Claim Ticket` button, and automated HTML transcript saved on close.",
+        "• Ticket Commands: `/ticket-panel`, `/ticket-add @user`, `/ticket-remove @user`, `/ticket-rename <name>`, `/ticket-config`, `/ticket-logs`.",
+        "",
+        "--- SYNCINK VOICE BOT KNOWLEDGE BASE ---",
+        "• Bot: SyncInk Voice Bot (<@1516578887109181520>)",
+        "• Join-to-Create Channel: <#1520749464569253998>",
+        "• How it works: Joining <#1520749464569253998> automatically spawns a private temporary voice room and linked control panel for the user.",
+        "• Room Settings Menu:",
+        "  - Name: Rename the temporary voice room.",
+        "  - Limit: Set user capacity (0 = unlimited, 1-99).",
+        "  - Status: Set a custom status/topic for the voice channel.",
+        "  - Game: Sync room name with current game played.",
+        "  - LFM: Broadcast Looking For Members announcement.",
+        "  - Bitrate: Adjust audio quality.",
+        "  - Region: Change voice server region.",
+        "  - Text: Toggle temporary private text chat for room members.",
+        "  - NSFW: Toggle NSFW age-restriction flag.",
+        "  - Claim: Claim ownership if the room owner leaves.",
+        "• Room Permissions Menu:",
+        "  - Lock: Lock room to prevent unauthorized members from entering.",
+        "  - Unlock: Reopen room to all members.",
+        "  - Permit: Whitelist specific user or role to join.",
+        "  - Reject: Kick user and deny reconnection.",
+        "  - Invite: Create instant invite link.",
+        "  - Ghost / Hide: Hide channel from the server list.",
+        "  - Unghost / Unhide: Reveal channel back on server list.",
+        "  - Transfer: Transfer room ownership to another user.",
+        "• Action Buttons: Load Settings, Refresh Panel, Dashboard.",
+        "",
         "--- OFFICIAL SYNCINK SERVER ROLES (CATEGORY-WISE) ---",
         "• Leadership & Administration:",
         f"  - Owner: {EmojiManager.get_role_emoji(guild, 'owner')} <@&1520856232460550194> (Server Owner & Creator of SyncInk)",
@@ -131,6 +188,9 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
 def resolve_greeting(prompt: str, guild: Optional[discord.Guild] = None) -> Optional[str]:
     """Provides a standardized welcome greeting that correctly points to General Chat for hanging out."""
     clean = prompt.lower().strip().rstrip("?!. ")
+    words = clean.split()
+    if len(words) > 3:
+        return None
     greetings = {"hi", "hello", "hey", "hii", "heyy", "sup", "yo", "start", "get started"}
     if clean in greetings or any(clean.startswith(g + " ") for g in ("hi", "hello", "hey")):
         g_name = guild.name if guild else "SyncInk Support"
@@ -146,67 +206,67 @@ def resolve_greeting(prompt: str, guild: Optional[discord.Guild] = None) -> Opti
         )
     return None
 
-TRUTH_QUESTIONS = [
-    "What is the most embarrassing thing you've ever typed in a Discord channel and instantly scrambled to delete?",
-    "If your Discord search history was projected onto a giant screen in this server, what would be the hardest thing to explain?",
-    "Have you ever pretended to be AFK, laggy, or offline just to avoid talking to someone in voice chat?",
-    "What is the pettiest reason you've ever left a Discord server, unfriended someone, or blocked a user?",
-    "What is the worst or most embarrassing video game you secretly spent hundreds of hours playing?",
-    "Have you ever blamed 'terrible ping' or 'server lag' when in reality you simply choked an easy play?",
-    "What is one song, artist, or playlist you love that you would never play out loud in a Discord voice channel?",
-    "If you had to trade roles with any staff member in this server for 24 hours, who would it be and why?",
-    "What is a controversial gaming or tech opinion you hold that you know almost everyone here would argue against?",
-    "Have you ever sent a screenshot of a Discord chat to another friend to talk about it behind someone's back?",
-    "What is the weirdest or most cringe username you ever used when you first created your online accounts?",
-    "What is the longest continuous gaming or Discord session you have ever pulled without leaving your chair?",
-    "If you could give yourself any custom role or permission on this server right now, what would it be?",
-    "What is one server rule that you secretly think is hilarious or unnecessary?",
-    "Have you ever accidentally sent a private message into a public server channel? What happened next?",
-    "If you had to pick one member in this server to survive a zombie apocalypse with, who would you choose?",
-    "What is the most expensive in-game cosmetic or microtransaction you deeply regret purchasing?",
-    "Have you ever stayed up past 4:00 AM talking about completely nonsensical topics in voice chat?",
-    "What is your biggest pet peeve when chatting with people on Discord?",
-    "If someone gave you 10,000 Discord Nitro credits right now, what is the first thing you would do with them?"
+DYNAMIC_TRUTH_QUESTIONS = [
+    "What's something (idea, current event, fear) that you find deeply unsettling?",
+    "What is a personal conviction you defended passionately in the past that you now find completely misguided?",
+    "If your thoughts over the past 48 hours were broadcast publicly in this server, who would you owe an immediate apology to?",
+    "What is a truth about your character that you try hardest to hide from people who admire you?",
+    "What is the most selfish decision you've ever made that you secretly do not regret at all?",
+    "If you had to name one unspoken insecurity that drives most of your daily decisions, what is it?",
+    "Have you ever allowed someone else to take the blame or consequences for a mistake you made?",
+    "What is a belief you secretly hold that you know would cause serious controversy if you said it out loud?",
+    "If you could review an unedited recording of any single conversation in your life, which one would it be?",
+    "What is something you pretend to find fulfilling or enjoyable solely to meet the expectations of others?",
+    "What is the harshest criticism someone has given you that you know deep down was 100% accurate?",
+    "If everyone in your life could read your mind for 60 seconds right now, what is the single thought that would destroy you?",
+    "What is a bridge you burned that you pretend was justified, but in reality was caused by your own pride?",
+    "What is the most morally ambiguous situation you've ever found yourself in, and how did you resolve it?",
+    "If you had to trade your entire digital identity and start completely fresh without any friends knowing, would you do it?",
+    "What is an unspoken boundary or rule you hold for other people that you routinely break yourself?",
+    "What is a dream or ambition you quietly abandoned because you were terrified of failing publicly?",
+    "If you knew with absolute certainty that no one would ever find out, what is one taboo rule you would break?",
+    "What is a compliment you received that felt more like an indictment of how fake you were being?",
+    "What is a memory that randomly surfaces at 3:00 AM and makes you cringe at your past self?",
+    "What is an opinion you hold about modern society that you would never dare post under your real name?",
+    "If you could see the exact statistical impact you've had on everyone you've met, what stat would you be most afraid to see?"
 ]
 
-DARE_CHALLENGES = [
-    "Speak strictly in rhymes for your next 3 messages in General Chat (<#1520461481857122485>)!",
-    "Set your Discord custom status to 'Certified SyncInk Fan 👑' for the next 30 minutes!",
-    "Ping the person directly above you in General Chat and tell them their Discord avatar is legendary!",
-    "Send a random animal sound in General Chat (<#1520461481857122485>) and refuse to provide any context!",
-    "Type out your full Discord username using only your elbow or chin in chat!",
-    "React with 👑 to the last 5 messages sent in General Chat (<#1520461481857122485>)!",
-    "Write a short, dramatic 2-line poem about your favorite video game in chat!",
-    "Change your Discord nickname on this server to something hilarious chosen by the next person who speaks!",
-    "Use only GIF reactions for the next 10 minutes in General Chat!",
-    "Give an overly formal, dramatic review of the last food or snack you ate in chat!"
+DYNAMIC_DARE_CHALLENGES = [
+    "Speak strictly in philosophical questions for your next 3 messages in General Chat (<#1520461481857122485>)!",
+    "Set your Discord custom status to 'Analyzing the simulation matrix 👁️' for the next 25 minutes!",
+    "Ping the person directly above you in chat and praise them as if they just saved the universe from destruction!",
+    "Write a short, excessively dramatic eulogy for a dead battery or broken charging cable in chat!",
+    "Type your next message in General Chat using only your thumb while holding your phone or keyboard upside down!",
+    "React with 🗿 to the last 5 messages sent in General Chat (<#1520461481857122485>) without saying a word!",
+    "Change your Discord nickname on this server to something ridiculous chosen by the next member who types!",
+    "Compose an overly intense, 2-line movie trailer voiceover about eating a midnight snack in chat!",
+    "Send a message in chat pretending you just woke up from a 100-year cryogenic sleep and need an explanation of modern Discord!",
+    "Post a totally serious, intellectual critique of why water is or is not wet in General Chat!"
 ]
+
+def get_interactive_game_mode(prompt: str) -> Optional[str]:
+    """Detects if prompt is requesting a Truth, Dare, or Truth or Dare game."""
+    p = prompt.lower().strip().rstrip("?!. ")
+    if p in ("truth", "ask truth", "give me a truth", "truth question", "t", "give truth", "play truth", "gimme truth", "ask me a truth", "send truth"):
+        return "truth"
+    if p in ("dare", "ask dare", "give me a dare", "dare challenge", "d", "give dare", "play dare", "gimme dare", "ask me a dare", "send dare"):
+        return "dare"
+    if p in ("truth or dare", "tod", "play truth or dare", "truth and dare", "t or d", "play tod", "give me truth or dare", "play truth and dare"):
+        return "random"
+    return None
 
 def resolve_fun_interactive(prompt: str) -> Optional[str]:
-    """Provides fun, interactive community games (Truth or Dare, playful prompts)."""
-    p = prompt.lower().strip().rstrip("?!. ")
-    if p in ("truth", "ask truth", "give me a truth", "truth question", "t", "give truth", "play truth"):
-        q = random.choice(TRUTH_QUESTIONS)
-        return (
-            f"🎲 **Truth Time!** Here is your question:\n\n"
-            f"> *\"{q}\"*\n\n"
-            f"Be 100% honest and drop your answer right here in chat!"
-        )
-    if p in ("dare", "ask dare", "give me a dare", "dare challenge", "d", "give dare", "play dare"):
-        d = random.choice(DARE_CHALLENGES)
-        return (
-            f"⚡ **Dare Challenge!** Here is your task:\n\n"
-            f"> *\"{d}\"*\n\n"
-            f"No backing out now! Let's see you do it."
-        )
-    if p in ("truth or dare", "tod", "play truth or dare", "truth and dare", "t or d"):
-        return (
-            f"🎮 **Truth or Dare!**\n\n"
-            f"Choose your fate:\n"
-            f"• Type `?ai truth` if you're ready to confess an honest truth.\n"
-            f"• Type `?ai dare` if you're ready for a challenge!\n\n"
-            f"What will it be?"
-        )
+    """Provides fun, interactive community games fallback."""
+    mode = get_interactive_game_mode(prompt)
+    if mode == "truth":
+        q = random.choice(DYNAMIC_TRUTH_QUESTIONS)
+        return f"🕸️ **Truth:** **{q}**"
+    if mode == "dare":
+        d = random.choice(DYNAMIC_DARE_CHALLENGES)
+        return f"⚡ **Dare:** **{d}**"
+    if mode == "random":
+        q = random.choice(DYNAMIC_TRUTH_QUESTIONS)
+        return f"🕸️ **Truth:** **{q}**"
     return None
 
 
@@ -214,8 +274,20 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
     """
     Directly answers specific server channel and action queries with 100% precision.
     Follows the strict rule: Tell ONLY that specific thing without dumping unrelated channels.
+    Never intercepts multi-sentence questions, report writing requests, or complex topics.
     """
     p = prompt.lower().strip().rstrip("?!. ")
+    words = p.split()
+
+    # Complex queries, multi-sentence questions, drafting requests, or incident reports MUST be handled by the AI model
+    complex_triggers = (
+        "write", "draft", "incident", "someone", "posting", "giving",
+        "nsfw", "photo", "image", "ban", "warn", "kick", "violation", "violating",
+        "can u", "can you", "could you", "help me with", "please help", "what should i do",
+        "explain", "why", "submit", "ticket because"
+    )
+    if len(words) > 5 or any(trigger in p for trigger in complex_triggers):
+        return None
 
     # 0. Contribute to SyncInk / Join the Team
     if any(k in p for k in (
@@ -255,12 +327,23 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
             "exclusively in <#1546548728721178724>."
         )
 
-    # 4. Rules & Guidelines
-    if any(k in p for k in ("where are the rules", "what are the rules", "rules channel", "server rules", "read the rules", "community rules", "guides channel", "guidelines")):
-        return "You can read the server guides, rules, and community guidelines in <#1520460587522330634>."
+    # 4. Rules & Guidelines (Strict focused matching)
+    if p in ("rules", "server rules", "what are the rules", "where are the rules", "rules channel", "read the rules", "community rules", "guides channel", "guidelines", "rules list", "server rules list"):
+        return (
+            "**Official SyncInk Support Server Rules** (<#1520460587522330634>):\n\n"
+            "• **Rule 1: Verification** — Complete verification in <#1520748219100041348>.\n"
+            "• **Rule 2: Conduct & Respect** — No harassment, bullying, hate speech, toxicity, or personal attacks.\n"
+            "• **Rule 3: Keep Discussions Relevant** — General chat in <#1520461481857122485>, tickets in <#1520460764937322566>, support in <#1520460808499363840>.\n"
+            "• **Rule 4: Zero Tolerance for Spam** — No repeated messages, unsolicited pings, mass emojis, or bot spam.\n"
+            "• **Rule 5: No Advertising** — External promotions and DM advertising are strictly prohibited.\n"
+            "• **Rule 6: Security & Responsible Use** — No exploiting or bypassing security. Report issues via ticket.\n"
+            "• **Rule 7: Respect Staff Decisions** — Appeals or questions must go privately through a ticket.\n"
+            "• **Rule 8: Enforcement Policy** — Warnings -> Timeouts -> Bans. Severe violations (such as NSFW) result in an immediate permanent ban!\n"
+            "• **Media Showcase Policy** (<#1520461517093343232>) — Strictly NO NSFW content."
+        )
 
-    # 5. General Chat / Where to talk & hang out
-    if any(k in p for k in ("where to talk", "where can i talk", "where can we talk", "where to chat", "where is general chat", "where is general", "general chat", "hang out", "where to hang out", "where can i hang out")):
+    # 5. General Chat / Where to talk & hang out (Strict focused matching to avoid false positives)
+    if p in ("general chat", "where to talk", "where can i talk", "where can we talk", "where to chat", "where is general chat", "where is general", "where to hang out", "where can i hang out"):
         return "You can hang out, talk, and chat with everyone in general chat at <#1520461481857122485>."
 
     # 6. Verification
@@ -268,7 +351,28 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
         return "You can verify your account at the verification checkpoint in <#1520748219100041348>."
 
     # 7. Support & Tickets
-    if any(k in p for k in ("open a ticket", "create a ticket", "support ticket", "ticket channel", "how to get support", "need staff help", "talk to staff")):
+    if p in ("ticket bot", "syncink ticket bot", "how does ticket bot work", "how to use ticket bot", "ticket categories"):
+        return (
+            "**SyncInk Ticket Bot** (<@1513075101992747158>) Guide:\n\n"
+            "Open private tickets in <#1520460764937322566> using the select menu:\n"
+            "• **User Report**: Report rule violations (NSFW, harassment, spam) directly to Admins.\n"
+            "• **General Request**: General support and questions handled by Staff.\n"
+            "• **Bug Report**: Technical bot bugs and platform issues routed to Developers.\n"
+            "• **Staff Abuse**: Confidential reporting of staff misconduct to Owner & Admins.\n"
+            "• **Owner Contact**: Partnerships and executive matters with Server Owner.\n"
+            "• **Other**: Inquiries not listed above."
+        )
+
+    if p in ("how to report", "how do i report", "how to report someone", "report someone", "report user", "how to report a user", "report nsfw"):
+        return (
+            "To report a rule violation (such as NSFW, harassment, or spam):\n\n"
+            "1. Go to <#1520460764937322566> (**Support Requests**).\n"
+            "2. Select **User Report** from the dropdown menu.\n"
+            "3. Provide the reported user's name/ID, channel, and screenshot evidence.\n\n"
+            "Our Admin & Moderation team will handle the matter confidentially."
+        )
+
+    if p in ("open a ticket", "create a ticket", "support ticket", "ticket channel", "how to get support", "need staff help", "talk to staff"):
         return (
             "For assistance from the SyncInk support team:\n"
             "• Open a private ticket in <#1520460764937322566>\n"
@@ -288,8 +392,16 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
             "⚠️ **Strict Rule:** Any NSFW content will result in an immediate permanent ban!"
         )
 
-    # 9. Voice Channel / Join to Create VC
-    if any(k in p for k in ("join to create", "create vc", "voice channel", "voice chat", "join vc", "where is vc", "how to join vc")):
+    # 9. Voice Channel / Join to Create VC & Voice Bot
+    if p in ("voice bot", "syncink voice", "how does voice bot work", "how to use voice bot", "voice commands", "voice controls"):
+        return (
+            "**SyncInk Voice Bot** (<@1516578887109181520>) Guide:\n\n"
+            "• **Join to Create**: Join <#1520749464569253998> to automatically generate your private voice room.\n"
+            "• **Room Settings Menu**: Rename room, set user limits, update status, sync with currently played game, toggle LFM, adjust bitrate, switch region, or toggle temporary text chat.\n"
+            "• **Permissions Menu**: Lock/Unlock your room, permit specific members, kick/reject unwanted users, ghost/hide the channel, or transfer ownership."
+        )
+
+    if p in ("join to create", "create vc", "voice channel", "voice chat", "join vc", "where is vc", "how to join vc"):
         return "You can join <#1520749464569253998> to automatically generate your own temporary private voice channel."
 
     # 10. Official Products & Bots
@@ -834,26 +946,56 @@ class ChatGPT(commands.Cog):
             "   - You MUST answer every question asked by users. Never refuse, avoid, or deflect inquiries.\n"
             "   - Whether the query is about programming, algorithms, software development, Discord bot design, server administration, mathematics, physics, science, gaming (e.g. GTA 6), movies, tech, history, life advice, or general trivia, deliver a high-quality, comprehensive, and accurate response directly addressing what was asked.\n"
             "   - **NEVER** recite generic server navigation introductions ('I am SyncInk Assistant, here to navigate...') unless the user explicitly asks for server navigation or channel help.\n"
-            "2. **PROFESSIONAL TONE FOR PROFESSIONAL & TECHNICAL QUESTIONS**:\n"
-            "   - When answering professional, technical, educational, coding, or server administration inquiries:\n"
-            "     • Respond with high professionalism, executive clarity, and technical precision.\n"
-            "     • Use well-structured Markdown: clear headings, bullet points, numbered steps, and properly formatted code blocks with language syntax highlighting.\n"
-            "     • Be thorough, objective, and authoritative—do not use childish slang or inappropriate humor when addressing professional or technical topics.\n"
-            "3. **CHARISMATIC & ENJOYABLE TONE FOR CASUAL & COMMUNITY INQUIRIES**:\n"
-            "   - When engaging in casual conversation, banter, gaming chats, or community games (like Truth or Dare):\n"
-            "     • Be friendly, charismatic, and fun to interact with, keeping community energy high!\n"
-            "     • Strictly keep it 'in limit': always clean, respectful, PG-13, no toxicity, no offensive language, no spam.\n"
-            "4. **IDENTITY & ORIGIN**:\n"
+            "2. **DISCORD-STYLE PROFESSIONAL & SHORT MESSAGES**:\n"
+            "   - Format all responses using crisp Discord Markdown: clear bullet points (•), sub-bullets (╰), bold labels, and code blocks with syntax highlighting.\n"
+            "   - Keep messages short, structured, professional, and directly to the point. Avoid conversational filler, wordy apologies, or repeating the user's prompt.\n"
+            "3. **INCIDENT REPORTING & TICKET HANDLING (CRITICAL)**:\n"
+            "   - When a member asks to write, draft, or submit a report for an incident (e.g. someone in general chat posting NSFW photos, harassment, toxicity, bot abuse, unauthorized advertising):\n"
+            "     • Do NOT deflect or tell them to 'hang out in general chat'.\n"
+            "     • Cite the official violated rule: **Rule 8 (Enforcement Policy & Zero Tolerance)** and **Media Showcase Policy (Strictly NO NSFW)**.\n"
+            "     • Provide a clean, structured incident report template ready for copy-pasting:\n"
+            "       📋 **Incident Report**\n"
+            "       • **Category:** User Report (<#1520460764937322566>)\n"
+            "       • **Reported User:** `[User Mention / Username / User ID]`\n"
+            "       • **Channel:** <#1520461481857122485> (General Chat)\n"
+            "       • **Rule Violated:** Rule 8 & Zero-Tolerance NSFW Policy\n"
+            "       • **Details:** `[User posted unauthorized/NSFW images in chat]`\n"
+            "       • **Evidence:** `[Attach screenshot or message link]`\n"
+            "     • Direct them clearly to open <#1520460764937322566> (**Support Requests**), select **User Report** from the dropdown menu, and submit this report with evidence for the Admin team.\n"
+            "4. **SYNCINK TICKET BOT KNOWLEDGE**:\n"
+            "   - Ticket Bot (<@1513075101992747158>) manages support tickets via <#1520460764937322566>.\n"
+            "   - Categories: `user_report` (reports of rule violations -> Admins), `general_request` (general support -> Staff), `bug_report` (bugs -> Developers), `staff_abuse` (staff misconduct -> Admins & Owner), `owner_contact` (executive matters -> Owner), `other_request`.\n"
+            "   - Features: `🔒 Close Ticket`, `✋ Claim Ticket`, confirmation modal, and HTML transcripts generated upon ticket closure.\n"
+            "5. **SYNCINK VOICE BOT KNOWLEDGE**:\n"
+            "   - Voice Bot (<@1516578887109181520>) powers temporary voice rooms via <#1520749464569253998>.\n"
+            "   - Room Settings: Rename, Limit (0-99), Status topic, Game sync, LFM broadcast, Bitrate, Region, Text chat, NSFW, Claim.\n"
+            "   - Room Permissions: Lock, Unlock, Permit, Reject, Invite, Ghost (hide), Unghost (reveal), Transfer.\n"
+            "   - Buttons: Load Settings, Refresh Panel, Dashboard.\n"
+            "6. **SUPPORT SERVER RULES KNOWLEDGE (<#1520460587522330634>)**:\n"
+            "   - Rule 1: Verification Required (<#1520748219100041348>).\n"
+            "   - Rule 2: Professional Conduct & Respect (No harassment, hate speech, bullying, toxicity).\n"
+            "   - Rule 3: Keep Discussions Relevant (General: <#1520461481857122485>, Tickets: <#1520460764937322566>, Support: <#1520460808499363840>, Suggestions: <#1546548728721178724>).\n"
+            "   - Rule 4: Zero Tolerance for Spam (No repeated messages, pings, mass emojis).\n"
+            "   - Rule 5: No Advertising or Self-Promotion (No unauthorized promos or DM advertising).\n"
+            "   - Rule 6: Security & Responsible Use (No exploits, malware, or phishing; report bugs via ticket).\n"
+            "   - Rule 7: Respect Staff Decisions (Appeals/questions must go through private tickets).\n"
+            "   - Rule 8: Enforcement Policy (Warnings -> Timeouts -> Bans; severe violations like NSFW result in immediate permanent ban).\n"
+            "   - Media Showcase Policy: Strictly NO NSFW content in <#1520461517093343232>.\n"
+            "7. **CHARISMATIC & ENJOYABLE TONE FOR CASUAL INQUIRIES**:\n"
+            "   - When engaging in casual conversation, banter, gaming chats, or community games:\n"
+            "     • Be friendly, charismatic, and fun to interact with!\n"
+            "     • Keep it 'in limit': clean, respectful, PG-13, no toxicity, no offensive language.\n"
+            "8. **IDENTITY & ORIGIN**:\n"
             "   - If (and ONLY if) someone explicitly asks who created, built, or developed you ('who made you', 'who created you', 'who is your developer'): proudly state that you were created and developed by the **SyncInk Development Team**!\n"
             "   - Do NOT inject this creator disclaimer into unrelated questions or general discussions.\n"
-            "5. **SERVER GUIDELINES & NAVIGATION (ONLY WHEN EXPLICITLY ASKED)**:\n"
+            "9. **SERVER GUIDELINES & NAVIGATION (ONLY WHEN EXPLICITLY ASKED)**:\n"
             "   - When asked where to do something in {guild_name}, specify ONLY that relevant channel with clickable Discord format (`<#channel_id>`):\n"
             "     • Casual chat & hanging out: General Chat (<#1520461481857122485>).\n"
             "     • Technical support & assistance: Support Chat (<#1520460808499363840>) or Support Ticket (<#1520460764937322566>).\n"
             "     • Rules and policies: <#1520460587522330634>.\n"
             "     • Feature suggestions: <#1546548728721178724>.\n"
             "   - Do not dump the entire server channel directory unless explicitly asked for 'all channels' or 'server directory'.\n"
-            "6. **ROLES PRESENTATION (WHEN ASKED)**:\n"
+            "10. **ROLES PRESENTATION (WHEN ASKED)**:\n"
             "   - When asked about server roles, format them cleanly in category groups with custom emojis:\n"
             "     • Leadership & Administration:\n"
             f"       - Owner: {owner_emoji} <@&1520856232460550194> (Server Owner & SyncInk Founder)\n"
@@ -915,6 +1057,66 @@ class ChatGPT(commands.Cog):
             )
             return fallback_msg, False
 
+    async def generate_truth_or_dare(self, mode: str, author: discord.User, guild: Optional[discord.Guild] = None) -> discord.Embed:
+        """
+        Dynamically generates an original, thought-provoking Truth question or creative Dare challenge,
+        styled identically to the community Truth or Dare design (Spiderweb/Lightning title, purple accent, requester footer).
+        """
+        if mode == "random":
+            mode = random.choice(["truth", "dare"])
+
+        ai_prompt = (
+            f"Generate ONE deeply thought-provoking, unique, and intriguing {mode.upper()} prompt for Discord.\n"
+            "STRICT RULES:\n"
+            "1. It MUST NOT be a cliché or common internet question (avoid generic tropes like 'what's your favorite color', 'who is your crush', 'have you ever lied').\n"
+            "2. For TRUTH: Make it psychologically deep, philosophical, unexpected, or revealing about human nature, personal principles, or hidden fears.\n"
+            "3. For DARE: Make it witty, creative, entertaining, and Discord-friendly (e.g. typing challenge, playful server message, dramatic roleplay) without violating server rules.\n"
+            "4. Return ONLY the question/dare itself in 1 concise sentence. Do not include quotes, prefixes like 'Truth:', markdown asterisks, or any extra text."
+        )
+
+        content = None
+        # Try dynamic generation via available AI models
+        try:
+            if self.gemini_key:
+                content = await self.call_gemini("You generate elite, original Truth or Dare prompts. Output raw prompt text only.", ai_prompt, [])
+            elif self.openrouter_key:
+                content = await self.call_openrouter("You generate elite, original Truth or Dare prompts. Output raw prompt text only.", ai_prompt, [])
+            elif self.openai_key:
+                content = await self.call_openai("You generate elite, original Truth or Dare prompts. Output raw prompt text only.", ai_prompt, [])
+        except Exception as e:
+            log.warning(f"AI generation for truth/dare failed: {e}")
+
+        # Clean AI output if received
+        if content:
+            content = content.strip().strip('"').strip("'").strip("*").strip()
+            content = re.sub(r'^(?:truth|dare)\s*:\s*', '', content, flags=re.IGNORECASE).strip()
+            if len(content) > 300:
+                content = content[:300]
+
+        # Robust offline fallback pool if AI call fails or is empty
+        if not content:
+            if mode == "truth":
+                content = random.choice(DYNAMIC_TRUTH_QUESTIONS)
+            else:
+                content = random.choice(DYNAMIC_DARE_CHALLENGES)
+
+        if mode == "truth":
+            title = "🕸️ Truth"
+        else:
+            title = "⚡ Dare"
+
+        # Color: Purple accent matching SyncInk violet theme (0x79529C)
+        embed = discord.Embed(
+            title=title,
+            description=f"**{content}**",
+            color=discord.Color(0x79529C)
+        )
+        embed.set_footer(
+            text=f"requested by {author.name}",
+            icon_url=author.display_avatar.url
+        )
+        return embed
+
     # -------------------------------------------------------------
     # LISTENERS & COMMANDS
     # -------------------------------------------------------------
@@ -960,6 +1162,16 @@ class ChatGPT(commands.Cog):
                 return
 
             self.trigger_cooldown(message.author.id)
+
+            game_mode = get_interactive_game_mode(prompt)
+            if game_mode:
+                try:
+                    async with message.channel.typing():
+                        embed = await self.generate_truth_or_dare(game_mode, message.author, message.guild)
+                        await message.reply(embed=embed, mention_author=False)
+                    return
+                except Exception as e:
+                    log.error(f"Error handling truth/dare mention: {e}")
 
             try:
                 async with message.channel.typing():
@@ -1031,6 +1243,16 @@ class ChatGPT(commands.Cog):
 
         self.trigger_cooldown(ctx.author.id)
 
+        game_mode = get_interactive_game_mode(question)
+        if game_mode:
+            try:
+                async with ctx.typing():
+                    embed = await self.generate_truth_or_dare(game_mode, ctx.author, ctx.guild)
+                    await ctx.reply(embed=embed, mention_author=False)
+                return
+            except Exception as e:
+                log.error(f"Error handling ?ask truth/dare: {e}")
+
         try:
             async with ctx.typing():
                 response, used_web = await self.get_ai_response(question, ctx.guild, ctx.author.id)
@@ -1080,6 +1302,16 @@ class ChatGPT(commands.Cog):
         elif q_clean.lower().startswith("ai "):
             q_clean = q_clean[3:].strip()
         question = q_clean or question
+
+        game_mode = get_interactive_game_mode(question)
+        if game_mode:
+            await interaction.response.defer()
+            try:
+                embed = await self.generate_truth_or_dare(game_mode, interaction.user, interaction.guild)
+                await interaction.followup.send(embed=embed)
+                return
+            except Exception as e:
+                log.error(f"Error handling /ask truth/dare: {e}")
 
         await interaction.response.defer()
         try:
