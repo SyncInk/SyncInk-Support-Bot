@@ -11,7 +11,7 @@ import random
 from collections import defaultdict, deque
 from typing import Optional, List, Tuple
 from utils.logger import log
-from utils.emojis import Emojis
+from utils.emojis import Emojis, format_discord_emojis
 from utils.emoji_manager import EmojiManager
 from utils.ui import SyncInkEmbed, SuccessEmbed, BRAND_ACCENT, ERROR_COLOR, WARNING_COLOR
 from services.web_search_service import WebSearchService
@@ -47,7 +47,7 @@ def is_creator_query(prompt: str) -> bool:
     return any(p in clean for p in patterns)
 
 def sanitize_ai_identity(text: str) -> str:
-    """Ensures AI never leaks third-party vendor names or confuses support chat with general chat."""
+    """Ensures AI never leaks third-party vendor names, confuses support chat with general chat, and properly formats custom Discord emojis."""
     replacements = [
         ("I was trained by Google", "I was developed by the SyncInk Development Team"),
         ("I am a large language model trained by Google", "I am SyncInk Assistant, developed by the SyncInk Development Team"),
@@ -88,6 +88,9 @@ def sanitize_ai_identity(text: str) -> str:
         res,
         flags=re.IGNORECASE
     )
+
+    # Automatically transform any raw :name: emojis into valid <:name:id> custom Discord emojis
+    res = format_discord_emojis(res)
     return res
 
 def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = None) -> str:
@@ -135,7 +138,7 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "--- SYNCINK TICKET BOT KNOWLEDGE BASE ---",
         "• Bot: SyncInk Ticket Bot (<@1513075101992747158>)",
         "• Ticket Creation Panel: <#1520460764937322566> (Support Requests dropdown menu)",
-        "• Support Categories & Emojis:",
+        "• Support Categories & Emojis (CRITICAL: Always use the exact Discord custom emoji tag <:name:id> without omitting the <: or :id>):",
         "  1. <:SyncProductSupport:1522287691792912394> Product Support (Primary): Get help with any SyncInk product, setup, configuration, or troubleshooting.",
         "  2. <:userreport:1513336966681460856> Account & Server: Appeals, account-related issues, verification problems, user reports (reporting rule breakers, NSFW in chat, harassment), or server concerns.",
         "  3. <:bugreport:1513337174148513892> Bug Report: Report a bug to the developers.",
@@ -880,6 +883,7 @@ class ChatGPT(commands.Cog):
                 f"I was created and developed by the **SyncInk Development Team**! "
                 f"I am the official AI assistant and server guide{server_suffix}."
             )
+            res = sanitize_ai_identity(res)
             if guild and user_id:
                 self.record_exchange(guild.id, user_id, prompt, res)
             return res, False
@@ -887,6 +891,7 @@ class ChatGPT(commands.Cog):
         # 0.1 Direct Fun Interactive Games Resolution (Truth or Dare, playful prompts)
         fun_res = resolve_fun_interactive(prompt)
         if fun_res:
+            fun_res = sanitize_ai_identity(fun_res)
             if guild and user_id:
                 self.record_exchange(guild.id, user_id, prompt, fun_res)
             return fun_res, False
@@ -894,6 +899,7 @@ class ChatGPT(commands.Cog):
         # 0.1 Direct Greeting Resolution
         greeting = resolve_greeting(prompt, guild)
         if greeting:
+            greeting = sanitize_ai_identity(greeting)
             if guild and user_id:
                 self.record_exchange(guild.id, user_id, prompt, greeting)
             return greeting, False
@@ -901,6 +907,7 @@ class ChatGPT(commands.Cog):
         # 0.2 Direct Specific Server Channel & Action Resolution
         specific_faq = resolve_server_faq(prompt, guild)
         if specific_faq:
+            specific_faq = sanitize_ai_identity(specific_faq)
             if guild and user_id:
                 self.record_exchange(guild.id, user_id, prompt, specific_faq)
             return specific_faq, False
@@ -909,6 +916,7 @@ class ChatGPT(commands.Cog):
         cached = self.get_cached_response(prompt)
         if cached:
             cached_res, cached_used_web = cached
+            cached_res = sanitize_ai_identity(cached_res)
             if guild and user_id:
                 self.record_exchange(guild.id, user_id, prompt, cached_res)
             return cached_res, cached_used_web
