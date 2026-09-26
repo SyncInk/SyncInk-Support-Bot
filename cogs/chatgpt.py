@@ -139,12 +139,12 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "• Bot: SyncInk Ticket Bot (<@1513075101992747158>)",
         "• Ticket Creation Panel: <#1520460764937322566> (Support Requests dropdown menu)",
         "• Support Categories & Emojis (CRITICAL: Always use the exact Discord custom emoji tag <:name:id> without omitting the <: or :id>):",
-        "  1. <:SyncProductSupport:1522287691792912394> Product Support (Primary): Get help with any SyncInk product, setup, configuration, or troubleshooting.",
-        "  2. <:userreport:1513336966681460856> Account & Server: Appeals, account-related issues, verification problems, user reports (reporting rule breakers, NSFW in chat, harassment), or server concerns.",
-        "  3. <:bugreport:1513337174148513892> Bug Report: Report a bug to the developers.",
-        "  4. <:staffabuse:1513337285024677899> Staff Abuse: Report a misbehaving staff member to the admins.",
-        "  5. <:others~1:1513337572078911488> Other: Something else that is not listed above.",
-        "  6. <:SyncPartnership:1522289808599290006> Partnership / Business: Business inquiries, collaborations, sponsorships, or partnership requests.",
+        "  1. <:SyncProductSupport:1553532855278116956> Product Support (Primary): Get help with any SyncInk product, setup, configuration, or troubleshooting.",
+        "  2. <:accsvr:1553532858058936424> Account & Server: Appeals, account-related issues, verification problems, user reports (reporting rule breakers, NSFW in chat, harassment), or server concerns.",
+        "  3. <:bugreport:1553532860408012850> Bug Report: Report a bug to the developers.",
+        "  4. <:staffabuse:1553532862945562754> Staff Abuse: Report a misbehaving staff member to the admins.",
+        "  5. <:others:1553533697364598814> Other: Something else that is not listed above.",
+        "  6. <:SyncPartnership:1553532869950046340> Partnership / Business: Business inquiries, collaborations, sponsorships, or partnership requests.",
         "• Ticket Creation Workflow (Exact Process):",
         "  - Step 1: User selects their matching category from the dropdown in <#1520460764937322566>.",
         "  - Step 2: A modal window opens where the user MUST write their issue / description in detail.",
@@ -363,12 +363,12 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
         return (
             "**SyncInk Ticket Bot** (<@1513075101992747158>) Guide:\n\n"
             "Open tickets in <#1520460764937322566> (**Support Requests**) by selecting a category:\n"
-            "• <:SyncProductSupport:1522287691792912394> **Product Support (Primary)** — Setup, configuration, or troubleshooting.\n"
-            "• <:userreport:1513336966681460856> **Account & Server** — Appeals, account issues, verification, or reporting rule breakers / bad behavior.\n"
-            "• <:bugreport:1513337174148513892> **Bug Report** — Report a bug to developers.\n"
-            "• <:staffabuse:1513337285024677899> **Staff Abuse** — Report misbehaving staff to admins & owner.\n"
-            "• <:others~1:1513337572078911488> **Other** — Inquiries not listed above.\n"
-            "• <:SyncPartnership:1522289808599290006> **Partnership / Business** — Business inquiries, sponsorships, or partnerships.\n\n"
+            "• <:SyncProductSupport:1553532855278116956> **Product Support (Primary)** — Setup, configuration, or troubleshooting.\n"
+            "• <:accsvr:1553532858058936424> **Account & Server** — Appeals, account issues, verification, or reporting rule breakers / bad behavior.\n"
+            "• <:bugreport:1553532860408012850> **Bug Report** — Report a bug to developers.\n"
+            "• <:staffabuse:1553532862945562754> **Staff Abuse** — Report misbehaving staff to admins & owner.\n"
+            "• <:others:1553533697364598814> **Other** — Inquiries not listed above.\n"
+            "• <:SyncPartnership:1553532869950046340> **Partnership / Business** — Business inquiries, sponsorships, or partnerships.\n\n"
             "**Ticket Workflow:**\n"
             "1. Choose your category in <#1520460764937322566>.\n"
             "2. A modal will pop up — **write your issue / reason**.\n"
@@ -380,7 +380,7 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
         return (
             "To report a rule violation (such as NSFW, harassment, or bad behavior):\n\n"
             "1. Head to <#1520460764937322566> (**Support Requests**).\n"
-            "2. Select <:userreport:1513336966681460856> **Account & Server** from the category menu.\n"
+            "2. Select <:accsvr:1553532858058936424> **Account & Server** from the category menu.\n"
             "3. A modal will pop up — write your report details and submit.\n"
             "4. The bot will create a **Private Thread** for your ticket.\n"
             "5. Attach your screenshot evidence in the thread, and **wait patiently until a staff member claims it** (`📝 Claim`)."

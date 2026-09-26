@@ -55,37 +55,37 @@ class EmojiManager:
             "key": "product_support",
             "names": ["SyncProductSupport", "productsupport", "sync_product_support"],
             "file": "SyncProductSupport.png",
-            "fallback": "<:SyncProductSupport:1522287691792912394>"
+            "fallback": "<:SyncProductSupport:1553532855278116956>"
         },
         {
             "key": "account_server",
-            "names": ["userreport", "user_report"],
+            "names": ["accsvr", "userreport", "user_report"],
             "file": "userreport.png",
-            "fallback": "<:userreport:1513336966681460856>"
+            "fallback": "<:accsvr:1553532858058936424>"
         },
         {
             "key": "bug_report",
             "names": ["bugreport", "bug_report"],
             "file": "bugreport.png",
-            "fallback": "<:bugreport:1513337174148513892>"
+            "fallback": "<:bugreport:1553532860408012850>"
         },
         {
             "key": "staff_abuse",
             "names": ["staffabuse", "staff_abuse"],
             "file": "staffabuse.png",
-            "fallback": "<:staffabuse:1513337285024677899>"
+            "fallback": "<:staffabuse:1553532862945562754>"
         },
         {
             "key": "other",
-            "names": ["others~1", "others", "other"],
+            "names": ["others", "others~1", "other"],
             "file": "others.png",
-            "fallback": "<:others~1:1513337572078911488>"
+            "fallback": "<:others:1553533697364598814>"
         },
         {
             "key": "partnership",
             "names": ["SyncPartnership", "syncpartnership", "partnership"],
             "file": "SyncPartnership.png",
-            "fallback": "<:SyncPartnership:1522289808599290006>"
+            "fallback": "<:SyncPartnership:1553532869950046340>"
         },
     ]
 
@@ -96,12 +96,12 @@ class EmojiManager:
         "staff": "🛡️",
         "partner": "<:partnered:1551337413660381255>",
         "verified": "<:verified:1551336293017845822>",
-        "product_support": "<:SyncProductSupport:1522287691792912394>",
-        "account_server": "<:userreport:1513336966681460856>",
-        "bug_report": "<:bugreport:1513337174148513892>",
-        "staff_abuse": "<:staffabuse:1513337285024677899>",
-        "other": "<:others~1:1513337572078911488>",
-        "partnership": "<:SyncPartnership:1522289808599290006>",
+        "product_support": "<:SyncProductSupport:1553532855278116956>",
+        "account_server": "<:accsvr:1553532858058936424>",
+        "bug_report": "<:bugreport:1553532860408012850>",
+        "staff_abuse": "<:staffabuse:1553532862945562754>",
+        "other": "<:others:1553533697364598814>",
+        "partnership": "<:SyncPartnership:1553532869950046340>",
     }
 
     @classmethod
@@ -305,11 +305,11 @@ class EmojiManager:
             if key not in cls._synced_emojis or not cls._synced_emojis[key]:
                 cls._synced_emojis[key] = spec["fallback"]
 
-        Emojis.TICKET_PRODUCT = cls._synced_emojis.get("product_support", "<:SyncProductSupport:1522287691792912394>")
-        Emojis.TICKET_ACCOUNT = cls._synced_emojis.get("account_server", "<:userreport:1513336966681460856>")
-        Emojis.TICKET_BUG = cls._synced_emojis.get("bug_report", "<:bugreport:1513337174148513892>")
-        Emojis.TICKET_STAFF_ABUSE = cls._synced_emojis.get("staff_abuse", "<:staffabuse:1513337285024677899>")
-        Emojis.TICKET_OTHER = cls._synced_emojis.get("other", "<:others~1:1513337572078911488>")
-        Emojis.TICKET_PARTNERSHIP = cls._synced_emojis.get("partnership", "<:SyncPartnership:1522289808599290006>")
+        Emojis.TICKET_PRODUCT = cls._synced_emojis.get("product_support", "<:SyncProductSupport:1553532855278116956>")
+        Emojis.TICKET_ACCOUNT = cls._synced_emojis.get("account_server", "<:accsvr:1553532858058936424>")
+        Emojis.TICKET_BUG = cls._synced_emojis.get("bug_report", "<:bugreport:1553532860408012850>")
+        Emojis.TICKET_STAFF_ABUSE = cls._synced_emojis.get("staff_abuse", "<:staffabuse:1553532862945562754>")
+        Emojis.TICKET_OTHER = cls._synced_emojis.get("other", "<:others:1553533697364598814>")
+        Emojis.TICKET_PARTNERSHIP = cls._synced_emojis.get("partnership", "<:SyncPartnership:1553532869950046340>")
 
         log.info("[EmojiManager] Role and ticket category emoji synchronization complete.")

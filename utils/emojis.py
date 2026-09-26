@@ -30,12 +30,12 @@ class Emojis:
     ROLE_VERIFIED = "<:verified:1551336293017845822>"
 
     # Official Ticket Category Emojis (<:name:id>)
-    TICKET_PRODUCT = "<:SyncProductSupport:1522287691792912394>"
-    TICKET_ACCOUNT = "<:userreport:1513336966681460856>"
-    TICKET_BUG = "<:bugreport:1513337174148513892>"
-    TICKET_STAFF_ABUSE = "<:staffabuse:1513337285024677899>"
-    TICKET_OTHER = "<:others~1:1513337572078911488>"
-    TICKET_PARTNERSHIP = "<:SyncPartnership:1522289808599290006>"
+    TICKET_PRODUCT = "<:SyncProductSupport:1553532855278116956>"
+    TICKET_ACCOUNT = "<:accsvr:1553532858058936424>"
+    TICKET_BUG = "<:bugreport:1553532860408012850>"
+    TICKET_STAFF_ABUSE = "<:staffabuse:1553532862945562754>"
+    TICKET_OTHER = "<:others:1553533697364598814>"
+    TICKET_PARTNERSHIP = "<:SyncPartnership:1553532869950046340>"
 
     MODERATION = "<:moderation:1547035031275573289>"
     LOOKING = "<:looking:1547034317018898552>"
@@ -82,12 +82,12 @@ class EmojiPartials:
     ROLE_VERIFIED = discord.PartialEmoji(name="verified", id=1551336293017845822, animated=False)
 
     # Ticket category partials
-    TICKET_PRODUCT = discord.PartialEmoji(name="SyncProductSupport", id=1522287691792912394, animated=False)
-    TICKET_ACCOUNT = discord.PartialEmoji(name="userreport", id=1513336966681460856, animated=False)
-    TICKET_BUG = discord.PartialEmoji(name="bugreport", id=1513337174148513892, animated=False)
-    TICKET_STAFF_ABUSE = discord.PartialEmoji(name="staffabuse", id=1513337285024677899, animated=False)
-    TICKET_OTHER = discord.PartialEmoji(name="others~1", id=1513337572078911488, animated=False)
-    TICKET_PARTNERSHIP = discord.PartialEmoji(name="SyncPartnership", id=1522289808599290006, animated=False)
+    TICKET_PRODUCT = discord.PartialEmoji(name="SyncProductSupport", id=1553532855278116956, animated=False)
+    TICKET_ACCOUNT = discord.PartialEmoji(name="accsvr", id=1553532858058936424, animated=False)
+    TICKET_BUG = discord.PartialEmoji(name="bugreport", id=1553532860408012850, animated=False)
+    TICKET_STAFF_ABUSE = discord.PartialEmoji(name="staffabuse", id=1553532862945562754, animated=False)
+    TICKET_OTHER = discord.PartialEmoji(name="others", id=1553533697364598814, animated=False)
+    TICKET_PARTNERSHIP = discord.PartialEmoji(name="SyncPartnership", id=1553532869950046340, animated=False)
 
     MODERATION = discord.PartialEmoji(name="moderation", id=1547035031275573289, animated=False)
     LOOKING = discord.PartialEmoji(name="looking", id=1547034317018898552, animated=False)
@@ -101,26 +101,44 @@ class EmojiPartials:
 
 import re
 
+# Legacy emoji tags map to ensure any stored or cached tags are upgraded to live server tags
+OLD_TAG_MAP = {
+    "<:SyncProductSupport:1522287691792912394>": "<:SyncProductSupport:1553532855278116956>",
+    "<:userreport:1513336966681460856>": "<:accsvr:1553532858058936424>",
+    "<:accsvr:1513336966681460856>": "<:accsvr:1553532858058936424>",
+    "<:bugreport:1513337174148513892>": "<:bugreport:1553532860408012850>",
+    "<:staffabuse:1513337285024677899>": "<:staffabuse:1553532862945562754>",
+    "<:others~1:1513337572078911488>": "<:others:1553533697364598814>",
+    "<:others:1513337572078911488>": "<:others:1553533697364598814>",
+    "<:SyncPartnership:1522289808599290006>": "<:SyncPartnership:1553532869950046340>",
+}
+
 # Comprehensive mapping of raw emoji names to valid custom Discord emoji tags
 EMOJI_NAME_MAP = {
-    # Ticket Categories
-    "syncproductsupport": "<:SyncProductSupport:1522287691792912394>",
-    "productsupport": "<:SyncProductSupport:1522287691792912394>",
-    "sync_product_support": "<:SyncProductSupport:1522287691792912394>",
-    "userreport": "<:userreport:1513336966681460856>",
-    "user_report": "<:userreport:1513336966681460856>",
-    "accountandserver": "<:userreport:1513336966681460856>",
-    "account_server": "<:userreport:1513336966681460856>",
-    "bugreport": "<:bugreport:1513337174148513892>",
-    "bug_report": "<:bugreport:1513337174148513892>",
-    "staffabuse": "<:staffabuse:1513337285024677899>",
-    "staff_abuse": "<:staffabuse:1513337285024677899>",
-    "others~1": "<:others~1:1513337572078911488>",
-    "others": "<:others~1:1513337572078911488>",
-    "other": "<:others~1:1513337572078911488>",
-    "syncpartnership": "<:SyncPartnership:1522289808599290006>",
-    "sync_partnership": "<:SyncPartnership:1522289808599290006>",
-    "partnership": "<:SyncPartnership:1522289808599290006>",
+    # Ticket Categories (Live Server Emojis)
+    "syncproductsupport": "<:SyncProductSupport:1553532855278116956>",
+    "productsupport": "<:SyncProductSupport:1553532855278116956>",
+    "sync_product_support": "<:SyncProductSupport:1553532855278116956>",
+    
+    "accsvr": "<:accsvr:1553532858058936424>",
+    "userreport": "<:accsvr:1553532858058936424>",
+    "user_report": "<:accsvr:1553532858058936424>",
+    "accountandserver": "<:accsvr:1553532858058936424>",
+    "account_server": "<:accsvr:1553532858058936424>",
+    
+    "bugreport": "<:bugreport:1553532860408012850>",
+    "bug_report": "<:bugreport:1553532860408012850>",
+    
+    "staffabuse": "<:staffabuse:1553532862945562754>",
+    "staff_abuse": "<:staffabuse:1553532862945562754>",
+    
+    "others": "<:others:1553533697364598814>",
+    "others~1": "<:others:1553533697364598814>",
+    "other": "<:others:1553533697364598814>",
+    
+    "syncpartnership": "<:SyncPartnership:1553532869950046340>",
+    "sync_partnership": "<:SyncPartnership:1553532869950046340>",
+    "partnership": "<:SyncPartnership:1553532869950046340>",
 
     # Connection & Status Emojis
     "goodconnection": "<:goodconnection:1551311911948394697>",
@@ -156,13 +174,18 @@ EMOJI_NAME_MAP = {
 
 def format_discord_emojis(text: str) -> str:
     """
-    Scans text for raw emoji names (e.g. :SyncProductSupport:, :bugreport:) and
+    Scans text for raw emoji names (e.g. :SyncProductSupport:, :bugreport:, :accsvr:) and
     automatically replaces them with valid custom Discord emoji tags (<:name:id>).
-    Preserves all already-formatted <:name:id> tags.
+    Also upgrades legacy emoji tags to current active server emojis.
     """
     if not text:
         return text
 
+    # 1. Upgrade legacy tags
+    for old_tag, new_tag in OLD_TAG_MAP.items():
+        text = text.replace(old_tag, new_tag)
+
+    # 2. Convert unformatted :name: emojis
     def _replace(match):
         name = match.group(1)
         key = name.lower()
