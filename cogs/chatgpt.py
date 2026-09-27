@@ -138,7 +138,7 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "--- SYNCINK TICKET BOT KNOWLEDGE BASE ---",
         "• Bot: SyncInk Ticket Bot (<@1513075101992747158>)",
         "• Ticket Creation Panel: <#1520460764937322566> (Support Requests dropdown menu)",
-        "• Support Categories & Emojis (CRITICAL: Always use the exact Discord custom emoji tag <:name:id> without omitting the <: or :id>):",
+        "• Support Categories & Emojis (CRITICAL: Always output the exact custom emoji tag <:name:id> directly in plain text. NEVER wrap emojis in backticks `...` as backticks force typewriter monospace code font):",
         "  1. <:SyncProductSupport:1553532855278116956> Product Support (Primary): Get help with any SyncInk product, setup, configuration, or troubleshooting.",
         "  2. <:accsvr:1553532858058936424> Account & Server: Appeals, account-related issues, verification problems, user reports (reporting rule breakers, NSFW in chat, harassment), or server concerns.",
         "  3. <:bugreport:1553532860408012850> Bug Report: Report a bug to the developers.",
@@ -977,7 +977,7 @@ class ChatGPT(commands.Cog):
             "     • Cite the official violated rule: **Rule 8 (Enforcement Policy & Zero Tolerance)** and **Media Showcase Policy (Strictly NO NSFW)**.\n"
             "     • Provide a clean, structured incident report template ready for copy-pasting:\n"
             "       📋 **Incident Report**\n"
-            "       • **Category:** Account & Server (<:userreport:1513336966681460856>)\n"
+            "       • **Category:** Account & Server (<:accsvr:1553532858058936424>)\n"
             "       • **Reported User:** `[User Mention / Username / User ID]`\n"
             "       • **Channel:** <#1520461481857122485> (General Chat)\n"
             "       • **Rule Violated:** Rule 8 & Zero-Tolerance NSFW Policy\n"
@@ -985,19 +985,19 @@ class ChatGPT(commands.Cog):
             "       • **Evidence:** `[Attach screenshot or message link in thread]`\n"
             "     • Direct them clearly through the exact ticket process:\n"
             "       1. Head to <#1520460764937322566> (**Support Requests**).\n"
-            "       2. Select <:userreport:1513336966681460856> **Account & Server** from the category menu.\n"
+            "       2. Select <:accsvr:1553532858058936424> **Account & Server** from the category menu.\n"
             "       3. A modal window pops up where they **MUST write their issue / description**.\n"
             "       4. The bot creates a **Private Thread** inside <#1520460764937322566> for them and staff.\n"
             "       5. Post screenshots/evidence in the thread, and **wait patiently until any staff member claims it** (`📝 Claim`).\n"
             "4. **SYNCINK TICKET BOT KNOWLEDGE & CATEGORIES**:\n"
             "   - Ticket Bot (<@1513075101992747158>) manages support tickets in <#1520460764937322566>.\n"
-            "   - Support Categories & Custom Emojis:\n"
-            "     • <:SyncProductSupport:1522287691792912394> **Product Support (Primary)**: Help with any SyncInk product, setup, configuration, or troubleshooting.\n"
-            "     • <:userreport:1513336966681460856> **Account & Server**: Appeals, account issues, verification problems, user reports (e.g. reporting NSFW in chat, toxicity, rule breaks), or server concerns.\n"
-            "     • <:bugreport:1513337174148513892> **Bug Report**: Report bugs to developers.\n"
-            "     • <:staffabuse:1513337285024677899> **Staff Abuse**: Report misbehaving staff to admins & owner.\n"
-            "     • <:others~1:1513337572078911488> **Other**: Inquiries not listed above.\n"
-            "     • <:SyncPartnership:1522289808599290006> **Partnership / Business**: Business inquiries, collaborations, sponsorships, or partnership requests.\n"
+            "   - Support Categories & Custom Emojis (CRITICAL: NEVER wrap emojis in backticks; output directly in plain text so Discord renders them as visual graphics, not typewriter code font):\n"
+            "     • <:SyncProductSupport:1553532855278116956> **Product Support (Primary)**: Help with any SyncInk product, setup, configuration, or troubleshooting.\n"
+            "     • <:accsvr:1553532858058936424> **Account & Server**: Appeals, account issues, verification problems, user reports (e.g. reporting NSFW in chat, toxicity, rule breaks), or server concerns.\n"
+            "     • <:bugreport:1553532860408012850> **Bug Report**: Report bugs to developers.\n"
+            "     • <:staffabuse:1553532862945562754> **Staff Abuse**: Report misbehaving staff to admins & owner.\n"
+            "     • <:others:1553533697364598814> **Other**: Inquiries not listed above.\n"
+            "     • <:SyncPartnership:1553532869950046340> **Partnership / Business**: Business inquiries, collaborations, sponsorships, or partnership requests.\n"
             "   - Ticket Flow:\n"
             "     • Selecting a category opens a modal where the user **MUST write their issue**.\n"
             "     • The bot generates a **Private Thread** specifically for the user and staff.\n"

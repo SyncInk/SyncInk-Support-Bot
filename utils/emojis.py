@@ -176,16 +176,24 @@ def format_discord_emojis(text: str) -> str:
     """
     Scans text for raw emoji names (e.g. :SyncProductSupport:, :bugreport:, :accsvr:) and
     automatically replaces them with valid custom Discord emoji tags (<:name:id>).
-    Also upgrades legacy emoji tags to current active server emojis.
+    Also upgrades legacy emoji tags to current active server emojis, and strips
+    any surrounding backticks (`...`) so Discord displays the emoji as a visual graphic
+    rather than typewriter/monospace code text.
     """
     if not text:
         return text
 
-    # 1. Upgrade legacy tags
+    # 1. Strip backticks around custom emojis <:name:id> or <a:name:id>
+    text = re.sub(r'[`\x60]+\s*(<a?:[a-zA-Z0-9_~-]+:\d+>)\s*[`\x60]+', r'\1', text)
+
+    # 2. Strip backticks around raw :name: emojis
+    text = re.sub(r'[`\x60]+\s*(:[a-zA-Z0-9_~-]+:)\s*[`\x60]+', r'\1', text)
+
+    # 3. Upgrade legacy tags
     for old_tag, new_tag in OLD_TAG_MAP.items():
         text = text.replace(old_tag, new_tag)
 
-    # 2. Convert unformatted :name: emojis
+    # 4. Convert unformatted :name: emojis
     def _replace(match):
         name = match.group(1)
         key = name.lower()
@@ -194,4 +202,9 @@ def format_discord_emojis(text: str) -> str:
         return match.group(0)
 
     # Matches :name: when NOT preceded by <: or <a: and NOT followed by :<id>>
-    return re.sub(r'(?<!<a:)(?<!<:):([a-zA-Z0-9_~-]+):(?![\d]+>)', _replace, text)
+    text = re.sub(r'(?<!<a:)(?<!<:):([a-zA-Z0-9_~-]+):(?![\d]+>)', _replace, text)
+
+    # 5. Final safety strip in case an emoji conversion resulted inside backticks
+    text = re.sub(r'[`\x60]+\s*(<a?:[a-zA-Z0-9_~-]+:\d+>)\s*[`\x60]+', r'\1', text)
+
+    return text
