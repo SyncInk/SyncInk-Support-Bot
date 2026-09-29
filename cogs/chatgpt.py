@@ -121,11 +121,11 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "",
         "--- OFFICIAL SUPPORT SERVER RULES (<#1520460587522330634>) & WEBSITE DOCUMENTATION ---",
         "Discord Guide Channel: <#1520460587522330634> (Reference Post: https://discord.com/channels/1520457643842342912/1520460587522330634/1539582756001161238)",
-        "Official Website Rules Page (Public - No Login Required): https://dash.syncink.xyz/rules",
-        "Official Website FAQ Page (Public - No Login Required): https://dash.syncink.xyz/faq",
-        "Official Terms of Use (Public - No Login Required): https://dash.syncink.xyz/terms",
-        "Official Privacy Policy (Public - No Login Required): https://dash.syncink.xyz/privacy",
-        "Official Security & Defense Dashboard: https://dash.syncink.xyz/",
+        "Official Website Rules Page (Public - No Login Required): https://sync-ink-support-bot.vercel.app/rules",
+        "Official Website FAQ Page (Public - No Login Required): https://sync-ink-support-bot.vercel.app/faq",
+        "Official Terms of Use (Public - No Login Required): https://sync-ink-support-bot.vercel.app/terms",
+        "Official Privacy Policy (Public - No Login Required): https://sync-ink-support-bot.vercel.app/privacy",
+        "Official Security & Defense Dashboard: https://sync-ink-support-bot.vercel.app/",
         "• Rule 1: Verification Required — All members must complete verification in <#1520748219100041348> before gaining access to the rest of the server.",
         "• Rule 2: Professional Conduct & Respect — Treat all members, staff, and developers with respect. Strictly prohibited: harassment, bullying, hate speech, discrimination, personal attacks, toxic behavior, provoking arguments.",
         "• Rule 3: Keep Discussions Relevant — Keep conversations in proper channels:",
@@ -361,7 +361,7 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
             "• **Rule 8: Enforcement Policy** — Warnings -> Timeouts -> Bans. Severe violations (such as NSFW) result in an immediate permanent ban!\n"
             "• **Rules for Use of AI**: 1-min cooldown per member, strictly no prompt injection/jailbreaking, PG-13 Truth or Dare interactions only, AI queries belong in <#1544361954574073916> or via `/ask`.\n\n"
             "📖 **Official Website Documentation (No Login Required):**\n"
-            "👉 **[View Complete Rules on Website](https://dash.syncink.xyz/rules)**"
+            "👉 **[View Complete Rules on Website](https://sync-ink-support-bot.vercel.app/rules)**"
         )
 
     # 4b. FAQ (Frequently Asked Questions)
@@ -370,17 +370,17 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
             "**Official SyncInk Support Server FAQ** (<#1520460624864350218>):\n\n"
             "Find answers about Verification, Ticket Bot categories, Voice Bot temporary rooms, Security Bot, and Staff Applications.\n\n"
             "❓ **Official Website FAQ (No Login Required):**\n"
-            "👉 **[View Server FAQ on Website](https://dash.syncink.xyz/faq)**"
+            "👉 **[View Server FAQ on Website](https://sync-ink-support-bot.vercel.app/faq)**"
         )
 
     # 4c. Terms of Use & Privacy Policy
     if p in ("terms", "terms of use", "terms of service", "tos", "privacy", "privacy policy", "data policy"):
         return (
             "**Official SyncInk Legal & Privacy Documentation** (Public - No Login Required):\n\n"
-            "• ⚖️ **Terms of Use:** [dash.syncink.xyz/terms](https://dash.syncink.xyz/terms)\n"
-            "• 🔒 **Privacy Policy:** [dash.syncink.xyz/privacy](https://dash.syncink.xyz/privacy)\n"
-            "• 📖 **Server Rules:** [dash.syncink.xyz/rules](https://dash.syncink.xyz/rules)\n"
-            "• ❓ **Frequently Asked Questions:** [dash.syncink.xyz/faq](https://dash.syncink.xyz/faq)"
+            "• ⚖️ **Terms of Use:** [sync-ink-support-bot.vercel.app/terms](https://sync-ink-support-bot.vercel.app/terms)\n"
+            "• 🔒 **Privacy Policy:** [sync-ink-support-bot.vercel.app/privacy](https://sync-ink-support-bot.vercel.app/privacy)\n"
+            "• 📖 **Server Rules:** [sync-ink-support-bot.vercel.app/rules](https://sync-ink-support-bot.vercel.app/rules)\n"
+            "• ❓ **Frequently Asked Questions:** [sync-ink-support-bot.vercel.app/faq](https://sync-ink-support-bot.vercel.app/faq)"
         )
 
     # 5. General Chat / Where to talk & hang out (Strict focused matching to avoid false positives)
@@ -1052,7 +1052,7 @@ class ChatGPT(commands.Cog):
             "   - Rule 8: Enforcement Policy (Warnings -> Timeouts -> Bans; severe violations like NSFW result in immediate permanent ban).\n"
             "   - Media Showcase Policy: Strictly NO NSFW content in <#1520461517093343232>.\n"
             "   - Rules for Use of AI: 1-minute rate limit per member, strictly NO prompt injection, DAN exploits, or jailbreaking attempts. All interactions, Truth or Dare games, and roleplay must strictly remain clean, PG-13, and family-friendly. AI queries belong in <#1544361954574073916> or via `/ask`.\n"
-            "   - Website Public Documentation (No Login Required): Always provide the direct website rules link `https://dash.syncink.xyz/rules` when answering about server rules or guidelines! Also available: FAQ at `https://dash.syncink.xyz/faq`, Terms at `https://dash.syncink.xyz/terms`, Privacy at `https://dash.syncink.xyz/privacy`.\n"
+            "   - Website Public Documentation (No Login Required): Always provide the direct website rules link `https://sync-ink-support-bot.vercel.app/rules` when answering about server rules or guidelines! Also available: FAQ at `https://sync-ink-support-bot.vercel.app/faq`, Terms at `https://sync-ink-support-bot.vercel.app/terms`, Privacy at `https://sync-ink-support-bot.vercel.app/privacy`.\n"
             "7. **CHARISMATIC & ENJOYABLE TONE FOR CASUAL INQUIRIES**:\n"
             "   - When engaging in casual conversation, banter, gaming chats, or community games:\n"
             "     • Be friendly, charismatic, and fun to interact with!\n"

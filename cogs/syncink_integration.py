@@ -88,11 +88,18 @@ class SyncInkIntegration(commands.Cog):
     @commands.command(name="links", description="View official SyncInk platform links.")
     async def links(self, ctx: commands.Context):
         embed = SyncInkEmbed(title=f"{Emojis.LOOKING} Official Resources")
-        embed.description = "Quick access to the SyncInk ecosystem."
+        embed.description = (
+            "Quick access to the official SyncInk platform, documentation, and security consoles.\n\n"
+            "• 📖 **Rules:** [sync-ink-support-bot.vercel.app/rules](https://sync-ink-support-bot.vercel.app/rules)\n"
+            "• ❓ **FAQ:** [sync-ink-support-bot.vercel.app/faq](https://sync-ink-support-bot.vercel.app/faq)\n"
+            "• ⚖️ **Terms:** [sync-ink-support-bot.vercel.app/terms](https://sync-ink-support-bot.vercel.app/terms)\n"
+            "• 🔒 **Privacy:** [sync-ink-support-bot.vercel.app/privacy](https://sync-ink-support-bot.vercel.app/privacy)"
+        )
         
         view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="Website", style=discord.ButtonStyle.link, url="https://syncink.xyz"))
-        view.add_item(discord.ui.Button(label="Dashboard", style=discord.ButtonStyle.link, url="https://dash.syncink.xyz"))
+        view.add_item(discord.ui.Button(label="Website", style=discord.ButtonStyle.link, url="https://sync-ink-support-bot.vercel.app"))
+        view.add_item(discord.ui.Button(label="Rules", style=discord.ButtonStyle.link, url="https://sync-ink-support-bot.vercel.app/rules"))
+        view.add_item(discord.ui.Button(label="FAQ", style=discord.ButtonStyle.link, url="https://sync-ink-support-bot.vercel.app/faq"))
         view.add_item(discord.ui.Button(label="Community", style=discord.ButtonStyle.link, url="https://discord.gg/syncink"))
         
         await ctx.send(embed=embed, view=view)

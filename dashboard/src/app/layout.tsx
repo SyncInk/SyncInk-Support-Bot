@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://sync-ink-support-bot.vercel.app"),
   title: "SyncInk Security Shield | Master Dashboard",
   description: "Live real-time web defense, automod, and forensics dashboard for SyncInk Security Bot.",
   icons: {
