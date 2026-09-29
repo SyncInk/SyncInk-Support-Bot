@@ -119,8 +119,13 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "16. Apply for Staff Channel: <#1539319001673367604> (Form: [Apply for Staff](https://discord.com/channels/1520457643842342912/1539319001673367604/1539371523188596916) - check requirements in <#1539319001673367604>)",
         "17. Ask AI Channel: <#1544361954574073916> (Dedicated channel for AI questions)",
         "",
-        "--- OFFICIAL SUPPORT SERVER RULES (<#1520460587522330634>) ---",
-        "Reference Post: https://discord.com/channels/1520457643842342912/1520460587522330634/1539582756001161238",
+        "--- OFFICIAL SUPPORT SERVER RULES (<#1520460587522330634>) & WEBSITE DOCUMENTATION ---",
+        "Discord Guide Channel: <#1520460587522330634> (Reference Post: https://discord.com/channels/1520457643842342912/1520460587522330634/1539582756001161238)",
+        "Official Website Rules Page (Public - No Login Required): https://dash.syncink.xyz/rules",
+        "Official Website FAQ Page (Public - No Login Required): https://dash.syncink.xyz/faq",
+        "Official Terms of Use (Public - No Login Required): https://dash.syncink.xyz/terms",
+        "Official Privacy Policy (Public - No Login Required): https://dash.syncink.xyz/privacy",
+        "Official Security & Defense Dashboard: https://dash.syncink.xyz/",
         "• Rule 1: Verification Required — All members must complete verification in <#1520748219100041348> before gaining access to the rest of the server.",
         "• Rule 2: Professional Conduct & Respect — Treat all members, staff, and developers with respect. Strictly prohibited: harassment, bullying, hate speech, discrimination, personal attacks, toxic behavior, provoking arguments.",
         "• Rule 3: Keep Discussions Relevant — Keep conversations in proper channels:",
@@ -134,6 +139,13 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "• Rule 7: Respect Staff Decisions — Comply with staff instructions. Appeals or questions must go privately through a ticket in <#1520460764937322566>, never argued publicly in chat.",
         "• Rule 8: Enforcement Policy — Escalation: Warnings -> Message Deletion -> Timeouts -> Kicks -> Permanent Bans. Severe violations (such as NSFW content, malicious attacks, hate speech) result in an immediate permanent ban without warning!",
         "• Media Showcase Policy (<#1520461517093343232>): Absolutely NO NSFW content. Posting NSFW results in an immediate permanent ban!",
+        "",
+        "--- RULES FOR USE OF AI (SYNCINK AI ASSISTANT) ---",
+        "• AI-Rule 1 (Rate Limits & Fair Use): 1-minute cooldown per member across ?ask and /ask to ensure fair server resources. Automated flooding/scripting is prohibited.",
+        "• AI-Rule 2 (Prompt Integrity & Anti-Jailbreak): Strictly no prompt injection, 'DAN' jailbreaking, instruction overrides, or attempts to extract internal system prompts or secrets.",
+        "• AI-Rule 3 (Safe Interactions & PG-13 Standard): All questions, discussions, and Truth or Dare challenges must remain family-friendly, PG-13, and respectful. Absolutely no NSFW, sexually explicit, abusive, or hateful prompts.",
+        "• AI-Rule 4 (Channel Discipline): Use <#1544361954574073916> (# 🤖・ask-ai) or /ask for AI interactions to avoid cluttering general chat.",
+        "• AI-Rule 5 (Sanctions): Abusing the AI results in automated blacklisting from AI commands, temporary timeouts, or server bans.",
         "",
         "--- SYNCINK TICKET BOT KNOWLEDGE BASE ---",
         "• Bot: SyncInk Ticket Bot (<@1513075101992747158>)",
@@ -336,7 +348,7 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
         )
 
     # 4. Rules & Guidelines (Strict focused matching)
-    if p in ("rules", "server rules", "what are the rules", "where are the rules", "rules channel", "read the rules", "community rules", "guides channel", "guidelines", "rules list", "server rules list"):
+    if p in ("rules", "server rules", "what are the rules", "where are the rules", "rules channel", "read the rules", "community rules", "guides channel", "guidelines", "rules list", "server rules list", "ai rules", "rules for ai", "use of ai rules", "ai usage rules"):
         return (
             "**Official SyncInk Support Server Rules** (<#1520460587522330634>):\n\n"
             "• **Rule 1: Verification** — Complete verification in <#1520748219100041348>.\n"
@@ -347,7 +359,28 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
             "• **Rule 6: Security & Responsible Use** — No exploiting or bypassing security. Report issues via ticket.\n"
             "• **Rule 7: Respect Staff Decisions** — Appeals or questions must go privately through a ticket.\n"
             "• **Rule 8: Enforcement Policy** — Warnings -> Timeouts -> Bans. Severe violations (such as NSFW) result in an immediate permanent ban!\n"
-            "• **Media Showcase Policy** (<#1520461517093343232>) — Strictly NO NSFW content."
+            "• **Rules for Use of AI**: 1-min cooldown per member, strictly no prompt injection/jailbreaking, PG-13 Truth or Dare interactions only, AI queries belong in <#1544361954574073916> or via `/ask`.\n\n"
+            "📖 **Official Website Documentation (No Login Required):**\n"
+            "👉 **[View Complete Rules on Website](https://dash.syncink.xyz/rules)**"
+        )
+
+    # 4b. FAQ (Frequently Asked Questions)
+    if p in ("faq", "server faq", "where is faq", "faqs", "frequently asked questions", "faq channel"):
+        return (
+            "**Official SyncInk Support Server FAQ** (<#1520460624864350218>):\n\n"
+            "Find answers about Verification, Ticket Bot categories, Voice Bot temporary rooms, Security Bot, and Staff Applications.\n\n"
+            "❓ **Official Website FAQ (No Login Required):**\n"
+            "👉 **[View Server FAQ on Website](https://dash.syncink.xyz/faq)**"
+        )
+
+    # 4c. Terms of Use & Privacy Policy
+    if p in ("terms", "terms of use", "terms of service", "tos", "privacy", "privacy policy", "data policy"):
+        return (
+            "**Official SyncInk Legal & Privacy Documentation** (Public - No Login Required):\n\n"
+            "• ⚖️ **Terms of Use:** [dash.syncink.xyz/terms](https://dash.syncink.xyz/terms)\n"
+            "• 🔒 **Privacy Policy:** [dash.syncink.xyz/privacy](https://dash.syncink.xyz/privacy)\n"
+            "• 📖 **Server Rules:** [dash.syncink.xyz/rules](https://dash.syncink.xyz/rules)\n"
+            "• ❓ **Frequently Asked Questions:** [dash.syncink.xyz/faq](https://dash.syncink.xyz/faq)"
         )
 
     # 5. General Chat / Where to talk & hang out (Strict focused matching to avoid false positives)
@@ -1008,7 +1041,7 @@ class ChatGPT(commands.Cog):
             "   - Room Settings: Rename, Limit (0-99), Status topic, Game sync, LFM broadcast, Bitrate, Region, Text chat, NSFW, Claim.\n"
             "   - Room Permissions: Lock, Unlock, Permit, Reject, Invite, Ghost (hide), Unghost (reveal), Transfer.\n"
             "   - Buttons: Load Settings, Refresh Panel, Dashboard.\n"
-            "6. **SUPPORT SERVER RULES KNOWLEDGE (<#1520460587522330634>)**:\n"
+            "6. **SUPPORT SERVER RULES & WEBSITE DOCUMENTATION (<#1520460587522330634>)**:\n"
             "   - Rule 1: Verification Required (<#1520748219100041348>).\n"
             "   - Rule 2: Professional Conduct & Respect (No harassment, hate speech, bullying, toxicity).\n"
             "   - Rule 3: Keep Discussions Relevant (General: <#1520461481857122485>, Tickets: <#1520460764937322566>, Support: <#1520460808499363840>, Suggestions: <#1546548728721178724>).\n"
@@ -1018,6 +1051,8 @@ class ChatGPT(commands.Cog):
             "   - Rule 7: Respect Staff Decisions (Appeals/questions must go through private tickets).\n"
             "   - Rule 8: Enforcement Policy (Warnings -> Timeouts -> Bans; severe violations like NSFW result in immediate permanent ban).\n"
             "   - Media Showcase Policy: Strictly NO NSFW content in <#1520461517093343232>.\n"
+            "   - Rules for Use of AI: 1-minute rate limit per member, strictly NO prompt injection, DAN exploits, or jailbreaking attempts. All interactions, Truth or Dare games, and roleplay must strictly remain clean, PG-13, and family-friendly. AI queries belong in <#1544361954574073916> or via `/ask`.\n"
+            "   - Website Public Documentation (No Login Required): Always provide the direct website rules link `https://dash.syncink.xyz/rules` when answering about server rules or guidelines! Also available: FAQ at `https://dash.syncink.xyz/faq`, Terms at `https://dash.syncink.xyz/terms`, Privacy at `https://dash.syncink.xyz/privacy`.\n"
             "7. **CHARISMATIC & ENJOYABLE TONE FOR CASUAL INQUIRIES**:\n"
             "   - When engaging in casual conversation, banter, gaming chats, or community games:\n"
             "     • Be friendly, charismatic, and fun to interact with!\n"

@@ -39,7 +39,8 @@ import {
   UserMinus,
   Key,
   HelpCircle,
-  Send
+  Send,
+  BookOpen
 } from "lucide-react";
 
 // --- Interfaces ---
@@ -420,17 +421,22 @@ export default function DashboardPage() {
     fetchSuggestions,
   ]);
 
-  // Auto-refresh interval
+  // Auto-refresh interval (adaptive: 1500ms second-to-second sync when on moderation tab, 7000ms otherwise)
   useEffect(() => {
     if (!autoRefresh) return;
+    const intervalMs = activeTab === "moderation" ? 1500 : 7000;
     const interval = setInterval(() => {
-      fetchData(true);
-      if (activeTab === "whitelist") fetchWhitelist();
-      if (activeTab === "quarantine") fetchQuarantine();
-      if (activeTab === "moderation") fetchModeration();
-      if (activeTab === "automod") fetchAutoMod();
-      if (activeTab === "suggestions") fetchSuggestions();
-    }, 7000);
+      if (activeTab === "moderation") {
+        fetchModeration();
+        fetchData(true);
+      } else {
+        fetchData(true);
+        if (activeTab === "whitelist") fetchWhitelist();
+        if (activeTab === "quarantine") fetchQuarantine();
+        if (activeTab === "automod") fetchAutoMod();
+        if (activeTab === "suggestions") fetchSuggestions();
+      }
+    }, intervalMs);
     return () => clearInterval(interval);
   }, [
     autoRefresh,
@@ -442,6 +448,7 @@ export default function DashboardPage() {
     fetchAutoMod,
     fetchSuggestions,
   ]);
+
 
   // --- Mutating Actions ---
   const handleToggle = async (moduleName: string, currentValue: boolean) => {
@@ -1154,6 +1161,21 @@ export default function DashboardPage() {
               label="Suggestions"
               badge={data?.stats?.suggestionsCount ? String(data.stats.suggestionsCount) : undefined}
             />
+            <div className="h-4 w-px bg-border/80 mx-1 self-center" />
+            <a
+              href="/rules"
+              className="flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-surface-card transition-all"
+            >
+              <BookOpen className="h-4 w-4 text-brand-crimson" />
+              <span>Rules</span>
+            </a>
+            <a
+              href="/faq"
+              className="flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-surface-card transition-all"
+            >
+              <HelpCircle className="h-4 w-4 text-amber-400" />
+              <span>FAQ</span>
+            </a>
           </div>
         </div>
       </header>
@@ -1767,16 +1789,34 @@ export default function DashboardPage() {
             <div className="glass-card rounded-2xl border border-border overflow-hidden">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border bg-surface/50 px-6 py-4">
                 <div>
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-cyan-400" />
-                    Server Punishment Ledger ({modCases.length})
-                  </h3>
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-cyan-400" />
+                      Server Punishment Ledger ({modCases.length})
+                    </h3>
+                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/70 border border-emerald-600/50 text-emerald-400">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      <span>Live Sync (Second-to-Second)</span>
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Immutable history of all disciplinary actions, bans, and sanctions.
+                    Immutable history of all disciplinary actions, bans, and sanctions synchronized second-to-second.
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => {
+                      fetchModeration();
+                      showToast("info", "Synchronized", "Refreshed moderation records directly from PostgreSQL.");
+                    }}
+                    className="flex items-center gap-1.5 rounded-xl border border-emerald-800/40 bg-emerald-950/30 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:text-white hover:bg-emerald-900/40 transition-colors"
+                    title="Instant Refresh"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>Sync Now</span>
+                  </button>
+
                   {/* Action Filters */}
                   {["ALL", "BAN", "KICK", "TIMEOUT", "WARN", "JAIL"].map((act) => (
                     <button

@@ -59,10 +59,18 @@ export async function GET(request: Request) {
       [guildId]
     ).catch(() => ({ count: "0" }));
 
-    return NextResponse.json({
-      cases: cases || [],
-      total: parseInt(totalCountRes?.count || "0", 10),
-    });
+    return NextResponse.json(
+      {
+        cases: cases || [],
+        total: parseInt(totalCountRes?.count || "0", 10),
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+          "Pragma": "no-cache",
+        },
+      }
+    );
   } catch (error: any) {
     console.error("Moderation API Error:", error);
     return NextResponse.json(

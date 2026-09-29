@@ -255,6 +255,55 @@ class AdvancedLogging(commands.Cog):
         embed.add_field(name="Channel Type", value=str(channel.type).capitalize(), inline=True)
         await self._send_log(channel.guild.id, "log_channel_server", embed)
 
+    # ==========================
+    # MODERATION AUDIT SYNC (REALTIME)
+    # ==========================
+    @commands.Cog.listener()
+    async def on_member_ban(self, guild: discord.Guild, user: discord.User | discord.Member):
+        from services.mod_service import ModService
+        mod_id = self.bot.user.id
+        reason = "Direct ban via Discord client"
+        try:
+            async for entry in guild.audit_logs(limit=4, action=discord.AuditLogAction.ban):
+                if entry.target.id == user.id:
+                    if entry.user:
+                        mod_id = entry.user.id
+                    if entry.reason:
+                        reason = entry.reason
+                    break
+        except Exception:
+            pass
+
+        try:
+            recent = await ModService.get_user_cases(guild.id, user.id)
+            if not recent or recent[0].get("action") != "BAN":
+                await ModService.log_case(guild.id, user.id, mod_id, "BAN", reason)
+        except Exception as e:
+            log.warning(f"Failed to auto-sync audit log ban case: {e}")
+
+    @commands.Cog.listener()
+    async def on_member_unban(self, guild: discord.Guild, user: discord.User):
+        from services.mod_service import ModService
+        mod_id = self.bot.user.id
+        reason = "Direct unban via Discord client"
+        try:
+            async for entry in guild.audit_logs(limit=4, action=discord.AuditLogAction.unban):
+                if entry.target.id == user.id:
+                    if entry.user:
+                        mod_id = entry.user.id
+                    if entry.reason:
+                        reason = entry.reason
+                    break
+        except Exception:
+            pass
+
+        try:
+            recent = await ModService.get_user_cases(guild.id, user.id)
+            if not recent or recent[0].get("action") != "UNBAN":
+                await ModService.log_case(guild.id, user.id, mod_id, "UNBAN", reason)
+        except Exception as e:
+            log.warning(f"Failed to auto-sync audit log unban case: {e}")
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(AdvancedLogging(bot))

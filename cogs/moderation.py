@@ -307,7 +307,15 @@ class Moderation(commands.Cog):
             return
         try:
             deleted = await ctx.channel.purge(limit=amount + 1)
-            msg = await ctx.send(embed=SuccessEmbed(f"Successfully deleted {len(deleted) - 1} messages."))
+            count = max(0, len(deleted) - 1)
+            case_id = await ModService.log_case(
+                ctx.guild.id,
+                ctx.author.id,
+                ctx.author.id,
+                "PURGE",
+                f"Bulk deleted {count} messages in #{ctx.channel.name}"
+            )
+            msg = await ctx.send(embed=SuccessEmbed(f"Successfully deleted {count} messages. (Case #{case_id})"))
             await msg.delete(delay=5)
         except Exception as e:
             err = await ctx.send(embed=ErrorEmbed(description="An error occurred while purging messages.", resolution=f"Details: `{e}`"))
