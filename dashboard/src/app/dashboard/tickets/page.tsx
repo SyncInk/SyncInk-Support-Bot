@@ -327,12 +327,12 @@ export default function NativeTicketDashboardPage() {
 
   const handleLogin = () => {
     const returnTarget = encodeURIComponent(window.location.origin + "/dashboard/tickets");
-    window.location.href = `https://syncink-ticket.onrender.com/api/auth/login?redirect=${returnTarget}`;
+    window.location.href = `/api/tickets/auth/login?redirect=${returnTarget}`;
   };
 
   const handleLogout = async () => {
     const returnTarget = encodeURIComponent(window.location.origin + "/dashboard/tickets");
-    window.location.href = `https://syncink-ticket.onrender.com/api/auth/logout?redirect=${returnTarget}`;
+    window.location.href = `/api/tickets/auth/logout?redirect=${returnTarget}`;
   };
 
   // Fetch Guild Data Snapshot
@@ -383,90 +383,9 @@ export default function NativeTicketDashboardPage() {
           setSaveAction(null);
         });
       } else {
-        // Fallback default mock snapshot so the user never gets an empty screen
-        setSnapshot({
-          bot: {
-            username: "SyncInk Ticket",
-            avatarUrl: "/ticket-logo.png",
-            nickname: "SyncInk Ticket",
-            uptimeMs: 98400000,
-            guildCount: 1
-          },
-          guild: guilds.find((g) => g.id === guildId) || { id: guildId, name: "Discord Server", memberCount: 120 },
-          settings: {
-            panelConfig: DEFAULT_PANEL_CONFIG,
-            panelChannelId: "",
-            logChannelId: "",
-            transcriptChannelId: "",
-            inactivityReminderMinutes: 120,
-            ownerRoleIds: [],
-            developerRoleIds: [],
-            adminRoleIds: [],
-            moderatorRoleIds: [],
-            staffRoleIds: []
-          },
-          stats: {
-            totalTickets: 24,
-            openTickets: 3,
-            closedTickets: 21,
-            activityCount: 88,
-            dailySeries: [
-              { label: "Mon", created: 4, closed: 3 },
-              { label: "Tue", created: 6, closed: 5 },
-              { label: "Wed", created: 2, closed: 4 },
-              { label: "Thu", created: 8, closed: 7 },
-              { label: "Fri", created: 5, closed: 3 },
-              { label: "Sat", created: 7, closed: 8 },
-              { label: "Sun", created: 3, closed: 2 }
-            ],
-            staffActivity: [
-              { actorId: "staff_1", name: "ModTeam Lead", actions: 42 },
-              { actorId: "staff_2", name: "Support Agent", actions: 29 }
-            ]
-          },
-          resources: {
-            textChannels: [
-              { id: "101", name: "support-tickets" },
-              { id: "102", name: "ticket-logs" },
-              { id: "103", name: "transcripts" }
-            ],
-            roles: [
-              { id: "r1", name: "Support Staff", color: "#7c3aed" },
-              { id: "r2", name: "Administrator", color: "#ef4444" },
-              { id: "r3", name: "Developer", color: "#3b82f6" }
-            ],
-            panelChannels: [
-              { id: "101", name: "support-tickets" }
-            ]
-          },
-          tickets: [
-            {
-              ticketId: "TICKET-001",
-              status: "open",
-              category: { label: "General Support", emoji: "❓" },
-              creator: { displayName: "PlayerOne" },
-              claimers: [{ displayName: "ModTeam Lead" }],
-              closedAt: null,
-              createdAt: Date.now() - 3600000
-            },
-            {
-              ticketId: "TICKET-002",
-              status: "closed",
-              category: { label: "Billing & Purchases", emoji: "💳" },
-              creator: { displayName: "GamerPro" },
-              claimers: [{ displayName: "Support Agent" }],
-              closedAt: Date.now() - 86400000,
-              createdAt: Date.now() - 90000000
-            }
-          ],
-          activities: [
-            { id: "a1", title: "Ticket created", description: "PlayerOne opened TICKET-001 in General Support", createdAt: Date.now() - 3600000, relatedTicketId: "TICKET-001" },
-            { id: "a2", title: "Ticket claimed", description: "ModTeam Lead claimed TICKET-001", createdAt: Date.now() - 1800000, relatedTicketId: "TICKET-001" }
-          ],
-          audits: [
-            { id: "aud1", action: "Updated ticket panel", createdAt: Date.now() - 1200000, actor: { displayName: "Server Admin" }, source: "dashboard", changes: [{ field: "panelConfig" }] }
-          ]
-        });
+        // Instead of falling back to fake mock data, we should let the user know the backend couldn't be reached
+        pushToast({ title: "Sync Error", description: "Failed to connect to the ticket bot backend. Ensure the bot is online and deployed.", tone: "error" });
+        setSnapshot(null);
       }
     } catch {
       pushToast({ title: "Sync notice", description: "Connected in offline preview mode.", tone: "info" });
