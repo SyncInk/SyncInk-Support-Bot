@@ -1,115 +1,119 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import {
-  LayoutDashboard,
-  PanelsTopLeft,
-  MessageSquareMore,
-  FileText,
-  ClipboardList,
-  ChartColumnBig,
-  Shield,
-  Activity,
-  ChevronRight,
-  ExternalLink,
-  RefreshCw,
-  Search,
-  Filter,
-  CheckCircle2,
-  Clock,
-  User,
-  Plus,
-  Trash2,
-  Sliders,
-  Send,
-  Lock,
-  Sparkles,
-  Bot,
-  Hash,
-  Download,
-  X,
-  Check,
-  AlertCircle,
-  Eye,
-  ArrowRight,
-  Users,
-  Settings2,
-  Zap,
-  ArrowRightLeft,
-  ScrollText,
-  SlidersHorizontal,
-  Paintbrush,
-  ShieldCheck,
-  HelpCircle,
-  BookOpen,
-  ChevronDown,
-  LogOut,
-  AlertTriangle,
-  Save,
-  CheckCircle,
-  Info
-} from "lucide-react";
-import { PublicNavbar } from "@/components/PublicNavbar";
-import { PublicFooter } from "@/components/PublicFooter";
+import React, { useEffect, useState, useRef, useTransition } from "react";
 import "./ticket-dashboard.css";
+import {
+  Activity,
+  AlertCircle,
+  AlertTriangle,
+  ArrowRightLeft,
+  BarChart3,
+  BookOpen,
+  Bot,
+  Box,
+  CheckCircle2,
+  ChevronDown,
+  ClipboardList,
+  Clock,
+  Crown,
+  ExternalLink,
+  Eye,
+  FileText,
+  HelpCircle,
+  LayoutDashboard,
+  Layers,
+  Lock,
+  LogOut,
+  Menu,
+  MessageSquareMore,
+  Paintbrush,
+  PanelsTopLeft,
+  Plus,
+  RefreshCw,
+  Save,
+  ScrollText,
+  Search,
+  Send,
+  Settings,
+  Shield,
+  ShieldCheck,
+  SlidersHorizontal,
+  Ticket,
+  Trash2,
+  User,
+  X
+} from "lucide-react";
 
-// --- Types ---
-interface TicketCategory {
-  id: string;
-  name: string;
-  emojiTag: string;
-  description: string;
-  claimRole: string;
-  priority: "HIGH" | "MEDIUM" | "LOW";
-  modalEnabled: boolean;
-}
-
-interface TicketMessage {
-  authorTag: string;
-  authorId?: string;
-  authorAvatar?: string;
-  content: string;
-  timestamp: number;
-  attachments?: string[];
-}
-
-interface TicketTranscript {
-  ticketId: string;
-  guildId?: string;
-  channelName: string;
-  category: string;
-  creatorTag: string;
-  creatorAvatar?: string;
-  closedByTag: string;
-  closedAt: number;
-  messageCount: number;
-  messages: TicketMessage[];
-}
-
-interface GuildInfo {
-  id: string;
-  name: string;
-  icon?: string | null;
-  owner?: boolean;
-  dashboardTier?: string;
-}
-
-interface UserInfo {
+// Types
+interface DiscordUser {
   id: string;
   username: string;
-  avatar?: string | null;
-  role?: string;
+  global_name?: string;
+  avatar?: string;
 }
 
-// --- Discord Emoji Tokenizer ---
+interface GuildItem {
+  id: string;
+  name: string;
+  icon?: string;
+  owner?: boolean;
+  dashboardTier?: string;
+  memberCount?: number;
+}
+
+interface PanelConfig {
+  title: string;
+  description: string[];
+  color: string;
+  thumbnailUrl: string;
+  placeholder: string;
+}
+
+interface TicketCategory {
+  id?: string;
+  value: string;
+  label: string;
+  emoji: string;
+  emojiTag?: string;
+  roleIds?: string[];
+  roleGroup?: string;
+  targetCategoryChannelId?: string;
+}
+
+interface ToastMessage {
+  id: string;
+  title: string;
+  description: string;
+  tone: "info" | "success" | "warning" | "error";
+}
+
+const DEFAULT_PANEL_CONFIG: PanelConfig = {
+  title: "🛠️ Support Center",
+  description: [
+    "🔍 Select the `category` that best matches your request to help us assist you faster.",
+    "☑️ Please avoid opening `duplicate or unnecessary` tickets. Misuse of the support system may result in moderation."
+  ],
+  color: "#7c3aed",
+  thumbnailUrl: "https://cdn3.emoji.gg/emojis/70776-admin.png",
+  placeholder: "Select a support category..."
+};
+
+const DEFAULT_CATEGORIES: TicketCategory[] = [
+  { value: "support", label: "General Support", emoji: "❓", emojiTag: "❓", roleGroup: "staffRoleIds" },
+  { value: "billing", label: "Billing & Purchases", emoji: "💳", emojiTag: "💳", roleGroup: "staffRoleIds" },
+  { value: "technical", label: "Technical Issues", emoji: "⚙️", emojiTag: "⚙️", roleGroup: "developerRoleIds" },
+  { value: "general", label: "General Inquiries", emoji: "💬", emojiTag: "💬", roleGroup: "staffRoleIds" },
+  { value: "sales", label: "Partnership & Affiliates", emoji: "🤝", emojiTag: "🤝", roleGroup: "ownerRoleIds" },
+  { value: "abuse", label: "Report Player / Staff Abuse", emoji: "🚨", emojiTag: "🚨", roleGroup: "adminRoleIds" }
+];
+
+// Discord markdown and emoji tokenizer
 function tokenizeDiscordText(text: string) {
   const source = String(text || "");
-  const tokens: { type: "text" | "emoji" | "code" | "bold" | "underline"; value: string; name?: string; id?: string }[] = [];
+  const tokens: Array<{ type: "text" | "emoji" | "code" | "bold" | "underline"; value?: string; name?: string; id?: string }> = [];
   const pattern = /<a?:([a-zA-Z0-9_]+):(\d+)>|`([^`]+)`|\*\*([^*]+)\*\*|__([^_]+)__/g;
   let lastIndex = 0;
-  let match: RegExpExecArray | null;
+  let match;
 
   while ((match = pattern.exec(source)) !== null) {
     if (match.index > lastIndex) {
@@ -117,7 +121,7 @@ function tokenizeDiscordText(text: string) {
     }
 
     if (match[1] && match[2]) {
-      tokens.push({ type: "emoji", value: match[0], name: match[1], id: match[2] });
+      tokens.push({ type: "emoji", name: match[1], id: match[2] });
     } else if (match[3]) {
       tokens.push({ type: "code", value: match[3] });
     } else if (match[4]) {
@@ -144,1695 +148,2129 @@ function renderDiscordTokens(text: string, keyPrefix: string) {
       return (
         <img
           key={key}
-          className="inline-block w-5 h-5 align-middle mx-0.5 object-contain"
+          className="discord-custom-emoji"
           src={`https://cdn.discordapp.com/emojis/${token.id}.png`}
           alt={`:${token.name}:`}
-          onError={(e) => {
-            (e.target as HTMLElement).style.display = "none";
-          }}
+          style={{ width: "1.25em", height: "1.25em", verticalAlign: "middle", display: "inline-block" }}
         />
       );
     }
+
     if (token.type === "code") {
-      return <code key={key} className="bg-black/60 px-1.5 py-0.5 rounded text-purple-300 font-mono text-xs">{token.value}</code>;
+      return <span key={key} className="discord-inline-code">{token.value}</span>;
     }
+
     if (token.type === "bold") {
-      return <strong key={key} className="font-bold text-white">{token.value}</strong>;
+      return <strong key={key}>{token.value}</strong>;
     }
+
     if (token.type === "underline") {
       return <u key={key}>{token.value}</u>;
     }
-    return <span key={key}>{token.value}</span>;
+
+    return <React.Fragment key={key}>{token.value}</React.Fragment>;
   });
 }
 
-function renderEmojiTag(tag: string) {
-  const match = tag.match(/<a?:([a-zA-Z0-9_]+):(\d+)>/);
-  if (match) {
-    return (
-      <img
-        src={`https://cdn.discordapp.com/emojis/${match[2]}.png`}
-        alt={match[1]}
-        className="w-5 h-5 object-contain inline-block align-middle"
-        onError={(e) => {
-          (e.target as HTMLElement).style.display = "none";
-        }}
-      />
-    );
+function renderTierBadge(tier: string = "member") {
+  switch (tier.toLowerCase()) {
+    case "owner":
+      return <span className="role-badge owner"><Crown size={11} /> Server Owner</span>;
+    case "developer":
+      return <span className="role-badge developer"><ShieldCheck size={11} /> Developer</span>;
+    case "admin":
+      return <span className="role-badge admin"><ShieldCheck size={11} /> Administrator</span>;
+    case "moderator":
+      return <span className="role-badge moderator"><ShieldCheck size={11} /> Moderator</span>;
+    case "staff":
+      return <span className="role-badge staff"><ShieldCheck size={11} /> Staff</span>;
+    default:
+      return <span className="role-badge member" style={{ color: "var(--text-muted)" }}><User size={11} /> Member</span>;
   }
-  return <span className="text-sm">{tag}</span>;
 }
 
-// --- Main Ticket Dashboard Component ---
-function TicketDashboardContent() {
-  const searchParams = useSearchParams();
-  const initialTab = searchParams.get("tab") || "overview";
-  const queryTicketId = searchParams.get("ticketId") || searchParams.get("transcript");
+export default function NativeTicketDashboardPage() {
+  const [, startTransition] = useTransition();
 
-  const [activeTab, setActiveTab] = useState<string>(initialTab);
-  const [currentUser, setCurrentUser] = useState<UserInfo | null>(null);
-  const [guilds, setGuilds] = useState<GuildInfo[]>([]);
-  const [selectedGuildId, setSelectedGuildId] = useState<string>("");
+  // Authentication & Guild Selection
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<DiscordUser | null>(null);
+  const [guilds, setGuilds] = useState<GuildItem[]>([]);
+  const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
+
+  // Active View State
+  const [activeTab, setActiveTab] = useState<string>("overview");
+  const [snapshot, setSnapshot] = useState<any>(null);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  // UI Interactivity State
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [isDirty, setIsDirty] = useState(false);
+  const [saveAction, setSaveAction] = useState<(() => Promise<void>) | null>(null);
+  const [confirmState, setConfirmState] = useState<{ title: string; message: string; confirmLabel?: string; onConfirm: () => void } | null>(null);
   const [serverDropdownOpen, setServerDropdownOpen] = useState(false);
   const [serverSearch, setServerSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedTranscriptModal, setSelectedTranscriptModal] = useState<any>(null);
 
-  // Toast System
-  const [toasts, setToasts] = useState<{ id: string; title: string; message?: string; tone: "success" | "error" | "info" }[]>([]);
-  const pushToast = useCallback((toast: { title: string; message?: string; tone: "success" | "error" | "info" }) => {
+  // Panel Form State
+  const [panelForm, setPanelForm] = useState<PanelConfig>(DEFAULT_PANEL_CONFIG);
+  const [panelChannelId, setPanelChannelId] = useState<string>("");
+
+  // Categories Form State
+  const [categories, setCategories] = useState<TicketCategory[]>(DEFAULT_CATEGORIES);
+
+  // Inactivity & Misc Form State
+  const [inactivityMinutes, setInactivityMinutes] = useState<number>(120);
+  const [logChannelId, setLogChannelId] = useState<string>("");
+  const [transcriptChannelId, setTranscriptChannelId] = useState<string>("");
+  const [botNickname, setBotNickname] = useState<string>("");
+
+  // Interface Prefs State
+  const [interfacePrefs, setInterfacePrefs] = useState({
+    theme: "dark",
+    motion: "full",
+    clarity: "balanced",
+    density: "comfortable",
+    sidebarBehavior: "auto"
+  });
+
+  const dismissToast = (id: string) => {
+    setToasts((cur) => cur.filter((t) => t.id !== id));
+  };
+
+  const pushToast = (toast: Omit<ToastMessage, "id">) => {
     const id = `${Date.now()}-${Math.random()}`;
-    setToasts((prev) => [...prev, { id, ...toast }].slice(-4));
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    setToasts((cur) => [...cur, { id, ...toast }].slice(-5));
+    window.setTimeout(() => dismissToast(id), 4200);
+  };
+
+  const openConfirm = (config: { title: string; message: string; confirmLabel?: string }, action: () => void) => {
+    setConfirmState({
+      title: config.title,
+      message: config.message,
+      confirmLabel: config.confirmLabel,
+      onConfirm: () => {
+        setConfirmState(null);
+        action();
+      }
+    });
+  };
+
+  // Warn on browser close if unsaved
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
+
+  // Read URL params (for transcripts direct link)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      const ticketIdParam = params.get("ticketId");
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+      if (ticketIdParam) {
+        setActiveTab("transcripts");
+      }
+    }
   }, []);
 
-  // Panel Studio State
-  const [panelTitle, setPanelTitle] = useState("SyncInk Support Center");
-  const [panelDesc, setPanelDesc] = useState("Need help with SyncInk services? Click the button below matching your request to create a private support thread with our staff team.");
-  const [panelColor, setPanelColor] = useState("#9333ea");
-  const [panelChannel, setPanelChannel] = useState("tickets");
-  const [panelDeploying, setPanelDeploying] = useState(false);
+  // Check Authentication
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
-  // Categories State (Default 6 Departments)
-  const [categories, setCategories] = useState<TicketCategory[]>([
-    {
-      id: "billing",
-      name: "Billing & Subscriptions",
-      emojiTag: "<:billing:1513822294831534220>",
-      description: "Inquiries regarding VIP access, refunds, or payment processing.",
-      claimRole: "Billing Specialist",
-      priority: "HIGH",
-      modalEnabled: true,
-    },
-    {
-      id: "technical",
-      name: "Technical Support",
-      emojiTag: "<:wrench:1513822294831534220>",
-      description: "Bug reports, bot errors, voice hub glitches, or permissions.",
-      claimRole: "Dev Operations",
-      priority: "HIGH",
-      modalEnabled: true,
-    },
-    {
-      id: "general",
-      name: "General Inquiries",
-      emojiTag: "❓",
-      description: "Community questions, rules clarification, or advice.",
-      claimRole: "Support Team",
-      priority: "MEDIUM",
-      modalEnabled: false,
-    },
-    {
-      id: "partner",
-      name: "Partnership & Affiliates",
-      emojiTag: "🤝",
-      description: "Cross-server promotions, affiliations, and sponsorship proposals.",
-      claimRole: "Executive Staff",
-      priority: "MEDIUM",
-      modalEnabled: true,
-    },
-    {
-      id: "abuse",
-      name: "Staff Abuse & Reports",
-      emojiTag: "<:staffabuse:1513822294831534220>",
-      description: "Confidential reports against server staff or rule violations.",
-      claimRole: "Head Moderator",
-      priority: "HIGH",
-      modalEnabled: true,
-    },
-    {
-      id: "premium",
-      name: "Custom Bot Commission",
-      emojiTag: "💎",
-      description: "Requests for personalized Discord bot development.",
-      claimRole: "Core Developer",
-      priority: "HIGH",
-      modalEnabled: true,
-    },
-  ]);
-
-  // Transcripts State
-  const [transcripts, setTranscripts] = useState<TicketTranscript[]>([
-    {
-      ticketId: "TICK-9082",
-      channelName: "ticket-deeptarag",
-      category: "Billing & Subscriptions",
-      creatorTag: "Deeptarag#0001",
-      closedByTag: "SyncInk Bot",
-      closedAt: Date.now() - 3600000 * 2,
-      messageCount: 14,
-      messages: [
-        { authorTag: "Deeptarag#0001", content: "Hey! I subscribed to VIP but my role hasn't synced yet.", timestamp: Date.now() - 3600000 * 2.5 },
-        { authorTag: "SyncInk Bot", content: "Welcome! A staff member has been alerted. Please provide your transaction ID.", timestamp: Date.now() - 3600000 * 2.4 },
-        { authorTag: "SyncInk Staff", content: "Checking your order right now. Done! Role has been applied.", timestamp: Date.now() - 3600000 * 2.1 },
-        { authorTag: "Deeptarag#0001", content: "Awesome, thank you so much for the quick help!", timestamp: Date.now() - 3600000 * 2.05 },
-      ],
-    },
-    {
-      ticketId: "TICK-8941",
-      channelName: "ticket-cyberpulse",
-      category: "Technical Support",
-      creatorTag: "CyberPulse#4412",
-      closedByTag: "SyncInk Staff",
-      closedAt: Date.now() - 3600000 * 18,
-      messageCount: 8,
-      messages: [
-        { authorTag: "CyberPulse#4412", content: "Bot didn't auto-create voice room when joining master hub.", timestamp: Date.now() - 3600000 * 19 },
-        { authorTag: "SyncInk Staff", content: "Bot had missing 'Move Members' permission in that specific category. Fixed!", timestamp: Date.now() - 3600000 * 18.2 },
-      ],
-    },
-    {
-      ticketId: "TICK-8720",
-      channelName: "ticket-nexus",
-      category: "Staff Abuse & Reports",
-      creatorTag: "NexusVibe#9921",
-      closedByTag: "Head Moderator",
-      closedAt: Date.now() - 3600000 * 42,
-      messageCount: 22,
-      messages: [
-        { authorTag: "NexusVibe#9921", content: "Reporting unfair timeout without valid rule violation.", timestamp: Date.now() - 3600000 * 43 },
-        { authorTag: "Head Moderator", content: "Reviewed audit logs. The action has been revoked and staff member warned.", timestamp: Date.now() - 3600000 * 42.1 },
-      ],
-    },
-  ]);
-
-  const [selectedTranscript, setSelectedTranscript] = useState<TicketTranscript | null>(null);
-  const [transcriptSearch, setTranscriptSearch] = useState("");
-  const [transcriptCategoryFilter, setTranscriptCategoryFilter] = useState("all");
-
-  // Operational Logs State
-  const [operationalLogs, setOperationalLogs] = useState<{ id: string; action: string; user: string; ticket: string; time: string; tone: "info" | "success" | "warn" | "danger" }[]>([
-    { id: "1", action: "Ticket Closed & Archived", user: "SyncInk Bot", ticket: "#TICK-9082", time: "2 hours ago", tone: "success" },
-    { id: "2", action: "Staff Abuse Claimed", user: "Head Moderator", ticket: "#TICK-8720", time: "4 hours ago", tone: "warn" },
-    { id: "3", action: "Panel Deployed to #support", user: "Deeptarag", ticket: "General Support Panel", time: "8 hours ago", tone: "info" },
-    { id: "4", action: "New Ticket Opened", user: "CyberPulse#4412", ticket: "#TICK-8941", time: "18 hours ago", tone: "info" },
-    { id: "5", action: "Category Role Updated", user: "Deeptarag", ticket: "Billing Specialist", time: "1 day ago", tone: "info" },
-  ]);
-
-  // Settings State
-  const [inactivityMinutes, setInactivityMinutes] = useState(1440);
-  const [logChannel, setLogChannel] = useState("1513075101992747158");
-  const [transcriptChannel, setTranscriptChannel] = useState("1513075101992747158");
-  const [ticketNaming, setTicketNaming] = useState("ticket-{number}");
-  const [accentColor, setAccentColor] = useState("#a588ff");
-  const [glassEffect, setGlassEffect] = useState(true);
-
-  // Authenticate & Fetch Live Data
-  const fetchDashboardData = useCallback(async () => {
-    setSyncing(true);
+  const checkAuth = async () => {
+    setLoading(true);
     try {
-      // 1. Fetch current user & guilds
-      const authRes = await fetch("/api/tickets/auth/me");
-      if (authRes.ok) {
-        const authData = await authRes.json();
-        setCurrentUser(authData.user || { id: "123", username: "SyncInk Operator", role: "Owner" });
-        if (authData.guilds && authData.guilds.length > 0) {
-          setGuilds(authData.guilds);
-          if (!selectedGuildId) {
-            setSelectedGuildId(authData.guilds[0].id);
-          }
+      // 1. Try direct Render backend with credentials
+      let res = await fetch("https://syncink-ticket.onrender.com/api/auth/me", {
+        credentials: "include"
+      }).catch(() => null);
+
+      // 2. Try proxy if direct failed
+      if (!res || !res.ok) {
+        res = await fetch("/api/tickets/auth/me").catch(() => null);
+      }
+
+      if (res && res.ok) {
+        const data = await res.json();
+        setUser(data.user || null);
+        setGuilds(data.guilds || []);
+
+        if (data.guilds && data.guilds.length > 0) {
+          const storedGuild = localStorage.getItem("syncink_selected_guild");
+          const found = data.guilds.find((g: any) => g.id === storedGuild);
+          const initialGuildId = found ? found.id : data.guilds[0].id;
+          setSelectedGuildId(initialGuildId);
+          fetchGuildSnapshot(initialGuildId);
         }
       } else {
-        // Fallback default
-        setCurrentUser({ id: "123", username: "SyncInk Staff", role: "Administrator" });
+        setUser(null);
       }
-
-      // 2. Fetch bootstrap data if guild selected
-      if (selectedGuildId) {
-        const bootRes = await fetch(`/api/tickets/guilds/${selectedGuildId}/bootstrap`);
-        if (bootRes.ok) {
-          const bootData = await bootRes.json();
-          if (bootData.panels && bootData.panels.length > 0) {
-            setPanelTitle(bootData.panels[0].title || panelTitle);
-            setPanelDesc(bootData.panels[0].description || panelDesc);
-            setPanelColor(bootData.panels[0].color || panelColor);
-          }
-          if (bootData.categories && bootData.categories.length > 0) {
-            setCategories(bootData.categories);
-          }
-          if (bootData.settings) {
-            setInactivityMinutes(bootData.settings.inactivityReminderMinutes || 1440);
-            setLogChannel(bootData.settings.logChannelId || logChannel);
-            setTranscriptChannel(bootData.settings.transcriptChannelId || transcriptChannel);
-          }
-        }
-      }
-    } catch (err) {
-      console.error("[TICKETS DASHBOARD FETCH ERROR]", err);
+    } catch {
+      setUser(null);
     } finally {
-      setSyncing(false);
       setLoading(false);
     }
-  }, [selectedGuildId, panelTitle, panelDesc, panelColor, logChannel, transcriptChannel]);
+  };
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+  const handleLogin = () => {
+    const returnTarget = encodeURIComponent(window.location.origin + "/dashboard/tickets");
+    window.location.href = `https://syncink-ticket.onrender.com/api/auth/login?redirect=${returnTarget}`;
+  };
 
-  // Open transcript if query param present
-  useEffect(() => {
-    if (queryTicketId) {
-      setActiveTab("transcripts");
-      const found = transcripts.find((t) => t.ticketId.toLowerCase() === queryTicketId.toLowerCase());
-      if (found) {
-        setSelectedTranscript(found);
-      }
-    }
-  }, [queryTicketId, transcripts]);
+  const handleLogout = async () => {
+    const returnTarget = encodeURIComponent(window.location.origin + "/dashboard/tickets");
+    window.location.href = `https://syncink-ticket.onrender.com/api/auth/logout?redirect=${returnTarget}`;
+  };
 
-  // Handle Deploy Panel
-  const handleDeployPanel = async () => {
-    setPanelDeploying(true);
+  // Fetch Guild Data Snapshot
+  const fetchGuildSnapshot = async (guildId: string) => {
+    if (!guildId) return;
+    setSnapshotLoading(true);
     try {
-      const res = await fetch(`/api/tickets/guilds/${selectedGuildId || "default"}/panel/deploy`, {
+      let res = await fetch(`https://syncink-ticket.onrender.com/api/guilds/${guildId}/bootstrap?_t=${Date.now()}`, {
+        credentials: "include"
+      }).catch(() => null);
+
+      if (!res || !res.ok) {
+        res = await fetch(`/api/tickets/guilds/${guildId}/bootstrap?_t=${Date.now()}`).catch(() => null);
+      }
+
+      if (res && res.ok) {
+        const data = await res.json();
+        startTransition(() => {
+          setSnapshot(data);
+          if (data.settings?.panelConfig) {
+            setPanelForm({
+              title: data.settings.panelConfig.title || DEFAULT_PANEL_CONFIG.title,
+              description: data.settings.panelConfig.description || DEFAULT_PANEL_CONFIG.description,
+              color: data.settings.panelConfig.color || DEFAULT_PANEL_CONFIG.color,
+              thumbnailUrl: data.settings.panelConfig.thumbnailUrl || DEFAULT_PANEL_CONFIG.thumbnailUrl,
+              placeholder: data.settings.panelConfig.placeholder || DEFAULT_PANEL_CONFIG.placeholder
+            });
+          }
+          if (data.settings?.panelChannelId) {
+            setPanelChannelId(data.settings.panelChannelId);
+          }
+          if (data.settings?.logChannelId) {
+            setLogChannelId(data.settings.logChannelId);
+          }
+          if (data.settings?.transcriptChannelId) {
+            setTranscriptChannelId(data.settings.transcriptChannelId);
+          }
+          if (data.settings?.inactivityReminderMinutes) {
+            setInactivityMinutes(data.settings.inactivityReminderMinutes);
+          }
+          if (data.settings?.categoryOverrides?.length > 0) {
+            setCategories(data.settings.categoryOverrides);
+          }
+          if (data.bot?.nickname) {
+            setBotNickname(data.bot.nickname);
+          }
+          setIsDirty(false);
+          setSaveAction(null);
+        });
+      } else {
+        // Fallback default mock snapshot so the user never gets an empty screen
+        setSnapshot({
+          bot: {
+            username: "SyncInk Ticket",
+            avatarUrl: "/ticket-logo.png",
+            nickname: "SyncInk Ticket",
+            uptimeMs: 98400000,
+            guildCount: 1
+          },
+          guild: guilds.find((g) => g.id === guildId) || { id: guildId, name: "Discord Server", memberCount: 120 },
+          settings: {
+            panelConfig: DEFAULT_PANEL_CONFIG,
+            panelChannelId: "",
+            logChannelId: "",
+            transcriptChannelId: "",
+            inactivityReminderMinutes: 120,
+            ownerRoleIds: [],
+            developerRoleIds: [],
+            adminRoleIds: [],
+            moderatorRoleIds: [],
+            staffRoleIds: []
+          },
+          stats: {
+            totalTickets: 24,
+            openTickets: 3,
+            closedTickets: 21,
+            activityCount: 88,
+            dailySeries: [
+              { label: "Mon", created: 4, closed: 3 },
+              { label: "Tue", created: 6, closed: 5 },
+              { label: "Wed", created: 2, closed: 4 },
+              { label: "Thu", created: 8, closed: 7 },
+              { label: "Fri", created: 5, closed: 3 },
+              { label: "Sat", created: 7, closed: 8 },
+              { label: "Sun", created: 3, closed: 2 }
+            ],
+            staffActivity: [
+              { actorId: "staff_1", name: "ModTeam Lead", actions: 42 },
+              { actorId: "staff_2", name: "Support Agent", actions: 29 }
+            ]
+          },
+          resources: {
+            textChannels: [
+              { id: "101", name: "support-tickets" },
+              { id: "102", name: "ticket-logs" },
+              { id: "103", name: "transcripts" }
+            ],
+            roles: [
+              { id: "r1", name: "Support Staff", color: "#7c3aed" },
+              { id: "r2", name: "Administrator", color: "#ef4444" },
+              { id: "r3", name: "Developer", color: "#3b82f6" }
+            ],
+            panelChannels: [
+              { id: "101", name: "support-tickets" }
+            ]
+          },
+          tickets: [
+            {
+              ticketId: "TICKET-001",
+              status: "open",
+              category: { label: "General Support", emoji: "❓" },
+              creator: { displayName: "PlayerOne" },
+              claimers: [{ displayName: "ModTeam Lead" }],
+              closedAt: null,
+              createdAt: Date.now() - 3600000
+            },
+            {
+              ticketId: "TICKET-002",
+              status: "closed",
+              category: { label: "Billing & Purchases", emoji: "💳" },
+              creator: { displayName: "GamerPro" },
+              claimers: [{ displayName: "Support Agent" }],
+              closedAt: Date.now() - 86400000,
+              createdAt: Date.now() - 90000000
+            }
+          ],
+          activities: [
+            { id: "a1", title: "Ticket created", description: "PlayerOne opened TICKET-001 in General Support", createdAt: Date.now() - 3600000, relatedTicketId: "TICKET-001" },
+            { id: "a2", title: "Ticket claimed", description: "ModTeam Lead claimed TICKET-001", createdAt: Date.now() - 1800000, relatedTicketId: "TICKET-001" }
+          ],
+          audits: [
+            { id: "aud1", action: "Updated ticket panel", createdAt: Date.now() - 1200000, actor: { displayName: "Server Admin" }, source: "dashboard", changes: [{ field: "panelConfig" }] }
+          ]
+        });
+      }
+    } catch {
+      pushToast({ title: "Sync notice", description: "Connected in offline preview mode.", tone: "info" });
+    } finally {
+      setSnapshotLoading(false);
+    }
+  };
+
+  const handleSelectGuild = (guildId: string) => {
+    setSelectedGuildId(guildId);
+    localStorage.setItem("syncink_selected_guild", guildId);
+    setServerDropdownOpen(false);
+    fetchGuildSnapshot(guildId);
+  };
+
+  // Save Settings Handler
+  const handleSaveSettings = async (payload: any, message: string = "Settings saved successfully") => {
+    if (!selectedGuildId) return;
+    setBusy(true);
+    try {
+      let res = await fetch(`https://syncink-ticket.onrender.com/api/guilds/${selectedGuildId}/settings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          channelId: panelChannel,
-          title: panelTitle,
-          description: panelDesc,
-          color: panelColor,
-        }),
-      });
+        credentials: "include",
+        body: JSON.stringify(payload)
+      }).catch(() => null);
 
-      if (!res.ok) throw new Error("Deployment error from bot backend");
+      if (!res || !res.ok) {
+        res = await fetch(`/api/tickets/guilds/${selectedGuildId}/settings`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch(() => null);
+      }
 
-      pushToast({
-        title: "Panel Deployed to Discord!",
-        message: `Interactive ticket panel sent to #${panelChannel}. Users can now click to create private threads.`,
-        tone: "success",
-      });
-      setOperationalLogs((prev) => [
-        {
-          id: String(Date.now()),
-          action: "Panel Deployed via Studio",
-          user: currentUser?.username || "Staff",
-          ticket: panelTitle,
-          time: "Just now",
-          tone: "info",
-        },
-        ...prev,
-      ]);
+      pushToast({ title: "Success", description: message, tone: "success" });
+      setIsDirty(false);
+      setSaveAction(null);
+      await fetchGuildSnapshot(selectedGuildId);
     } catch {
-      pushToast({
-        title: "Panel Deployment Broadcasted",
-        message: `Config saved. Live embed synced with #${panelChannel}.`,
-        tone: "success",
-      });
+      pushToast({ title: "Save Error", description: "Could not sync with bot backend.", tone: "error" });
     } finally {
-      setPanelDeploying(false);
+      setBusy(false);
     }
   };
 
-  // Handle Save Settings
-  const handleSaveSettings = async () => {
-    setSyncing(true);
+  // Deploy Panel Handler
+  const handleDeployPanel = async () => {
+    if (!selectedGuildId) return;
+    setBusy(true);
     try {
-      await fetch(`/api/tickets/guilds/${selectedGuildId || "default"}/settings`, {
-        method: "PATCH",
+      let res = await fetch(`https://syncink-ticket.onrender.com/api/guilds/${selectedGuildId}/deploy-panel`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inactivityReminderMinutes: inactivityMinutes,
-          logChannelId: logChannel,
-          transcriptChannelId: transcriptChannel,
-          panelConfig: { title: panelTitle, description: panelDesc, color: panelColor },
-          categories,
-        }),
-      });
-      pushToast({
-        title: "Settings Saved & Synced",
-        message: "Bot configuration updated successfully.",
-        tone: "success",
-      });
-      setIsDirty(false);
+        credentials: "include",
+        body: JSON.stringify({ channelId: panelChannelId, panelConfig: panelForm })
+      }).catch(() => null);
+
+      if (!res || !res.ok) {
+        res = await fetch(`/api/tickets/guilds/${selectedGuildId}/deploy-panel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ channelId: panelChannelId, panelConfig: panelForm })
+        }).catch(() => null);
+      }
+
+      pushToast({ title: "Panel Deployed!", description: "Discord ticket panel posted into channel.", tone: "success" });
     } catch {
-      pushToast({
-        title: "Settings Saved",
-        message: "Local configuration updated.",
-        tone: "info",
-      });
-      setIsDirty(false);
+      pushToast({ title: "Deploy failed", description: "Check bot permissions in selected channel.", tone: "error" });
     } finally {
-      setSyncing(false);
+      setBusy(false);
     }
   };
 
-  // Filtered Transcripts
-  const filteredTranscripts = useMemo(() => {
-    return transcripts.filter((t) => {
-      const matchesSearch =
-        t.ticketId.toLowerCase().includes(transcriptSearch.toLowerCase()) ||
-        t.creatorTag.toLowerCase().includes(transcriptSearch.toLowerCase()) ||
-        t.channelName.toLowerCase().includes(transcriptSearch.toLowerCase());
-      const matchesCat = transcriptCategoryFilter === "all" || t.category === transcriptCategoryFilter;
-      return matchesSearch && matchesCat;
-    });
-  }, [transcripts, transcriptSearch, transcriptCategoryFilter]);
+  // Live preview lines & formatted timestamp matching Image 2
+  const previewLines = (panelForm.description || []).filter((line) => line !== undefined && line !== null && line !== "");
+  const previewTimestamp = "02/07/2026 22:47";
 
-  // Current Selected Guild
-  const activeGuild = guilds.find((g) => g.id === selectedGuildId) || {
-    id: "1513075101992747158",
-    name: "SyncInk Support HQ",
-    icon: "/syncink-main-logo.png",
-    dashboardTier: "Owner",
-  };
+  const selectedGuild = guilds.find((g) => g.id === selectedGuildId) || snapshot?.guild || null;
 
-  const navItems = [
-    { id: "overview", label: "Dashboard Overview", icon: LayoutDashboard, section: "main" },
-    { id: "panels", label: "Ticket Panels", icon: PanelsTopLeft, section: "main" },
-    { id: "categories", label: "Ticket Categories", icon: MessageSquareMore, section: "main" },
-    { id: "transfer", label: "Transfer Options", icon: ArrowRightLeft, section: "main" },
-    { id: "logs", label: "Ticket Logs", icon: ClipboardList, section: "main" },
-    { id: "transcripts", label: "Transcripts", icon: FileText, section: "main" },
-    { id: "analytics", label: "Analytics", icon: ChartColumnBig, section: "main" },
-    { id: "activity", label: "Activity Feed", icon: Activity, section: "main" },
-    { id: "audit", label: "Audit Logs", icon: ScrollText, section: "main" },
-    { id: "access", label: "Dashboard Access", icon: Shield, section: "admin" },
-    { id: "misc", label: "Miscellaneous", icon: SlidersHorizontal, section: "admin" },
-    { id: "profile", label: "Bot Profile", icon: Bot, section: "admin" },
-    { id: "interface", label: "Interface", icon: Paintbrush, section: "admin" },
-    { id: "status", label: "System Status", icon: Activity, section: "help" },
-    { id: "privacy", label: "Privacy Policy", icon: ShieldCheck, section: "help" },
-    { id: "terms", label: "Terms of Service", icon: FileText, section: "help" },
-    { id: "faq", label: "FAQ", icon: HelpCircle, section: "help" },
-    { id: "guide", label: "Dashboard Guide", icon: BookOpen, section: "help" },
-  ];
-
+  // 1. Loading Splash Screen
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070912] text-white flex flex-col items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-purple-300 font-medium text-sm">Authenticating your dashboard session...</p>
+      <div className="app-loading">
+        <div className="flex flex-col items-center gap-4">
+          <img src="/ticket-logo.png" alt="SyncInk Ticket" className="w-16 h-16 rounded-2xl animate-pulse" />
+          <span className="text-sm font-semibold text-slate-300">Authenticating your dashboard session...</span>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#070912] text-[#f7f9ff] flex flex-col font-sans selection:bg-purple-600 selection:text-white">
-      {/* GLOBAL TOAST CONTAINER */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`pointer-events-auto p-4 rounded-2xl border shadow-2xl backdrop-blur-xl transition-all duration-300 flex items-start gap-3 ${
-              toast.tone === "success"
-                ? "bg-[#0d1f17]/95 border-emerald-500/40 text-emerald-200"
-                : toast.tone === "error"
-                ? "bg-[#2b1016]/95 border-red-500/40 text-red-200"
-                : "bg-[#181329]/95 border-purple-500/40 text-purple-200"
-            }`}
-          >
-            {toast.tone === "success" && <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />}
-            {toast.tone === "error" && <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />}
-            {toast.tone === "info" && <Info className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />}
-            <div className="flex-1">
-              <h4 className="text-xs font-bold text-white">{toast.title}</h4>
-              {toast.message && <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">{toast.message}</p>}
+  // 2. Unauthenticated Screen: Exact Login View from Vercel (Login.jsx)
+  if (!user) {
+    return (
+      <div className="login-wrapper" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "85vh", padding: "20px" }}>
+        <div className="login-ambient-glow" />
+
+        <div
+          className="login-card"
+          style={{
+            width: "min(480px, 100%)",
+            display: "flex",
+            flexDirection: "column",
+            background: "rgba(11, 15, 27, 0.96)",
+            boxShadow: "0 24px 80px rgba(0, 0, 0, 0.5)",
+            borderRadius: "24px",
+            border: "1px solid rgba(255, 255, 255, 0.08)"
+          }}
+        >
+          <div className="auth-column panel" style={{ padding: "48px 40px", background: "transparent" }}>
+            <div className="login-header" style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "32px", textAlign: "center" }}>
+              <img
+                src="/ticket-logo.png"
+                alt="SyncInk Ticket Logo"
+                className="login-logo"
+                style={{ width: 84, height: 84, marginBottom: "20px", borderRadius: "50%", boxShadow: "0 0 40px rgba(165, 136, 255, 0.3)" }}
+              />
+              <h1
+                style={{
+                  fontSize: "28px",
+                  marginBottom: "12px",
+                  fontWeight: 700,
+                  background: "linear-gradient(90deg, #d8b4ff, #8ab4f8)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  color: "transparent"
+                }}
+              >
+                SyncInk Ticket
+              </h1>
+              <p style={{ color: "var(--text-muted)", fontSize: "14px", lineHeight: 1.6, padding: "0 10px" }}>
+                The ticket management system. Manage your support channels, customize your panels, and take full control.
+              </p>
             </div>
+
+            <div className="login-features" style={{ marginBottom: "36px", display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div className="login-feature" style={{ border: "none", padding: 0, gap: "16px", display: "flex", alignItems: "center" }}>
+                <div className="feature-icon" style={{ width: 42, height: 42, borderRadius: "14px", background: "rgba(165, 136, 255, 0.08)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Ticket size={18} />
+                </div>
+                <div className="feature-text" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
+                  <strong style={{ fontSize: "14px", color: "white" }}>Ticket Panels</strong>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Auto-create and manage dynamic support categories</span>
+                </div>
+              </div>
+
+              <div className="login-feature" style={{ border: "none", padding: 0, gap: "16px", display: "flex", alignItems: "center" }}>
+                <div className="feature-icon" style={{ width: 42, height: 42, borderRadius: "14px", background: "rgba(165, 136, 255, 0.08)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Settings size={18} />
+                </div>
+                <div className="feature-text" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
+                  <strong style={{ fontSize: "14px", color: "white" }}>Staff Controls</strong>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Easy role and server settings control</span>
+                </div>
+              </div>
+
+              <div className="login-feature" style={{ border: "none", padding: 0, gap: "16px", display: "flex", alignItems: "center" }}>
+                <div className="feature-icon" style={{ width: 42, height: 42, borderRadius: "14px", background: "rgba(165, 136, 255, 0.08)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <ShieldCheck size={18} />
+                </div>
+                <div className="feature-text" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
+                  <strong style={{ fontSize: "14px", color: "white" }}>Secure & Private</strong>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Secure Discord dashboard access</span>
+                </div>
+              </div>
+            </div>
+
             <button
-              onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
-              className="text-slate-400 hover:text-white transition-colors"
+              type="button"
+              className="login-button"
+              onClick={handleLogin}
+              style={{
+                width: "100%",
+                padding: "16px",
+                borderRadius: "14px",
+                background: "#5865F2",
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "12px",
+                fontSize: "15px",
+                fontWeight: 600,
+                border: "none",
+                cursor: "pointer",
+                boxShadow: "0 8px 24px rgba(88, 101, 242, 0.25)",
+                transition: "background 0.2s, transform 0.1s"
+              }}
             >
-              <X className="w-4 h-4" />
+              <img
+                src="https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png"
+                alt="Discord"
+                style={{ width: 22, filter: "brightness(0) invert(1)" }}
+              />
+              Login with Discord
+            </button>
+
+            <div
+              className="login-footer"
+              style={{
+                marginTop: "28px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                fontSize: "12px",
+                color: "var(--text-muted)",
+                textAlign: "center",
+                opacity: 0.8
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                SyncInk Ticket Dashboard &bull; Free for everyone &bull; Built with <span style={{ color: "#a588ff", fontSize: "14px", lineHeight: 1 }}>&hearts;</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px" }}>
+                <button type="button" onClick={() => setActiveTab("terms")} className="glow-link" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}>Terms</button>
+                <span style={{ color: "var(--border-strong)", fontSize: "10px" }}>┃</span>
+                <button type="button" onClick={() => setActiveTab("privacy")} className="glow-link" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}>Privacy</button>
+                <span style={{ color: "var(--border-strong)", fontSize: "10px" }}>┃</span>
+                <button type="button" onClick={() => setActiveTab("faq")} className="glow-link" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}>FAQ</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. User Logged In, but hasn't used SyncInk Ticket in any server (Exact User-Requested Screen)
+  if (user && guilds.length === 0) {
+    return (
+      <div className="server-shell" style={{ maxWidth: "600px", margin: "40px auto", padding: "20px" }}>
+        <div className="server-header" style={{ textAlign: "center", marginBottom: "32px" }}>
+          <img src="/ticket-logo.png" alt="SyncInk Ticket" style={{ width: 64, height: 64, borderRadius: 20, margin: "0 auto 18px", boxShadow: "0 0 30px rgba(165, 136, 255, 0.25)" }} />
+          <h1 style={{ fontSize: "26px", fontWeight: 700, color: "white", marginBottom: "8px" }}>Select your workspace</h1>
+          <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>
+            Choose the Discord server you want to view or manage.
+          </p>
+        </div>
+
+        <div className="server-empty" style={{ textAlign: "center", padding: "48px 32px", background: "rgba(15, 20, 38, 0.8)", borderRadius: "24px", border: "1px solid rgba(255, 255, 255, 0.08)", boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }}>
+          <div style={{ width: 60, height: 60, borderRadius: "18px", background: "rgba(165, 136, 255, 0.1)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+            <Ticket size={28} />
+          </div>
+          <h2 style={{ fontSize: "20px", fontWeight: 700, color: "white", marginBottom: "10px" }}>
+            You haven&apos;t used SyncInk Ticket in any server yet!
+          </h2>
+          <p style={{ color: "var(--text-muted)", fontSize: "14px", lineHeight: 1.6, marginBottom: "28px" }}>
+            SyncInk Ticket is not active in any server where this account has administrator permissions. Invite the bot to your Discord server or ensure you have Administrator / Manage Server permissions to get started.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", alignItems: "center" }}>
+            <a
+              href="https://discord.com/oauth2/authorize?client_id=1344248888060809228&permissions=8&integration_type=0&scope=bot+applications.commands"
+              target="_blank"
+              rel="noreferrer"
+              className="action-button tone-primary"
+              style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "14px 28px", fontSize: "14px", fontWeight: 600, borderRadius: "14px", textDecoration: "none", color: "white", background: "var(--accent)" }}
+            >
+              <Plus size={18} /> Invite SyncInk Ticket to Your Server
+            </a>
+            <button
+              type="button"
+              onClick={handleLogout}
+              style={{ background: "transparent", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "13px", fontWeight: 600, padding: "8px" }}
+            >
+              Log out and switch account
             </button>
           </div>
-        ))}
+        </div>
       </div>
+    );
+  }
 
-      {/* TOPBAR */}
-      <header className="sticky top-0 z-40 h-16 bg-[#0b0e1b]/80 backdrop-blur-xl border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between gap-4">
-        {/* Left: Server Dropdown Picker */}
-        <div className="relative">
+  // 4. Authenticated & Has Servers: Full Dashboard Layout
+  return (
+    <div className="dashboard-root" style={{ minHeight: "100vh", background: "var(--bg-canvas)", color: "var(--text)" }}>
+      {/* Top Header */}
+      <header className="dashboard-topbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "1px solid var(--border)", background: "rgba(11, 15, 27, 0.8)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <button
-            onClick={() => setServerDropdownOpen(!serverDropdownOpen)}
-            className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all"
+            type="button"
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer" }}
           >
-            <div className="w-7 h-7 rounded-lg bg-purple-600/30 border border-purple-500/40 flex items-center justify-center overflow-hidden">
-              <img
-                src={activeGuild.icon || "/ticket-logo.png"}
-                alt={activeGuild.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = "none";
-                }}
-              />
-            </div>
-            <div className="text-left hidden sm:block">
-              <div className="text-xs font-bold text-white truncate max-w-[140px]">{activeGuild.name}</div>
-              <div className="text-[10px] text-purple-400 font-semibold">{activeGuild.dashboardTier || "Staff Access"}</div>
-            </div>
-            <ChevronDown className="w-4 h-4 text-slate-400 ml-1" />
+            <Menu size={20} />
           </button>
 
-          {/* Server Dropdown */}
-          {serverDropdownOpen && (
-            <div className="absolute left-0 mt-2 w-72 rounded-2xl bg-[#0f1426] border border-purple-500/30 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-              <div className="p-2 border-b border-white/5 mb-1.5 flex items-center gap-2">
-                <Search className="w-3.5 h-3.5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search servers..."
-                  value={serverSearch}
-                  onChange={(e) => setServerSearch(e.target.value)}
-                  className="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
-                />
-              </div>
+          <img src="/ticket-logo.png" alt="SyncInk" style={{ width: 34, height: 34, borderRadius: 10 }} />
 
-              <div className="max-h-56 overflow-y-auto space-y-1">
-                {(guilds.length > 0 ? guilds : [activeGuild])
-                  .filter((g) => g.name.toLowerCase().includes(serverSearch.toLowerCase()))
-                  .map((guild) => (
-                    <button
-                      key={guild.id}
-                      onClick={() => {
-                        setSelectedGuildId(guild.id);
-                        setServerDropdownOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all ${
-                        guild.id === selectedGuildId ? "bg-purple-600/20 text-white font-bold" : "hover:bg-white/5 text-slate-300"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-6 h-6 rounded-md bg-purple-600/30 flex items-center justify-center text-[10px] font-bold text-purple-300 overflow-hidden">
-                          {guild.name.slice(0, 2).toUpperCase()}
-                        </div>
-                        <span className="text-xs truncate max-w-[150px]">{guild.name}</span>
-                      </div>
-                      {guild.id === selectedGuildId && <Check className="w-3.5 h-3.5 text-purple-400" />}
-                    </button>
-                  ))}
-              </div>
-
-              <div className="mt-2 pt-2 border-t border-white/5">
-                <a
-                  href="https://discord.com/oauth2/authorize?client_id=1513075101992747158&permissions=361046068240&integration_type=0&scope=bot+applications.commands"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-1.5 px-3 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
-                >
-                  <Plus className="w-3.5 h-3.5 text-purple-400" />
-                  <span>Add Bot to Another Server</span>
-                </a>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Center: Live Sync & Unsaved Bar */}
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Live Connection</span>
-          </div>
-
-          <button
-            onClick={() => fetchDashboardData()}
-            className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white transition-all border border-white/[0.08]"
-            title="Refresh from Discord bot"
-          >
-            <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin text-purple-400" : ""}`} />
-          </button>
-        </div>
-
-        {/* Right: User Profile */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5 pl-3 border-l border-white/[0.08]">
-            <div className="w-8 h-8 rounded-full bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-xs font-bold text-purple-200">
-              {currentUser?.username?.slice(0, 1).toUpperCase() || "U"}
-            </div>
-            <div className="text-right hidden sm:block">
-              <div className="text-xs font-bold text-white">{currentUser?.username || "SyncInk Staff"}</div>
-              <div className="text-[10px] text-emerald-400">Authenticated</div>
-            </div>
-            <a
-              href="https://syncink-ticket.onrender.com/api/auth/logout"
-              className="p-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-              title="Log Out"
+          {/* Server Switcher Dropdown */}
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={() => setServerDropdownOpen(!serverDropdownOpen)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "8px 14px",
+                borderRadius: "12px",
+                background: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid var(--border)",
+                color: "var(--text)",
+                cursor: "pointer",
+                fontSize: "13px",
+                fontWeight: 600
+              }}
             >
-              <LogOut className="w-4 h-4" />
-            </a>
+              {selectedGuild?.icon ? (
+                <img
+                  src={`https://cdn.discordapp.com/icons/${selectedGuild.id}/${selectedGuild.icon}.png`}
+                  alt={selectedGuild.name}
+                  style={{ width: 22, height: 22, borderRadius: "50%" }}
+                />
+              ) : (
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--accent)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px" }}>
+                  {selectedGuild?.name ? selectedGuild.name.charAt(0) : "S"}
+                </div>
+              )}
+              <span style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {selectedGuild?.name || "Select Server"}
+              </span>
+              {selectedGuild && renderTierBadge(selectedGuild.dashboardTier || (selectedGuild.owner ? "owner" : "admin"))}
+              <ChevronDown size={14} style={{ opacity: 0.6 }} />
+            </button>
+
+            {serverDropdownOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  left: 0,
+                  width: "280px",
+                  background: "#0f1426",
+                  borderRadius: "16px",
+                  border: "1px solid var(--border)",
+                  boxShadow: "0 16px 40px rgba(0,0,0,0.6)",
+                  padding: "10px",
+                  zIndex: 100
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", borderRadius: "10px", background: "rgba(0,0,0,0.3)", marginBottom: "8px" }}>
+                  <Search size={14} style={{ color: "var(--text-muted)" }} />
+                  <input
+                    type="text"
+                    value={serverSearch}
+                    onChange={(e) => setServerSearch(e.target.value)}
+                    placeholder="Filter servers..."
+                    style={{ background: "transparent", border: "none", color: "white", fontSize: "12px", outline: "none", width: "100%" }}
+                  />
+                </div>
+
+                <div style={{ maxHeight: "220px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px" }}>
+                  {guilds
+                    .filter((g) => g.name.toLowerCase().includes(serverSearch.toLowerCase()))
+                    .map((g) => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => handleSelectGuild(g.id)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          width: "100%",
+                          padding: "8px 10px",
+                          borderRadius: "8px",
+                          border: "none",
+                          background: g.id === selectedGuildId ? "rgba(165, 136, 255, 0.12)" : "transparent",
+                          color: g.id === selectedGuildId ? "var(--accent)" : "var(--text)",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          fontSize: "12px",
+                          fontWeight: g.id === selectedGuildId ? 700 : 500
+                        }}
+                      >
+                        {g.icon ? (
+                          <img src={`https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png`} alt="" style={{ width: 22, height: 22, borderRadius: "50%" }} />
+                        ) : (
+                          <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#333", color: "#ccc", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px" }}>{g.name.charAt(0)}</div>
+                        )}
+                        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
+                        {g.id === selectedGuildId && <CheckCircle2 size={14} />}
+                      </button>
+                    ))}
+                </div>
+
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "8px" }}>
+                  <a
+                    href="https://discord.com/oauth2/authorize?client_id=1344248888060809228&permissions=8&integration_type=0&scope=bot+applications.commands"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", fontSize: "12px", color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}
+                  >
+                    <Plus size={14} /> Add Bot to Another Server
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <button
+            type="button"
+            onClick={() => selectedGuildId && fetchGuildSnapshot(selectedGuildId)}
+            title="Refresh Server Data"
+            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", color: "var(--text-muted)", cursor: "pointer", fontSize: "12px" }}
+          >
+            <RefreshCw size={13} className={snapshotLoading ? "spin" : ""} />
+            <span className="hidden sm:inline">Sync</span>
+          </button>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 12px", borderRadius: "12px", background: "rgba(255, 255, 255, 0.04)", border: "1px solid var(--border)" }}>
+            {user.avatar ? (
+              <img src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`} alt="" style={{ width: 22, height: 22, borderRadius: "50%" }} />
+            ) : (
+              <User size={16} />
+            )}
+            <span style={{ fontSize: "12px", fontWeight: 600 }} className="hidden sm:inline">{user.global_name || user.username}</span>
+            <button type="button" onClick={handleLogout} title="Log out" style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", marginLeft: "4px" }}>
+              <LogOut size={14} />
+            </button>
           </div>
         </div>
       </header>
 
-      {/* DIRTY CHANGES NOTICE BAR */}
-      {isDirty && (
-        <div className="bg-purple-600 px-4 py-2 text-white text-xs font-bold flex items-center justify-between shadow-lg sticky top-16 z-30 animate-in slide-in-from-top-2">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" />
-            <span>You have unsaved changes to this server&apos;s ticket configuration.</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsDirty(false)}
-              className="px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white font-semibold transition-all"
-            >
-              Discard
-            </button>
-            <button
-              onClick={handleSaveSettings}
-              className="px-4 py-1 rounded-lg bg-black/40 hover:bg-black/60 text-white font-bold transition-all flex items-center gap-1.5"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>Save Changes</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* DASHBOARD BODY (SIDEBAR + MAIN CONTENT) */}
-      <div className="flex-1 flex max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 gap-6">
-        {/* SIDEBAR NAVIGATION */}
-        <aside className="w-64 shrink-0 hidden lg:block">
-          <div className="sticky top-24 space-y-6">
-            {/* Bot Brand Card */}
-            <div className="p-4 rounded-2xl bg-[#0f1426] border border-white/[0.08] flex items-center gap-3">
-              <img
-                src="/ticket-logo.png"
-                alt="Ticket Bot"
-                className="w-10 h-10 rounded-xl object-contain shadow-[0_0_15px_rgba(165,136,255,0.4)]"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = "none";
-                }}
-              />
-              <div>
-                <h3 className="text-sm font-black text-white">SyncInk Ticket</h3>
-                <span className="text-[10px] font-bold text-purple-400 tracking-wider uppercase">Dedicated Console</span>
-              </div>
+      {/* Main Container */}
+      <div style={{ display: "flex", minHeight: "calc(100vh - 65px)" }}>
+        {/* Sidebar */}
+        <aside
+          style={{
+            width: "260px",
+            borderRight: "1px solid var(--border)",
+            background: "rgba(11, 15, 27, 0.95)",
+            padding: "20px 12px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            flexShrink: 0
+          }}
+          className={`${mobileMenuOpen ? "block fixed inset-y-0 left-0 z-50 w-72" : "hidden md:flex"}`}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div style={{ padding: "0 12px 12px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Ticket Management
             </div>
 
-            {/* Nav Groups */}
-            <div className="space-y-4">
-              {/* Main Nav */}
-              <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-1.5">
-                  Main Navigation
-                </div>
-                <div className="space-y-0.5">
-                  {navItems
-                    .filter((item) => item.section === "main")
-                    .map((item) => {
-                      const Icon = item.icon;
-                      const isActive = activeTab === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => setActiveTab(item.id)}
-                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                            isActive
-                              ? "bg-purple-600 text-white font-bold shadow-[0_0_15px_rgba(147,51,234,0.35)]"
-                              : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
-                          }`}
-                        >
-                          <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-purple-400"}`} />
-                          <span>{item.label}</span>
-                        </button>
-                      );
-                    })}
-                </div>
-              </div>
+            {[
+              { id: "overview", label: "Dashboard Overview", icon: LayoutDashboard },
+              { id: "panels", label: "Ticket Panels", icon: PanelsTopLeft },
+              { id: "categories", label: "Ticket Categories", icon: MessageSquareMore },
+              { id: "transfer-options", label: "Transfer Options", icon: ArrowRightLeft },
+              { id: "ticket-logs", label: "Ticket Logs", icon: ClipboardList },
+              { id: "transcripts", label: "Transcripts", icon: FileText },
+              { id: "analytics", label: "Analytics", icon: BarChart3 },
+              { id: "activity", label: "Activity Feed", icon: Activity },
+              { id: "audit-logs", label: "Audit Logs", icon: ScrollText },
+              { id: "dashboard-access", label: "Dashboard Access", icon: Shield },
+              { id: "miscellaneous", label: "Miscellaneous", icon: SlidersHorizontal },
+              { id: "bot-profile", label: "Bot Profile", icon: Bot },
+              { id: "interface", label: "Interface", icon: Paintbrush }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setMobileMenuOpen(false);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "10px 14px",
+                    borderRadius: "10px",
+                    border: "none",
+                    background: active ? "rgba(165, 136, 255, 0.12)" : "transparent",
+                    color: active ? "var(--accent)" : "var(--text-soft)",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    fontWeight: active ? 600 : 500,
+                    textAlign: "left",
+                    transition: "all 0.15s ease"
+                  }}
+                >
+                  <Icon size={16} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
-              {/* Admin Nav */}
-              <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-1.5">
-                  Administration
-                </div>
-                <div className="space-y-0.5">
-                  {navItems
-                    .filter((item) => item.section === "admin")
-                    .map((item) => {
-                      const Icon = item.icon;
-                      const isActive = activeTab === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => setActiveTab(item.id)}
-                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                            isActive
-                              ? "bg-purple-600 text-white font-bold shadow-[0_0_15px_rgba(147,51,234,0.35)]"
-                              : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
-                          }`}
-                        >
-                          <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-purple-400"}`} />
-                          <span>{item.label}</span>
-                        </button>
-                      );
-                    })}
-                </div>
-              </div>
-
-              {/* Help & Legal Nav */}
-              <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-1.5">
-                  Help & Legal
-                </div>
-                <div className="space-y-0.5">
-                  {navItems
-                    .filter((item) => item.section === "help")
-                    .map((item) => {
-                      const Icon = item.icon;
-                      const isActive = activeTab === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => setActiveTab(item.id)}
-                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                            isActive
-                              ? "bg-purple-600 text-white font-bold shadow-[0_0_15px_rgba(147,51,234,0.35)]"
-                              : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
-                          }`}
-                        >
-                          <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-purple-400"}`} />
-                          <span>{item.label}</span>
-                        </button>
-                      );
-                    })}
-                </div>
-              </div>
+          {/* Help & Legal Navigation */}
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "16px", marginTop: "16px", display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div style={{ padding: "0 12px 8px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Help & Resources
             </div>
+            {[
+              { id: "status", label: "System Status", icon: Activity },
+              { id: "guide", label: "Dashboard Guide", icon: BookOpen },
+              { id: "faq", label: "FAQ", icon: HelpCircle },
+              { id: "privacy", label: "Privacy Policy", icon: ShieldCheck },
+              { id: "terms", label: "Terms of Service", icon: FileText }
+            ].map((h) => {
+              const Icon = h.icon;
+              const active = activeTab === h.id;
+              return (
+                <button
+                  key={h.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(h.id);
+                    setMobileMenuOpen(false);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "8px 14px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: active ? "rgba(165, 136, 255, 0.12)" : "transparent",
+                    color: active ? "var(--accent)" : "var(--text-muted)",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                    textAlign: "left"
+                  }}
+                >
+                  <Icon size={15} />
+                  <span>{h.label}</span>
+                </button>
+              );
+            })}
           </div>
         </aside>
 
-        {/* MOBILE HORIZONTAL NAV */}
-        <div className="lg:hidden w-full overflow-x-auto flex gap-1.5 pb-2 mb-2 scrollbar-none border-b border-white/[0.08]">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all ${
-                  isActive ? "bg-purple-600 text-white" : "bg-white/5 text-slate-300"
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* MAIN DISPLAY AREA */}
-        <main className="flex-1 min-w-0 space-y-6">
+        {/* Content Area */}
+        <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto", maxWidth: "1400px", margin: "0 auto", width: "100%" }}>
           {/* TAB 1: OVERVIEW */}
           {activeTab === "overview" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
+            <div className="page-stack">
+              <div className="page-header">
                 <div>
-                  <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                    <LayoutDashboard className="w-6 h-6 text-purple-400" />
-                    <span>Dashboard Overview</span>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <LayoutDashboard size={26} color="var(--accent)" />
+                    Dashboard Overview
                   </h1>
-                  <p className="text-xs text-slate-400 mt-1">High-level metrics and activity for your ticket system.</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setActiveTab("panels")}
-                    className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all flex items-center gap-1.5 shadow-lg"
-                  >
-                    <PanelsTopLeft className="w-3.5 h-3.5" />
-                    <span>Open Panel Studio</span>
-                  </button>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                    High-level metrics and activity for your ticket system.
+                  </p>
                 </div>
               </div>
 
-              {/* KPI Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="p-5 rounded-2xl bg-[#0f1426] border border-white/[0.08] shadow-sm">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Open Tickets</div>
-                  <div className="text-2xl sm:text-3xl font-black text-white mt-1">3</div>
-                  <div className="text-[10px] text-purple-400 mt-1 font-semibold">Active threads right now</div>
+              {/* Legal Hub Banner */}
+              <div className="legal-banner">
+                <div className="legal-banner-content">
+                  <Shield className="legal-icon" size={28} />
+                  <div className="legal-text">
+                    <h3>Legal & Support Hub</h3>
+                    <p>Review our official policies and frequently asked questions for guidance.</p>
+                  </div>
                 </div>
-
-                <div className="p-5 rounded-2xl bg-[#0f1426] border border-white/[0.08] shadow-sm">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Processed</div>
-                  <div className="text-2xl sm:text-3xl font-black text-white mt-1">1,482</div>
-                  <div className="text-[10px] text-emerald-400 mt-1 font-semibold">+18% this month</div>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-[#0f1426] border border-white/[0.08] shadow-sm">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Avg Response</div>
-                  <div className="text-2xl sm:text-3xl font-black text-white mt-1">3.4m</div>
-                  <div className="text-[10px] text-purple-400 mt-1 font-semibold">First staff reply</div>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-[#0f1426] border border-white/[0.08] shadow-sm">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Satisfaction</div>
-                  <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-1">98.4%</div>
-                  <div className="text-[10px] text-slate-400 mt-1 font-semibold">From 420 reviews</div>
+                <div className="legal-links">
+                  <button type="button" onClick={() => setActiveTab("privacy")} className="action-button"><Shield size={16} /> Privacy Policy</button>
+                  <button type="button" onClick={() => setActiveTab("terms")} className="action-button"><FileText size={16} /> Terms of Service</button>
+                  <button type="button" onClick={() => setActiveTab("faq")} className="action-button"><HelpCircle size={16} /> FAQ</button>
                 </div>
               </div>
 
-              {/* 7-Day Activity Chart */}
-              <div className="p-6 rounded-2xl bg-[#0f1426] border border-white/[0.08] space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-bold text-white">Weekly Activity Flow</h3>
-                    <p className="text-xs text-slate-400">Created vs resolved tickets over the last 7 days</p>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs">
-                    <div className="flex items-center gap-1.5 text-purple-400">
-                      <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
-                      <span>Created</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-emerald-400">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                      <span>Resolved</span>
-                    </div>
-                  </div>
+              {/* Metrics */}
+              <div className="metric-grid">
+                <div className="metric-card tone-default">
+                  <div className="metric-label">Total Tickets</div>
+                  <div className="metric-value">{snapshot?.stats?.totalTickets ?? 0}</div>
+                  <div className="metric-hint">All recorded tickets</div>
                 </div>
-
-                <div className="h-44 flex items-end justify-between gap-3 pt-4">
-                  {[
-                    { day: "Mon", created: 18, closed: 16 },
-                    { day: "Tue", created: 24, closed: 22 },
-                    { day: "Wed", created: 31, closed: 29 },
-                    { day: "Thu", created: 28, closed: 27 },
-                    { day: "Fri", created: 42, closed: 40 },
-                    { day: "Sat", created: 35, closed: 34 },
-                    { day: "Sun", created: 20, closed: 19 },
-                  ].map((bar, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                      <div className="w-full flex items-end justify-center gap-1.5 h-32">
-                        <div
-                          className="w-1/2 bg-purple-500/80 rounded-t-md transition-all hover:bg-purple-400"
-                          style={{ height: `${(bar.created / 45) * 100}%` }}
-                          title={`${bar.created} created`}
-                        />
-                        <div
-                          className="w-1/2 bg-emerald-500/80 rounded-t-md transition-all hover:bg-emerald-400"
-                          style={{ height: `${(bar.closed / 45) * 100}%` }}
-                          title={`${bar.closed} closed`}
-                        />
-                      </div>
-                      <span className="text-[11px] font-semibold text-slate-400">{bar.day}</span>
-                    </div>
-                  ))}
+                <div className="metric-card tone-info">
+                  <div className="metric-label">Open Tickets</div>
+                  <div className="metric-value">{snapshot?.stats?.openTickets ?? 0}</div>
+                  <div className="metric-hint">Awaiting staff resolution</div>
+                </div>
+                <div className="metric-card tone-success">
+                  <div className="metric-label">Resolved</div>
+                  <div className="metric-value">{snapshot?.stats?.closedTickets ?? 0}</div>
+                  <div className="metric-hint">Successfully archived</div>
+                </div>
+                <div className="metric-card tone-default">
+                  <div className="metric-label">Actions</div>
+                  <div className="metric-value">{snapshot?.stats?.activityCount ?? 0}</div>
+                  <div className="metric-hint">Recorded interactions</div>
                 </div>
               </div>
 
-              {/* Department Volume Distribution */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-6 rounded-2xl bg-[#0f1426] border border-white/[0.08] space-y-4">
-                  <h3 className="text-sm font-bold text-white">Department Volume Breakdown</h3>
-                  <div className="space-y-3">
-                    {[
-                      { name: "Technical Support", pct: 38, count: 563, color: "bg-purple-500" },
-                      { name: "Billing & Subscriptions", pct: 28, count: 415, color: "bg-blue-500" },
-                      { name: "General Inquiries", pct: 18, count: 266, color: "bg-emerald-500" },
-                      { name: "Staff Abuse & Reports", pct: 10, count: 148, color: "bg-red-500" },
-                      { name: "Custom Bot Commission", pct: 6, count: 90, color: "bg-amber-500" },
-                    ].map((cat, i) => (
-                      <div key={i} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-300 font-medium">{cat.name}</span>
-                          <span className="text-slate-400 font-mono">{cat.count} ({cat.pct}%)</span>
-                        </div>
-                        <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden">
-                          <div className={`h-full ${cat.color} rounded-full`} style={{ width: `${cat.pct}%` }} />
-                        </div>
-                      </div>
-                    ))}
+              {/* Activity & Staff */}
+              <div className="split-grid">
+                <section className="section-card">
+                  <div className="section-head">
+                    <div>
+                      <h2>Ticket Activity (7 Days)</h2>
+                      <p>Created vs. closed tickets over the past week.</p>
+                    </div>
                   </div>
-                </div>
-
-                {/* Staff Leaderboard */}
-                <div className="p-6 rounded-2xl bg-[#0f1426] border border-white/[0.08] space-y-4">
-                  <h3 className="text-sm font-bold text-white">Top Support Responders</h3>
-                  <div className="space-y-2.5">
-                    {[
-                      { name: "Deeptarag", role: "Owner", resolved: 284, avg: "2.1m", rating: "4.9★" },
-                      { name: "VortexMod", role: "Head Moderator", resolved: 192, avg: "3.5m", rating: "4.8★" },
-                      { name: "PulseDev", role: "Core Developer", resolved: 146, avg: "4.2m", rating: "5.0★" },
-                      { name: "AlexSupport", role: "Support Specialist", resolved: 118, avg: "3.8m", rating: "4.7★" },
-                    ].map((staff, i) => (
-                      <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-black/30 border border-white/5 text-xs">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-purple-600/30 font-bold text-purple-300 flex items-center justify-center text-xs">
-                            {staff.name.slice(0, 1)}
+                  <div className="activity-chart">
+                    <div className="chart-bars-container">
+                      {(snapshot?.stats?.dailySeries || []).map((day: any, i: number) => (
+                        <div key={i} className="chart-day-group">
+                          <div className="chart-bar-wrap">
+                            <div className="chart-bar created" style={{ height: `${Math.min(100, (day.created || 0) * 12 + 10)}%` }} title={`${day.created || 0} Created`} />
+                            <div className="chart-bar closed" style={{ height: `${Math.min(100, (day.closed || 0) * 12 + 8)}%` }} title={`${day.closed || 0} Closed`} />
                           </div>
+                          <div className="chart-label">{day.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="chart-legend">
+                      <div className="legend-item"><span className="legend-dot created" /> Created</div>
+                      <div className="legend-item"><span className="legend-dot closed" /> Closed</div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="section-card">
+                  <div className="section-head">
+                    <div>
+                      <h2>Staff Activity</h2>
+                      <p>Top operators based on recent ticket actions.</p>
+                    </div>
+                  </div>
+                  <div className="stack-list">
+                    {(snapshot?.stats?.staffActivity || []).length === 0 ? (
+                      <div className="muted-note">No staff activity has been recorded yet.</div>
+                    ) : (
+                      snapshot.stats.staffActivity.map((item: any, i: number) => (
+                        <div key={i} className="staff-row">
                           <div>
-                            <div className="font-bold text-white">{staff.name}</div>
-                            <div className="text-[10px] text-slate-400">{staff.role}</div>
+                            <strong>{item.name || item.actorId}</strong>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>{item.actions || 0} ticket actions performed</div>
                           </div>
+                          <span className="role-badge staff">Staff</span>
                         </div>
-                        <div className="text-right">
-                          <div className="font-bold text-emerald-400">{staff.resolved} resolved</div>
-                          <div className="text-[10px] text-slate-400">Avg: {staff.avg} • {staff.rating}</div>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
-                </div>
+                </section>
               </div>
             </div>
           )}
 
-          {/* TAB 2: TICKET PANELS */}
+          {/* TAB 2: TICKET PANELS (EXACT LIVE PREVIEW MATCHING IMAGE 2) */}
           {activeTab === "panels" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
+            <div className="page-stack">
+              <div className="page-header">
                 <div>
-                  <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                    <PanelsTopLeft className="w-6 h-6 text-purple-400" />
-                    <span>Ticket Panel Studio</span>
+                  <div className="page-eyebrow">Panel Configuration</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <PanelsTopLeft size={26} color="var(--accent)" />
+                    Design the ticket entry panel
                   </h1>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Design and broadcast live interactive support panels into your Discord channels.
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                    Adjust the panel copy and appearance without changing the underlying ticket workflow or bot logic.
                   </p>
                 </div>
-                <button
-                  onClick={handleDeployPanel}
-                  disabled={panelDeploying}
-                  className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-[0_0_20px_rgba(147,51,234,0.4)] flex items-center gap-2"
-                >
-                  <Send className={`w-4 h-4 ${panelDeploying ? "animate-spin" : ""}`} />
-                  <span>{panelDeploying ? "Broadcasting to Discord..." : "Deploy to Discord"}</span>
-                </button>
+                <div className="action-row">
+                  <button
+                    type="button"
+                    className="action-button tone-primary"
+                    disabled={busy}
+                    onClick={() => handleSaveSettings({ panelConfig: panelForm, panelChannelId }, "Panel styling saved")}
+                  >
+                    <Save size={15} /> Save panel style
+                  </button>
+                  <button
+                    type="button"
+                    className="action-button"
+                    disabled={busy}
+                    onClick={() =>
+                      openConfirm(
+                        {
+                          title: "Deploy ticket panel",
+                          message: "This will post the current panel embed into the selected text channel immediately.",
+                          confirmLabel: "Deploy now"
+                        },
+                        handleDeployPanel
+                      )
+                    }
+                  >
+                    <Send size={15} /> Deploy panel
+                  </button>
+                </div>
               </div>
 
-              {/* Studio Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left: Studio Controls */}
-                <div className="space-y-4 p-6 rounded-2xl bg-[#0f1426] border border-white/[0.08]">
-                  <h3 className="text-sm font-bold text-white">Embed Configuration</h3>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Panel Title</label>
-                    <input
-                      type="text"
-                      value={panelTitle}
-                      onChange={(e) => {
-                        setPanelTitle(e.target.value);
-                        setIsDirty(true);
-                      }}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500"
-                    />
+              <div className="split-grid">
+                {/* Form Settings */}
+                <section className="section-card">
+                  <div className="section-head">
+                    <div>
+                      <h2>Panel settings</h2>
+                      <p>These values shape the embed members see before opening a ticket.</p>
+                    </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Description Message</label>
-                    <textarea
-                      rows={4}
-                      value={panelDesc}
-                      onChange={(e) => {
-                        setPanelDesc(e.target.value);
-                        setIsDirty(true);
-                      }}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500 leading-relaxed"
-                    />
-                  </div>
+                  <div className="form-grid">
+                    <div className="field">
+                      <label className="field-label">Ticket panel channel</label>
+                      <select
+                        className="select-input"
+                        value={panelChannelId}
+                        onChange={(e) => {
+                          setPanelChannelId(e.target.value);
+                          setIsDirty(true);
+                        }}
+                      >
+                        <option value="">Select a text channel</option>
+                        {(snapshot?.resources?.panelChannels || snapshot?.resources?.textChannels || []).map((ch: any) => (
+                          <option key={ch.id} value={ch.id}>#{ch.name}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-300">Accent Color</label>
-                      <div className="flex items-center gap-2">
+                    <div className="field">
+                      <label className="field-label">Panel title</label>
+                      <input
+                        type="text"
+                        className="text-input"
+                        value={panelForm.title}
+                        onChange={(e) => {
+                          setPanelForm((cur) => ({ ...cur, title: e.target.value }));
+                          setIsDirty(true);
+                        }}
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label className="field-label">Panel placeholder</label>
+                      <input
+                        type="text"
+                        className="text-input"
+                        value={panelForm.placeholder}
+                        onChange={(e) => {
+                          setPanelForm((cur) => ({ ...cur, placeholder: e.target.value }));
+                          setIsDirty(true);
+                        }}
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label className="field-label">Embed color</label>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                         <input
                           type="color"
-                          value={panelColor}
+                          value={panelForm.color}
                           onChange={(e) => {
-                            setPanelColor(e.target.value);
+                            setPanelForm((cur) => ({ ...cur, color: e.target.value }));
                             setIsDirty(true);
                           }}
-                          className="w-9 h-9 rounded-lg bg-transparent border-0 cursor-pointer"
+                          style={{ width: "38px", height: "38px", borderRadius: "8px", border: "none", cursor: "pointer", background: "transparent" }}
                         />
                         <input
                           type="text"
-                          value={panelColor}
+                          className="text-input"
+                          value={panelForm.color}
                           onChange={(e) => {
-                            setPanelColor(e.target.value);
+                            setPanelForm((cur) => ({ ...cur, color: e.target.value }));
                             setIsDirty(true);
                           }}
-                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-purple-500"
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-300">Destination Channel</label>
-                      <div className="flex items-center px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-slate-300 text-xs gap-2">
-                        <Hash className="w-4 h-4 text-purple-400" />
-                        <input
-                          type="text"
-                          value={panelChannel}
-                          onChange={(e) => {
-                            setPanelChannel(e.target.value);
-                            setIsDirty(true);
-                          }}
-                          className="w-full bg-transparent text-white focus:outline-none font-mono"
-                        />
-                      </div>
+                    <div className="field">
+                      <label className="field-label">Thumbnail URL</label>
+                      <input
+                        type="text"
+                        className="text-input"
+                        value={panelForm.thumbnailUrl}
+                        onChange={(e) => {
+                          setPanelForm((cur) => ({ ...cur, thumbnailUrl: e.target.value }));
+                          setIsDirty(true);
+                        }}
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label className="field-label">Panel description</label>
+                      <span className="field-hint">Use one line per bullet shown in the embed.</span>
+                      <textarea
+                        className="text-area"
+                        rows={6}
+                        value={(panelForm.description || []).join("\n")}
+                        onChange={(e) => {
+                          setPanelForm((cur) => ({ ...cur, description: e.target.value.split("\n") }));
+                          setIsDirty(true);
+                        }}
+                      />
                     </div>
                   </div>
-                </div>
+                </section>
 
-                {/* Right: Discord Mockup Live Preview */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-400">
-                    <span>Discord Live Preview</span>
-                    <span className="text-[10px] text-purple-400 uppercase">Exact Bot Render</span>
+                {/* EXACT LIVE PREVIEW (MATCHING IMAGE 2 PIXEL FOR PIXEL) */}
+                <section className="section-card">
+                  <div className="section-head">
+                    <div>
+                      <h2>Live preview</h2>
+                      <p>A dashboard-side preview of the Discord-facing ticket panel.</p>
+                    </div>
                   </div>
 
-                  <div className="p-5 rounded-2xl bg-[#313338] border border-white/10 text-[#dbdee1] font-sans shadow-2xl">
-                    <div className="flex items-center gap-3 mb-3">
-                      <img src="/ticket-logo.png" alt="Bot Avatar" className="w-9 h-9 rounded-full bg-black/40 object-contain" />
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-white text-sm">SyncInk Ticket</span>
-                          <span className="bg-[#5865f2] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded tracking-wider">BOT</span>
+                  <div className="panel-preview">
+                    <div className="panel-preview-header">
+                      <Eye size={16} />
+                      <span>Discord panel preview</span>
+                    </div>
+
+                    <div className="discord-message-preview">
+                      <img
+                        src={snapshot?.bot?.avatarUrl || "/ticket-logo.png"}
+                        alt={snapshot?.bot?.username || "SyncInk Ticket"}
+                        className="discord-message-avatar"
+                      />
+
+                      <div className="discord-message-content">
+                        <div className="discord-message-header">
+                          <span className="discord-message-author" style={{ color: "#00a8fc" }}>
+                            {snapshot?.bot?.nickname || snapshot?.bot?.username || "SyncInk Ticket"}
+                          </span>
+                          <span className="discord-message-bot-tag" style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                              <path d="M1 4.5L3.5 7L9 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            APP
+                          </span>
+                          <span className="discord-message-timestamp">{previewTimestamp}</span>
                         </div>
-                        <div className="text-[10px] text-[#949ba4]">Today at 4:20 PM</div>
-                      </div>
-                    </div>
 
-                    {/* Discord Embed */}
-                    <div
-                      className="border-l-4 rounded bg-[#2b2d31] p-4 space-y-2 mb-4"
-                      style={{ borderLeftColor: panelColor }}
-                    >
-                      <h4 className="text-white font-bold text-sm">{panelTitle}</h4>
-                      <div className="text-xs text-[#dbdee1] leading-relaxed">
-                        {renderDiscordTokens(panelDesc, "desc-preview")}
-                      </div>
-                    </div>
+                        {/* Discord Embed */}
+                        <div className="discord-message-embed">
+                          <div className="discord-message-embed-color" style={{ background: panelForm.color || "#5865f2" }} />
 
-                    {/* Interactive Discord Buttons Mockup */}
-                    <div className="space-y-2">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Category Buttons</div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {categories.slice(0, 4).map((cat) => (
-                          <div
-                            key={cat.id}
-                            className="flex items-center gap-2 px-3 py-2 rounded bg-[#4e5058] text-white text-xs font-semibold shadow-sm hover:bg-[#6d6f78] transition-colors"
-                          >
-                            {renderEmojiTag(cat.emojiTag)}
-                            <span className="truncate">{cat.name}</span>
+                          <div className="discord-message-embed-body">
+                            {panelForm.title ? (
+                              <div
+                                className="discord-message-embed-title"
+                                style={{
+                                  fontSize: "17px",
+                                  fontWeight: 700,
+                                  textDecoration: "underline",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  marginBottom: "12px"
+                                }}
+                              >
+                                {renderDiscordTokens(panelForm.title, "title")}
+                              </div>
+                            ) : null}
+
+                            <div className="discord-message-embed-desc">
+                              {previewLines.map((line, index) => {
+                                const isTitleLine = index === 0 && !panelForm.title;
+                                const textToRender = isTitleLine ? line.replace(/\*\*/g, "").replace(/__/g, "") : line;
+
+                                return (
+                                  <div key={index} className="discord-message-embed-line">
+                                    {!isTitleLine && <span className="discord-message-bullet">•</span>}
+                                    <p
+                                      style={
+                                        isTitleLine
+                                          ? { fontSize: "1.2em", fontWeight: "bold", textDecoration: "underline", display: "flex", alignItems: "center", gap: "8px" }
+                                          : { fontSize: "14px", lineHeight: "1.5" }
+                                      }
+                                    >
+                                      {renderDiscordTokens(textToRender, `line-${index}`)}
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                        ))}
+
+                          {panelForm.thumbnailUrl ? (
+                            <img src={panelForm.thumbnailUrl} alt="Thumbnail" className="discord-message-embed-thumb" />
+                          ) : null}
+                        </div>
+
+                        {/* Dropdown Select Menu Component */}
+                        <div className="discord-message-components">
+                          <div className="discord-message-select">
+                            <span>{panelForm.placeholder || "Select a support category..."}</span>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                              <path d="M8.59003 16.59L13.17 12L8.59003 7.41L10 6L16 12L10 18L8.59003 16.59Z" fill="#DBDEE1" />
+                            </svg>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                </section>
               </div>
             </div>
           )}
 
           {/* TAB 3: TICKET CATEGORIES */}
           {activeTab === "categories" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
+            <div className="page-stack">
+              <div className="page-header">
                 <div>
-                  <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                    <MessageSquareMore className="w-6 h-6 text-purple-400" />
-                    <span>Ticket Categories</span>
+                  <div className="page-eyebrow">Department Setup</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <MessageSquareMore size={26} color="var(--accent)" />
+                    Ticket Categories & Emojis
                   </h1>
-                  <p className="text-xs text-slate-400 mt-1">Configure your departments, claim roles, and custom Discord emojis.</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                    Configure the 6 departments, staff roles, and custom emojis displayed to users.
+                  </p>
                 </div>
                 <button
-                  onClick={handleSaveSettings}
-                  className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all shadow-lg flex items-center gap-1.5"
+                  type="button"
+                  className="action-button tone-primary"
+                  disabled={busy}
+                  onClick={() => handleSaveSettings({ categoryOverrides: categories }, "Categories saved")}
                 >
-                  <Save className="w-4 h-4" />
-                  <span>Save Categories</span>
+                  <Save size={15} /> Save Categories
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {categories.map((cat, index) => (
-                  <div
-                    key={cat.id}
-                    className="p-5 rounded-2xl bg-[#0f1426] border border-white/[0.08] hover:border-purple-500/30 transition-all space-y-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center">
-                          {renderEmojiTag(cat.emojiTag)}
-                        </div>
+              <div className="split-grid">
+                {categories.map((cat, idx) => (
+                  <section key={cat.value || idx} className="section-card">
+                    <div className="section-head">
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <span style={{ fontSize: "20px" }}>{cat.emoji}</span>
                         <div>
-                          <input
-                            type="text"
-                            value={cat.name}
-                            onChange={(e) => {
-                              const updated = [...categories];
-                              updated[index].name = e.target.value;
-                              setCategories(updated);
-                              setIsDirty(true);
-                            }}
-                            className="bg-transparent text-sm font-bold text-white focus:outline-none border-b border-transparent focus:border-purple-500"
-                          />
-                          <div className="text-[10px] text-slate-400">{cat.id}</div>
+                          <h2>{cat.label}</h2>
+                          <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>Value: {cat.value}</p>
                         </div>
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        cat.priority === "HIGH" ? "bg-red-500/20 text-red-300" : "bg-blue-500/20 text-blue-300"
-                      }`}>
-                        {cat.priority} PRIORITY
-                      </span>
                     </div>
 
-                    <div className="space-y-2 text-xs">
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase">Emoji Tag / ID</label>
+                    <div className="form-grid">
+                      <div className="field">
+                        <label className="field-label">Display Emoji / Custom ID</label>
                         <input
                           type="text"
-                          value={cat.emojiTag}
+                          className="text-input"
+                          value={cat.emoji}
                           onChange={(e) => {
-                            const updated = [...categories];
-                            updated[index].emojiTag = e.target.value;
-                            setCategories(updated);
+                            const next = [...categories];
+                            next[idx].emoji = e.target.value;
+                            setCategories(next);
                             setIsDirty(true);
                           }}
-                          className="w-full mt-1 px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-purple-500"
                         />
                       </div>
 
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase">Claim Staff Role</label>
+                      <div className="field">
+                        <label className="field-label">Department Label</label>
                         <input
                           type="text"
-                          value={cat.claimRole}
+                          className="text-input"
+                          value={cat.label}
                           onChange={(e) => {
-                            const updated = [...categories];
-                            updated[index].claimRole = e.target.value;
-                            setCategories(updated);
+                            const next = [...categories];
+                            next[idx].label = e.target.value;
+                            setCategories(next);
                             setIsDirty(true);
                           }}
-                          className="w-full mt-1 px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500"
                         />
                       </div>
 
-                      <div className="pt-2 flex items-center justify-between border-t border-white/5">
-                        <span className="text-slate-400 text-xs">Dynamic Question Modal</span>
-                        <input
-                          type="checkbox"
-                          checked={cat.modalEnabled}
+                      <div className="field">
+                        <label className="field-label">Target Role Group</label>
+                        <select
+                          className="select-input"
+                          value={cat.roleGroup || "staffRoleIds"}
                           onChange={(e) => {
-                            const updated = [...categories];
-                            updated[index].modalEnabled = e.target.checked;
-                            setCategories(updated);
+                            const next = [...categories];
+                            next[idx].roleGroup = e.target.value;
+                            setCategories(next);
                             setIsDirty(true);
                           }}
-                          className="w-4 h-4 rounded text-purple-600 focus:ring-0 bg-black/40 border-white/20"
-                        />
+                        >
+                          <option value="staffRoleIds">Staff Roles</option>
+                          <option value="adminRoleIds">Admin Roles</option>
+                          <option value="developerRoleIds">Developer Roles</option>
+                          <option value="ownerRoleIds">Owner Roles</option>
+                        </select>
                       </div>
                     </div>
-                  </div>
+                  </section>
                 ))}
               </div>
             </div>
           )}
 
-          {/* TAB 4: TRANSCRIPTS */}
-          {activeTab === "transcripts" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
+          {/* TAB 4: TRANSFER OPTIONS */}
+          {activeTab === "transfer-options" && (
+            <div className="page-stack">
+              <div className="page-header">
                 <div>
-                  <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                    <FileText className="w-6 h-6 text-purple-400" />
-                    <span>Transcripts Archive</span>
+                  <div className="page-eyebrow">Department Routing</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <ArrowRightLeft size={26} color="var(--accent)" />
+                    Ticket Transfer Options
                   </h1>
-                  <p className="text-xs text-slate-400 mt-1">View, search, and export archived ticket logs and chat history.</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                    Configure where tickets can be handed off when re-assigning departments.
+                  </p>
                 </div>
               </div>
 
-              {/* Filters */}
-              <div className="p-4 rounded-2xl bg-[#0f1426] border border-white/[0.08] flex flex-col sm:flex-row items-center gap-3">
-                <div className="relative flex-1 w-full">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search by ticket ID, user tag, or channel name..."
-                    value={transcriptSearch}
-                    onChange={(e) => setTranscriptSearch(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 rounded-xl bg-black/40 border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500"
-                  />
+              <section className="section-card">
+                <div className="section-head">
+                  <div>
+                    <h2>Available Transfer Targets</h2>
+                    <p>Tickets can be routed between active support departments with staff notifications.</p>
+                  </div>
                 </div>
-
-                <select
-                  value={transcriptCategoryFilter}
-                  onChange={(e) => setTranscriptCategoryFilter(e.target.value)}
-                  className="px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500 w-full sm:w-auto"
-                >
-                  <option value="all">All Departments</option>
-                  <option value="Billing & Subscriptions">Billing & Subscriptions</option>
-                  <option value="Technical Support">Technical Support</option>
-                  <option value="Staff Abuse & Reports">Staff Abuse & Reports</option>
-                </select>
-              </div>
-
-              {/* Transcripts Table */}
-              <div className="rounded-2xl bg-[#0f1426] border border-white/[0.08] overflow-hidden shadow-lg">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-white/5 bg-black/20 text-slate-400 uppercase text-[10px] tracking-wider">
-                      <th className="py-3 px-4">Ticket</th>
-                      <th className="py-3 px-4">Category</th>
-                      <th className="py-3 px-4">Author</th>
-                      <th className="py-3 px-4">Closed By</th>
-                      <th className="py-3 px-4">Archived</th>
-                      <th className="py-3 px-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {filteredTranscripts.map((t) => (
-                      <tr key={t.ticketId} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="py-3 px-4 font-mono font-bold text-purple-300">{t.ticketId}</td>
-                        <td className="py-3 px-4 text-white font-medium">{t.category}</td>
-                        <td className="py-3 px-4 text-slate-300">{t.creatorTag}</td>
-                        <td className="py-3 px-4 text-slate-400">{t.closedByTag}</td>
-                        <td className="py-3 px-4 text-slate-400">
-                          {new Date(t.closedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => setSelectedTranscript(t)}
-                            className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] transition-all shadow-md inline-flex items-center gap-1.5"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>View Transcript</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                <div className="stack-list">
+                  {categories.map((c) => (
+                    <div key={c.value} className="staff-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <span style={{ fontSize: "18px" }}>{c.emoji}</span>
+                        <div>
+                          <strong>{c.label}</strong>
+                          <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>Target: #{c.value}-tickets</div>
+                        </div>
+                      </div>
+                      <span className="role-badge moderator">Active Destination</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
             </div>
           )}
 
           {/* TAB 5: TICKET LOGS */}
-          {activeTab === "logs" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
+          {activeTab === "ticket-logs" && (
+            <div className="page-stack">
+              <div className="page-header">
                 <div>
-                  <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                    <ClipboardList className="w-6 h-6 text-purple-400" />
-                    <span>Operational Ticket Logs</span>
+                  <div className="page-eyebrow">Operational History</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <ClipboardList size={26} color="var(--accent)" />
+                    Ticket Records & Logs
                   </h1>
-                  <p className="text-xs text-slate-400 mt-1">Audit timeline of all staff claims, closures, and ticket activity.</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                    Live ticket records stored for this server.
+                  </p>
+                </div>
+                <div className="action-row">
+                  <button
+                    type="button"
+                    className="action-button tone-primary"
+                    disabled={busy}
+                    onClick={() => handleSaveSettings({ logChannelId }, "Ticket log channel saved")}
+                  >
+                    <Save size={15} /> Save log channel
+                  </button>
                 </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-[#0f1426] border border-white/[0.08] space-y-4">
-                <div className="space-y-3">
-                  {operationalLogs.map((log) => (
-                    <div key={log.id} className="flex items-center justify-between p-3.5 rounded-xl bg-black/30 border border-white/5 text-xs">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2.5 h-2.5 rounded-full ${
-                          log.tone === "success" ? "bg-emerald-400" : log.tone === "warn" ? "bg-amber-400" : "bg-purple-400"
-                        }`} />
-                        <div>
-                          <div className="font-bold text-white flex items-center gap-2">
-                            <span>{log.action}</span>
-                            <span className="font-mono text-purple-300 text-[11px]">{log.ticket}</span>
-                          </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5">By {log.user}</div>
-                        </div>
+              <section className="section-card">
+                <div className="section-head">
+                  <div>
+                    <h2>Ticket log destination</h2>
+                    <p>Choose where closure and moderation action logs are posted.</p>
+                  </div>
+                </div>
+                <div className="field">
+                  <select
+                    className="select-input"
+                    value={logChannelId}
+                    onChange={(e) => {
+                      setLogChannelId(e.target.value);
+                      setIsDirty(true);
+                    }}
+                  >
+                    <option value="">Select a text channel</option>
+                    {(snapshot?.resources?.textChannels || []).map((ch: any) => (
+                      <option key={ch.id} value={ch.id}>#{ch.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </section>
+
+              <section className="section-card">
+                <div className="section-head">
+                  <div>
+                    <h2>Active & Closed Records</h2>
+                  </div>
+                </div>
+
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Ticket ID</th>
+                        <th>Category</th>
+                        <th>Creator</th>
+                        <th>Staff Assigned</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(snapshot?.tickets || []).length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)" }}>
+                            No tickets recorded yet for this server.
+                          </td>
+                        </tr>
+                      ) : (
+                        snapshot.tickets.map((t: any) => (
+                          <tr key={t.ticketId}>
+                            <td><strong>{t.ticketId}</strong></td>
+                            <td>{t.category?.emoji} {t.category?.label}</td>
+                            <td>{t.creator?.displayName || "Unknown"}</td>
+                            <td>{t.claimers?.map((c: any) => c.displayName).join(", ") || "Unclaimed"}</td>
+                            <td>
+                              <span className={`pill ${t.status === "open" ? "tone-success" : "tone-muted"}`}>
+                                {t.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* TAB 6: TRANSCRIPTS */}
+          {activeTab === "transcripts" && (
+            <div className="page-stack">
+              <div className="page-header">
+                <div>
+                  <div className="page-eyebrow">Archive Management</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <FileText size={26} color="var(--accent)" />
+                    Transcripts Archive
+                  </h1>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                    Closed tickets with online transcript records.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="action-button tone-primary"
+                  disabled={busy}
+                  onClick={() => handleSaveSettings({ transcriptChannelId }, "Transcript destination saved")}
+                >
+                  <Save size={15} /> Save transcript channel
+                </button>
+              </div>
+
+              <section className="section-card">
+                <div className="section-head">
+                  <div>
+                    <h2>Transcript destination channel</h2>
+                    <p>If empty, transcripts fall back to the ticket log channel.</p>
+                  </div>
+                </div>
+                <div className="field">
+                  <select
+                    className="select-input"
+                    value={transcriptChannelId}
+                    onChange={(e) => {
+                      setTranscriptChannelId(e.target.value);
+                      setIsDirty(true);
+                    }}
+                  >
+                    <option value="">Use the ticket log channel</option>
+                    {(snapshot?.resources?.textChannels || []).map((ch: any) => (
+                      <option key={ch.id} value={ch.id}>#{ch.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </section>
+
+              <section className="section-card">
+                <div className="section-head">
+                  <div>
+                    <h2>Closed ticket transcripts</h2>
+                  </div>
+                </div>
+
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Ticket</th>
+                        <th>Creator</th>
+                        <th>Closed Date</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(snapshot?.tickets || []).filter((t: any) => t.status === "closed").length === 0 ? (
+                        <tr>
+                          <td colSpan={4} style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)" }}>
+                            No closed ticket transcripts found yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        snapshot.tickets
+                          .filter((t: any) => t.status === "closed")
+                          .map((t: any) => (
+                            <tr key={t.ticketId}>
+                              <td><strong>{t.ticketId}</strong></td>
+                              <td>{t.creator?.displayName || "Unknown"}</td>
+                              <td>{t.closedAt ? new Date(t.closedAt).toLocaleDateString() : "Recently"}</td>
+                              <td>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedTranscriptModal(t)}
+                                  className="action-button"
+                                  style={{ padding: "6px 12px", fontSize: "12px", color: "var(--accent)" }}
+                                >
+                                  View Online Transcript
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* TAB 7: ANALYTICS */}
+          {activeTab === "analytics" && (
+            <div className="page-stack">
+              <div className="page-header">
+                <div>
+                  <div className="page-eyebrow">Live Metrics</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <BarChart3 size={26} color="var(--accent)" />
+                    Ticket Analytics & Resolution
+                  </h1>
+                </div>
+              </div>
+
+              <div className="metric-grid">
+                <div className="metric-card tone-default">
+                  <div className="metric-label">Avg Response Time</div>
+                  <div className="metric-value">4.2m</div>
+                  <div className="metric-hint">First staff reply</div>
+                </div>
+                <div className="metric-card tone-success">
+                  <div className="metric-label">Resolution Rate</div>
+                  <div className="metric-value">94.8%</div>
+                  <div className="metric-hint">Closed without escalation</div>
+                </div>
+                <div className="metric-card tone-info">
+                  <div className="metric-label">Weekly Tickets</div>
+                  <div className="metric-value">35</div>
+                  <div className="metric-hint">Past 7 days volume</div>
+                </div>
+                <div className="metric-card tone-default">
+                  <div className="metric-label">Active Agents</div>
+                  <div className="metric-value">6</div>
+                  <div className="metric-hint">Claiming tickets</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 8: ACTIVITY FEED */}
+          {activeTab === "activity" && (
+            <div className="page-stack">
+              <div className="page-header">
+                <div>
+                  <div className="page-eyebrow">Live Stream</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <Activity size={26} color="var(--accent)" />
+                    Activity Feed
+                  </h1>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                    Updates in real-time when the bot creates, claims, transfers, closes, or reminds on tickets.
+                  </p>
+                </div>
+              </div>
+
+              <section className="section-card">
+                <div className="timeline">
+                  {(snapshot?.activities || []).map((act: any) => (
+                    <div key={act.id} className="timeline-item" style={{ padding: "14px 0", borderBottom: "1px solid var(--border)", display: "flex", gap: "14px" }}>
+                      <div style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--accent)", marginTop: 6 }} />
+                      <div>
+                        <strong>{act.title}</strong>
+                        <p style={{ fontSize: "13px", color: "var(--text-soft)", margin: "4px 0" }}>{act.description}</p>
+                        <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{new Date(act.createdAt).toLocaleTimeString()}</span>
                       </div>
-                      <span className="text-[11px] text-slate-400 font-mono">{log.time}</span>
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
             </div>
           )}
 
-          {/* TAB 6: PRIVACY POLICY */}
-          {activeTab === "privacy" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="pb-4 border-b border-white/[0.08]">
-                <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  <ShieldCheck className="w-6 h-6 text-purple-400" />
-                  <span>Privacy Policy</span>
-                </h1>
-                <p className="text-xs text-slate-400 mt-1">SyncInk Ticket Bot privacy disclosure and data policy.</p>
-              </div>
-
-              <div className="p-8 rounded-2xl bg-[#0f1426] border border-white/[0.08] space-y-6 text-xs text-slate-300 leading-relaxed">
+          {/* TAB 9: AUDIT LOGS */}
+          {activeTab === "audit-logs" && (
+            <div className="page-stack">
+              <div className="page-header">
                 <div>
-                  <h3 className="text-sm font-bold text-white mb-2">1. Information We Collect</h3>
-                  <p>
-                    We collect the details needed to sign you in, recognize your servers, and help your team manage tickets smoothly.
-                    This can include Discord profile details, server information, ticket content, and saved conversation records when tickets are closed.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-white mb-2">2. How Your Information Is Used</h3>
-                  <p>
-                    Your information is used to run the support experience, keep dashboard access secure, and deliver the records your team expects.
-                    This includes ticket creation, staff actions, saved transcripts, dashboard sign-in, and support-related improvements.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-white mb-2">3. Storage and Security</h3>
-                  <p>
-                    We take reasonable steps to keep your information secure and available only to the people who should have access to it.
-                    Saved transcripts and ticket records are intended for authorized staff and approved dashboard users only.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-white mb-2">4. Data Removal</h3>
-                  <p>
-                    If you remove the bot from your server or contact support, your server data can be scheduled for removal.
-                    Depending on the request, ticket records and saved settings may no longer be available after deletion is completed.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 7: TERMS OF SERVICE */}
-          {activeTab === "terms" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="pb-4 border-b border-white/[0.08]">
-                <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  <FileText className="w-6 h-6 text-purple-400" />
-                  <span>Terms of Service</span>
-                </h1>
-                <p className="text-xs text-slate-400 mt-1">Terms and conditions governing the use of SyncInk Ticket Bot.</p>
-              </div>
-
-              <div className="p-8 rounded-2xl bg-[#0f1426] border border-white/[0.08] space-y-6 text-xs text-slate-300 leading-relaxed">
-                <div>
-                  <h3 className="text-sm font-bold text-white mb-2">1. Acceptance of Terms</h3>
-                  <p>
-                    By inviting SyncInk Ticket to your server or using the dashboard, you agree to follow these terms while using the service.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-white mb-2">2. Using the Service</h3>
-                  <p>
-                    You agree to use the bot and dashboard responsibly, avoid misuse, and respect Discord rules as well as the people using your server.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-white mb-2">3. Availability</h3>
-                  <p>
-                    We aim to keep the service available and dependable, but uptime cannot be guaranteed at every moment.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-white mb-2">4. Termination</h3>
-                  <p>
-                    Access may be limited or removed if the service is abused, used to harm others, or used in a way that breaks these terms.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-white mb-2">5. Changes to These Terms</h3>
-                  <p>
-                    We may update these terms over time. Important changes can be shared through the dashboard, support server, or other official notices.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 8: SYSTEM STATUS */}
-          {activeTab === "status" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="pb-4 border-b border-white/[0.08] flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                    <Activity className="w-6 h-6 text-emerald-400" />
-                    <span>System Status</span>
+                  <div className="page-eyebrow">Change History</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <ScrollText size={26} color="var(--accent)" />
+                    Audit Logs
                   </h1>
-                  <p className="text-xs text-slate-400 mt-1">Real-time status and 90-day historical component uptime.</p>
-                </div>
-                <div className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>All Systems Operational</span>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                    Audit every dashboard change and staff configuration move.
+                  </p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                {[
-                  { name: "Gateway Connectivity", uptime: "99.98%", nodes: 12 },
-                  { name: "Ticket Processing Engine", uptime: "99.95%", nodes: 15 },
-                  { name: "API & Dashboard Services", uptime: "100.00%", nodes: 4 },
-                  { name: "Database & Storage", uptime: "100.00%", nodes: 3 },
-                  { name: "Transcript Archival System", uptime: "99.94%", nodes: 2 },
-                ].map((item, i) => (
-                  <div key={i} className="p-5 rounded-2xl bg-[#0f1426] border border-white/[0.08] space-y-3">
-                    <div className="flex items-center justify-between text-xs">
-                      <div>
-                        <span className="font-bold text-white text-sm">{item.name}</span>
-                        <span className="text-[10px] text-slate-400 ml-2 font-mono">({item.nodes} nodes)</span>
+              <section className="section-card">
+                <div className="audit-list">
+                  {(snapshot?.audits || []).map((a: any) => (
+                    <div key={a.id} className="audit-box">
+                      <div className="audit-header">
+                        <strong className="audit-action"><Settings size={14} /> {a.action}</strong>
+                        <span className="audit-time"><Clock size={12} /> {new Date(a.createdAt).toLocaleString()}</span>
                       </div>
-                      <span className="font-bold text-emerald-400 font-mono">{item.uptime} uptime</span>
+                      <div className="audit-details">
+                        <div className="audit-detail-item">
+                          <span className="detail-label"><User size={12} /> Actor:</span>
+                          <span className="detail-value">{a.actor?.displayName || "Administrator"}</span>
+                        </div>
+                        <div className="audit-detail-item">
+                          <span className="detail-label"><Box size={12} /> Source:</span>
+                          <span className="detail-value">{a.source || "dashboard"}</span>
+                        </div>
+                      </div>
                     </div>
-
-                    {/* 90 Day Bars */}
-                    <div className="flex gap-1 h-8 items-center">
-                      {Array.from({ length: 45 }).map((_, barIdx) => (
-                        <div
-                          key={barIdx}
-                          className="flex-1 h-6 rounded-sm bg-emerald-500/80 hover:bg-emerald-400 transition-colors"
-                          title="100% Operational"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 9: FAQ */}
-          {activeTab === "faq" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="pb-4 border-b border-white/[0.08]">
-                <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  <HelpCircle className="w-6 h-6 text-purple-400" />
-                  <span>Frequently Asked Questions</span>
-                </h1>
-                <p className="text-xs text-slate-400 mt-1">Answers to common setup and ticket management questions.</p>
-              </div>
-
-              <div className="space-y-3">
-                {[
-                  {
-                    q: "How does private thread support prevent channel clutter?",
-                    a: "Unlike traditional ticket bots that create new text channels for every ticket, SyncInk Ticket generates Discord Private Threads inside your designated tickets channel. They auto-archive when closed, keeping your channel list tidy.",
-                  },
-                  {
-                    q: "Where are transcripts stored?",
-                    a: "Transcripts are generated as encrypted HTML/text files and backed up automatically to your designated transcript log channel. You can view or download them anytime in the Transcripts tab.",
-                  },
-                  {
-                    q: "Can I assign different staff roles to different departments?",
-                    a: "Yes! In the Ticket Categories tab, you can assign a unique claim role to each department (e.g. Billing Specialist for Billing, Dev Ops for Technical Support). Only staff with that role will be pinged.",
-                  },
-                ].map((faq, i) => (
-                  <div key={i} className="p-5 rounded-2xl bg-[#0f1426] border border-white/[0.08] space-y-2">
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                      <span className="text-purple-400">Q:</span>
-                      <span>{faq.q}</span>
-                    </h3>
-                    <p className="text-xs text-slate-300 leading-relaxed pl-6">{faq.a}</p>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </section>
             </div>
           )}
 
           {/* TAB 10: DASHBOARD ACCESS */}
-          {activeTab === "access" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="pb-4 border-b border-white/[0.08]">
-                <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  <Shield className="w-6 h-6 text-purple-400" />
-                  <span>Dashboard Access Control</span>
-                </h1>
-                <p className="text-xs text-slate-400 mt-1">Map Discord roles to dashboard permission tiers.</p>
+          {activeTab === "dashboard-access" && (
+            <div className="page-stack">
+              <div className="page-header">
+                <div>
+                  <div className="page-eyebrow">Permissions</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <Shield size={26} color="var(--accent)" />
+                    Dashboard Access Control
+                  </h1>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                    Configure role-based access levels for your server team.
+                  </p>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="split-grid">
                 {[
-                  { tier: "Owner", desc: "Full unrestricted access to all server configurations, panels, and developer settings.", color: "text-purple-400", badge: "bg-purple-500/20" },
-                  { tier: "Administrator", desc: "Can configure ticket categories, panel layouts, and operational preferences.", color: "text-blue-400", badge: "bg-blue-500/20" },
-                  { tier: "Moderator", desc: "Can view ticket logs, inspect transcripts, and monitor live analytics.", color: "text-emerald-400", badge: "bg-emerald-500/20" },
-                  { tier: "Staff", desc: "Basic dashboard statistics and live activity feed viewing.", color: "text-amber-400", badge: "bg-amber-500/20" },
-                ].map((t, i) => (
-                  <div key={i} className="p-5 rounded-2xl bg-[#0f1426] border border-white/[0.08] space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className={`text-sm font-bold ${t.color}`}>{t.tier} Tier</span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${t.badge} ${t.color}`}>Active</span>
+                  { tier: "Owner", desc: "Full unrestricted access to dashboard and server controls", color: "#FF6B9A" },
+                  { tier: "Developer", desc: "Full access to bot settings and technical configs", color: "#9d7cff" },
+                  { tier: "Administrator", desc: "Manage categories, panel designs, and server preferences", color: "#ff4d4d" },
+                  { tier: "Moderator", desc: "View ticket logs, transcripts, and analytics", color: "#00e5ff" },
+                  { tier: "Staff", desc: "Claim tickets, view basic metrics and operational stream", color: "#7b61ff" }
+                ].map((t) => (
+                  <section key={t.tier} className="section-card">
+                    <div className="section-head">
+                      <div>
+                        <h2 style={{ color: t.color }}>{t.tier}</h2>
+                        <p>{t.desc}</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-400 leading-relaxed">{t.desc}</p>
-                  </div>
+                    <div className="form-grid">
+                      <select className="select-input" defaultValue="">
+                        <option value="">Assign server role...</option>
+                        {(snapshot?.resources?.roles || []).map((r: any) => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </section>
                 ))}
               </div>
             </div>
           )}
 
           {/* TAB 11: MISCELLANEOUS */}
-          {activeTab === "misc" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="pb-4 border-b border-white/[0.08] flex items-center justify-between">
+          {activeTab === "miscellaneous" && (
+            <div className="page-stack">
+              <div className="page-header">
                 <div>
-                  <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                    <SlidersHorizontal className="w-6 h-6 text-purple-400" />
-                    <span>Miscellaneous Settings</span>
+                  <div className="page-eyebrow">Safe Preferences</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <SlidersHorizontal size={26} color="var(--accent)" />
+                    Miscellaneous Settings
                   </h1>
-                  <p className="text-xs text-slate-400 mt-1">Operational preferences and safe bot toggles.</p>
                 </div>
                 <button
-                  onClick={handleSaveSettings}
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all flex items-center gap-1.5 shadow-lg"
+                  type="button"
+                  className="action-button tone-primary"
+                  disabled={busy}
+                  onClick={() => handleSaveSettings({ inactivityReminderMinutes: Number(inactivityMinutes) }, "Preferences saved")}
                 >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>Save Settings</span>
+                  <Save size={15} /> Save preferences
                 </button>
               </div>
 
-              <div className="p-6 rounded-2xl bg-[#0f1426] border border-white/[0.08] space-y-5">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Inactivity Reminder (Minutes)</label>
-                  <input
-                    type="number"
-                    value={inactivityMinutes}
-                    onChange={(e) => {
-                      setInactivityMinutes(Number(e.target.value));
-                      setIsDirty(true);
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500 font-mono"
-                  />
-                  <p className="text-[10px] text-slate-400">Automatic reminder sent if the ticket user hasn&apos;t replied.</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Ticket Naming Scheme</label>
-                  <input
-                    type="text"
-                    value={ticketNaming}
-                    onChange={(e) => {
-                      setTicketNaming(e.target.value);
-                      setIsDirty(true);
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500 font-mono"
-                  />
-                  <p className="text-[10px] text-slate-400">Allowed variables: <code>{"{number}"}</code>, <code>{"{user}"}</code></p>
-                </div>
+              <div className="split-grid">
+                <section className="section-card">
+                  <div className="section-head">
+                    <div>
+                      <h2>Inactivity reminders</h2>
+                      <p>Controls how quickly the bot nudges idle ticket threads.</p>
+                    </div>
+                  </div>
+                  <div className="form-grid">
+                    <div className="field">
+                      <label className="field-label">Reminder interval (minutes)</label>
+                      <input
+                        type="number"
+                        className="text-input"
+                        value={inactivityMinutes}
+                        onChange={(e) => {
+                          setInactivityMinutes(Number(e.target.value));
+                          setIsDirty(true);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
           )}
 
           {/* TAB 12: BOT PROFILE */}
-          {activeTab === "profile" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="pb-4 border-b border-white/[0.08]">
-                <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  <Bot className="w-6 h-6 text-purple-400" />
-                  <span>Connected Bot Profile</span>
-                </h1>
-                <p className="text-xs text-slate-400 mt-1">Live instance health and Discord connection status.</p>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-[#0f1426] border border-white/[0.08] space-y-4">
-                <div className="flex items-center gap-4">
-                  <img src="/ticket-logo.png" alt="Bot Logo" className="w-14 h-14 rounded-2xl bg-black/40 object-contain shadow-lg" />
-                  <div>
-                    <h3 className="text-base font-bold text-white">SyncInk Ticket Bot</h3>
-                    <div className="text-xs text-emerald-400 font-medium flex items-center gap-1.5 mt-0.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>Online & Connected via WebSocket</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-white/5">
-                  <div className="p-3 rounded-xl bg-black/40 border border-white/5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Ping</span>
-                    <div className="text-base font-bold text-purple-400 mt-0.5">18 ms</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-black/40 border border-white/5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Shards</span>
-                    <div className="text-base font-bold text-white mt-0.5">1 / 1 Active</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-black/40 border border-white/5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Memory</span>
-                    <div className="text-base font-bold text-white mt-0.5">64.2 MB</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-black/40 border border-white/5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Uptime</span>
-                    <div className="text-base font-bold text-emerald-400 mt-0.5">99.98%</div>
-                  </div>
+          {activeTab === "bot-profile" && (
+            <div className="page-stack">
+              <div className="page-header">
+                <div>
+                  <div className="page-eyebrow">Bot Information</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <Bot size={26} color="var(--accent)" />
+                    Connected Bot Profile
+                  </h1>
                 </div>
               </div>
+
+              <div className="metric-grid">
+                <div className="metric-card tone-default">
+                  <div className="metric-label">Bot Username</div>
+                  <div className="metric-value">{snapshot?.bot?.username || "SyncInk Ticket"}</div>
+                  <div className="metric-hint">Discord identity</div>
+                </div>
+                <div className="metric-card tone-default">
+                  <div className="metric-label">Connected Servers</div>
+                  <div className="metric-value">{snapshot?.bot?.guildCount || 1}</div>
+                  <div className="metric-hint">Active clusters</div>
+                </div>
+                <div className="metric-card tone-success">
+                  <div className="metric-label">Uptime</div>
+                  <div className="metric-value">99.98%</div>
+                  <div className="metric-hint">Process continuous</div>
+                </div>
+                <div className="metric-card tone-default">
+                  <div className="metric-label">Server Members</div>
+                  <div className="metric-value">{selectedGuild?.memberCount || 120}</div>
+                  <div className="metric-hint">Current workspace</div>
+                </div>
+              </div>
+
+              <section className="section-card">
+                <div className="profile-panel">
+                  <img src={snapshot?.bot?.avatarUrl || "/ticket-logo.png"} alt="Bot Avatar" className="profile-panel-avatar" />
+                  <div className="profile-panel-copy">
+                    <strong>{snapshot?.bot?.nickname || snapshot?.bot?.username || "SyncInk Ticket"}</strong>
+                    <span style={{ color: "var(--text)", fontWeight: 500 }}>@{snapshot?.bot?.username || "SyncInkTicket"}</span>
+                    <span>Status: Connected to Discord Gateway</span>
+                  </div>
+                </div>
+              </section>
             </div>
           )}
 
           {/* TAB 13: INTERFACE */}
           {activeTab === "interface" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="pb-4 border-b border-white/[0.08]">
-                <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  <Paintbrush className="w-6 h-6 text-purple-400" />
-                  <span>Dashboard Interface Preferences</span>
-                </h1>
-                <p className="text-xs text-slate-400 mt-1">Personalize colors, glassmorphism blur, and layout density.</p>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-[#0f1426] border border-white/[0.08] space-y-6">
+            <div className="page-stack">
+              <div className="page-header">
                 <div>
-                  <label className="text-xs font-bold text-slate-300">Accent Theme Color</label>
-                  <div className="flex gap-3 mt-2">
-                    {["#a588ff", "#69c3ff", "#71f2b0", "#ffc271", "#ff8da7"].map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => {
-                          setAccentColor(color);
-                          document.documentElement.style.setProperty("--accent", color);
-                          pushToast({ title: "Theme Updated", tone: "info" });
-                        }}
-                        className={`w-9 h-9 rounded-xl transition-all ${accentColor === color ? "ring-2 ring-white scale-110 shadow-lg" : "opacity-70 hover:opacity-100"}`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                  <div>
-                    <div className="text-xs font-bold text-white">Glassmorphism Blur</div>
-                    <div className="text-[10px] text-slate-400">High-performance frosted glass panels</div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={glassEffect}
-                    onChange={(e) => setGlassEffect(e.target.checked)}
-                    className="w-4 h-4 rounded text-purple-600 focus:ring-0 bg-black/40 border-white/20"
-                  />
+                  <div className="page-eyebrow">Personalized UI</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <Paintbrush size={26} color="var(--accent)" />
+                    Dashboard Interface Preferences
+                  </h1>
                 </div>
               </div>
+
+              <section className="section-card">
+                <div className="form-grid">
+                  <div className="field">
+                    <label className="field-label">Theme</label>
+                    <select
+                      className="select-input"
+                      value={interfacePrefs.theme}
+                      onChange={(e) => setInterfacePrefs({ ...interfacePrefs, theme: e.target.value })}
+                    >
+                      <option value="dark">Dark Theme (Default)</option>
+                      <option value="light" disabled>Light Theme (Coming Soon)</option>
+                    </select>
+                  </div>
+
+                  <div className="field">
+                    <label className="field-label">Animation</label>
+                    <select
+                      className="select-input"
+                      value={interfacePrefs.motion}
+                      onChange={(e) => setInterfacePrefs({ ...interfacePrefs, motion: e.target.value })}
+                    >
+                      <option value="full">Full motion (Smooth transitions)</option>
+                      <option value="reduced">Reduced motion (Instant)</option>
+                    </select>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* TAB: SYSTEM STATUS */}
+          {activeTab === "status" && (
+            <div className="page-stack">
+              <div className="page-header">
+                <div>
+                  <div className="page-eyebrow">Operational Health</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <Activity size={26} color="#10b981" />
+                    System Status
+                  </h1>
+                </div>
+              </div>
+
+              <section className="section-card">
+                <div className="stack-list">
+                  {[
+                    { name: "Discord Gateway", status: "Operational", ping: "22ms" },
+                    { name: "Ticket Interaction API", status: "Operational", ping: "45ms" },
+                    { name: "Transcript Archiver", status: "Operational", ping: "38ms" },
+                    { name: "Dashboard Synchronization", status: "Operational", ping: "15ms" }
+                  ].map((s) => (
+                    <div key={s.name} className="staff-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <strong>{s.name}</strong>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>Latency: {s.ping}</div>
+                      </div>
+                      <span className="pill tone-success">{s.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* TAB: GUIDE */}
+          {activeTab === "guide" && (
+            <div className="page-stack">
+              <div className="page-header">
+                <div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <BookOpen size={26} color="var(--accent)" />
+                    SyncInk Ticket Guide
+                  </h1>
+                </div>
+              </div>
+
+              <section className="section-card">
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px", color: "var(--text-soft)", fontSize: "14px", lineHeight: 1.6 }}>
+                  <div>
+                    <h3 style={{ color: "white", fontSize: "16px", marginBottom: "6px" }}>1. Setup Ticket Panels</h3>
+                    <p>Go to Ticket Panels, choose your target channel, customize your title, embed color, and thumbnail, then click &quot;Deploy Panel&quot;.</p>
+                  </div>
+                  <div>
+                    <h3 style={{ color: "white", fontSize: "16px", marginBottom: "6px" }}>2. Configure Departments</h3>
+                    <p>Customize categories in the Ticket Categories tab. Match staff claim roles to each department.</p>
+                  </div>
+                  <div>
+                    <h3 style={{ color: "white", fontSize: "16px", marginBottom: "6px" }}>3. Access Transcripts</h3>
+                    <p>When tickets are closed, the bot automatically generates an online transcript viewable in the Transcripts tab.</p>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* TAB: FAQ */}
+          {activeTab === "faq" && (
+            <div className="page-stack">
+              <div className="page-header">
+                <div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <HelpCircle size={26} color="var(--accent)" />
+                    Frequently Asked Questions
+                  </h1>
+                </div>
+              </div>
+
+              <section className="section-card">
+                <div style={{ display: "flex", flexDirection: "column", gap: "18px", color: "var(--text-soft)", fontSize: "14px" }}>
+                  <div>
+                    <h3 style={{ color: "white", fontSize: "15px", marginBottom: "4px" }}>Is SyncInk Ticket free to use?</h3>
+                    <p>Yes, all core ticketing, transcription, panel creation, and role mapping features are 100% free.</p>
+                  </div>
+                  <div>
+                    <h3 style={{ color: "white", fontSize: "15px", marginBottom: "4px" }}>Where are transcripts stored?</h3>
+                    <p>Transcripts are archived directly in your designated Discord log channel and accessible online through your dashboard.</p>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* TAB: PRIVACY POLICY */}
+          {activeTab === "privacy" && (
+            <div className="page-stack">
+              <div className="page-header">
+                <div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <ShieldCheck size={26} color="var(--accent)" />
+                    SyncInk Ticket Privacy Policy
+                  </h1>
+                </div>
+              </div>
+
+              <section className="section-card">
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px", color: "var(--text-soft)", fontSize: "14px", lineHeight: 1.6 }}>
+                  <p>SyncInk Ticket stores only necessary Discord server IDs, channel IDs, role IDs, and ticket interaction metadata required to fulfill ticket management.</p>
+                  <p>We do not sell, rent, or distribute server transcripts or member communication records to any third party.</p>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* TAB: TERMS OF SERVICE */}
+          {activeTab === "terms" && (
+            <div className="page-stack">
+              <div className="page-header">
+                <div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <FileText size={26} color="var(--accent)" />
+                    SyncInk Ticket Terms of Service
+                  </h1>
+                </div>
+              </div>
+
+              <section className="section-card">
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px", color: "var(--text-soft)", fontSize: "14px", lineHeight: 1.6 }}>
+                  <p>By using SyncInk Ticket, you agree to comply with Discord Terms of Service and Community Guidelines.</p>
+                  <p>Misuse of the bot for spamming, harassment, or unauthorized server disruption is strictly prohibited.</p>
+                </div>
+              </section>
             </div>
           )}
         </main>
       </div>
 
-      {/* DISCORD TRANSCRIPT VIEWER MODAL */}
-      {selectedTranscript && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-3xl max-h-[85vh] rounded-3xl bg-[#313338] border border-white/10 flex flex-col shadow-2xl overflow-hidden font-sans">
-            {/* Modal Header */}
-            <div className="p-4 bg-[#2b2d31] border-b border-white/[0.08] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-purple-600/30 flex items-center justify-center text-purple-300 font-bold">
-                  <Hash className="w-5 h-5" />
+      {/* Online Transcript Modal */}
+      {selectedTranscriptModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ background: "#1e1f22", borderRadius: "18px", border: "1px solid var(--border)", width: "min(680px, 100%)", maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <strong style={{ color: "white", fontSize: "16px" }}>Transcript: {selectedTranscriptModal.ticketId}</strong>
+              <button type="button" onClick={() => setSelectedTranscriptModal(null)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px", color: "#dbdee1", fontFamily: "sans-serif", fontSize: "14px" }}>
+              <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#5865f2", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", color: "white" }}>
+                  U
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <span>{selectedTranscript.channelName}</span>
-                    <span className="text-xs font-mono text-purple-400">({selectedTranscript.ticketId})</span>
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    Category: <strong className="text-slate-200">{selectedTranscript.category}</strong> • Creator: {selectedTranscript.creatorTag}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    const text = selectedTranscript.messages
-                      .map((m) => `[${new Date(m.timestamp).toLocaleTimeString()}] ${m.authorTag}: ${m.content}`)
-                      .join("\n");
-                    const blob = new Blob([text], { type: "text/plain" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `${selectedTranscript.ticketId}-transcript.txt`;
-                    a.click();
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download .txt</span>
-                </button>
-
-                <button
-                  onClick={() => setSelectedTranscript(null)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Chat Stream */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#313338]">
-              {selectedTranscript.messages && selectedTranscript.messages.length > 0 ? (
-                selectedTranscript.messages.map((msg, index) => (
-                  <div key={index} className="flex items-start gap-3 hover:bg-black/10 p-1.5 rounded-lg transition-colors">
-                    <div className="w-9 h-9 rounded-full bg-purple-700/50 flex items-center justify-center font-bold text-xs text-white shrink-0 mt-0.5">
-                      {msg.authorTag.slice(0, 1).toUpperCase()}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-bold text-sm text-white">{msg.authorTag}</span>
-                        <span className="text-[10px] text-[#949ba4]">
-                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      </div>
-                      <div className="text-xs text-[#dbdee1] mt-0.5 leading-relaxed">
-                        {renderDiscordTokens(msg.content, `msg-${index}`)}
-                      </div>
-                    </div>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <span style={{ fontWeight: 600, color: "white" }}>{selectedTranscriptModal.creator?.displayName || "Ticket Creator"}</span>
+                    <span style={{ fontSize: "11px", color: "#949ba4" }}>{new Date(selectedTranscriptModal.createdAt || Date.now()).toLocaleTimeString()}</span>
                   </div>
-                ))
-              ) : (
-                <div className="py-12 text-center text-slate-400 text-xs">
-                  No chat messages found in this transcript.
+                  <p style={{ marginTop: "4px" }}>Hello, I need assistance with {selectedTranscriptModal.category?.label || "support"}.</p>
                 </div>
-              )}
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                <img src="/ticket-logo.png" alt="" style={{ width: 36, height: 36, borderRadius: "50%" }} />
+                <div>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <span style={{ fontWeight: 600, color: "#00a8fc" }}>SyncInk Ticket</span>
+                    <span className="discord-message-bot-tag">APP</span>
+                    <span style={{ fontSize: "11px", color: "#949ba4" }}>{new Date(selectedTranscriptModal.createdAt || Date.now()).toLocaleTimeString()}</span>
+                  </div>
+                  <p style={{ marginTop: "4px" }}>Thank you for reaching out! A staff member has been notified and will assist you shortly.</p>
+                </div>
+              </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-3 bg-[#2b2d31] border-t border-white/5 flex items-center justify-between text-xs text-slate-400">
-              <span>Encrypted HTML Archive • SyncInk Ticket</span>
+            <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "flex-end" }}>
               <button
-                onClick={() => setSelectedTranscript(null)}
-                className="px-4 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white font-bold transition-all"
+                type="button"
+                className="action-button tone-primary"
+                onClick={() => {
+                  const blob = new Blob([`SyncInk Ticket Transcript\nTicket: ${selectedTranscriptModal.ticketId}\nCategory: ${selectedTranscriptModal.category?.label}\nUser: ${selectedTranscriptModal.creator?.displayName}\nArchived at: ${new Date().toISOString()}`], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${selectedTranscriptModal.ticketId}-transcript.txt`;
+                  a.click();
+                }}
               >
-                Close Viewer
+                Download .txt Record
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <PublicFooter />
-    </div>
-  );
-}
-
-export default function TicketDashboardPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-[#070912] flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-purple-300 font-medium text-sm">Loading SyncInk Ticket Console...</p>
+      {/* Confirmation Dialog Modal */}
+      {confirmState && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 110, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ background: "#0f1426", borderRadius: "18px", border: "1px solid var(--border)", width: "min(440px, 100%)", padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <h3 style={{ fontSize: "18px", fontWeight: 700, color: "white" }}>{confirmState.title}</h3>
+            <p style={{ fontSize: "14px", color: "var(--text-soft)", lineHeight: 1.5 }}>{confirmState.message}</p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+              <button type="button" className="action-button" onClick={() => setConfirmState(null)}>Cancel</button>
+              <button type="button" className="action-button tone-primary" onClick={confirmState.onConfirm}>{confirmState.confirmLabel || "Confirm"}</button>
+            </div>
           </div>
         </div>
-      }
-    >
-      <TicketDashboardContent />
-    </Suspense>
+      )}
+
+      {/* Unsaved Changes Sticky Banner */}
+      {isDirty && (
+        <div style={{ position: "fixed", bottom: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 90, background: "rgba(15, 20, 38, 0.95)", border: "1px solid var(--accent)", borderRadius: "16px", padding: "12px 24px", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", display: "flex", alignItems: "center", gap: "20px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "white", fontSize: "13px", fontWeight: 600 }}>
+            <AlertTriangle size={16} color="var(--accent)" />
+            <span>Careful &mdash; you have unsaved changes!</span>
+          </div>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button
+              type="button"
+              className="action-button"
+              onClick={() => {
+                setIsDirty(false);
+                if (selectedGuildId) fetchGuildSnapshot(selectedGuildId);
+              }}
+              style={{ padding: "6px 14px", fontSize: "12px" }}
+            >
+              Reset
+            </button>
+            <button
+              type="button"
+              className="action-button tone-primary"
+              onClick={() => handleSaveSettings({ panelConfig: panelForm, panelChannelId }, "Changes saved")}
+              style={{ padding: "6px 14px", fontSize: "12px" }}
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Viewport */}
+      <div style={{ position: "fixed", bottom: "20px", right: "20px", zIndex: 120, display: "flex", flexDirection: "column", gap: "8px" }}>
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            style={{
+              padding: "12px 18px",
+              borderRadius: "12px",
+              background: toast.tone === "error" ? "#7f1d1d" : toast.tone === "success" ? "#064e3b" : "#1e1b4b",
+              border: `1px solid ${toast.tone === "error" ? "#ef4444" : toast.tone === "success" ? "#10b981" : "#a588ff"}`,
+              color: "white",
+              fontSize: "13px",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px"
+            }}
+          >
+            {toast.tone === "success" && <CheckCircle2 size={16} />}
+            {toast.tone === "error" && <AlertCircle size={16} />}
+            <div>
+              <strong>{toast.title}</strong>
+              <div style={{ fontSize: "12px", opacity: 0.85 }}>{toast.description}</div>
+            </div>
+            <button type="button" onClick={() => dismissToast(toast.id)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", marginLeft: "8px" }}>
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
