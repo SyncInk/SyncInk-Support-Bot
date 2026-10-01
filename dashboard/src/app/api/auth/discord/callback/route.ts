@@ -190,7 +190,10 @@ export async function GET(request: Request) {
       guildName: finalGuildName,
     });
 
-    const response = NextResponse.redirect(`${baseUrl}/`);
+    const rawState = url.searchParams.get("state") || "/dashboard";
+    const targetPath = rawState.startsWith("/") && !rawState.startsWith("//") ? rawState : "/dashboard";
+
+    const response = NextResponse.redirect(`${baseUrl}${targetPath}`);
     response.cookies.set({
       name: DISCORD_COOKIE_NAME,
       value: sessionToken,

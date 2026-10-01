@@ -14,6 +14,7 @@ import {
   X,
   Sparkles,
   ChevronRight,
+  Layers,
 } from "lucide-react";
 
 export function PublicNavbar() {
@@ -21,10 +22,12 @@ export function PublicNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { href: "/rules", label: "Rules & Guidelines", icon: BookOpen },
+    { href: "/#bots", label: "Bots Showcase", icon: Layers },
+    { href: "/apply", label: "Apply (Staff & Dev)", icon: Sparkles },
+    { href: "/rules", label: "Rules", icon: BookOpen },
     { href: "/faq", label: "FAQ", icon: HelpCircle },
-    { href: "/terms", label: "Terms of Use", icon: FileCheck },
-    { href: "/privacy", label: "Privacy Policy", icon: Lock },
+    { href: "/terms", label: "Terms", icon: FileCheck },
+    { href: "/privacy", label: "Privacy", icon: Lock },
   ];
 
   return (
@@ -52,17 +55,17 @@ export function PublicNavbar() {
                   SyncInk
                 </span>
                 <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-brand-red/15 text-brand-crimson border border-brand-red/30 rounded-md">
-                  Official
+                  syncink.site
                 </span>
               </div>
               <span className="text-[11px] text-slate-400 font-medium">
-                Support & Security Platform
+                Official Bot Ecosystem & Console
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-1">
             {navLinks.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -70,14 +73,14 @@ export function PublicNavbar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
                     isActive
                       ? "bg-brand-red/15 text-white border border-brand-red/30 shadow-[0_0_12px_rgba(231,76,60,0.15)]"
                       : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
                   }`}
                 >
                   <Icon
-                    className={`h-4 w-4 ${
+                    className={`h-3.5 w-3.5 ${
                       isActive ? "text-brand-crimson" : "text-slate-400"
                     }`}
                   />
@@ -90,11 +93,11 @@ export function PublicNavbar() {
           {/* Right Action Buttons */}
           <div className="hidden sm:flex items-center gap-3">
             <Link
-              href="/"
+              href="/dashboard"
               className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-white bg-[#161b26] border border-white/10 hover:border-white/20 hover:bg-[#1c2331] transition-all duration-200 shadow-sm"
             >
               <Shield className="h-3.5 w-3.5 text-accent-cyan" />
-              <span>Security Dashboard</span>
+              <span>Multi-Bot Console</span>
             </Link>
 
             <a
@@ -109,7 +112,7 @@ export function PublicNavbar() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex md:hidden items-center gap-2">
+          <div className="flex lg:hidden items-center gap-2">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors focus:outline-none"
@@ -127,7 +130,7 @@ export function PublicNavbar() {
 
       {/* Mobile Dropdown Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-white/[0.08] bg-[#0c0f16]/98 backdrop-blur-2xl px-4 pt-3 pb-5 space-y-2">
+        <div className="lg:hidden border-b border-white/[0.08] bg-[#0c0f16]/98 backdrop-blur-2xl px-4 pt-3 pb-5 space-y-2">
           {navLinks.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -139,7 +142,7 @@ export function PublicNavbar() {
                 className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all ${
                   isActive
                     ? "bg-brand-red/15 text-white border border-brand-red/30"
-                    : "text-slate-300 hover:bg-white/[0.05] hover:text-white"
+                    : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
@@ -155,22 +158,22 @@ export function PublicNavbar() {
             );
           })}
 
-          <div className="pt-3 border-t border-white/[0.06] flex flex-col gap-2">
+          <div className="pt-2 border-t border-white/[0.08] space-y-2">
             <Link
-              href="/"
+              href="/dashboard"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold text-white bg-[#161b26] border border-white/10"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-[#161b26] border border-white/10"
             >
               <Shield className="h-4 w-4 text-accent-cyan" />
-              <span>Security Dashboard</span>
+              <span>Multi-Bot Console</span>
             </Link>
             <a
               href="https://discord.gg/syncink"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-[#5865F2]"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-[#5865F2]"
             >
-              <span>Join Official Discord Server</span>
+              <span>Join Discord Support</span>
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </div>

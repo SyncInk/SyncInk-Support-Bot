@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Bot,
   Radio,
+  Sparkles,
 } from "lucide-react";
 
 export function PublicFooter() {
@@ -76,15 +77,13 @@ export function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <a
-                  href="https://syncink.github.io/syncink-portfolio/apply-developer"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  href="/apply"
                   className="hover:text-white transition-colors flex items-center gap-1.5"
                 >
-                  <ExternalLink className="h-3 w-3 text-indigo-400" />
-                  <span>Developer Application</span>
-                </a>
+                  <Sparkles className="h-3 w-3 text-purple-400" />
+                  <span>Join Team (Staff & Developer Apply)</span>
+                </Link>
               </li>
             </ul>
           </div>
@@ -115,11 +114,11 @@ export function PublicFooter() {
               </li>
               <li>
                 <Link
-                  href="/"
+                  href="/dashboard"
                   className="hover:text-white transition-colors flex items-center gap-1.5"
                 >
                   <Shield className="h-3 w-3 text-accent-cyan" />
-                  <span>Security & Audit Dashboard</span>
+                  <span>Multi-Bot Console & Telemetry</span>
                 </Link>
               </li>
             </ul>

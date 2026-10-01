@@ -32,6 +32,7 @@ export async function GET(request: Request) {
   }
 
   const redirectUri = `${baseUrl}/api/auth/discord/callback`;
+  const redirectTo = url.searchParams.get("redirect_to") || "/dashboard";
 
   const discordAuthUrl =
     `https://discord.com/oauth2/authorize?` +
@@ -41,6 +42,7 @@ export async function GET(request: Request) {
       redirect_uri: redirectUri,
       scope: "identify guilds",
       prompt: "consent",
+      state: redirectTo,
     }).toString();
 
   return NextResponse.redirect(discordAuthUrl);
