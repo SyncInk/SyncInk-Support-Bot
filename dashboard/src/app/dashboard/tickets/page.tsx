@@ -490,7 +490,7 @@ export default function NativeTicketDashboardPage() {
             width: "min(480px, 100%)",
             display: "flex",
             flexDirection: "column",
-            background: "rgba(11, 15, 27, 0.96)",
+            background: "rgba(8, 8, 8, 0.96)",
             boxShadow: "0 24px 80px rgba(0, 0, 0, 0.5)",
             borderRadius: "24px",
             border: "1px solid rgba(255, 255, 255, 0.08)"
@@ -502,7 +502,7 @@ export default function NativeTicketDashboardPage() {
                 src="/ticket-logo.png"
                 alt="SyncInk Ticket Logo"
                 className="login-logo"
-                style={{ width: 84, height: 84, marginBottom: "20px", borderRadius: "50%", boxShadow: "0 0 40px rgba(165, 136, 255, 0.3)" }}
+                style={{ width: 84, height: 84, marginBottom: "20px", borderRadius: "50%", boxShadow: "0 0 40px rgba(139, 76, 255, 0.3)" }}
               />
               <h1
                 style={{
@@ -524,7 +524,7 @@ export default function NativeTicketDashboardPage() {
 
             <div className="login-features" style={{ marginBottom: "36px", display: "flex", flexDirection: "column", gap: "20px" }}>
               <div className="login-feature" style={{ border: "none", padding: 0, gap: "16px", display: "flex", alignItems: "center" }}>
-                <div className="feature-icon" style={{ width: 42, height: 42, borderRadius: "14px", background: "rgba(165, 136, 255, 0.08)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="feature-icon" style={{ width: 42, height: 42, borderRadius: "14px", background: "rgba(139, 76, 255, 0.08)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Ticket size={18} />
                 </div>
                 <div className="feature-text" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
@@ -534,7 +534,7 @@ export default function NativeTicketDashboardPage() {
               </div>
 
               <div className="login-feature" style={{ border: "none", padding: 0, gap: "16px", display: "flex", alignItems: "center" }}>
-                <div className="feature-icon" style={{ width: 42, height: 42, borderRadius: "14px", background: "rgba(165, 136, 255, 0.08)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="feature-icon" style={{ width: 42, height: 42, borderRadius: "14px", background: "rgba(139, 76, 255, 0.08)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Settings size={18} />
                 </div>
                 <div className="feature-text" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
@@ -544,7 +544,7 @@ export default function NativeTicketDashboardPage() {
               </div>
 
               <div className="login-feature" style={{ border: "none", padding: 0, gap: "16px", display: "flex", alignItems: "center" }}>
-                <div className="feature-icon" style={{ width: 42, height: 42, borderRadius: "14px", background: "rgba(165, 136, 255, 0.08)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="feature-icon" style={{ width: 42, height: 42, borderRadius: "14px", background: "rgba(139, 76, 255, 0.08)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <ShieldCheck size={18} />
                 </div>
                 <div className="feature-text" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
@@ -619,15 +619,15 @@ export default function NativeTicketDashboardPage() {
     return (
       <div className="server-shell" style={{ maxWidth: "600px", margin: "40px auto", padding: "20px" }}>
         <div className="server-header" style={{ textAlign: "center", marginBottom: "32px" }}>
-          <img src="/ticket-logo.png" alt="SyncInk Ticket" style={{ width: 64, height: 64, borderRadius: 20, margin: "0 auto 18px", boxShadow: "0 0 30px rgba(165, 136, 255, 0.25)" }} />
+          <img src="/ticket-logo.png" alt="SyncInk Ticket" style={{ width: 64, height: 64, borderRadius: 20, margin: "0 auto 18px", boxShadow: "0 0 30px rgba(139, 76, 255, 0.25)" }} />
           <h1 style={{ fontSize: "26px", fontWeight: 700, color: "white", marginBottom: "8px" }}>Select your workspace</h1>
           <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>
             Choose the Discord server you want to view or manage.
           </p>
         </div>
 
-        <div className="server-empty" style={{ textAlign: "center", padding: "48px 32px", background: "rgba(15, 20, 38, 0.8)", borderRadius: "24px", border: "1px solid rgba(255, 255, 255, 0.08)", boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }}>
-          <div style={{ width: 60, height: 60, borderRadius: "18px", background: "rgba(165, 136, 255, 0.1)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+        <div className="server-empty" style={{ textAlign: "center", padding: "48px 32px", background: "rgba(10, 10, 10, 0.8)", borderRadius: "24px", border: "1px solid rgba(255, 255, 255, 0.08)", boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }}>
+          <div style={{ width: 60, height: 60, borderRadius: "18px", background: "rgba(139, 76, 255, 0.1)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
             <Ticket size={28} />
           </div>
           <h2 style={{ fontSize: "20px", fontWeight: 700, color: "white", marginBottom: "10px" }}>
@@ -663,7 +663,7 @@ export default function NativeTicketDashboardPage() {
   return (
     <div className="dashboard-root" style={{ minHeight: "100vh", background: "var(--bg-canvas)", color: "var(--text)" }}>
       {/* Top Header */}
-      <header className="dashboard-topbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "1px solid var(--border)", background: "rgba(11, 15, 27, 0.8)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
+      <header className="dashboard-topbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "1px solid var(--border)", background: "rgba(5, 5, 5, 0.8)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <button
             type="button"
@@ -755,7 +755,7 @@ export default function NativeTicketDashboardPage() {
                           padding: "8px 10px",
                           borderRadius: "8px",
                           border: "none",
-                          background: g.id === selectedGuildId ? "rgba(165, 136, 255, 0.12)" : "transparent",
+                          background: g.id === selectedGuildId ? "rgba(139, 76, 255, 0.12)" : "transparent",
                           color: g.id === selectedGuildId ? "var(--accent)" : "var(--text)",
                           cursor: "pointer",
                           textAlign: "left",
@@ -821,7 +821,7 @@ export default function NativeTicketDashboardPage() {
           style={{
             width: "260px",
             borderRight: "1px solid var(--border)",
-            background: "rgba(11, 15, 27, 0.95)",
+            background: "rgba(5, 5, 5, 0.95)",
             padding: "20px 12px",
             display: "flex",
             flexDirection: "column",
@@ -867,7 +867,7 @@ export default function NativeTicketDashboardPage() {
                     padding: "10px 14px",
                     borderRadius: "10px",
                     border: "none",
-                    background: active ? "rgba(165, 136, 255, 0.12)" : "transparent",
+                    background: active ? "rgba(139, 76, 255, 0.12)" : "transparent",
                     color: active ? "var(--accent)" : "var(--text-soft)",
                     cursor: "pointer",
                     fontSize: "13px",
@@ -912,7 +912,7 @@ export default function NativeTicketDashboardPage() {
                     padding: "8px 14px",
                     borderRadius: "8px",
                     border: "none",
-                    background: active ? "rgba(165, 136, 255, 0.12)" : "transparent",
+                    background: active ? "rgba(139, 76, 255, 0.12)" : "transparent",
                     color: active ? "var(--accent)" : "var(--text-muted)",
                     cursor: "pointer",
                     fontSize: "12px",
@@ -2131,7 +2131,7 @@ export default function NativeTicketDashboardPage() {
 
       {/* Unsaved Changes Sticky Banner */}
       {isDirty && (
-        <div style={{ position: "fixed", bottom: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 90, background: "rgba(15, 20, 38, 0.95)", border: "1px solid var(--accent)", borderRadius: "16px", padding: "12px 24px", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", display: "flex", alignItems: "center", gap: "20px" }}>
+        <div style={{ position: "fixed", bottom: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 90, background: "rgba(10, 10, 10, 0.95)", border: "1px solid var(--accent)", borderRadius: "16px", padding: "12px 24px", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", display: "flex", alignItems: "center", gap: "20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "white", fontSize: "13px", fontWeight: 600 }}>
             <AlertTriangle size={16} color="var(--accent)" />
             <span>Careful &mdash; you have unsaved changes!</span>
