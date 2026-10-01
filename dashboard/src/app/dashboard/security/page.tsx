@@ -2851,15 +2851,13 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
-              <a
-                href="https://syncink-discord-ticket-bot.vercel.app"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/dashboard/tickets"
                 className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all shadow-[0_0_20px_rgba(147,51,234,0.4)] flex items-center gap-2"
               >
                 <span>Open Dedicated Ticket Console</span>
                 <ChevronRight className="w-4 h-4" />
-              </a>
+              </Link>
               <a
                 href="https://discord.com/oauth2/authorize?client_id=1513075101992747158&permissions=361046068240&integration_type=0&scope=bot+applications.commands"
                 target="_blank"

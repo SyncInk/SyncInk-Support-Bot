@@ -94,6 +94,10 @@ export async function POST(request: Request, ctx: { params: { route: string[] } 
   return proxyRequest(request, ctx);
 }
 
+export async function PUT(request: Request, ctx: { params: { route: string[] } }) {
+  return proxyRequest(request, ctx);
+}
+
 export async function PATCH(request: Request, ctx: { params: { route: string[] } }) {
   return proxyRequest(request, ctx);
 }

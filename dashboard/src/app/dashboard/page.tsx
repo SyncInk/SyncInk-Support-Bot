@@ -136,24 +136,20 @@ export default function MasterDashboardHub() {
             </div>
 
             <div className="mt-8 space-y-2.5">
-              <a
-                href="https://syncink-discord-ticket-bot.vercel.app"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/dashboard/tickets"
                 className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs sm:text-sm transition-all shadow-[0_0_20px_rgba(147,51,234,0.4)] flex items-center justify-center gap-2"
               >
-                <span>Launch Dedicated Ticket Console</span>
-                <ExternalLink className="w-4 h-4" />
-              </a>
-              <a
-                href="https://syncink-discord-ticket-bot.vercel.app/transcripts"
-                target="_blank"
-                rel="noopener noreferrer"
+                <span>Launch Ticket Dashboard</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/dashboard/tickets?tab=transcripts"
                 className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition-all border border-white/10 flex items-center justify-center gap-1.5"
               >
                 <span>Browse Transcripts Archive</span>
                 <ChevronRight className="w-3 h-3" />
-              </a>
+              </Link>
             </div>
           </div>
 

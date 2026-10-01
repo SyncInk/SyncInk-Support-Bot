@@ -5,6 +5,6 @@ export default function GuildTranscriptRedirect({
 }: {
   params: { guildId: string; ticketId: string };
 }) {
-  const { guildId, ticketId } = params;
-  redirect(`https://syncink-discord-ticket-bot.vercel.app/dashboard/${guildId}/transcripts/${ticketId}`);
+  const { ticketId } = params;
+  redirect(`/dashboard/tickets?tab=transcripts&ticketId=${ticketId}`);
 }
