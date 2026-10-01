@@ -143,15 +143,13 @@ export default function MasterDashboardHub() {
                 <span>Launch Ticket Dashboard</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <a
-                href="https://syncink-ticket-bot.up.railway.app/"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/dashboard/tickets"
                 className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition-all border border-white/10 flex items-center justify-center gap-1.5"
               >
-                <span>Sync with Railway Host</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+                <span>Browse Transcripts Archive</span>
+                <ChevronRight className="w-3 h-3" />
+              </Link>
             </div>
           </div>
 
@@ -208,15 +206,13 @@ export default function MasterDashboardHub() {
                 <span>Launch Voice Dashboard</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <a
-                href="https://syncink-voice-dashboard.up.railway.app"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/dashboard/voice"
                 className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition-all border border-white/10 flex items-center justify-center gap-1.5"
               >
-                <span>Sync with Railway Host</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+                <span>Voice Hub Controls</span>
+                <ChevronRight className="w-3 h-3" />
+              </Link>
             </div>
           </div>
 

@@ -93,15 +93,13 @@ export default function VoiceDashboardPage() {
               />
             </button>
 
-            <a
-              href="https://syncink-voice-dashboard.up.railway.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition-all shadow-[0_0_15px_rgba(6,182,212,0.35)] flex items-center gap-1.5"
+            <Link
+              href="/dashboard/tickets"
+              className="px-3.5 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/30 text-purple-200 font-bold text-xs transition-all flex items-center gap-1.5"
             >
-              <span>Sync with Railway Web Panel</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+              <span>Ticket Console</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
         </div>
 
