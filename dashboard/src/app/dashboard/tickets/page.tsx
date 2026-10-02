@@ -290,17 +290,63 @@ export default function NativeTicketDashboardPage() {
     checkAuth();
   }, []);
 
+  const getStoredToken = (): string | null => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("syncink_ticket_token");
+  };
+
+  const getAuthHeaders = (): Record<string, string> => {
+    const token = getStoredToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+      headers["x-session-id"] = token;
+      headers["x-token"] = token;
+    }
+    return headers;
+  };
+
   const checkAuth = async () => {
     setLoading(true);
     try {
-      // 1. Try direct Render backend with credentials
-      let res = await fetch("https://syncink-ticket.onrender.com/api/auth/me", {
-        credentials: "include"
+      // 0. Extract token from URL if redirected from Discord OAuth callback
+      let activeToken = getStoredToken();
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const urlToken = params.get("token") || params.get("session_id");
+        if (urlToken) {
+          activeToken = urlToken;
+          localStorage.setItem("syncink_ticket_token", urlToken);
+          params.delete("token");
+          params.delete("session_id");
+          const remaining = params.toString();
+          const cleanUrl = window.location.pathname + (remaining ? `?${remaining}` : "");
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+      }
+
+      const headers: Record<string, string> = {};
+      if (activeToken) {
+        headers["Authorization"] = `Bearer ${activeToken}`;
+        headers["x-session-id"] = activeToken;
+        headers["x-token"] = activeToken;
+      }
+
+      // 1. Try local proxy first (same-origin, no CORS, passes cookies and auth headers)
+      const proxyQuery = activeToken ? `?token=${encodeURIComponent(activeToken)}` : "";
+      let res = await fetch(`/api/tickets/auth/me${proxyQuery}`, {
+        headers
       }).catch(() => null);
 
-      // 2. Try proxy if direct failed
+      // 2. If proxy returns 502/404 or fails, try direct Render backend
       if (!res || !res.ok) {
-        res = await fetch("/api/tickets/auth/me").catch(() => null);
+        const directUrl = activeToken
+          ? `https://syncink-ticket.onrender.com/api/auth/me?token=${encodeURIComponent(activeToken)}`
+          : "https://syncink-ticket.onrender.com/api/auth/me";
+        res = await fetch(directUrl, {
+          credentials: "include",
+          headers
+        }).catch(() => null);
       }
 
       if (res && res.ok) {
@@ -331,6 +377,10 @@ export default function NativeTicketDashboardPage() {
   };
 
   const handleLogout = async () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("syncink_ticket_token");
+      localStorage.removeItem("syncink_selected_guild");
+    }
     const returnTarget = encodeURIComponent(window.location.origin + "/dashboard/tickets");
     window.location.href = `/api/tickets/auth/logout?redirect=${returnTarget}`;
   };
@@ -340,52 +390,71 @@ export default function NativeTicketDashboardPage() {
     if (!guildId) return;
     setSnapshotLoading(true);
     try {
-      let res = await fetch(`https://syncink-ticket.onrender.com/api/guilds/${guildId}/bootstrap?_t=${Date.now()}`, {
-        credentials: "include"
+      const activeToken = getStoredToken();
+      const headers = getAuthHeaders();
+      const tokenParam = activeToken ? `&token=${encodeURIComponent(activeToken)}` : "";
+
+      // 1. Try local proxy first
+      let res = await fetch(`/api/tickets/guilds/${guildId}/bootstrap?_t=${Date.now()}${tokenParam}`, {
+        headers
       }).catch(() => null);
 
+      // 2. Fall back to direct Render backend
       if (!res || !res.ok) {
-        res = await fetch(`/api/tickets/guilds/${guildId}/bootstrap?_t=${Date.now()}`).catch(() => null);
+        res = await fetch(`https://syncink-ticket.onrender.com/api/guilds/${guildId}/bootstrap?_t=${Date.now()}${tokenParam}`, {
+          credentials: "include",
+          headers
+        }).catch(() => null);
       }
 
       if (res && res.ok) {
         const data = await res.json();
-        startTransition(() => {
-          setSnapshot(data);
-          if (data.settings?.panelConfig) {
-            setPanelForm({
-              title: data.settings.panelConfig.title || DEFAULT_PANEL_CONFIG.title,
-              description: data.settings.panelConfig.description || DEFAULT_PANEL_CONFIG.description,
-              color: data.settings.panelConfig.color || DEFAULT_PANEL_CONFIG.color,
-              thumbnailUrl: data.settings.panelConfig.thumbnailUrl || DEFAULT_PANEL_CONFIG.thumbnailUrl,
-              placeholder: data.settings.panelConfig.placeholder || DEFAULT_PANEL_CONFIG.placeholder
-            });
-          }
-          if (data.settings?.panelChannelId) {
-            setPanelChannelId(data.settings.panelChannelId);
-          }
-          if (data.settings?.logChannelId) {
-            setLogChannelId(data.settings.logChannelId);
-          }
-          if (data.settings?.transcriptChannelId) {
-            setTranscriptChannelId(data.settings.transcriptChannelId);
-          }
-          if (data.settings?.inactivityReminderMinutes) {
-            setInactivityMinutes(data.settings.inactivityReminderMinutes);
-          }
-          if (data.settings?.categoryOverrides?.length > 0) {
-            setCategories(data.settings.categoryOverrides);
-          }
-          if (data.bot?.nickname) {
-            setBotNickname(data.bot.nickname);
-          }
-          setIsDirty(false);
-          setSaveAction(null);
-        });
+        if (data && data.guild) {
+          startTransition(() => {
+            setSnapshot(data);
+            if (data.settings?.panelConfig) {
+              setPanelForm({
+                title: data.settings.panelConfig.title || DEFAULT_PANEL_CONFIG.title,
+                description: data.settings.panelConfig.description || DEFAULT_PANEL_CONFIG.description,
+                color: data.settings.panelConfig.color || DEFAULT_PANEL_CONFIG.color,
+                thumbnailUrl: data.settings.panelConfig.thumbnailUrl || DEFAULT_PANEL_CONFIG.thumbnailUrl,
+                placeholder: data.settings.panelConfig.placeholder || DEFAULT_PANEL_CONFIG.placeholder
+              });
+            }
+            if (data.settings?.panelChannelId) {
+              setPanelChannelId(data.settings.panelChannelId);
+            }
+            if (data.settings?.logChannelId) {
+              setLogChannelId(data.settings.logChannelId);
+            }
+            if (data.settings?.transcriptChannelId) {
+              setTranscriptChannelId(data.settings.transcriptChannelId);
+            }
+            if (data.settings?.inactivityReminderMinutes) {
+              setInactivityMinutes(data.settings.inactivityReminderMinutes);
+            }
+            if (data.settings?.categoryOverrides?.length > 0) {
+              setCategories(data.settings.categoryOverrides);
+            }
+            if (data.bot?.nickname) {
+              setBotNickname(data.bot.nickname);
+            }
+            setIsDirty(false);
+            setSaveAction(null);
+          });
+        } else {
+          pushToast({
+            title: "Server Notice",
+            description: data?.error || "Could not retrieve server snapshot from bot backend.",
+            tone: "warning"
+          });
+        }
       } else {
-        // Instead of falling back to fake mock data, we should let the user know the backend couldn't be reached
-        pushToast({ title: "Sync Error", description: "Failed to connect to the ticket bot backend. Ensure the bot is online and deployed.", tone: "error" });
-        setSnapshot(null);
+        pushToast({
+          title: "Sync Error",
+          description: "Failed to connect to the ticket bot backend. Ensure the bot is online.",
+          tone: "error"
+        });
       }
     } catch {
       pushToast({ title: "Sync notice", description: "Connected in offline preview mode.", tone: "info" });
@@ -406,17 +475,24 @@ export default function NativeTicketDashboardPage() {
     if (!selectedGuildId) return;
     setBusy(true);
     try {
-      let res = await fetch(`https://syncink-ticket.onrender.com/api/guilds/${selectedGuildId}/settings`, {
+      const activeToken = getStoredToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...getAuthHeaders()
+      };
+      const tokenParam = activeToken ? `?token=${encodeURIComponent(activeToken)}` : "";
+
+      let res = await fetch(`/api/tickets/guilds/${selectedGuildId}/settings${tokenParam}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers,
         body: JSON.stringify(payload)
       }).catch(() => null);
 
       if (!res || !res.ok) {
-        res = await fetch(`/api/tickets/guilds/${selectedGuildId}/settings`, {
+        res = await fetch(`https://syncink-ticket.onrender.com/api/guilds/${selectedGuildId}/settings${tokenParam}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
+          credentials: "include",
           body: JSON.stringify(payload)
         }).catch(() => null);
       }
@@ -437,17 +513,24 @@ export default function NativeTicketDashboardPage() {
     if (!selectedGuildId) return;
     setBusy(true);
     try {
-      let res = await fetch(`https://syncink-ticket.onrender.com/api/guilds/${selectedGuildId}/deploy-panel`, {
+      const activeToken = getStoredToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...getAuthHeaders()
+      };
+      const tokenParam = activeToken ? `?token=${encodeURIComponent(activeToken)}` : "";
+
+      let res = await fetch(`/api/tickets/guilds/${selectedGuildId}/panel/deploy${tokenParam}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers,
         body: JSON.stringify({ channelId: panelChannelId, panelConfig: panelForm })
       }).catch(() => null);
 
       if (!res || !res.ok) {
-        res = await fetch(`/api/tickets/guilds/${selectedGuildId}/deploy-panel`, {
+        res = await fetch(`https://syncink-ticket.onrender.com/api/guilds/${selectedGuildId}/panel/deploy${tokenParam}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
+          credentials: "include",
           body: JSON.stringify({ channelId: panelChannelId, panelConfig: panelForm })
         }).catch(() => null);
       }
@@ -661,7 +744,7 @@ export default function NativeTicketDashboardPage() {
 
   // 4. Authenticated & Has Servers: Full Dashboard Layout
   return (
-    <div className="dashboard-root" style={{ minHeight: "100vh", background: "var(--bg-canvas)", color: "var(--text)" }}>
+    <div className="dashboard-root" style={{ minHeight: "100vh", background: "#000000", color: "var(--text)" }}>
       {/* Top Header */}
       <header className="dashboard-topbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "1px solid var(--border)", background: "rgba(5, 5, 5, 0.8)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -930,8 +1013,35 @@ export default function NativeTicketDashboardPage() {
 
         {/* Content Area */}
         <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto", maxWidth: "1400px", margin: "0 auto", width: "100%" }}>
-          {/* TAB 1: OVERVIEW */}
-          {activeTab === "overview" && (
+          {snapshotLoading && !snapshot && !["guide", "faq", "privacy", "terms", "status", "interface"].includes(activeTab) ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "55vh", gap: "16px" }}>
+              <RefreshCw size={36} className="spin" style={{ color: "var(--accent)" }} />
+              <span style={{ fontSize: "14px", color: "var(--text-muted)", fontWeight: 500 }}>
+                Synchronizing server ticket telemetry...
+              </span>
+            </div>
+          ) : !snapshot && !["guide", "faq", "privacy", "terms", "status", "interface"].includes(activeTab) ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "55vh", gap: "16px", textAlign: "center", padding: "40px 20px" }}>
+              <div style={{ width: 56, height: 56, borderRadius: "16px", background: "rgba(245, 158, 11, 0.12)", color: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <AlertCircle size={28} />
+              </div>
+              <h3 style={{ fontSize: "18px", fontWeight: 700, color: "white" }}>Ticket Backend Synchronizing</h3>
+              <p style={{ fontSize: "13px", color: "var(--text-muted)", maxWidth: "460px", lineHeight: 1.6 }}>
+                The ticket bot backend service may be waking up from cold start or reconnecting with Discord. Click below to refresh telemetry.
+              </p>
+              <button
+                type="button"
+                className="action-button tone-primary"
+                onClick={() => selectedGuildId && fetchGuildSnapshot(selectedGuildId)}
+                style={{ marginTop: "8px", display: "inline-flex", alignItems: "center", gap: "8px" }}
+              >
+                <RefreshCw size={14} className={snapshotLoading ? "spin" : ""} /> Retry Server Sync
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* TAB 1: OVERVIEW */}
+              {activeTab === "overview" && (
             <div className="page-stack">
               <div className="page-header">
                 <div>
@@ -1024,11 +1134,11 @@ export default function NativeTicketDashboardPage() {
                     {(snapshot?.stats?.staffActivity || []).length === 0 ? (
                       <div className="muted-note">No staff activity has been recorded yet.</div>
                     ) : (
-                      snapshot.stats.staffActivity.map((item: any, i: number) => (
+                      (snapshot?.stats?.staffActivity || []).map((item: any, i: number) => (
                         <div key={i} className="staff-row">
                           <div>
                             <strong>{item.name || item.actorId}</strong>
-                            <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>{item.actions || 0} ticket actions performed</div>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>{item.actions || item.total || 0} ticket actions performed</div>
                           </div>
                           <span className="role-badge staff">Staff</span>
                         </div>
@@ -1503,15 +1613,15 @@ export default function NativeTicketDashboardPage() {
                           </td>
                         </tr>
                       ) : (
-                        snapshot.tickets.map((t: any) => (
-                          <tr key={t.ticketId}>
+                        (snapshot?.tickets || []).map((t: any) => (
+                          <tr key={t.ticketId || t._id}>
                             <td><strong>{t.ticketId}</strong></td>
-                            <td>{t.category?.emoji} {t.category?.label}</td>
-                            <td>{t.creator?.displayName || "Unknown"}</td>
-                            <td>{t.claimers?.map((c: any) => c.displayName).join(", ") || "Unclaimed"}</td>
+                            <td>{t.category?.emoji || "🎫"} {t.category?.label || "General"}</td>
+                            <td>{t.creator?.displayName || t.creator?.tag || "Unknown"}</td>
+                            <td>{t.claimers?.map((c: any) => c.displayName).join(", ") || (t.claimer ? t.claimer.displayName : "Unclaimed")}</td>
                             <td>
                               <span className={`pill ${t.status === "open" ? "tone-success" : "tone-muted"}`}>
-                                {t.status}
+                                {t.status || "open"}
                               </span>
                             </td>
                           </tr>
@@ -1597,12 +1707,12 @@ export default function NativeTicketDashboardPage() {
                           </td>
                         </tr>
                       ) : (
-                        snapshot.tickets
+                        (snapshot?.tickets || [])
                           .filter((t: any) => t.status === "closed")
                           .map((t: any) => (
-                            <tr key={t.ticketId}>
+                            <tr key={t.ticketId || t._id}>
                               <td><strong>{t.ticketId}</strong></td>
-                              <td>{t.creator?.displayName || "Unknown"}</td>
+                              <td>{t.creator?.displayName || t.creator?.tag || "Unknown"}</td>
                               <td>{t.closedAt ? new Date(t.closedAt).toLocaleDateString() : "Recently"}</td>
                               <td>
                                 <button
@@ -2054,7 +2164,9 @@ export default function NativeTicketDashboardPage() {
               </section>
             </div>
           )}
-        </main>
+        </>
+      )}
+    </main>
       </div>
 
       {/* Online Transcript Modal */}

@@ -23,6 +23,17 @@ async function proxyRequest(request: Request, { params }: { params: { route: str
     headers["Cookie"] = incomingCookie;
   }
 
+  const authHeader = request.headers.get("authorization");
+  if (authHeader) {
+    headers["Authorization"] = authHeader;
+  }
+
+  const sessionIdHeader = request.headers.get("x-session-id") || request.headers.get("x-token");
+  if (sessionIdHeader) {
+    headers["x-session-id"] = sessionIdHeader;
+    headers["x-token"] = sessionIdHeader;
+  }
+
   if (user) {
     headers["x-syncink-user-id"] = user.id;
     headers["x-syncink-username"] = user.username;
