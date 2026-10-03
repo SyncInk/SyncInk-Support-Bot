@@ -43,6 +43,20 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/dashboard/tickets/servers',
+        destination: '/dashboard/tickets',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/tickets/servers/:path*',
+        destination: '/dashboard/tickets',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
