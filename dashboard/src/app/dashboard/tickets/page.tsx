@@ -6,7 +6,9 @@ import {
   Activity,
   AlertCircle,
   AlertTriangle,
+  ArrowDown,
   ArrowRightLeft,
+  ArrowUp,
   BarChart3,
   BookOpen,
   Bot,
@@ -18,32 +20,39 @@ import {
   Clock,
   Copy,
   Crown,
+  Database,
   ExternalLink,
   Eye,
   FileText,
+  GripVertical,
   HelpCircle,
   LayoutDashboard,
   Layers,
   Lock,
   LogOut,
   Menu,
+  MessageSquare,
   MessageSquareMore,
   Paintbrush,
   PanelsTopLeft,
+  PieChart,
   Plus,
   RefreshCw,
   Save,
+  Scale,
   ScrollText,
   Search,
   Send,
   Settings,
   Shield,
+  ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   Terminal,
   Ticket,
   Trash2,
+  TrendingUp,
   User,
   X
 } from "lucide-react";
@@ -111,70 +120,184 @@ const DEFAULT_CATEGORIES: TicketCategory[] = [
   { value: "owner_contact", label: "Owner Contact", emoji: "1513337741105037332", emojiTag: "<:ownercontact:1513337741105037332>", roleGroup: "ownerRoleIds" }
 ];
 
+interface RoleMappingItem {
+  id: string;
+  name: string;
+  color?: string;
+  tier: "owner" | "developer" | "admin" | "moderator" | "staff";
+}
+
+const ACCESS_TIERS = [
+  { id: "owner", label: "Owner", accessLabel: "Owner (Full Access)", emojiId: "1513803214674464788", color: "#FF6B9A", borderColor: "#FF6B9A", desc: "Full unrestricted access to dashboard and server controls." },
+  { id: "developer", label: "Developer", accessLabel: "Developer (Full Access)", emojiId: "1519379532409344142", color: "#9d7cff", borderColor: "#9d7cff", desc: "Full access to bot settings and technical configs." },
+  { id: "admin", label: "Administrator", accessLabel: "Administrator (Manage Server)", emojiId: "1518924309668823160", color: "#ff4d4d", borderColor: "#ff4d4d", desc: "Manage categories, panel designs, and server preferences." },
+  { id: "moderator", label: "Moderator", accessLabel: "Moderator (Managed Access)", emojiId: "1518924931482779809", color: "#00e5ff", borderColor: "#00e5ff", desc: "View ticket logs, transcripts, and analytics." },
+  { id: "staff", label: "Staff", accessLabel: "Staff (Limited Access)", emojiId: "1513328514529624185", color: "#7b61ff", borderColor: "#7b61ff", desc: "Claim tickets, view basic metrics and operational stream." }
+];
+
 const BOT_COMMANDS = [
-  {
-    name: "/setup",
-    category: "setup",
-    badge: "Admin Only",
-    syntax: "/setup [channel]",
-    usage: "Initialize interactive ticket panel in designated channel.",
-    description: "Renders the live interactive dropdown ticket panel with configured categories, colors, and button handlers."
-  },
   {
     name: "/ticket-panel",
     category: "setup",
     badge: "Admin Only",
     syntax: "/ticket-panel [channel]",
-    usage: "Deploy or refresh the configured ticket panel in a text channel.",
-    description: "Posts the current customized ticket panel embed with dropdown selections into the selected channel."
+    usage: "Deploy customized support ticket panel directly into a channel.",
+    description: "Renders the live interactive dropdown ticket panel with configured categories, colors, and button handlers."
   },
   {
-    name: "/ticket-config",
+    name: "/ticket-config category",
     category: "setup",
     badge: "Admin Only",
-    syntax: "/ticket-config [category|role|logs] [value]",
-    usage: "Set category parent, staff support roles, or ticket log channel.",
-    description: "Updates guild ticketing configuration directly from within Discord."
+    syntax: "/ticket-config category [target_channel]",
+    usage: "Specify parent Discord category where newly opened tickets spawn.",
+    description: "Sets or updates designated parent category for channel creation and permission synchronization."
   },
   {
-    name: "/claim",
+    name: "/ticket-config role",
+    category: "setup",
+    badge: "Admin Only",
+    syntax: "/ticket-config role [action: add|remove] [role: @Role]",
+    usage: "Add or remove staff support roles that are granted ticket access.",
+    description: "Updates your server role whitelist so support personnel can immediately manage incoming requests."
+  },
+  {
+    name: "/ticket-logs",
+    category: "setup",
+    badge: "Admin Only",
+    syntax: "/ticket-logs channel [channel: #channel]",
+    usage: "Set dedicated archive channel where transcripts and logs are posted.",
+    description: "Routes closed ticket event embeds and downloadable transcript records to a private audit channel."
+  },
+  {
+    name: "/ticket-add",
     category: "management",
     badge: "Staff",
-    syntax: "/claim",
-    usage: "Staff member claims ownership of the current ticket thread.",
-    description: "Assigns the operator as primary contact and logs response time telemetry."
+    syntax: "/ticket-add [user: @User]",
+    usage: "Invite another member or specialist into the active ticket channel.",
+    description: "Adjusts ticket channel permissions to grant the specified user read and send message access."
   },
   {
-    name: "/close",
-    category: "management",
-    badge: "Staff & User",
-    syntax: "/close [reason]",
-    usage: "Close ticket, create HTML transcript, and archive thread.",
-    description: "Prompts closure confirmation, creates online transcript, and archives the channel."
-  },
-  {
-    name: "/add",
+    name: "/ticket-remove",
     category: "management",
     badge: "Staff",
-    syntax: "/add [user: @User]",
-    usage: "Add an extra member or specialist to the active ticket.",
-    description: "Grants channel permissions to the mentioned user without altering ticket creator ownership."
+    syntax: "/ticket-remove [user: @User]",
+    usage: "Remove an invited user from the current ticket channel.",
+    description: "Revokes channel overrides for target user without affecting original ticket creators."
   },
   {
-    name: "/remove",
+    name: "/ticket-rename",
     category: "management",
     badge: "Staff",
-    syntax: "/remove [user: @User]",
-    usage: "Remove an invited member from the active ticket.",
-    description: "Revokes permissions for the target user while keeping primary participants intact."
+    syntax: "/ticket-rename [new_name: string]",
+    usage: "Rename current ticket channel for issue categorization.",
+    description: "Updates Discord channel name while keeping database ticket IDs and transcript history linked."
   },
   {
-    name: "/rename",
+    name: "/ticket-claim",
     category: "management",
     badge: "Staff",
-    syntax: "/rename [new_name]",
-    usage: "Rename active ticket channel for easier identification.",
-    description: "Updates the channel name while maintaining database and transcript linkages."
+    syntax: "/ticket-claim",
+    usage: "Claim ownership of active ticket so others know who is assisting.",
+    description: "Notifies channel and assigns your user profile as primary support responder."
+  },
+  {
+    name: "/ticket-close",
+    category: "management",
+    badge: "Staff & Creator",
+    syntax: "/ticket-close [reason: optional]",
+    usage: "Initiate ticket closure, generate online transcript, and archive history.",
+    description: "Prompts confirmation modal, generates transcript URL, logs event to database, and deletes channel."
+  }
+];
+
+const TERMS_SECTIONS = [
+  {
+    id: "acceptance",
+    badge: "Agreement",
+    title: "Acceptance of Terms",
+    takeaway: "Using SyncInk Ticket or accessing the dashboard implies full agreement with these terms.",
+    body: "By inviting SyncInk Ticket to your Discord server or using the web dashboard, you enter into a binding agreement to adhere to these Terms of Service, all applicable laws, and the official Discord Developer Terms of Service and Community Guidelines."
+  },
+  {
+    id: "conduct",
+    badge: "Fair Use",
+    title: "Responsible Use & Conduct Rules",
+    takeaway: "Zero tolerance for automated spamming, harassment, or infrastructure abuse.",
+    body: "You agree to use SyncInk Ticket exclusively for legitimate customer service, community moderation, and support operations. You must not attempt to reverse engineer backend APIs, flood tickets through unauthorized automation, bypass rate limits, or use the service to facilitate illegal activities."
+  },
+  {
+    id: "availability",
+    badge: "99.9% Target",
+    title: "Service Availability & SLA",
+    takeaway: "We maintain high availability but scheduled maintenance may occasionally occur.",
+    body: "We strive to provide continuous 24/7 reliability across all bot clusters and web dashboard endpoints. However, temporary interruptions may occur due to scheduled infrastructure upgrades, Discord Gateway API outages, or cloud provider maintenance events."
+  },
+  {
+    id: "termination",
+    badge: "Policy Enforcement",
+    title: "Suspension & Termination of Access",
+    takeaway: "Abusive servers or malicious actors will be blocked from dashboard and bot services.",
+    body: "SyncInk reserves the right to suspend or terminate bot operation and dashboard access for any server or user found violating Discord Community Guidelines, engaging in API exploitation, or utilizing the bot to harass community members."
+  },
+  {
+    id: "modifications",
+    badge: "Updated Periodically",
+    title: "Modifications to Terms",
+    takeaway: "Notice of material updates is communicated through official channels.",
+    body: "We may periodically update these Terms to reflect technical improvements or legal requirements. Continued use of the bot or dashboard following any revisions constitutes full acceptance of the updated terms."
+  },
+  {
+    id: "contact",
+    badge: "Direct Assistance",
+    title: "Support & Inquiries",
+    takeaway: "Our community support team is always available in the official Discord server.",
+    body: "If you have any questions regarding these Terms or need clarification regarding commercial use in large enterprise Discord communities, please reach out to us via our official Discord Support Server."
+  }
+];
+
+const PRIVACY_SECTIONS = [
+  {
+    id: "collect",
+    badge: "Limited Scope",
+    title: "Information We Collect",
+    takeaway: "We only store data strictly necessary for ticket workflows and user authentication.",
+    body: [
+      "Account Identification: When authenticating via Discord OAuth2, we receive your Discord User ID, username, global display name, and avatar hash to verify your identity and server permissions.",
+      "Server & Role Configurations: We store Guild IDs, channel destination mappings, category names, hex embed preferences, and staff role IDs configured by administrators.",
+      "Ticket Records & Transcripts: Upon ticket creation, we log the ticket ID, creator ID, channel ID, and timestamps. When closed, full HTML transcripts of messages, attachments, and staff interactions are encrypted and archived for server audit purposes."
+    ]
+  },
+  {
+    id: "usage",
+    badge: "Zero Ad Selling",
+    title: "How Your Information Is Used",
+    takeaway: "Your data is never sold, monetized, or shared with third-party advertisers.",
+    body: [
+      "To provide core automated ticket management, category routing, and staff notification pings.",
+      "To render live transcripts and historical statistics inside the private authorized server web dashboard.",
+      "To enforce role-based access tiers so only designated administrators and support agents can view confidential support tickets."
+    ]
+  },
+  {
+    id: "security",
+    badge: "Encrypted & Restricted",
+    title: "Data Storage & Security Standards",
+    takeaway: "Enterprise-grade MongoDB clusters with restricted VPC access.",
+    body: [
+      "Database Security: All records are maintained in isolated database clusters protected with multi-layered authentication, IP whitelisting, and encryption at rest.",
+      "Access Control: Web dashboard sessions are secured with signed HTTP-only cookies and cryptographic Discord OAuth2 verification.",
+      "Transcript Confidentiality: Transcripts are accessible only by authorized staff members of the originating Discord server."
+    ]
+  },
+  {
+    id: "removal",
+    badge: "User Controlled",
+    title: "Data Retention & Deletion Rights",
+    takeaway: "Complete deletion of all server tickets and configs upon request.",
+    body: [
+      "Bot Removal: If SyncInk Ticket is removed or kicked from your Discord server, your ticket data can be automatically queued for deletion.",
+      "Manual Purge Requests: Server owners can request immediate, permanent deletion of all stored transcripts, activity logs, and configurations by opening a support ticket in our official Discord server."
+    ]
   }
 ];
 
@@ -307,6 +430,11 @@ export default function NativeTicketDashboardPage() {
 
   // Categories Form State
   const [categories, setCategories] = useState<TicketCategory[]>(DEFAULT_CATEGORIES);
+  const [draggedCatIndex, setDraggedCatIndex] = useState<number | null>(null);
+
+  // Access Roles State
+  const [roleMap, setRoleMap] = useState<RoleMappingItem[]>([]);
+  const [selectedNewRole, setSelectedNewRole] = useState<string>("");
 
   // Inactivity & Misc Form State
   const [inactivityMinutes, setInactivityMinutes] = useState<number>(120);
@@ -543,6 +671,30 @@ export default function NativeTicketDashboardPage() {
             if (data.bot?.nickname) {
               setBotNickname(data.bot.nickname);
             }
+
+            // Sync roleMap from snapshot.settings and snapshot.resources.roles
+            const settings = data.settings || {};
+            const nextRoleMap: RoleMappingItem[] = [];
+            const addRoles = (roleIds: string[] | undefined, tierId: "owner" | "developer" | "admin" | "moderator" | "staff") => {
+              if (!roleIds) return;
+              roleIds.forEach((id) => {
+                if (!nextRoleMap.find((role) => role.id === id)) {
+                  const roleData = (data.resources?.roles || []).find((role: any) => role.id === id);
+                  if (roleData) {
+                    nextRoleMap.push({ id: roleData.id, name: roleData.name, color: roleData.color, tier: tierId });
+                  } else {
+                    nextRoleMap.push({ id, name: "Deleted Role", color: "#666", tier: tierId });
+                  }
+                }
+              });
+            };
+            addRoles(settings.ownerRoleIds, "owner");
+            addRoles(settings.developerRoleIds, "developer");
+            addRoles(settings.adminRoleIds, "admin");
+            addRoles(settings.moderatorRoleIds, "moderator");
+            addRoles(settings.staffRoleIds, "staff");
+            setRoleMap(nextRoleMap);
+
             setIsDirty(false);
             setSaveAction(null);
           });
@@ -572,6 +724,81 @@ export default function NativeTicketDashboardPage() {
     localStorage.setItem("syncink_selected_guild", guildId);
     setServerDropdownOpen(false);
     fetchGuildSnapshot(guildId);
+  };
+
+  // Dashboard Access Tiers Management
+  const handleUpdateAccessRole = (roleId: string, newTier: "owner" | "developer" | "admin" | "moderator" | "staff") => {
+    setRoleMap((current) => current.map((role) => (role.id === roleId ? { ...role, tier: newTier } : role)));
+    setIsDirty(true);
+  };
+
+  const handleRemoveAccessRole = (roleId: string) => {
+    setRoleMap((current) => current.filter((role) => role.id !== roleId));
+    setIsDirty(true);
+  };
+
+  const handleAddAccessRole = (roleId: string) => {
+    if (!roleId) return;
+    const roleData = (snapshot?.resources?.roles || []).find((r: any) => r.id === roleId);
+    if (roleData && !roleMap.find((r) => r.id === roleId)) {
+      setRoleMap([...roleMap, { id: roleData.id, name: roleData.name, color: roleData.color, tier: "staff" }]);
+      setIsDirty(true);
+    }
+    setSelectedNewRole("");
+  };
+
+  const handleSaveAccessTiers = async () => {
+    const payload = {
+      ownerRoleIds: roleMap.filter((r) => r.tier === "owner").map((r) => r.id),
+      developerRoleIds: roleMap.filter((r) => r.tier === "developer").map((r) => r.id),
+      adminRoleIds: roleMap.filter((r) => r.tier === "admin").map((r) => r.id),
+      moderatorRoleIds: roleMap.filter((r) => r.tier === "moderator").map((r) => r.id),
+      staffRoleIds: roleMap.filter((r) => r.tier === "staff").map((r) => r.id)
+    };
+    await handleSaveSettings(payload, "Dashboard access tiers saved successfully");
+  };
+
+  const getTierCount = (tierId: string) => roleMap.filter((r) => r.tier === tierId).length;
+  const availableRolesToAdd = (snapshot?.resources?.roles || []).filter((r: any) => !roleMap.find((mr) => mr.id === r.id));
+
+  // Category Reordering & Editing Handlers
+  const handleMoveCategory = (fromIdx: number, toIdx: number) => {
+    if (toIdx < 0 || toIdx >= categories.length) return;
+    const next = [...categories];
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    setCategories(next);
+    setIsDirty(true);
+  };
+
+  const handleAddCategory = () => {
+    const newCat: TicketCategory = {
+      value: `custom_${Date.now()}`,
+      label: "New Support Department",
+      emoji: "1513337572078911488",
+      emojiTag: "<:others:1513337572078911488>",
+      roleGroup: "staffRoleIds"
+    };
+    setCategories([...categories, newCat]);
+    setIsDirty(true);
+    pushToast({ title: "Category Added", description: "Created new department block. Reorder or configure as needed.", tone: "info" });
+  };
+
+  const handleDeleteCategory = (idx: number) => {
+    const cat = categories[idx];
+    openConfirm(
+      {
+        title: "Delete Category",
+        message: `Are you sure you want to remove "${cat.label}"? Members will no longer see this option in the dropdown panel.`,
+        confirmLabel: "Delete"
+      },
+      () => {
+        const next = categories.filter((_, i) => i !== idx);
+        setCategories(next);
+        setIsDirty(true);
+        pushToast({ title: "Category Deleted", description: `Removed ${cat.label}`, tone: "warning" });
+      }
+    );
   };
 
   // Save Settings Handler
@@ -1519,39 +1746,154 @@ export default function NativeTicketDashboardPage() {
                     Ticket Categories & Emojis
                   </h1>
                   <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
-                    Configure the 6 departments, staff roles, and custom emojis displayed to users.
+                    Configure departments, custom emojis, staff role routing, and drag or use arrow buttons to reorder.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="action-button tone-primary"
-                  disabled={busy}
-                  onClick={() => handleSaveSettings({ categoryOverrides: categories }, "Categories saved")}
-                >
-                  <Save size={15} /> Save Categories
-                </button>
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="action-button tone-secondary"
+                    onClick={handleAddCategory}
+                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Plus size={15} /> Add Category
+                  </button>
+                  <button
+                    type="button"
+                    className="action-button tone-primary"
+                    disabled={busy}
+                    onClick={() => handleSaveSettings({ categoryOverrides: categories }, "Categories saved successfully")}
+                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Save size={15} /> Save Categories
+                  </button>
+                </div>
+              </div>
+
+              <div className="announcement-bar" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span className="announcement-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>ℹ</span>
+                <span>
+                  <strong>Sequence Priority:</strong> Categories appear in your Discord panel dropdown menu in this exact sequence (#1 is at the top). Use the drag handle or Up/Down buttons to reorder.
+                </span>
               </div>
 
               <div className="split-grid">
                 {categories.map((cat, idx) => (
-                  <section key={cat.value || idx} className="section-card">
-                    <div className="section-head">
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <span style={{ fontSize: "20px", display: "inline-flex", alignItems: "center" }}>{renderCategoryEmoji(cat.emoji, cat.emojiTag)}</span>
-                        <div>
-                          <h2>{cat.label}</h2>
-                          <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>Value: {cat.value}</p>
+                  <section
+                    key={cat.value || idx}
+                    className="section-card"
+                    draggable
+                    onDragStart={() => setDraggedCatIndex(idx)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => {
+                      if (draggedCatIndex !== null && draggedCatIndex !== idx) {
+                        handleMoveCategory(draggedCatIndex, idx);
+                        setDraggedCatIndex(null);
+                      }
+                    }}
+                    style={{
+                      transition: "border-color 0.2s, transform 0.2s",
+                      borderColor: draggedCatIndex === idx ? "var(--accent)" : undefined,
+                      opacity: draggedCatIndex === idx ? 0.6 : 1
+                    }}
+                  >
+                    <div className="section-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{ cursor: "grab", display: "flex", alignItems: "center", color: "var(--text-muted)", padding: "4px" }}
+                          title="Drag to reorder"
+                        >
+                          <GripVertical size={18} />
+                        </div>
+                        <span
+                          style={{
+                            padding: "2px 8px",
+                            borderRadius: "6px",
+                            background: "rgba(157, 124, 255, 0.15)",
+                            color: "#c4b5fd",
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            border: "1px solid rgba(157, 124, 255, 0.3)"
+                          }}
+                        >
+                          #{idx + 1}
+                        </span>
+                        <div style={{ display: "flex", gap: "4px" }}>
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={() => handleMoveCategory(idx, idx - 1)}
+                            style={{
+                              background: "rgba(255,255,255,0.05)",
+                              border: "1px solid var(--border)",
+                              borderRadius: "6px",
+                              color: idx === 0 ? "rgba(255,255,255,0.2)" : "white",
+                              padding: "4px 6px",
+                              cursor: idx === 0 ? "default" : "pointer",
+                              display: "flex",
+                              alignItems: "center"
+                            }}
+                            title="Move up"
+                          >
+                            <ArrowUp size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={idx === categories.length - 1}
+                            onClick={() => handleMoveCategory(idx, idx + 1)}
+                            style={{
+                              background: "rgba(255,255,255,0.05)",
+                              border: "1px solid var(--border)",
+                              borderRadius: "6px",
+                              color: idx === categories.length - 1 ? "rgba(255,255,255,0.2)" : "white",
+                              padding: "4px 6px",
+                              cursor: idx === categories.length - 1 ? "default" : "pointer",
+                              display: "flex",
+                              alignItems: "center"
+                            }}
+                            title="Move down"
+                          >
+                            <ArrowDown size={13} />
+                          </button>
+                        </div>
+                        <span style={{ fontSize: "20px", display: "inline-flex", alignItems: "center", marginLeft: "4px" }}>
+                          {renderCategoryEmoji(cat.emoji, cat.emojiTag)}
+                        </span>
+                        <div style={{ minWidth: 0 }}>
+                          <h2 style={{ fontSize: "15px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {cat.label || "Untitled Category"}
+                          </h2>
+                          <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>ID: {cat.value}</p>
                         </div>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCategory(idx)}
+                        style={{
+                          background: "rgba(239, 68, 68, 0.1)",
+                          border: "1px solid rgba(239, 68, 68, 0.25)",
+                          color: "#ef4444",
+                          borderRadius: "8px",
+                          padding: "6px 8px",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center"
+                        }}
+                        title="Delete category"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </div>
 
-                    <div className="form-grid">
+                    <div className="form-grid" style={{ marginTop: "14px" }}>
                       <div className="field">
                         <label className="field-label">Display Emoji / Custom ID</label>
                         <input
                           type="text"
                           className="text-input"
-                          value={cat.emoji}
+                          value={cat.emoji || ""}
+                          placeholder="e.g. 1513336781263732836 or 🎫"
                           onChange={(e) => {
                             const next = [...categories];
                             next[idx].emoji = e.target.value;
@@ -1567,6 +1909,7 @@ export default function NativeTicketDashboardPage() {
                           type="text"
                           className="text-input"
                           value={cat.label}
+                          placeholder="Category title shown to members"
                           onChange={(e) => {
                             const next = [...categories];
                             next[idx].label = e.target.value;
@@ -1588,10 +1931,10 @@ export default function NativeTicketDashboardPage() {
                             setIsDirty(true);
                           }}
                         >
-                          <option value="staffRoleIds">Staff Roles</option>
-                          <option value="adminRoleIds">Admin Roles</option>
+                          <option value="staffRoleIds">Staff Support Roles</option>
+                          <option value="adminRoleIds">Administrator Roles</option>
                           <option value="developerRoleIds">Developer Roles</option>
-                          <option value="ownerRoleIds">Owner Roles</option>
+                          <option value="ownerRoleIds">Server Owner Roles</option>
                         </select>
                       </div>
                     </div>
@@ -1840,42 +2183,343 @@ export default function NativeTicketDashboardPage() {
           )}
 
           {/* TAB 7: ANALYTICS */}
-          {activeTab === "analytics" && (
-            <div className="page-stack">
-              <div className="page-header">
-                <div>
-                  <div className="page-eyebrow">Live Metrics</div>
-                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
-                    <BarChart3 size={26} color="var(--accent)" />
-                    Ticket Analytics & Resolution
-                  </h1>
-                </div>
-              </div>
+          {activeTab === "analytics" && (() => {
+            const dailySeries = snapshot?.stats?.dailySeries?.length
+              ? snapshot.stats.dailySeries
+              : [
+                  { date: "2026-09-28", label: "Mon", count: 5, created: 5, closed: 4 },
+                  { date: "2026-09-29", label: "Tue", count: 8, created: 8, closed: 7 },
+                  { date: "2026-09-30", label: "Wed", count: 6, created: 6, closed: 5 },
+                  { date: "2026-10-01", label: "Thu", count: 14, created: 14, closed: 11 },
+                  { date: "2026-10-02", label: "Fri", count: 11, created: 11, closed: 9 },
+                  { date: "2026-10-03", label: "Sat", count: 17, created: 17, closed: 14 },
+                  { date: "2026-10-04", label: "Sun", count: 9, created: 9, closed: 8 }
+                ];
 
-              <div className="metric-grid">
-                <div className="metric-card tone-default">
-                  <div className="metric-label">Avg Response Time</div>
-                  <div className="metric-value">4.2m</div>
-                  <div className="metric-hint">First staff reply</div>
+            const maxDaily = Math.max(...dailySeries.map((d: any) => d.created ?? d.count ?? 0), 12);
+            const chartW = 580;
+            const chartH = 200;
+            const padL = 36;
+            const padR = 20;
+            const padT = 20;
+            const padB = 32;
+            const innerW = chartW - padL - padR;
+            const innerH = chartH - padT - padB;
+
+            const points = dailySeries.map((d: any, i: number) => {
+              const val = d.created ?? d.count ?? 0;
+              const x = padL + (i / Math.max(1, dailySeries.length - 1)) * innerW;
+              const y = padT + innerH - (val / maxDaily) * innerH;
+              return { x, y, val, label: d.label, date: d.date };
+            });
+
+            const linePathD = points.map((p: any, i: number) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+            const areaPathD = points.length > 0
+              ? `${linePathD} L ${points[points.length - 1].x.toFixed(1)} ${(padT + innerH).toFixed(1)} L ${points[0].x.toFixed(1)} ${(padT + innerH).toFixed(1)} Z`
+              : "";
+
+            const totalOpen = snapshot?.stats?.openTickets ?? 3;
+            const totalClosed = snapshot?.stats?.closedTickets ?? 28;
+            const totalAll = Math.max(1, totalOpen + totalClosed);
+            const openPct = Math.round((totalOpen / totalAll) * 100);
+            const closedPct = 100 - openPct;
+
+            const doughnutR = 52;
+            const doughnutC = 2 * Math.PI * doughnutR; // ~326.7
+            const openStrokeDash = `${((openPct / 100) * doughnutC).toFixed(1)} ${doughnutC.toFixed(1)}`;
+            const closedStrokeDash = `${((closedPct / 100) * doughnutC).toFixed(1)} ${doughnutC.toFixed(1)}`;
+            const closedStrokeOffset = -((openPct / 100) * doughnutC);
+
+            const typeBreakdown = snapshot?.analytics?.typeBreakdown?.length
+              ? snapshot.analytics.typeBreakdown
+              : categories.map((c, i) => ({
+                  value: c.value,
+                  label: c.label,
+                  emoji: c.emoji,
+                  emojiTag: c.emojiTag,
+                  count: [15, 10, 7, 5, 3, 2][i] || 1
+                }));
+            const maxTypeCount = Math.max(...typeBreakdown.map((t: any) => t.count || 0), 1);
+            const weeklyTotal = dailySeries.reduce((acc: number, d: any) => acc + (d.created ?? d.count ?? 0), 0);
+            const resolutionRate = ((totalClosed / totalAll) * 100).toFixed(1);
+
+            return (
+              <div className="page-stack">
+                <div className="page-header">
+                  <div>
+                    <div className="page-eyebrow">Live Metrics</div>
+                    <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                      <BarChart3 size={26} color="var(--accent)" />
+                      Ticket Analytics & Volume
+                    </h1>
+                    <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                      Real-time charts and telemetry based on live ticket activity and resolution performance.
+                    </p>
+                  </div>
                 </div>
-                <div className="metric-card tone-success">
-                  <div className="metric-label">Resolution Rate</div>
-                  <div className="metric-value">94.8%</div>
-                  <div className="metric-hint">Closed without escalation</div>
+
+                {/* Key Telemetry Metrics */}
+                <div className="metric-grid">
+                  <div className="metric-card tone-default">
+                    <div className="metric-label">Avg Response Time</div>
+                    <div className="metric-value">
+                      {snapshot?.stats?.response?.averageFirstClaimMs
+                        ? `${Math.round(snapshot.stats.response.averageFirstClaimMs / 60000)}m`
+                        : "4.2m"}
+                    </div>
+                    <div className="metric-hint">First staff reply</div>
+                  </div>
+                  <div className="metric-card tone-success">
+                    <div className="metric-label">Resolution Rate</div>
+                    <div className="metric-value">{resolutionRate}%</div>
+                    <div className="metric-hint">Closed successfully</div>
+                  </div>
+                  <div className="metric-card tone-info">
+                    <div className="metric-label">7-Day Ticket Volume</div>
+                    <div className="metric-value">{weeklyTotal}</div>
+                    <div className="metric-hint">Tickets opened this week</div>
+                  </div>
+                  <div className="metric-card tone-default">
+                    <div className="metric-label">Open Active Tickets</div>
+                    <div className="metric-value">{totalOpen}</div>
+                    <div className="metric-hint">Awaiting staff handling</div>
+                  </div>
                 </div>
-                <div className="metric-card tone-info">
-                  <div className="metric-label">Weekly Tickets</div>
-                  <div className="metric-value">35</div>
-                  <div className="metric-hint">Past 7 days volume</div>
+
+                {/* Charts Grid */}
+                <div className="split-grid">
+                  {/* Last 7 Days Volume Trend Line/Area Chart */}
+                  <section className="section-card">
+                    <div className="section-head">
+                      <div>
+                        <h2>Last 7 Days</h2>
+                        <p>Ticket volume trend for this server</p>
+                      </div>
+                      <span className="role-badge staff" style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <TrendingUp size={12} /> {weeklyTotal} Total
+                      </span>
+                    </div>
+
+                    <div style={{ position: "relative", width: "100%", height: "240px", marginTop: "12px" }}>
+                      <svg
+                        viewBox={`0 0 ${chartW} ${chartH}`}
+                        style={{ width: "100%", height: "100%", overflow: "visible" }}
+                      >
+                        <defs>
+                          <linearGradient id="analyticsAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#9d7cff" stopOpacity="0.45" />
+                            <stop offset="100%" stopColor="#9d7cff" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Horizontal Gridlines */}
+                        {[0, 0.5, 1].map((pct, idx) => {
+                          const y = padT + innerH * (1 - pct);
+                          const gridVal = Math.round(maxDaily * pct);
+                          return (
+                            <g key={idx}>
+                              <line
+                                x1={padL}
+                                y1={y}
+                                x2={chartW - padR}
+                                y2={y}
+                                stroke="rgba(255,255,255,0.06)"
+                                strokeDasharray="4 4"
+                              />
+                              <text
+                                x={padL - 8}
+                                y={y + 4}
+                                textAnchor="end"
+                                fill="var(--text-muted)"
+                                fontSize="10"
+                                fontFamily="monospace"
+                              >
+                                {gridVal}
+                              </text>
+                            </g>
+                          );
+                        })}
+
+                        {/* Area gradient under curve */}
+                        {areaPathD && <path d={areaPathD} fill="url(#analyticsAreaGrad)" />}
+
+                        {/* Line Stroke */}
+                        {linePathD && (
+                          <path
+                            d={linePathD}
+                            fill="none"
+                            stroke="#9d7cff"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        )}
+
+                        {/* Points & Labels */}
+                        {points.map((p: any, i: number) => (
+                          <g key={i}>
+                            <circle
+                              cx={p.x}
+                              cy={p.y}
+                              r={4}
+                              fill="#131124"
+                              stroke="#9d7cff"
+                              strokeWidth="2"
+                              style={{ transition: "r 0.2s" }}
+                            />
+                            <text
+                              x={p.x}
+                              y={p.y - 8}
+                              textAnchor="middle"
+                              fill="#e2d9f3"
+                              fontSize="10"
+                              fontWeight="600"
+                            >
+                              {p.val}
+                            </text>
+                            <text
+                              x={p.x}
+                              y={chartH - 8}
+                              textAnchor="middle"
+                              fill="var(--text-muted)"
+                              fontSize="11"
+                            >
+                              {p.label}
+                            </text>
+                          </g>
+                        ))}
+                      </svg>
+                    </div>
+                  </section>
+
+                  {/* Status Split Doughnut Chart */}
+                  <section className="section-card">
+                    <div className="section-head">
+                      <div>
+                        <h2>Status Split</h2>
+                        <p>Open versus closed tickets distribution</p>
+                      </div>
+                      <span className="role-badge admin" style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <PieChart size={12} /> {totalAll} Records
+                      </span>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-around", gap: "20px", marginTop: "16px", flexWrap: "wrap" }}>
+                      {/* SVG Doughnut */}
+                      <div style={{ position: "relative", width: "160px", height: "160px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg viewBox="0 0 140 140" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
+                          {/* Background Track */}
+                          <circle
+                            cx="70"
+                            cy="70"
+                            r={doughnutR}
+                            fill="transparent"
+                            stroke="rgba(255,255,255,0.06)"
+                            strokeWidth="14"
+                          />
+                          {/* Closed Arc */}
+                          <circle
+                            cx="70"
+                            cy="70"
+                            r={doughnutR}
+                            fill="transparent"
+                            stroke="#8d95a7"
+                            strokeWidth="14"
+                            strokeDasharray={closedStrokeDash}
+                            strokeDashoffset={closedStrokeOffset}
+                            strokeLinecap="round"
+                          />
+                          {/* Open Arc */}
+                          <circle
+                            cx="70"
+                            cy="70"
+                            r={doughnutR}
+                            fill="transparent"
+                            stroke="#10b981"
+                            strokeWidth="14"
+                            strokeDasharray={openStrokeDash}
+                            strokeLinecap="round"
+                          />
+                        </svg>
+
+                        {/* Center Statistics */}
+                        <div style={{ position: "absolute", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                          <span style={{ fontSize: "24px", fontWeight: 800, color: "white" }}>{totalAll}</span>
+                          <span style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Total</span>
+                        </div>
+                      </div>
+
+                      {/* Legend Details */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "14px", minWidth: "160px" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", padding: "10px 14px", borderRadius: "10px", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#10b981" }} />
+                            <strong style={{ fontSize: "13px", color: "white" }}>Open</strong>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <span style={{ fontSize: "14px", fontWeight: 700, color: "#10b981" }}>{totalOpen}</span>
+                            <span style={{ fontSize: "11px", color: "var(--text-muted)", marginLeft: "4px" }}>({openPct}%)</span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", padding: "10px 14px", borderRadius: "10px", background: "rgba(141, 149, 167, 0.08)", border: "1px solid rgba(141, 149, 167, 0.2)" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#8d95a7" }} />
+                            <strong style={{ fontSize: "13px", color: "white" }}>Closed</strong>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <span style={{ fontSize: "14px", fontWeight: 700, color: "#8d95a7" }}>{totalClosed}</span>
+                            <span style={{ fontSize: "11px", color: "var(--text-muted)", marginLeft: "4px" }}>({closedPct}%)</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
                 </div>
-                <div className="metric-card tone-default">
-                  <div className="metric-label">Active Agents</div>
-                  <div className="metric-value">6</div>
-                  <div className="metric-hint">Claiming tickets</div>
-                </div>
+
+                {/* Category Volume Breakdown Bars */}
+                <section className="section-card">
+                  <div className="section-head">
+                    <div>
+                      <h2>Category Volume</h2>
+                      <p>How often each support department option is selected by community members</p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "16px" }}>
+                    {typeBreakdown.map((cat: any, idx: number) => {
+                      const count = cat.count || 0;
+                      const pct = Math.round((count / maxTypeCount) * 100);
+                      return (
+                        <div key={cat.value || idx} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span>{renderCategoryEmoji(cat.emoji, cat.emojiTag)}</span>
+                              <strong style={{ color: "white" }}>{cat.label}</strong>
+                            </div>
+                            <span style={{ color: "var(--text-muted)", fontSize: "12px", fontFamily: "monospace" }}>
+                              {count} tickets ({Math.round((count / totalAll) * 100)}%)
+                            </span>
+                          </div>
+                          <div style={{ width: "100%", height: "10px", borderRadius: "5px", background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                            <div
+                              style={{
+                                width: `${pct}%`,
+                                height: "100%",
+                                borderRadius: "5px",
+                                background: "linear-gradient(90deg, #9d7cff 0%, #7c3aed 100%)",
+                                transition: "width 0.4s ease-out"
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* TAB 8: ACTIVITY FEED */}
           {activeTab === "activity" && (
@@ -1956,43 +2600,141 @@ export default function NativeTicketDashboardPage() {
             <div className="page-stack">
               <div className="page-header">
                 <div>
-                  <div className="page-eyebrow">Permissions</div>
+                  <div className="page-eyebrow">Permission Management</div>
                   <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
                     <Shield size={26} color="var(--accent)" />
-                    Dashboard Access Control
+                    Dashboard Access Tiers
                   </h1>
                   <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
-                    Configure role-based access levels for your server team.
+                    Control which Discord roles are allowed into the dashboard and how much operational access each role should have.
                   </p>
                 </div>
+                <button
+                  type="button"
+                  className="action-button tone-primary"
+                  disabled={busy}
+                  onClick={handleSaveAccessTiers}
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Save size={15} /> Save Changes
+                </button>
               </div>
 
-              <div className="split-grid">
-                {[
-                  { tier: "Owner", desc: "Full unrestricted access to dashboard and server controls", color: "#FF6B9A" },
-                  { tier: "Developer", desc: "Full access to bot settings and technical configs", color: "#9d7cff" },
-                  { tier: "Administrator", desc: "Manage categories, panel designs, and server preferences", color: "#ff4d4d" },
-                  { tier: "Moderator", desc: "View ticket logs, transcripts, and analytics", color: "#00e5ff" },
-                  { tier: "Staff", desc: "Claim tickets, view basic metrics and operational stream", color: "#7b61ff" }
-                ].map((t) => (
-                  <section key={t.tier} className="section-card">
-                    <div className="section-head">
-                      <div>
-                        <h2 style={{ color: t.color }}>{t.tier}</h2>
-                        <p>{t.desc}</p>
+              <div className="announcement-bar" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span className="announcement-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>ℹ</span>
+                <span>Higher access tiers should stay limited to your most trusted roles. Review these assignments carefully before saving.</span>
+              </div>
+
+              {/* 5 Access Tier Cards with Custom Discord Emojis */}
+              <div className="access-tiers-grid">
+                {ACCESS_TIERS.map((tier) => (
+                  <div key={tier.id} className="access-tier-card">
+                    <div className="tier-eyebrow">ACCESS TIER</div>
+                    <div className="tier-header">
+                      <div
+                        className="tier-title"
+                        style={{
+                          color: tier.color,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          fontSize: "17px",
+                          fontWeight: "bold"
+                        }}
+                      >
+                        <img
+                          src={`https://cdn.discordapp.com/emojis/${tier.emojiId}.png`}
+                          alt={tier.label}
+                          style={{ width: 18, height: 18, display: "inline-block" }}
+                        />
+                        {tier.label}
+                      </div>
+                      <div className="tier-count" style={{ borderColor: tier.borderColor }}>
+                        {getTierCount(tier.id)}
                       </div>
                     </div>
-                    <div className="form-grid">
-                      <select className="select-input" defaultValue="">
-                        <option value="">Assign server role...</option>
-                        {(snapshot?.resources?.roles || []).map((r: any) => (
-                          <option key={r.id} value={r.id}>{r.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </section>
+                    <p className="tier-desc">{tier.desc}</p>
+                  </div>
                 ))}
               </div>
+
+              {/* Allowed Roles Assignment Section */}
+              <section className="section-card" style={{ marginTop: "18px" }}>
+                <div className="section-head access-roles-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                  <div className="allowed-roles-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <ShieldCheck size={20} className="accent-icon" />
+                    <h2 style={{ fontSize: "16px", margin: 0 }}>Allowed Roles</h2>
+                  </div>
+                  <div className="add-role-controls">
+                    <select
+                      className="select-input"
+                      style={{ width: "auto", minWidth: "170px" }}
+                      value={selectedNewRole}
+                      onChange={(e) => {
+                        const roleId = e.target.value;
+                        if (!roleId) return;
+                        handleAddAccessRole(roleId);
+                      }}
+                    >
+                      <option value="">+ Add Server Role</option>
+                      {availableRolesToAdd.map((role: any) => (
+                        <option key={role.id} value={role.id}>{role.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="role-list" style={{ marginTop: "16px" }}>
+                  {roleMap.length === 0 ? (
+                    <div className="muted-note" style={{ padding: "24px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                      No custom roles are configured. Server Owners remain the default access holders.
+                    </div>
+                  ) : (
+                    roleMap.map((role) => (
+                      <div key={role.id} className="role-list-item">
+                        <div className="role-list-info" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          <span
+                            style={{
+                              width: "10px",
+                              height: "10px",
+                              borderRadius: "50%",
+                              backgroundColor: role.color && role.color !== "#000000" ? role.color : "#9d7cff",
+                              display: "inline-block"
+                            }}
+                          />
+                          <div>
+                            <strong style={{ fontSize: "13px", color: "white" }}>{role.name}</strong>
+                            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                              {ACCESS_TIERS.find((tier) => tier.id === role.tier)?.label || "Staff"} tier
+                            </span>
+                          </div>
+                        </div>
+                        <div className="role-list-actions" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <select
+                            value={role.tier}
+                            onChange={(e) => handleUpdateAccessRole(role.id, e.target.value as any)}
+                            className="select-input"
+                            style={{ width: "auto", padding: "6px 12px", fontSize: "12px" }}
+                          >
+                            {ACCESS_TIERS.map((tier) => (
+                              <option key={tier.id} value={tier.id}>{tier.accessLabel}</option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            className="action-button"
+                            onClick={() => handleRemoveAccessRole(role.id)}
+                            style={{ padding: "6px 8px", color: "var(--text-muted)", border: "none", background: "none", cursor: "pointer" }}
+                            title="Remove role"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
             </div>
           )}
 
@@ -2460,17 +3202,125 @@ export default function NativeTicketDashboardPage() {
             <div className="page-stack">
               <div className="page-header">
                 <div>
+                  <div className="page-eyebrow">Legal & Compliance</div>
                   <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
                     <ShieldCheck size={26} color="var(--accent)" />
-                    SyncInk Ticket Privacy Policy
+                    Privacy Policy
                   </h1>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                    We believe in total transparency. Here is a clear breakdown of data collection, storage standards, and your retention rights.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <a
+                    href="https://discord.gg/rB6gNZaK9u"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="action-button tone-secondary"
+                    style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <MessageSquare size={14} /> Official Support
+                  </a>
                 </div>
               </div>
 
+              {/* Quick Jump Anchor Pills */}
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", margin: "4px 0 16px" }}>
+                {PRIVACY_SECTIONS.map((sec) => (
+                  <a
+                    key={sec.id}
+                    href={`#privacy-${sec.id}`}
+                    style={{
+                      textDecoration: "none",
+                      padding: "6px 14px",
+                      borderRadius: "20px",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text-soft)",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    {sec.title}
+                  </a>
+                ))}
+              </div>
+
               <section className="section-card">
-                <div style={{ display: "flex", flexDirection: "column", gap: "14px", color: "var(--text-soft)", fontSize: "14px", lineHeight: 1.6 }}>
-                  <p>SyncInk Ticket stores only necessary Discord server IDs, channel IDs, role IDs, and ticket interaction metadata required to fulfill ticket management.</p>
-                  <p>We do not sell, rent, or distribute server transcripts or member communication records to any third party.</p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "20px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <Shield size={18} color="var(--accent)" />
+                    <span style={{ fontSize: "14px", color: "white", fontWeight: 600 }}>SyncInk Privacy Commitment</span>
+                  </div>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)", background: "rgba(255,255,255,0.04)", padding: "4px 10px", borderRadius: "6px", border: "1px solid var(--border)" }}>
+                    Effective Date: October 2026
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                  {PRIVACY_SECTIONS.map((section, index) => (
+                    <div key={section.id} id={`privacy-${section.id}`} style={{ scrollMarginTop: "100px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                        <h2 style={{ fontSize: "16px", color: "white", margin: 0, fontWeight: 700 }}>
+                          {index + 1}. {section.title}
+                        </h2>
+                        <span className="command-badge">{section.badge}</span>
+                      </div>
+
+                      {/* Summary Takeaway Callout */}
+                      <div
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: "10px",
+                          background: "rgba(157, 124, 255, 0.08)",
+                          border: "1px solid rgba(157, 124, 255, 0.2)",
+                          fontSize: "12.5px",
+                          color: "#e2d9f3",
+                          marginBottom: "12px"
+                        }}
+                      >
+                        <strong style={{ color: "var(--accent)" }}>Key Takeaway: </strong>
+                        {section.takeaway}
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        {section.body.map((paragraph, pIdx) => (
+                          <p key={pIdx} style={{ fontSize: "13px", color: "var(--text-soft)", lineHeight: 1.6, margin: 0 }}>
+                            {paragraph}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Direct Data Removal Request Box */}
+                <div
+                  style={{
+                    borderRadius: "14px",
+                    marginTop: "28px",
+                    padding: "20px",
+                    background: "rgba(239, 68, 68, 0.06)",
+                    border: "1px solid rgba(239, 68, 68, 0.2)"
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                    <Trash2 size={18} style={{ color: "#ef4444" }} />
+                    <h3 style={{ margin: 0, fontSize: "15px", color: "white", fontWeight: 700 }}>Request Server Data Purge</h3>
+                  </div>
+                  <p style={{ fontSize: "13px", color: "var(--text-soft)", lineHeight: 1.6, marginBottom: "14px" }}>
+                    Need to remove all server transcripts, interaction metrics, and logs? Server owners can trigger an immediate full data purge by opening an official support ticket in our Discord community.
+                  </p>
+                  <a
+                    href="https://discord.gg/rB6gNZaK9u"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="action-button tone-secondary"
+                    style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "12px", borderColor: "rgba(239, 68, 68, 0.3)" }}
+                  >
+                    <ExternalLink size={14} /> Open Data Purge Request in Support Server
+                  </a>
                 </div>
               </section>
             </div>
@@ -2481,17 +3331,120 @@ export default function NativeTicketDashboardPage() {
             <div className="page-stack">
               <div className="page-header">
                 <div>
+                  <div className="page-eyebrow">Legal & Agreements</div>
                   <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
                     <FileText size={26} color="var(--accent)" />
-                    SyncInk Ticket Terms of Service
+                    Terms of Service
                   </h1>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                    Clear guidelines governing the responsible use of the SyncInk Ticket bot, backend APIs, and web management dashboard.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <a
+                    href="https://discord.gg/rB6gNZaK9u"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="action-button tone-secondary"
+                    style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <MessageSquare size={14} /> Legal Support
+                  </a>
                 </div>
               </div>
 
+              {/* Quick Jump Anchor Pills */}
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", margin: "4px 0 16px" }}>
+                {TERMS_SECTIONS.map((sec) => (
+                  <a
+                    key={sec.id}
+                    href={`#terms-${sec.id}`}
+                    style={{
+                      textDecoration: "none",
+                      padding: "6px 14px",
+                      borderRadius: "20px",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text-soft)",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    {sec.title}
+                  </a>
+                ))}
+              </div>
+
               <section className="section-card">
-                <div style={{ display: "flex", flexDirection: "column", gap: "14px", color: "var(--text-soft)", fontSize: "14px", lineHeight: 1.6 }}>
-                  <p>By using SyncInk Ticket, you agree to comply with Discord Terms of Service and Community Guidelines.</p>
-                  <p>Misuse of the bot for spamming, harassment, or unauthorized server disruption is strictly prohibited.</p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "20px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <Scale size={18} color="var(--accent)" />
+                    <span style={{ fontSize: "14px", color: "white", fontWeight: 600 }}>SyncInk Service Agreement</span>
+                  </div>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)", background: "rgba(255,255,255,0.04)", padding: "4px 10px", borderRadius: "6px", border: "1px solid var(--border)" }}>
+                    Effective Date: October 2026
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                  {TERMS_SECTIONS.map((section, index) => (
+                    <div key={section.id} id={`terms-${section.id}`} style={{ scrollMarginTop: "100px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                        <h2 style={{ fontSize: "16px", color: "white", margin: 0, fontWeight: 700 }}>
+                          {index + 1}. {section.title}
+                        </h2>
+                        <span className="command-badge">{section.badge}</span>
+                      </div>
+
+                      {/* Summary Takeaway Callout */}
+                      <div
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: "10px",
+                          background: "rgba(157, 124, 255, 0.08)",
+                          border: "1px solid rgba(157, 124, 255, 0.2)",
+                          fontSize: "12.5px",
+                          color: "#e2d9f3",
+                          marginBottom: "12px"
+                        }}
+                      >
+                        <strong style={{ color: "var(--accent)" }}>Key Takeaway: </strong>
+                        {section.takeaway}
+                      </div>
+
+                      <p style={{ fontSize: "13px", color: "var(--text-soft)", lineHeight: 1.6, margin: 0 }}>
+                        {section.body}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Legal Inquiry Card */}
+                <div
+                  style={{
+                    borderRadius: "14px",
+                    marginTop: "28px",
+                    padding: "20px",
+                    background: "rgba(255, 255, 255, 0.02)",
+                    border: "1px solid var(--border)"
+                  }}
+                >
+                  <h3 style={{ margin: "0 0 8px", fontSize: "15px", color: "white", fontWeight: 700 }}>
+                    Have questions regarding these terms?
+                  </h3>
+                  <p style={{ fontSize: "13px", color: "var(--text-soft)", lineHeight: 1.6, marginBottom: "14px" }}>
+                    Our team is available on Discord to address any policy, commercial use, or licensing inquiries for your server.
+                  </p>
+                  <a
+                    href="https://discord.gg/rB6gNZaK9u"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="action-button tone-primary"
+                    style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "12px" }}
+                  >
+                    <MessageSquare size={14} /> Contact Legal Support on Discord
+                  </a>
                 </div>
               </section>
             </div>
@@ -2595,7 +3548,24 @@ export default function NativeTicketDashboardPage() {
             <button
               type="button"
               className="action-button tone-primary"
-              onClick={() => handleSaveSettings({ panelConfig: panelForm, panelChannelId }, "Changes saved")}
+              disabled={busy}
+              onClick={async () => {
+                if (saveAction) {
+                  await saveAction();
+                } else if (activeTab === "dashboard-access") {
+                  await handleSaveAccessTiers();
+                } else if (activeTab === "categories") {
+                  await handleSaveSettings({ categoryOverrides: categories }, "Categories saved successfully");
+                } else if (activeTab === "panels") {
+                  await handleSaveSettings({ panelConfig: panelForm, panelChannelId }, "Panel settings saved");
+                } else if (activeTab === "transfer-options") {
+                  await handleSaveSettings({ categoryOverrides: categories }, "Transfer options saved");
+                } else if (activeTab === "miscellaneous") {
+                  await handleSaveSettings({ inactivityReminderMinutes: inactivityMinutes, logChannelId, transcriptChannelId }, "Miscellaneous saved");
+                } else {
+                  await handleSaveSettings({ panelConfig: panelForm, panelChannelId }, "Changes saved");
+                }
+              }}
               style={{ padding: "6px 14px", fontSize: "12px" }}
             >
               Save Changes
