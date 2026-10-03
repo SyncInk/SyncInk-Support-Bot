@@ -99,12 +99,12 @@ const DEFAULT_PANEL_CONFIG: PanelConfig = {
 };
 
 const DEFAULT_CATEGORIES: TicketCategory[] = [
-  { value: "support", label: "General Support", emoji: "❓", emojiTag: "❓", roleGroup: "staffRoleIds" },
-  { value: "billing", label: "Billing & Purchases", emoji: "💳", emojiTag: "💳", roleGroup: "staffRoleIds" },
-  { value: "technical", label: "Technical Issues", emoji: "⚙️", emojiTag: "⚙️", roleGroup: "developerRoleIds" },
-  { value: "general", label: "General Inquiries", emoji: "💬", emojiTag: "💬", roleGroup: "staffRoleIds" },
-  { value: "sales", label: "Partnership & Affiliates", emoji: "🤝", emojiTag: "🤝", roleGroup: "ownerRoleIds" },
-  { value: "abuse", label: "Report Player / Staff Abuse", emoji: "🚨", emojiTag: "🚨", roleGroup: "adminRoleIds" }
+  { value: "product_support", label: "Product Support", emoji: "1553532855278116956", emojiTag: "<:SyncProductSupport:1553532855278116956>", roleGroup: "staffRoleIds" },
+  { value: "account_server", label: "Account & Server", emoji: "1553532858058936424", emojiTag: "<:accsvr:1553532858058936424>", roleGroup: "staffRoleIds" },
+  { value: "bug_report", label: "Bug Report", emoji: "1553532860408012850", emojiTag: "<:bugreport:1553532860408012850>", roleGroup: "developerRoleIds" },
+  { value: "staff_abuse", label: "Staff Abuse", emoji: "1553532862945562754", emojiTag: "<:staffabuse:1553532862945562754>", roleGroup: "adminRoleIds" },
+  { value: "partnership", label: "Partnership / Business", emoji: "1553532869950046340", emojiTag: "<:SyncPartnership:1553532869950046340>", roleGroup: "ownerRoleIds" },
+  { value: "other", label: "Other", emoji: "1553533697364598814", emojiTag: "<:others:1553533697364598814>", roleGroup: "staffRoleIds" }
 ];
 
 // Discord markdown and emoji tokenizer
