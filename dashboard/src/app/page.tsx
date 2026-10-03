@@ -107,14 +107,14 @@ export default function HomePage() {
       alpha: number;
     }> = [];
 
-    const particleCount = Math.min(Math.floor(window.innerWidth / 16), 80);
+    const particleCount = Math.min(Math.floor(window.innerWidth / 25), 45);
     for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: Math.random() * width,
         y: Math.random() * height,
         vx: (Math.random() - 0.5) * 0.3,
         vy: (Math.random() - 0.5) * 0.3,
-        radius: Math.random() * 1.6 + 0.6,
+        radius: Math.random() * 1.5 + 0.5,
         alpha: Math.random() * 0.45 + 0.15,
       });
     }
@@ -129,11 +129,11 @@ export default function HomePage() {
           const dy = particles[i].y - particles[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
 
-          if (dist < 115) {
+          if (dist < 90) {
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(157, 124, 255, ${0.1 * (1 - dist / 115)})`;
+            ctx.strokeStyle = `rgba(157, 124, 255, ${0.1 * (1 - dist / 90)})`;
             ctx.lineWidth = 0.85;
             ctx.stroke();
           }
@@ -177,21 +177,12 @@ export default function HomePage() {
       />
 
       {/* Radiant Glow Lights (Electric blue / Violet / Lilac) */}
-      <motion.div 
-        animate={{ scale: [1, 1.1, 1], opacity: [0.12, 0.2, 0.12] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[750px] bg-blue-600 rounded-full blur-[150px] pointer-events-none z-0" 
-      />
-      <motion.div 
-        animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.15, 0.1] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-        className="fixed bottom-1/4 right-10 w-[550px] h-[550px] bg-indigo-600 rounded-full blur-[140px] pointer-events-none z-0" 
-      />
-      <motion.div 
-        animate={{ scale: [1, 1.15, 1], opacity: [0.1, 0.18, 0.1] }}
-        transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 4 }}
-        className="fixed top-2/3 left-10 w-[480px] h-[480px] bg-cyan-500 rounded-full blur-[130px] pointer-events-none z-0" 
-      />
+      <div
+        className="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[750px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none z-0 will-change-transform" />
+      <div
+        className="fixed bottom-1/4 right-10 w-[550px] h-[550px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none z-0 will-change-transform" />
+      <div
+        className="fixed top-2/3 left-10 w-[480px] h-[480px] bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none z-0 will-change-transform" />
 
       {/* Navigation */}
       <PublicNavbar />
@@ -872,4 +863,5 @@ export default function HomePage() {
     </div>
   );
 }
+
 
