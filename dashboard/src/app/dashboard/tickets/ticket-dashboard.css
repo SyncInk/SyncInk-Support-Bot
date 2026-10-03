@@ -4167,3 +4167,117 @@ canvas {
   opacity: 0.3;
   cursor: not-allowed;
 }
+
+/* Command Explorer & Filter Pills */
+.command-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  padding: 10px 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.command-search-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 13px;
+  width: 100%;
+}
+.command-filter-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.command-pill {
+  padding: 6px 14px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.command-pill.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.commands-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.command-card {
+  background: rgba(10, 10, 10, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+.command-card:hover {
+  border-color: rgba(139, 76, 255, 0.4);
+  transform: translateY(-2px);
+}
+.command-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.command-name {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #a78bfa;
+}
+.command-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(139, 76, 255, 0.15);
+  color: #c4b5fd;
+  border: 1px solid rgba(139, 76, 255, 0.25);
+}
+.command-syntax {
+  font-family: monospace;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.command-copy-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s ease;
+}
+.command-copy-btn:hover {
+  color: #fff;
+}
+.command-desc {
+  font-size: 12px;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
