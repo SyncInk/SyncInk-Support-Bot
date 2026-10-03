@@ -43,10 +43,10 @@ export function PublicFooter() {
             </div>
           </div>
 
-          {/* Quick Navigation */}
+          {/* Support Server Docs */}
           <div className="space-y-2.5">
             <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-              Documentation & Guides
+              Support Server Docs
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
@@ -78,38 +78,47 @@ export function PublicFooter() {
               </li>
               <li>
                 <Link
-                  href="/apply"
+                  href="/privacy"
                   className="hover:text-white transition-colors flex items-center gap-1.5"
                 >
-                  <Sparkles className="h-3 w-3 text-purple-400" />
-                  <span>Join Team (Staff & Developer Apply)</span>
+                  <Lock className="h-3 w-3 text-emerald-400" />
+                  <span>Server Privacy Policy</span>
                 </Link>
               </li>
-            </ul>
-          </div>
-
-          {/* Legal & Policies */}
-          <div className="space-y-2.5">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-              Legal & Trust
-            </h4>
-            <ul className="space-y-2 text-xs">
               <li>
                 <Link
                   href="/terms"
                   className="hover:text-white transition-colors flex items-center gap-1.5"
                 >
                   <FileCheck className="h-3 w-3 text-blue-400" />
-                  <span>Terms of Use & Service</span>
+                  <span>Server Terms of Use</span>
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Bots Legal & Trust */}
+          <div className="space-y-2.5">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+              Bots Legal & Trust
+            </h4>
+            <ul className="space-y-2 text-xs">
+              <li>
+                <Link
+                  href="/bots/terms"
+                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                >
+                  <FileCheck className="h-3 w-3 text-blue-400" />
+                  <span>Bots Terms of Service</span>
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/privacy"
+                  href="/bots/privacy"
                   className="hover:text-white transition-colors flex items-center gap-1.5"
                 >
                   <Lock className="h-3 w-3 text-emerald-400" />
-                  <span>Privacy Policy & Data Security</span>
+                  <span>Bots Privacy Policy</span>
                 </Link>
               </li>
               <li>
@@ -119,6 +128,15 @@ export function PublicFooter() {
                 >
                   <Shield className="h-3 w-3 text-accent-cyan" />
                   <span>Multi-Bot Console & Telemetry</span>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/apply"
+                  className="hover:text-white transition-colors flex items-center gap-1.5 mt-2 pt-2 border-t border-white/10"
+                >
+                  <Sparkles className="h-3 w-3 text-purple-400" />
+                  <span>Join Team (Staff & Dev Apply)</span>
                 </Link>
               </li>
             </ul>

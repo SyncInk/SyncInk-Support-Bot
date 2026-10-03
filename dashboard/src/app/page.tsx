@@ -80,7 +80,7 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Canvas particle animation with luminous purple/violet gradient dots
+  // Canvas particle animation with luminous blue/violet gradient dots
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -169,18 +169,18 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-brand-purple selection:text-white relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-brand-blue selection:text-white relative overflow-x-hidden">
       {/* Background Particle Canvas */}
       <canvas
         ref={canvasRef}
         className="fixed inset-0 pointer-events-none z-0 opacity-85"
       />
 
-      {/* Radiant Glow Lights (Electric Purple / Violet / Lilac) */}
+      {/* Radiant Glow Lights (Electric blue / Violet / Lilac) */}
       <motion.div 
         animate={{ scale: [1, 1.1, 1], opacity: [0.12, 0.2, 0.12] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[750px] bg-purple-600 rounded-full blur-[150px] pointer-events-none z-0" 
+        className="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[750px] bg-blue-600 rounded-full blur-[150px] pointer-events-none z-0" 
       />
       <motion.div 
         animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.15, 0.1] }}
@@ -198,16 +198,16 @@ export default function HomePage() {
 
       <main className="relative z-10 flex-1">
         {/* ========================================================= */}
-        {/* HERO SECTION WITH PURPLE GRADIENT GREETING */}
+        {/* HERO SECTION WITH blue GRADIENT GREETING */}
         {/* ========================================================= */}
         <section className="pt-28 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-extrabold uppercase tracking-widest mb-6 shadow-[0_0_15px_rgba(157,124,255,0.25)]"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-extrabold uppercase tracking-widest mb-6 shadow-[0_0_15px_rgba(157,124,255,0.25)]"
           >
-            <Sparkles className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+            <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
             <span>SyncInk Ecosystem • syncink.site</span>
           </motion.div>
 
@@ -218,7 +218,7 @@ export default function HomePage() {
             className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.08] max-w-5xl mx-auto mb-6"
           >
             Discord Infrastructure{" "}
-            <span className="bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-300 bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(157,124,255,0.4)]">
+            <span className="bg-gradient-to-r from-blue-400 via-violet-400 to-indigo-300 bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(157,124,255,0.4)]">
               Built For Performance.
             </span>
           </motion.h1>
@@ -240,7 +240,7 @@ export default function HomePage() {
           >
             <a
               href="#bots"
-              className="px-7 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm sm:text-base transition-all shadow-[0_0_25px_rgba(147,51,234,0.4)] hover:shadow-[0_0_35px_rgba(147,51,234,0.6)] hover:-translate-y-1 flex items-center gap-2 duration-300"
+              className="px-7 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm sm:text-base transition-all shadow-[0_0_25px_rgba(147,51,234,0.4)] hover:shadow-[0_0_35px_rgba(147,51,234,0.6)] hover:-translate-y-1 flex items-center gap-2 duration-300"
             >
               <span>Explore All Bots</span>
               <ChevronRight className="w-4 h-4" />
@@ -248,9 +248,9 @@ export default function HomePage() {
 
             <Link
               href="/dashboard"
-              className="px-7 py-3.5 rounded-xl bg-[#121626] hover:bg-[#1a2034] text-white font-bold text-sm sm:text-base transition-all border border-purple-500/25 hover:border-purple-500/50 flex items-center gap-2 shadow-lg hover:-translate-y-1 duration-300"
+              className="px-7 py-3.5 rounded-xl bg-[#121626] hover:bg-[#1a2034] text-white font-bold text-sm sm:text-base transition-all border border-blue-500/25 hover:border-blue-500/50 flex items-center gap-2 shadow-lg hover:-translate-y-1 duration-300"
             >
-              <Layers className="w-4 h-4 text-purple-400" />
+              <Layers className="w-4 h-4 text-blue-400" />
               <span>Dedicated Dashboards</span>
             </Link>
 
@@ -258,7 +258,7 @@ export default function HomePage() {
               href="/apply"
               className="px-7 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 font-bold text-sm sm:text-base transition-all border border-white/10 flex items-center gap-2 hover:-translate-y-1 duration-300"
             >
-              <Sparkles className="w-4 h-4 text-purple-400" />
+              <Sparkles className="w-4 h-4 text-blue-400" />
               <span>Apply for Team</span>
             </Link>
           </motion.div>
@@ -273,13 +273,13 @@ export default function HomePage() {
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
             variants={fadeIn}
-            className="p-6 sm:p-8 rounded-3xl bg-[#0b0e1a]/90 border border-purple-500/25 backdrop-blur-xl shadow-2xl relative overflow-hidden group hover:border-purple-500/40 transition-colors duration-500"
+            className="p-6 sm:p-8 rounded-3xl bg-[#0b0e1a]/90 border border-blue-500/25 backdrop-blur-xl shadow-2xl relative overflow-hidden group hover:border-blue-500/40 transition-colors duration-500"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-transparent to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
             <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-white/[0.08] relative z-10">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-300">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-300">
                   <Activity className="w-5 h-5 animate-pulse" />
                 </div>
                 <div>
@@ -312,7 +312,7 @@ export default function HomePage() {
                 </div>
               </motion.div>
               <motion.div variants={fadeIn} className="text-center p-2">
-                <div className="text-3xl sm:text-5xl font-black text-purple-400 drop-shadow-[0_0_15px_rgba(192,132,252,0.4)]">25,000+</div>
+                <div className="text-3xl sm:text-5xl font-black text-blue-400 drop-shadow-[0_0_15px_rgba(192,132,252,0.4)]">25,000+</div>
                 <div className="text-xs sm:text-sm font-semibold text-slate-400 mt-1 uppercase tracking-wider">
                   Tickets Resolved
                 </div>
@@ -344,7 +344,7 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-xs font-bold uppercase tracking-widest text-purple-400 mb-2"
+              className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-2"
             >
               SyncInk Bot Suite
             </motion.div>
@@ -367,16 +367,16 @@ export default function HomePage() {
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={fadeIn}
-            className="rounded-[2.5rem] bg-[#0e0c1a]/95 border border-purple-500/30 p-8 sm:p-12 backdrop-blur-xl shadow-2xl relative overflow-hidden group hover:border-purple-500/60 transition-all duration-500 hover:shadow-[0_20px_80px_-20px_rgba(147,51,234,0.4)] hover:-translate-y-2"
+            className="rounded-[2.5rem] bg-[#0e0c1a]/95 border border-blue-500/30 p-8 sm:p-12 backdrop-blur-xl shadow-2xl relative overflow-hidden group hover:border-blue-500/60 transition-all duration-500 hover:shadow-[0_20px_80px_-20px_rgba(147,51,234,0.4)] hover:-translate-y-2"
           >
-            <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none transition-transform duration-700 group-hover:scale-110" />
+            <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none transition-transform duration-700 group-hover:scale-110" />
 
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 pb-10 border-b border-white/[0.08] relative z-10">
               <div className="flex items-start sm:items-center gap-6">
                 <motion.div 
                   whileHover={{ rotate: [0, -10, 10, 0], scale: 1.05 }}
                   transition={{ duration: 0.5 }}
-                  className="w-24 h-24 rounded-3xl bg-purple-600/20 border-2 border-purple-500/40 shadow-[0_0_30px_rgba(147,51,234,0.4)] flex items-center justify-center p-2.5 shrink-0"
+                  className="w-24 h-24 rounded-3xl bg-blue-600/20 border-2 border-blue-500/40 shadow-[0_0_30px_rgba(147,51,234,0.4)] flex items-center justify-center p-2.5 shrink-0"
                 >
                   <img
                     src="/ticket-logo.png"
@@ -389,7 +389,7 @@ export default function HomePage() {
                 </motion.div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-500/15 text-blue-300 border border-blue-500/30">
                       Support Tickets
                     </span>
                     <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
@@ -401,7 +401,7 @@ export default function HomePage() {
                   </div>
                   <h3 className="text-3xl sm:text-4xl font-black text-white drop-shadow-md">SyncInk© Ticket Bot</h3>
                   <p className="text-base text-slate-300 mt-3 max-w-2xl leading-relaxed">
-                    <strong className="text-purple-300 block mb-1">Powerful. Automated. Professional.</strong>
+                    <strong className="text-blue-300 block mb-1">Powerful. Automated. Professional.</strong>
                     A next-generation Discord ticket bot built for modern communities. SyncInk Ticket combines private-thread infrastructure, intelligent claim systems, automated transcripts, advanced transfers, and premium workflows into one seamless support experience.
                   </p>
                 </div>
@@ -412,7 +412,7 @@ export default function HomePage() {
                   href="https://discord.com/oauth2/authorize?client_id=1513075101992747158&permissions=361046068240&integration_type=0&scope=bot+applications.commands"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-6 py-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm transition-all shadow-[0_0_20px_rgba(147,51,234,0.35)] hover:shadow-[0_0_30px_rgba(147,51,234,0.6)] flex items-center gap-2 hover:scale-105"
+                  className="px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all shadow-[0_0_20px_rgba(147,51,234,0.35)] hover:shadow-[0_0_30px_rgba(147,51,234,0.6)] flex items-center gap-2 hover:scale-105"
                 >
                   <ExternalLink className="w-4 h-4" />
                   <span>Invite Bot</span>
@@ -421,7 +421,7 @@ export default function HomePage() {
                   href="/dashboard/tickets"
                   className="px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-sm transition-all border border-white/10 flex items-center gap-2 hover:scale-105"
                 >
-                  <Layers className="w-4 h-4 text-purple-400" />
+                  <Layers className="w-4 h-4 text-blue-400" />
                   <span>Open Dedicated Dashboard</span>
                 </Link>
               </div>
@@ -431,50 +431,72 @@ export default function HomePage() {
             <div className="pt-8 pb-4 relative z-10">
               <div className="flex items-center justify-between mb-4">
                  <h4 className="text-lg font-bold text-white flex items-center gap-2">
-                   <Sparkles className="w-5 h-5 text-purple-400" />
+                   <Sparkles className="w-5 h-5 text-blue-400" />
                    Fully Customizable Categories
                  </h4>
               </div>
               <div className="flex flex-wrap gap-3">
-                 {/* Product Support */}
-                 <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-purple-500/20 rounded-lg hover:bg-purple-500/10 transition-colors">
-                    <img src="https://cdn.discordapp.com/emojis/1553532855278116956.png" className="w-5 h-5" alt="Product Support" />
-                    <span className="text-sm font-semibold text-slate-200">Product Support</span>
+                 {/* General Request */}
+                 <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-brand-blue/20 rounded-lg hover:bg-brand-blue/10 transition-colors">
+                    <img src="https://cdn.discordapp.com/emojis/1513336781263732836.png" className="w-5 h-5" alt="General Request" />
+                    <span className="text-sm font-semibold text-slate-200">General Request</span>
                  </div>
-                 {/* Account Server */}
-                 <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-purple-500/20 rounded-lg hover:bg-purple-500/10 transition-colors">
-                    <img src="https://cdn.discordapp.com/emojis/1553532858058936424.png" className="w-5 h-5" alt="Account & Server" />
-                    <span className="text-sm font-semibold text-slate-200">Account & Server</span>
+                 {/* User Report */}
+                 <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-brand-blue/20 rounded-lg hover:bg-brand-blue/10 transition-colors">
+                    <img src="https://cdn.discordapp.com/emojis/1513336966681460856.png" className="w-5 h-5" alt="User Report" />
+                    <span className="text-sm font-semibold text-slate-200">User Report</span>
                  </div>
                  {/* Bug Report */}
-                 <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-purple-500/20 rounded-lg hover:bg-purple-500/10 transition-colors">
-                    <img src="https://cdn.discordapp.com/emojis/1553532860408012850.png" className="w-5 h-5" alt="Bug Report" />
+                 <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-brand-blue/20 rounded-lg hover:bg-brand-blue/10 transition-colors">
+                    <img src="https://cdn.discordapp.com/emojis/1513337174148513892.png" className="w-5 h-5" alt="Bug Report" />
                     <span className="text-sm font-semibold text-slate-200">Bug Report</span>
                  </div>
                  {/* Staff Abuse */}
-                 <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-purple-500/20 rounded-lg hover:bg-purple-500/10 transition-colors">
-                    <img src="https://cdn.discordapp.com/emojis/1553532862945562754.png" className="w-5 h-5" alt="Staff Abuse" />
+                 <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-brand-blue/20 rounded-lg hover:bg-brand-blue/10 transition-colors">
+                    <img src="https://cdn.discordapp.com/emojis/1513337285024677899.png" className="w-5 h-5" alt="Staff Abuse" />
                     <span className="text-sm font-semibold text-slate-200">Staff Abuse</span>
                  </div>
-                 {/* Partnership */}
-                 <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-purple-500/20 rounded-lg hover:bg-purple-500/10 transition-colors">
-                    <img src="https://cdn.discordapp.com/emojis/1553532869950046340.png" className="w-5 h-5" alt="Partnership" />
-                    <span className="text-sm font-semibold text-slate-200">Partnership</span>
-                 </div>
                  {/* Other */}
-                 <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-purple-500/20 rounded-lg hover:bg-purple-500/10 transition-colors">
-                    <img src="https://cdn.discordapp.com/emojis/1553533697364598814.png" className="w-5 h-5" alt="Other" />
+                 <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-brand-blue/20 rounded-lg hover:bg-brand-blue/10 transition-colors">
+                    <img src="https://cdn.discordapp.com/emojis/1513337572078911488.png" className="w-5 h-5" alt="Other" />
                     <span className="text-sm font-semibold text-slate-200">Other</span>
+                 </div>
+                 {/* Owner Contact */}
+                 <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-brand-blue/20 rounded-lg hover:bg-brand-blue/10 transition-colors">
+                    <img src="https://cdn.discordapp.com/emojis/1513337741105037332.png" className="w-5 h-5" alt="Owner Contact" />
+                    <span className="text-sm font-semibold text-slate-200">Owner Contact</span>
                  </div>
               </div>
             </div>
 
+            {/* Command Reference */}
+            <div className="pt-8 pb-4 relative z-10 border-t border-white/5 mt-8">
+              <h4 className="text-lg font-bold text-white mb-4">Core Commands & Features</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="text-sm font-bold text-brand-blue font-mono mb-1">/setup</div>
+                  <div className="text-xs text-slate-400">Initialize interactive ticket panel</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="text-sm font-bold text-brand-blue font-mono mb-1">/add user</div>
+                  <div className="text-xs text-slate-400">Add member to private thread</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="text-sm font-bold text-brand-blue font-mono mb-1">/claim</div>
+                  <div className="text-xs text-slate-400">Staff claim responsibility</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="text-sm font-bold text-brand-blue font-mono mb-1">/close</div>
+                  <div className="text-xs text-slate-400">Archive & generate transcript</div>
+                </div>
+              </div>
+            </div>
             {/* Feature Highlights Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 relative z-10">
               <motion.div whileHover={{ y: -5 }} className="p-6 rounded-2xl bg-black/40 border border-white/5 space-y-3 shadow-lg">
-                <div className="text-purple-300 font-bold text-base flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                    <Lock className="w-4 h-4 text-purple-400" />
+                <div className="text-blue-300 font-bold text-base flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <Lock className="w-4 h-4 text-blue-400" />
                   </div>
                   Private Threads Engine
                 </div>
@@ -484,9 +506,9 @@ export default function HomePage() {
               </motion.div>
 
               <motion.div whileHover={{ y: -5 }} className="p-6 rounded-2xl bg-black/40 border border-white/5 space-y-3 shadow-lg">
-                <div className="text-purple-300 font-bold text-base flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-purple-400" />
+                <div className="text-blue-300 font-bold text-base flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <Zap className="w-4 h-4 text-blue-400" />
                   </div>
                   Auto-Claim & Mentions
                 </div>
@@ -496,9 +518,9 @@ export default function HomePage() {
               </motion.div>
 
               <motion.div whileHover={{ y: -5 }} className="p-6 rounded-2xl bg-black/40 border border-white/5 space-y-3 shadow-lg">
-                <div className="text-purple-300 font-bold text-base flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                    <FileCheck className="w-4 h-4 text-purple-400" />
+                <div className="text-blue-300 font-bold text-base flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <FileCheck className="w-4 h-4 text-blue-400" />
                   </div>
                   Encrypted Transcripts
                 </div>
@@ -542,7 +564,7 @@ export default function HomePage() {
                     <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
                       Voice Channels
                     </span>
-                    <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-500/15 text-blue-300 border border-blue-500/30">
                       Join to Create
                     </span>
                     <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
@@ -576,6 +598,28 @@ export default function HomePage() {
               </div>
             </div>
 
+            {/* Command Reference */}
+            <div className="pt-8 pb-4 relative z-10 border-t border-white/5 mt-8">
+              <h4 className="text-lg font-bold text-white mb-4">Voice Control Panel Commands</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="text-sm font-bold text-cyan-400 font-mono mb-1">/voice lock</div>
+                  <div className="text-xs text-slate-400">Lock channel from outsiders</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="text-sm font-bold text-cyan-400 font-mono mb-1">/voice hide</div>
+                  <div className="text-xs text-slate-400">Make channel invisible</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="text-sm font-bold text-cyan-400 font-mono mb-1">/voice limit</div>
+                  <div className="text-xs text-slate-400">Set maximum user slots</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="text-sm font-bold text-cyan-400 font-mono mb-1">/voice kick</div>
+                  <div className="text-xs text-slate-400">Remove specific users</div>
+                </div>
+              </div>
+            </div>
             {/* Feature Highlights Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 relative z-10">
               <motion.div whileHover={{ y: -5 }} className="p-6 rounded-2xl bg-black/40 border border-white/5 space-y-3 shadow-lg">
@@ -661,6 +705,17 @@ export default function HomePage() {
               </div>
             </div>
 
+            {/* Command Reference */}
+            <div className="pt-6 relative z-10">
+              <h4 className="text-sm font-bold text-pink-300/70 mb-3 uppercase tracking-wider">Core Commands</h4>
+              <div className="flex flex-wrap gap-2 opacity-70">
+                <span className="bg-black/40 border border-pink-500/20 px-3 py-1 rounded text-xs text-pink-200 font-mono">/play</span>
+                <span className="bg-black/40 border border-pink-500/20 px-3 py-1 rounded text-xs text-pink-200 font-mono">/skip</span>
+                <span className="bg-black/40 border border-pink-500/20 px-3 py-1 rounded text-xs text-pink-200 font-mono">/stop</span>
+                <span className="bg-black/40 border border-pink-500/20 px-3 py-1 rounded text-xs text-pink-200 font-mono">/queue</span>
+                <span className="bg-black/40 border border-pink-500/20 px-3 py-1 rounded text-xs text-pink-200 font-mono">/filters</span>
+              </div>
+            </div>
             {/* Platform Badges */}
             <div className="pt-8 flex flex-wrap gap-3 relative z-10 opacity-70">
               {["Spotify", "YouTube Music", "SoundCloud", "Apple Music", "Deezer", "TIDAL"].map((plat) => (
@@ -682,25 +737,25 @@ export default function HomePage() {
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={fadeIn}
-            className="rounded-[2.5rem] bg-[#130a13]/95 border border-purple-500/40 p-8 sm:p-12 backdrop-blur-xl shadow-2xl relative overflow-hidden group hover:border-purple-500/70 transition-all duration-500 hover:shadow-[0_20px_80px_-20px_rgba(157,124,255,0.4)] hover:-translate-y-2"
+            className="rounded-[2.5rem] bg-[#130a13]/95 border border-blue-500/40 p-8 sm:p-12 backdrop-blur-xl shadow-2xl relative overflow-hidden group hover:border-blue-500/70 transition-all duration-500 hover:shadow-[0_20px_80px_-20px_rgba(157,124,255,0.4)] hover:-translate-y-2"
           >
-            <div className="absolute top-0 right-0 w-96 h-96 bg-brand-purple/15 rounded-full blur-3xl pointer-events-none transition-transform duration-700 group-hover:scale-110" />
+            <div className="absolute top-0 right-0 w-96 h-96 bg-brand-blue/15 rounded-full blur-3xl pointer-events-none transition-transform duration-700 group-hover:scale-110" />
 
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 pb-10 border-b border-white/[0.08] relative z-10">
               <div className="flex items-start sm:items-center gap-6">
                 <motion.div 
                   whileHover={{ scale: 1.05 }}
-                  className="w-24 h-24 rounded-3xl bg-purple-600/20 border-2 border-purple-500/40 shadow-[0_0_40px_rgba(157,124,255,0.4)] flex items-center justify-center shrink-0 overflow-hidden"
+                  className="w-24 h-24 rounded-3xl bg-blue-600/20 border-2 border-blue-500/40 shadow-[0_0_40px_rgba(157,124,255,0.4)] flex items-center justify-center shrink-0 overflow-hidden"
                 >
                   <img
-                    src="/syncink-s-purple.jpg"
+                    src="/syncink-s-blue.jpg"
                     alt="SyncInk Support Bot"
                     className="w-full h-full object-cover"
                   />
                 </motion.div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-[0_0_12px_rgba(157,124,255,0.25)]">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/40 shadow-[0_0_12px_rgba(157,124,255,0.25)]">
                       🛡️ Internal Support Server Bot • Non-Invitable
                     </span>
                     <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
@@ -715,12 +770,12 @@ export default function HomePage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3 shrink-0">
-                <span className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-purple-300 font-bold">
+                <span className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-blue-300 font-bold">
                   Server ID: 1520461877073674392
                 </span>
                 <Link
                   href="/dashboard/security"
-                  className="px-6 py-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm transition-all shadow-[0_0_20px_rgba(157,124,255,0.35)] hover:shadow-[0_0_30px_rgba(157,124,255,0.6)] flex items-center gap-2 hover:scale-105"
+                  className="px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all shadow-[0_0_20px_rgba(157,124,255,0.35)] hover:shadow-[0_0_30px_rgba(157,124,255,0.6)] flex items-center gap-2 hover:scale-105"
                 >
                   <Shield className="w-4 h-4" />
                   <span>Security Console</span>
@@ -731,9 +786,9 @@ export default function HomePage() {
             {/* Defense Highlights */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 relative z-10">
               <motion.div whileHover={{ y: -5 }} className="p-6 rounded-2xl bg-black/40 border border-white/5 space-y-3 shadow-lg">
-                <div className="text-purple-300 font-bold text-base flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                    <Shield className="w-4 h-4 text-purple-400" />
+                <div className="text-blue-300 font-bold text-base flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-blue-400" />
                   </div>
                   Velocity Raid Dampeners
                 </div>
@@ -743,9 +798,9 @@ export default function HomePage() {
               </motion.div>
 
               <motion.div whileHover={{ y: -5 }} className="p-6 rounded-2xl bg-black/40 border border-white/5 space-y-3 shadow-lg">
-                <div className="text-purple-300 font-bold text-base flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                    <Lock className="w-4 h-4 text-purple-400" />
+                <div className="text-blue-300 font-bold text-base flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <Lock className="w-4 h-4 text-blue-400" />
                   </div>
                   Quarantine Isolation
                 </div>
@@ -755,9 +810,9 @@ export default function HomePage() {
               </motion.div>
 
               <motion.div whileHover={{ y: -5 }} className="p-6 rounded-2xl bg-black/40 border border-white/5 space-y-3 shadow-lg">
-                <div className="text-purple-300 font-bold text-base flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                    <Activity className="w-4 h-4 text-purple-400" />
+                <div className="text-blue-300 font-bold text-base flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <Activity className="w-4 h-4 text-blue-400" />
                   </div>
                   Real-Time Forensics
                 </div>
@@ -776,13 +831,13 @@ export default function HomePage() {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="rounded-[2.5rem] bg-gradient-to-r from-[#120e24] via-[#10132b] to-[#150d24] border border-purple-500/30 p-10 sm:p-16 text-center relative overflow-hidden shadow-[0_20px_60px_-15px_rgba(147,51,234,0.3)]"
+            className="rounded-[2.5rem] bg-gradient-to-r from-[#120e24] via-[#10132b] to-[#150d24] border border-blue-500/30 p-10 sm:p-16 text-center relative overflow-hidden shadow-[0_20px_60px_-15px_rgba(147,51,234,0.3)]"
           >
             <div className="max-w-2xl mx-auto space-y-5 relative z-10">
               <motion.div 
                 animate={{ rotate: [0, 5, -5, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="w-16 h-16 rounded-3xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center mx-auto text-purple-400 shadow-[0_0_30px_rgba(157,124,255,0.4)]"
+                className="w-16 h-16 rounded-3xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center mx-auto text-blue-400 shadow-[0_0_30px_rgba(157,124,255,0.4)]"
               >
                 <Users className="w-8 h-8" />
               </motion.div>
@@ -793,7 +848,7 @@ export default function HomePage() {
               <div className="pt-6 flex flex-wrap items-center justify-center gap-4">
                 <Link
                   href="/apply"
-                  className="px-8 py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm sm:text-base transition-all shadow-[0_0_20px_rgba(157,124,255,0.4)] hover:shadow-[0_0_30px_rgba(157,124,255,0.6)] flex items-center gap-2 hover:-translate-y-1"
+                  className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm sm:text-base transition-all shadow-[0_0_20px_rgba(157,124,255,0.4)] hover:shadow-[0_0_30px_rgba(157,124,255,0.6)] flex items-center gap-2 hover:-translate-y-1"
                 >
                   <span>Apply Now (No Discord ID Input Needed)</span>
                   <ArrowRight className="w-5 h-5" />
@@ -817,3 +872,4 @@ export default function HomePage() {
     </div>
   );
 }
+

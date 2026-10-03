@@ -99,12 +99,12 @@ const DEFAULT_PANEL_CONFIG: PanelConfig = {
 };
 
 const DEFAULT_CATEGORIES: TicketCategory[] = [
-  { value: "product_support", label: "Product Support", emoji: "1553532855278116956", emojiTag: "<:SyncProductSupport:1553532855278116956>", roleGroup: "staffRoleIds" },
-  { value: "account_server", label: "Account & Server", emoji: "1553532858058936424", emojiTag: "<:accsvr:1553532858058936424>", roleGroup: "staffRoleIds" },
-  { value: "bug_report", label: "Bug Report", emoji: "1553532860408012850", emojiTag: "<:bugreport:1553532860408012850>", roleGroup: "developerRoleIds" },
-  { value: "staff_abuse", label: "Staff Abuse", emoji: "1553532862945562754", emojiTag: "<:staffabuse:1553532862945562754>", roleGroup: "adminRoleIds" },
-  { value: "partnership", label: "Partnership / Business", emoji: "1553532869950046340", emojiTag: "<:SyncPartnership:1553532869950046340>", roleGroup: "ownerRoleIds" },
-  { value: "other", label: "Other", emoji: "1553533697364598814", emojiTag: "<:others:1553533697364598814>", roleGroup: "staffRoleIds" }
+  { value: "general_request", label: "General Request", emoji: "1513336781263732836", emojiTag: "<:generalrequest:1513336781263732836>", roleGroup: "staffRoleIds" },
+  { value: "user_report", label: "User Report", emoji: "1513336966681460856", emojiTag: "<:userreport:1513336966681460856>", roleGroup: "staffRoleIds" },
+  { value: "bug_report", label: "Bug Report", emoji: "1513337174148513892", emojiTag: "<:bugreport:1513337174148513892>", roleGroup: "developerRoleIds" },
+  { value: "staff_abuse", label: "Staff Abuse", emoji: "1513337285024677899", emojiTag: "<:staffabuse:1513337285024677899>", roleGroup: "adminRoleIds" },
+  { value: "other", label: "Other", emoji: "1513337572078911488", emojiTag: "<:others:1513337572078911488>", roleGroup: "staffRoleIds" },
+  { value: "owner_contact", label: "Owner Contact", emoji: "1513337741105037332", emojiTag: "<:ownercontact:1513337741105037332>", roleGroup: "ownerRoleIds" }
 ];
 
 // Discord markdown and emoji tokenizer
