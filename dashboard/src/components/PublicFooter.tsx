@@ -127,7 +127,7 @@ export function PublicFooter() {
                   className="hover:text-white transition-colors flex items-center gap-1.5"
                 >
                   <Shield className="h-3 w-3 text-accent-cyan" />
-                  <span>Multi-Bot Console & Telemetry</span>
+                  <span>Security Console & Telemetry</span>
                 </Link>
               </li>
               <li>

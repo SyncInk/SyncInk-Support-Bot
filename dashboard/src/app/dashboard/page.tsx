@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -68,22 +68,22 @@ export default function MasterDashboardHub() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/[0.08]">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-purple/10 border border-brand-purple/30 text-brand-lilac text-xs font-bold uppercase tracking-wider mb-2">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Unified Bot Management Platform</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-red/10 border border-brand-red/30 text-brand-crimson text-xs font-bold uppercase tracking-wider mb-2">
+              <Shield className="w-3.5 h-3.5" />
+              <span>Internal Defense System</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              Bot Command Centers
+              Security Console
             </h1>
             <p className="text-sm text-slate-400 mt-1 max-w-xl">
-              Each SyncInk bot operates with its own dedicated, synchronized dashboard. Select a bot below to open its specialized console.
+              Real-time monitoring and automod control panel for the official SyncInk Support Server.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>All 3 Dedicated Consoles Online</span>
+              <span>Security Engine Online</span>
             </div>
           </div>
         </div>
