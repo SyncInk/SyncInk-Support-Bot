@@ -48,7 +48,7 @@ const nextConfig = {
       beforeFiles: [
         {
           source: '/dashboard/voice',
-          destination: 'https://syncink-voice.onrender.com/dashboard/voice',
+          destination: 'https://syncink-voice.onrender.com/dashboard/voice/',
         },
         {
           source: '/dashboard/voice/:path*',
