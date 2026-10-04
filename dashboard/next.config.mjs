@@ -55,6 +55,16 @@ const nextConfig = {
         destination: '/dashboard/tickets',
         permanent: false,
       },
+      {
+        source: '/dashboard/tickets/faq',
+        destination: '/dashboard/tickets/faqs',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/tickets/guide',
+        destination: '/dashboard/tickets/guides',
+        permanent: false,
+      },
     ];
   },
 };

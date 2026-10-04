@@ -3358,7 +3358,9 @@ canvas {
   .sidebar {
     position: fixed !important;
     top: 0;
-    left: -100%;
+    left: 0;
+    transform: translate3d(-100%, 0, 0);
+    will-change: transform;
     height: 100vh !important;
     width: 290px;
     z-index: 1000;
@@ -3366,10 +3368,10 @@ canvas {
     border: none;
     border-right: 1px solid var(--border-strong);
     background: var(--bg-panel-strong);
-    transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .dashboard-shell.mobile-menu-open .sidebar {
-    left: 0;
+    transform: translate3d(0, 0, 0);
   }
   .mobile-only-sidebar-links {
     display: block !important;
@@ -4280,4 +4282,59 @@ canvas {
   font-size: 12px;
   color: var(--text-soft);
   line-height: 1.5;
+}
+
+
+/* ==========================================================================
+   MOBILE 60FPS SMOOTH MOTION, TOUCH TARGETS & SAFARI ZOOM PREVENTION
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  html, body {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent iOS Safari 16px auto-zoom on inputs */
+  input, select, textarea, .text-input, .select-input {
+    font-size: 16px !important;
+  }
+
+  /* 44px minimum tap targets per Apple HIG */
+  .action-button,
+  .sidebar-nav button,
+  .tab-btn,
+  .mobile-menu-btn {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  /* 60fps hardware accelerated drawer */
+  .sidebar {
+    transform: translate3d(-100%, 0, 0) !important;
+    will-change: transform !important;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .dashboard-shell.mobile-menu-open .sidebar {
+    transform: translate3d(0, 0, 0) !important;
+  }
+
+  /* Smooth momentum table scrolling without clipping */
+  .table-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    border-radius: var(--radius-md);
+  }
+
+  .data-table {
+    min-width: 580px;
+  }
+
+  /* Safe area inset protection for mobile bottom nav / notch */
+  .content-shell,
+  .server-shell,
+  .invite-shell,
+  .login-wrapper {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+  }
 }

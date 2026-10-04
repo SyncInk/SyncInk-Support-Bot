@@ -56,6 +56,7 @@ import {
   User,
   X
 } from "lucide-react";
+import { DiscordTranscriptViewer, TranscriptTicket } from "@/components/DiscordTranscriptViewer";
 
 // Types
 interface DiscordUser {
@@ -422,7 +423,69 @@ export default function NativeTicketDashboardPage() {
   const [serverDropdownOpen, setServerDropdownOpen] = useState(false);
   const [serverSearch, setServerSearch] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [selectedTranscriptModal, setSelectedTranscriptModal] = useState<any>(null);
+
+  // Transcripts State & Handlers
+  const [selectedTranscript, setSelectedTranscript] = useState<TranscriptTicket | null>(null);
+  const [transcriptLoading, setTranscriptLoading] = useState(false);
+  const [transcriptError, setTranscriptError] = useState<string | null>(null);
+  const [transcriptFilter, setTranscriptFilter] = useState<"all" | "closed" | "open">("all");
+  const [transcriptSearch, setTranscriptSearch] = useState("");
+
+  const loadTicketTranscript = async (ticketId: string, guildId?: string | null) => {
+    if (!ticketId) return;
+    setTranscriptLoading(true);
+    setTranscriptError(null);
+    setSelectedTranscript({ ticketId, messages: [] });
+
+    try {
+      const gId = guildId || selectedGuildId;
+      const proxyUrl = gId
+        ? `/api/tickets/guilds/${gId}/tickets/${ticketId}/transcript`
+        : `/api/tickets/transcripts/${ticketId}`;
+
+      let res = await fetch(proxyUrl);
+      if (!res.ok) {
+        // Direct Render backend fallback
+        res = await fetch(`https://syncink-ticket.onrender.com/api/transcripts/${ticketId}`);
+      }
+
+      if (!res.ok) {
+        throw new Error(`Failed to load transcript for #${ticketId}`);
+      }
+
+      const data = await res.json();
+      setSelectedTranscript(data);
+    } catch (err: any) {
+      console.error("[TRANSCRIPTS] Error loading transcript:", err);
+      setTranscriptError(err.message || "Failed to load ticket transcript from database.");
+      const fromSnap = (snapshot?.tickets || []).find((t: any) => t.ticketId === ticketId);
+      if (fromSnap) {
+        setSelectedTranscript({
+          ...fromSnap,
+          messages: fromSnap.messages || [
+            {
+              authorTag: fromSnap.creator?.displayName || "Creator",
+              authorAvatar: fromSnap.creator?.avatarUrl || "https://cdn.discordapp.com/embed/avatars/0.png",
+              content: `Ticket #${ticketId} created in category ${fromSnap.category?.label || "Support"}.`,
+              timestamp: fromSnap.createdAt || Date.now(),
+              attachments: []
+            }
+          ]
+        });
+      }
+    } finally {
+      setTranscriptLoading(false);
+    }
+  };
+
+  const setSelectedTranscriptModal = (t: any) => {
+    if (!t) {
+      setSelectedTranscript(null);
+      setTranscriptError(null);
+      return;
+    }
+    loadTicketTranscript(t.ticketId || t.id, t.guildId || selectedGuildId);
+  };
 
   // Panel Form State
   const [panelForm, setPanelForm] = useState<PanelConfig>(DEFAULT_PANEL_CONFIG);
@@ -512,6 +575,7 @@ export default function NativeTicketDashboardPage() {
       }
       if (ticketIdParam) {
         setActiveTab("transcripts");
+        loadTicketTranscript(ticketIdParam);
       }
     }
   }, []);
@@ -2051,26 +2115,46 @@ export default function NativeTicketDashboardPage() {
                         <th>Creator</th>
                         <th>Staff Assigned</th>
                         <th>Status</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(snapshot?.tickets || []).length === 0 ? (
                         <tr>
-                          <td colSpan={5} style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)" }}>
+                          <td colSpan={6} style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)" }}>
                             No tickets recorded yet for this server.
                           </td>
                         </tr>
                       ) : (
                         (snapshot?.tickets || []).map((t: any) => (
                           <tr key={t.ticketId || t._id}>
-                            <td><strong>{t.ticketId}</strong></td>
+                            <td><strong>#{t.ticketId}</strong></td>
                             <td><span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>{renderCategoryEmoji(t.category?.emoji, t.category?.emojiTag)} {t.category?.label || "General"}</span></td>
-                            <td>{t.creator?.displayName || t.creator?.tag || "Unknown"}</td>
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <img
+                                  src={t.creator?.avatarUrl || "https://cdn.discordapp.com/embed/avatars/0.png"}
+                                  alt=""
+                                  style={{ width: "22px", height: "22px", borderRadius: "50%" }}
+                                />
+                                <span>{t.creator?.displayName || t.creator?.tag || "Unknown"}</span>
+                              </div>
+                            </td>
                             <td>{t.claimers?.map((c: any) => c.displayName).join(", ") || (t.claimer ? t.claimer.displayName : "Unclaimed")}</td>
                             <td>
                               <span className={`pill ${t.status === "open" ? "tone-success" : "tone-muted"}`}>
                                 {t.status || "open"}
                               </span>
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                onClick={() => loadTicketTranscript(t.ticketId, selectedGuildId || t.guildId)}
+                                className="action-button"
+                                style={{ padding: "6px 12px", fontSize: "12px", color: "var(--accent)" }}
+                              >
+                                View Chat
+                              </button>
                             </td>
                           </tr>
                         ))
@@ -2083,104 +2167,231 @@ export default function NativeTicketDashboardPage() {
           )}
 
           {/* TAB 6: TRANSCRIPTS */}
-          {activeTab === "transcripts" && (
-            <div className="page-stack">
-              <div className="page-header">
-                <div>
-                  <div className="page-eyebrow">Archive Management</div>
-                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
-                    <FileText size={26} color="var(--accent)" />
-                    Transcripts Archive
-                  </h1>
-                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
-                    Closed tickets with online transcript records.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="action-button tone-primary"
-                  disabled={busy}
-                  onClick={() => handleSaveSettings({ transcriptChannelId }, "Transcript destination saved")}
-                >
-                  <Save size={15} /> Save transcript channel
-                </button>
-              </div>
+          {activeTab === "transcripts" && (() => {
+            const allTickets = snapshot?.tickets || [];
+            const filtered = allTickets.filter((t: any) => {
+              if (transcriptFilter === "closed" && t.status !== "closed") return false;
+              if (transcriptFilter === "open" && t.status === "closed") return false;
+              if (transcriptSearch.trim()) {
+                const q = transcriptSearch.toLowerCase();
+                const matchId = String(t.ticketId || "").toLowerCase().includes(q);
+                const matchUser = String(t.creator?.displayName || t.creator?.username || t.creator?.tag || "").toLowerCase().includes(q);
+                const matchCategory = String(t.category?.label || t.type || "").toLowerCase().includes(q);
+                return matchId || matchUser || matchCategory;
+              }
+              return true;
+            });
 
-              <section className="section-card">
-                <div className="section-head">
+            return (
+              <div className="page-stack">
+                <div className="page-header">
                   <div>
-                    <h2>Transcript destination channel</h2>
-                    <p>If empty, transcripts fall back to the ticket log channel.</p>
+                    <div className="page-eyebrow">Archive Management</div>
+                    <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                      <FileText size={26} color="var(--accent)" />
+                      Transcripts Archive
+                    </h1>
+                    <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                      Browse and view complete Discord chat transcripts with attachments and author logs.
+                    </p>
                   </div>
-                </div>
-                <div className="field">
-                  <select
-                    className="select-input"
-                    value={transcriptChannelId}
-                    onChange={(e) => {
-                      setTranscriptChannelId(e.target.value);
-                      setIsDirty(true);
-                    }}
+                  <button
+                    type="button"
+                    className="action-button tone-primary"
+                    disabled={busy}
+                    onClick={() => handleSaveSettings({ transcriptChannelId }, "Transcript destination saved")}
                   >
-                    <option value="">Use the ticket log channel</option>
-                    {(snapshot?.resources?.textChannels || []).map((ch: any) => (
-                      <option key={ch.id} value={ch.id}>#{ch.name}</option>
-                    ))}
-                  </select>
+                    <Save size={15} /> Save transcript channel
+                  </button>
                 </div>
-              </section>
 
-              <section className="section-card">
-                <div className="section-head">
-                  <div>
-                    <h2>Closed ticket transcripts</h2>
+                <section className="section-card">
+                  <div className="section-head">
+                    <div>
+                      <h2>Transcript destination channel</h2>
+                      <p>If empty, transcripts fall back to the ticket log channel.</p>
+                    </div>
                   </div>
-                </div>
+                  <div className="field">
+                    <select
+                      className="select-input"
+                      value={transcriptChannelId}
+                      onChange={(e) => {
+                        setTranscriptChannelId(e.target.value);
+                        setIsDirty(true);
+                      }}
+                    >
+                      <option value="">Use the ticket log channel</option>
+                      {(snapshot?.resources?.textChannels || []).map((ch: any) => (
+                        <option key={ch.id} value={ch.id}>#{ch.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </section>
 
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Ticket</th>
-                        <th>Creator</th>
-                        <th>Closed Date</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(snapshot?.tickets || []).filter((t: any) => t.status === "closed").length === 0 ? (
+                <section className="section-card">
+                  <div className="section-head" style={{ flexWrap: "wrap", gap: "16px", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <h2>Discord Chat Transcripts ({filtered.length})</h2>
+                      <p>View complete encrypted conversations recorded by SyncInk Ticket Bot.</p>
+                    </div>
+
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px" }}>
+                      {/* Filter pills */}
+                      <div style={{ display: "flex", gap: "6px", background: "rgba(255,255,255,0.04)", padding: "4px", borderRadius: "10px", border: "1px solid var(--border)" }}>
+                        <button
+                          type="button"
+                          onClick={() => setTranscriptFilter("all")}
+                          style={{
+                            padding: "4px 10px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            borderRadius: "6px",
+                            border: "none",
+                            cursor: "pointer",
+                            background: transcriptFilter === "all" ? "var(--accent)" : "transparent",
+                            color: transcriptFilter === "all" ? "white" : "var(--text-soft)"
+                          }}
+                        >
+                          All ({allTickets.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTranscriptFilter("closed")}
+                          style={{
+                            padding: "4px 10px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            borderRadius: "6px",
+                            border: "none",
+                            cursor: "pointer",
+                            background: transcriptFilter === "closed" ? "var(--accent)" : "transparent",
+                            color: transcriptFilter === "closed" ? "white" : "var(--text-soft)"
+                          }}
+                        >
+                          Closed ({allTickets.filter((t: any) => t.status === "closed").length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTranscriptFilter("open")}
+                          style={{
+                            padding: "4px 10px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            borderRadius: "6px",
+                            border: "none",
+                            cursor: "pointer",
+                            background: transcriptFilter === "open" ? "var(--accent)" : "transparent",
+                            color: transcriptFilter === "open" ? "white" : "var(--text-soft)"
+                          }}
+                        >
+                          Open ({allTickets.filter((t: any) => t.status !== "closed").length})
+                        </button>
+                      </div>
+
+                      {/* Search input */}
+                      <div style={{ position: "relative", minWidth: "220px" }}>
+                        <Search size={14} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                        <input
+                          type="text"
+                          placeholder="Search transcripts..."
+                          value={transcriptSearch}
+                          onChange={(e) => setTranscriptSearch(e.target.value)}
+                          className="text-input"
+                          style={{ paddingLeft: "32px", fontSize: "12px", height: "36px" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="table-wrapper">
+                    <table className="data-table">
+                      <thead>
                         <tr>
-                          <td colSpan={4} style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)" }}>
-                            No closed ticket transcripts found yet.
-                          </td>
+                          <th>Ticket ID</th>
+                          <th>Category</th>
+                          <th>Creator</th>
+                          <th>Status</th>
+                          <th>Date</th>
+                          <th>Actions</th>
                         </tr>
-                      ) : (
-                        (snapshot?.tickets || [])
-                          .filter((t: any) => t.status === "closed")
-                          .map((t: any) => (
+                      </thead>
+                      <tbody>
+                        {filtered.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
+                              {transcriptSearch
+                                ? `No transcripts matching "${transcriptSearch}".`
+                                : "No ticket transcripts found for this filter."}
+                            </td>
+                          </tr>
+                        ) : (
+                          filtered.map((t: any) => (
                             <tr key={t.ticketId || t._id}>
-                              <td><strong>{t.ticketId}</strong></td>
-                              <td>{t.creator?.displayName || t.creator?.tag || "Unknown"}</td>
-                              <td>{t.closedAt ? new Date(t.closedAt).toLocaleDateString() : "Recently"}</td>
                               <td>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedTranscriptModal(t)}
-                                  className="action-button"
-                                  style={{ padding: "6px 12px", fontSize: "12px", color: "var(--accent)" }}
-                                >
-                                  View Online Transcript
-                                </button>
+                                <strong style={{ color: "white" }}>#{t.ticketId}</strong>
+                              </td>
+                              <td>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                                  {renderCategoryEmoji(t.category?.emoji, t.category?.emojiTag)}
+                                  {t.category?.label || "General"}
+                                </span>
+                              </td>
+                              <td>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  <img
+                                    src={t.creator?.avatarUrl || "https://cdn.discordapp.com/embed/avatars/0.png"}
+                                    alt=""
+                                    style={{ width: "24px", height: "24px", borderRadius: "50%" }}
+                                  />
+                                  <span>{t.creator?.displayName || t.creator?.tag || "Unknown"}</span>
+                                </div>
+                              </td>
+                              <td>
+                                <span className={`pill ${t.status === "open" ? "tone-success" : "tone-muted"}`}>
+                                  {t.status || "closed"}
+                                </span>
+                              </td>
+                              <td style={{ fontSize: "12px", color: "var(--text-soft)" }}>
+                                {t.closedAt
+                                  ? new Date(t.closedAt).toLocaleDateString()
+                                  : t.createdAt
+                                  ? new Date(t.createdAt).toLocaleDateString()
+                                  : "Recently"}
+                              </td>
+                              <td>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => loadTicketTranscript(t.ticketId, selectedGuildId || t.guildId)}
+                                    className="action-button tone-primary"
+                                    style={{ padding: "6px 14px", fontSize: "12px" }}
+                                  >
+                                    <Eye size={13} /> View Transcript
+                                  </button>
+
+                                  <a
+                                    href={`/dashboard/tickets/transcripts/${t.ticketId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="action-button"
+                                    style={{ padding: "6px 8px", fontSize: "12px" }}
+                                    title="Open Standalone Link"
+                                  >
+                                    <ExternalLink size={13} />
+                                  </a>
+                                </div>
                               </td>
                             </tr>
                           ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          )}
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
+            );
+          })()}
 
           {/* TAB 7: ANALYTICS */}
           {activeTab === "analytics" && (() => {
@@ -3454,60 +3665,39 @@ export default function NativeTicketDashboardPage() {
     </main>
       </div>
 
-      {/* Online Transcript Modal */}
-      {selectedTranscriptModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div style={{ background: "#1e1f22", borderRadius: "18px", border: "1px solid var(--border)", width: "min(680px, 100%)", maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <strong style={{ color: "white", fontSize: "16px" }}>Transcript: {selectedTranscriptModal.ticketId}</strong>
-              <button type="button" onClick={() => setSelectedTranscriptModal(null)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ padding: "24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px", color: "#dbdee1", fontFamily: "sans-serif", fontSize: "14px" }}>
-              <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#5865f2", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", color: "white" }}>
-                  U
-                </div>
-                <div>
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    <span style={{ fontWeight: 600, color: "white" }}>{selectedTranscriptModal.creator?.displayName || "Ticket Creator"}</span>
-                    <span style={{ fontSize: "11px", color: "#949ba4" }}>{new Date(selectedTranscriptModal.createdAt || Date.now()).toLocaleTimeString()}</span>
-                  </div>
-                  <p style={{ marginTop: "4px" }}>Hello, I need assistance with {selectedTranscriptModal.category?.label || "support"}.</p>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                <img src="/ticket-logo.png" alt="" style={{ width: 36, height: 36, borderRadius: "50%" }} />
-                <div>
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    <span style={{ fontWeight: 600, color: "#00a8fc" }}>SyncInk Ticket</span>
-                    <span className="discord-message-bot-tag">APP</span>
-                    <span style={{ fontSize: "11px", color: "#949ba4" }}>{new Date(selectedTranscriptModal.createdAt || Date.now()).toLocaleTimeString()}</span>
-                  </div>
-                  <p style={{ marginTop: "4px" }}>Thank you for reaching out! A staff member has been notified and will assist you shortly.</p>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                className="action-button tone-primary"
-                onClick={() => {
-                  const blob = new Blob([`SyncInk Ticket Transcript\nTicket: ${selectedTranscriptModal.ticketId}\nCategory: ${selectedTranscriptModal.category?.label}\nUser: ${selectedTranscriptModal.creator?.displayName}\nArchived at: ${new Date().toISOString()}`], { type: "text/plain" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `${selectedTranscriptModal.ticketId}-transcript.txt`;
-                  a.click();
-                }}
-              >
-                Download .txt Record
-              </button>
-            </div>
+      {/* Online Discord Transcript Modal */}
+      {(selectedTranscript || transcriptLoading || transcriptError) && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.85)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            zIndex: 150,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px"
+          }}
+          onClick={() => {
+            setSelectedTranscript(null);
+            setTranscriptError(null);
+          }}
+        >
+          <div
+            style={{ width: "min(920px, 100%)", maxHeight: "90vh", display: "flex", flexDirection: "column" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DiscordTranscriptViewer
+              ticket={selectedTranscript}
+              loading={transcriptLoading}
+              error={transcriptError}
+              onClose={() => {
+                setSelectedTranscript(null);
+                setTranscriptError(null);
+              }}
+            />
           </div>
         </div>
       )}
