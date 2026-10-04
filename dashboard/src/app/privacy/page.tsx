@@ -1,167 +1,232 @@
 "use client";
 
-import React from "react";
-import Link from "next/link";
-import {
-  Lock,
-  ShieldCheck,
-  Database,
-  EyeOff,
-  UserCheck,
-  FileCheck,
-  ExternalLink,
-} from "lucide-react";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Shield, Headphones, Ticket, Lock, CheckCircle2, Database, EyeOff, Trash2 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
 
-export default function PrivacyPage() {
-  const lastUpdated = "September 30, 2026";
+const BOTS = [
+  {
+    id: "support",
+    name: "SyncInk Support Bot",
+    icon: Shield,
+    color: "text-brand-crimson",
+    bgLight: "bg-brand-red/10",
+    border: "border-brand-red/30",
+    bgActive: "bg-brand-red/20",
+    lastUpdated: "October 2026",
+    sections: [
+      {
+        title: "1. Data Collection & Security",
+        content: "The SyncInk Support Bot automatically collects server telemetry, user violation counts, and quarantine status strictly for the purpose of maintaining server security and defending against raid attacks."
+      },
+      {
+        title: "2. Information We Monitor",
+        content: "To perform its security duties, the Support Bot temporarily buffers:",
+        points: [
+          "Chat messages (for spam and NSFW detection) which are discarded immediately after analysis.",
+          "Account creation dates and join velocities (to trigger anti-raid dampeners).",
+          "Automod infraction logs and warning histories."
+        ]
+      },
+      {
+        title: "3. No Third-Party Selling",
+        content: "We never sell your data, distribute personal information to third-party advertisers, or use your warning history for any purpose other than maintaining the safety of the official Support Server."
+      },
+      {
+        title: "4. Data Deletion",
+        content: "If you leave the Support Server, your warning points decay over time. Permanent bans are retained indefinitely in our security database to prevent evasion."
+      }
+    ]
+  },
+  {
+    id: "ticket",
+    name: "SyncInk Ticket Bot",
+    icon: Ticket,
+    color: "text-brand-purple",
+    bgLight: "bg-purple-500/10",
+    border: "border-purple-500/30",
+    bgActive: "bg-purple-500/20",
+    lastUpdated: "October 2026",
+    sections: [
+      {
+        title: "1. Ticket Data & Transcripts",
+        content: "The Ticket Bot is designed to securely manage private support inquiries. When a ticket is closed, the bot generates a secure HTML transcript of the conversation."
+      },
+      {
+        title: "2. Encryption & Storage",
+        content: "All transcripts are stored using AES-256 encryption. Only authorized server staff members with specific role permissions can decrypt and view these logs via the dashboard."
+      },
+      {
+        title: "3. Data Retention",
+        content: "We retain ticket data for server administrators to reference. However, server owners may configure automatic deletion policies to purge transcripts older than 30, 60, or 90 days."
+      },
+      {
+        title: "4. Personal Identifiable Information (PII)",
+        content: "We strongly advise against sharing passwords, credit cards, or sensitive PII in tickets. SyncInk is not responsible for data exposure caused by compromised server staff accounts."
+      }
+    ]
+  },
+  {
+    id: "voice",
+    name: "SyncInk Voice Bot",
+    icon: Headphones,
+    color: "text-cyan-400",
+    bgLight: "bg-cyan-500/10",
+    border: "border-cyan-500/30",
+    bgActive: "bg-cyan-500/20",
+    lastUpdated: "July 2026",
+    sections: [
+      {
+        title: "1. Voice Channel Monitoring",
+        content: "The Voice Bot does NOT record, listen to, or store any audio transmitted in the dynamic voice channels. It strictly manages the creation and deletion of the channels themselves."
+      },
+      {
+        title: "2. Metadata Collection",
+        content: "To function, the bot requires access to:",
+        points: [
+          "Voice state updates (when you join/leave a channel).",
+          "Your Discord User ID (to assign you as the room owner).",
+          "Channel configurations (names, limits, bitrates)."
+        ]
+      },
+      {
+        title: "3. Temporary Data",
+        content: "Once all users leave a temporary voice channel, the channel is deleted by the bot, and all associated tracking data for that specific session is immediately purged from our active memory."
+      },
+      {
+        title: "4. User Privacy",
+        content: "Your custom room names and settings are saved to your profile so they persist across sessions. You may request deletion of your Voice Bot profile data at any time in our Support Server."
+      }
+    ]
+  }
+];
 
-  const sections = [
-    {
-      id: "overview",
-      icon: ShieldCheck,
-      title: "1. Privacy Commitment & Overview",
-      content:
-        "SyncInk is committed to maintaining high standards of data security, privacy, and transparency. This Privacy Policy details how we collect, process, and safeguard information across our Discord bots (Ticket Bot, Voice Bot, Security Bot), the live web dashboard, and official community channels. We never sell user data, distribute personal information to third-party advertisers, or access private member communications.",
-    },
-    {
-      id: "collection",
-      icon: Database,
-      title: "2. Information We Collect",
-      content:
-        "We collect only the minimal data strictly necessary to execute Discord bot features, community safety, and automated moderation:",
-      points: [
-        "Discord Identification: Public Discord User IDs, guild/server IDs, and channel IDs required to route bot commands, voice rooms, and ticket threads.",
-        "Moderation Sanction Ledger: Records of issued warnings, timeouts, kicks, bans, and automod strikes (including case ID, user ID, moderator ID, action type, reason, and timestamp) stored in our secure PostgreSQL database (mod_cases).",
-        "Security & Anti-Spam Telemetry: Temporary message frequency and rate-limit counters used exclusively in-memory by our anti-raid, anti-spam, and anti-nuke defense engines.",
-        "AI Assistant Session Data: Transient question-and-answer context used strictly to provide relevant conversational responses during an active AI interaction.",
-        "What We DO NOT Collect: We never collect, request, or store personal passwords, private payment card information, physical addresses, or off-platform biometric data.",
-      ],
-    },
-    {
-      id: "security",
-      icon: Lock,
-      title: "3. How Data Is Stored & Protected",
-      content:
-        "All server data is housed in enterprise-grade PostgreSQL databases with end-to-end SSL/TLS encryption in transit and secure encrypted volumes at rest. Administrative web dashboard access is protected via role-based Discord OAuth authorization and encrypted session cookies.",
-    },
-    {
-      id: "third-party",
-      icon: EyeOff,
-      title: "4. Third-Party Service Providers",
-      content:
-        "To deliver fast, reliable services, SyncInk interfaces with select vetted technical infrastructure providers:",
-      points: [
-        "Discord Inc.: The platform through which our bots operate, governed by Discord's Developer Terms and Privacy Policy.",
-        "Vercel Inc.: Provides secure cloud hosting and edge runtime execution for the public documentation and management dashboard.",
-        "AI Model API Providers (OpenRouter, Google Gemini, OpenAI): Query prompts sent to the SyncInk AI Assistant are processed securely via encrypted API endpoints without permanent profile indexing.",
-      ],
-    },
-    {
-      id: "retention",
-      icon: UserCheck,
-      title: "5. Data Retention & User Rights",
-      content:
-        "Moderation cases and audit logs are retained to maintain server safety, facilitate fair appeals, and prevent ban evasion. Users hold the right to request information regarding their stored records or request data deletion under appropriate circumstances. To file a data inquiry, submit a ticket in # 🎟️・create-ticket under the 'Account & Server' category.",
-    },
-    {
-      id: "changes",
-      icon: FileCheck,
-      title: "6. Updates to this Policy",
-      content:
-        "SyncInk may periodically update this Privacy Policy to reflect technical enhancements or regulatory compliance. Any significant modifications will be announced in # 📢・updates on the official Discord server.",
-    },
-  ];
+export default function UnifiedPrivacyPage() {
+  const [activeTab, setActiveTab] = useState(BOTS[0].id);
+  const activeBot = BOTS.find(b => b.id === activeTab)!;
 
   return (
-    <div className="min-h-screen bg-[#080a0f] text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#080a0f] text-slate-100 flex flex-col selection:bg-brand-purple selection:text-white">
       <PublicNavbar />
 
-      {/* Hero Header */}
-      <section className="relative overflow-hidden pt-12 pb-14 border-b border-white/[0.08] bg-gradient-to-b from-[#111624] via-[#0b0e15] to-[#080a0f]">
+      {/* Header Banner */}
+      <section className="relative overflow-hidden pt-16 pb-12 border-b border-white/[0.08] bg-gradient-to-b from-[#111624] via-[#0b0e15] to-[#080a0f]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/50 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-4">
             <Lock className="h-3.5 w-3.5" />
-            Data Protection & Trust
+            Unified Data Privacy
           </div>
-
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-            Privacy Policy & Data Security
+          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+            Privacy Policy Hub
           </h1>
-
-          <p className="mt-3 text-xs sm:text-sm text-slate-400">
-            Last Updated: {lastUpdated} • Public Access (No Login Required)
+          <p className="mt-4 text-sm text-slate-400 max-w-2xl mx-auto">
+            Select a SyncInk ecosystem bot below to understand exactly how it handles your data, transcripts, and personal information.
           </p>
         </div>
       </section>
 
-      {/* Main Privacy Body */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1 w-full space-y-8">
-        <div className="rounded-2xl border border-white/[0.08] bg-[#0e121d] p-6 sm:p-8 space-y-8">
-          <div className="border-b border-white/[0.06] pb-4">
-            <h2 className="text-base sm:text-lg font-bold text-white">
-              SyncInk Platform Privacy & Telemetry Standards
-            </h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Transparent, privacy-first infrastructure designed to protect Discord communities.
-            </p>
-          </div>
-
-          <div className="space-y-8">
-            {sections.map((sec) => {
-              const Icon = sec.icon;
-              return (
-                <div key={sec.id} className="space-y-3">
-                  <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2.5">
-                    <Icon className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-                    <span>{sec.title}</span>
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    {sec.content}
-                  </p>
-                  {sec.points && (
-                    <ul className="list-disc list-inside space-y-1.5 pl-2 text-xs text-slate-400">
-                      {sec.points.map((pt, idx) => (
-                        <li key={idx} className="leading-relaxed">
-                          {pt}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Bottom navigation links */}
-          <div className="pt-6 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
-            <div className="flex items-center gap-4">
-              <Link href="/terms" className="text-blue-400 hover:underline font-semibold">
-                Terms of Use
-              </Link>
-              <span>•</span>
-              <Link href="/rules" className="text-brand-crimson hover:underline font-semibold">
-                Server Rules
-              </Link>
-              <span>•</span>
-              <Link href="/faq" className="text-amber-400 hover:underline font-semibold">
-                FAQ
-              </Link>
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1 w-full flex flex-col lg:flex-row gap-8">
+        
+        {/* Sidebar Tabs */}
+        <div className="lg:w-80 flex-shrink-0">
+          <div className="sticky top-24 space-y-3">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-4">Select a Service</h2>
+            <div className="flex flex-col gap-3">
+              {BOTS.map((bot) => {
+                const isActive = activeTab === bot.id;
+                const Icon = bot.icon;
+                return (
+                  <button
+                    key={bot.id}
+                    onClick={() => setActiveTab(bot.id)}
+                    className={`relative flex items-center gap-4 w-full p-4 rounded-2xl text-left transition-all duration-300 ${
+                      isActive 
+                        ? `bg-white/[0.04] border ${bot.border} shadow-lg` 
+                        : 'border border-transparent hover:bg-white/[0.02] text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeTabIndicatorPrivacy"
+                        className={`absolute inset-0 rounded-2xl border ${bot.border} bg-gradient-to-r from-transparent to-white/[0.01]`}
+                        initial={false}
+                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      />
+                    )}
+                    <div className={`relative z-10 p-2.5 rounded-xl ${isActive ? bot.bgActive : 'bg-white/5'} ${isActive ? bot.color : 'text-slate-400'}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className={`relative z-10 font-bold text-[15px] ${isActive ? 'text-white' : ''}`}>
+                      {bot.name}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <a
-              href="https://discord.com/channels/1520457643842342912/1520460764937322566"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-indigo-400 hover:underline flex items-center gap-1 font-semibold"
-            >
-              <span>Data Rights Inquiries via Ticket</span>
-              <ExternalLink className="h-3 w-3" />
-            </a>
           </div>
         </div>
-      </main>
 
+        {/* Dynamic Content Area */}
+        <div className="flex-1 min-w-0">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="bg-[#0e121d] border border-white/[0.08] rounded-[2rem] p-6 sm:p-10 shadow-2xl relative overflow-hidden"
+            >
+              {/* Background Glow */}
+              <div className={`absolute top-0 right-0 w-72 h-72 rounded-full blur-[120px] pointer-events-none opacity-30 ${activeBot.bgLight}`} />
+
+              <div className="relative z-10">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/[0.06] pb-6 mb-8 gap-4">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-3">
+                      <activeBot.icon className={`w-7 h-7 sm:w-8 sm:h-8 ${activeBot.color}`} />
+                      {activeBot.name} Privacy
+                    </h2>
+                    <p className="text-sm text-slate-400 mt-2">
+                      Full transparency on how we process and protect your data.
+                    </p>
+                  </div>
+                  <span className={`self-start sm:self-auto px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${activeBot.border} ${activeBot.bgLight} ${activeBot.color}`}>
+                    Updated {activeBot.lastUpdated}
+                  </span>
+                </div>
+
+                <div className="space-y-10">
+                  {activeBot.sections.map((sec, idx) => (
+                    <div key={idx} className="space-y-3">
+                      <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                        <span className={activeBot.color}>§</span> {sec.title}
+                      </h3>
+                      <p className="text-sm text-slate-300 leading-relaxed">
+                        {sec.content}
+                      </p>
+                      {sec.points && (
+                        <div className="mt-3 space-y-2.5 pl-2">
+                          {sec.points.map((pt, pIdx) => (
+                            <div key={pIdx} className="flex items-start gap-2.5 text-sm text-slate-400">
+                              <CheckCircle2 className={`w-4 h-4 shrink-0 mt-0.5 ${activeBot.color}`} />
+                              <span className="leading-relaxed">{pt}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+      </main>
       <PublicFooter />
     </div>
   );
