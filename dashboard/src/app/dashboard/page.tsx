@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -89,195 +89,69 @@ export default function MasterDashboardHub() {
         </div>
 
         {/* 3 Distinct Bot Dashboard Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* CARD 1: TICKET BOT DASHBOARD */}
-          <div className="p-7 rounded-3xl bg-gradient-to-b from-[#120d24] to-[#0c0a18] border border-purple-500/30 shadow-2xl relative overflow-hidden flex flex-col justify-between group hover:border-purple-500/60 transition-all duration-300">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="flex justify-center max-w-7xl mx-auto px-4 w-full">
+          {/* CARD 1: SUPPORT SERVER SECURITY DASHBOARD */}
+          <div className="w-full max-w-2xl p-8 rounded-[2rem] bg-gradient-to-b from-[#180d12] to-[#0d070a] border border-brand-red/30 shadow-[0_20px_60px_-15px_rgba(231,76,60,0.2)] relative overflow-hidden flex flex-col justify-between group hover:border-brand-red/60 hover:shadow-[0_20px_60px_-15px_rgba(231,76,60,0.4)] transition-all duration-500 hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-brand-red/15 rounded-full blur-3xl pointer-events-none group-hover:bg-brand-red/25 transition-all duration-500" />
 
             <div>
-              <div className="flex items-center justify-between mb-5">
-                <div className="w-14 h-14 rounded-2xl bg-purple-600/20 border-2 border-purple-500/40 flex items-center justify-center p-2 shadow-[0_0_20px_rgba(147,51,234,0.35)]">
-                  <img
-                    src="/ticket-logo.png"
-                    alt="Ticket Bot"
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = "none";
-                    }}
-                  />
-                </div>
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                  Dedicated Console
-                </span>
-              </div>
-
-              <h2 className="text-2xl font-black text-white group-hover:text-purple-300 transition-colors">
-                SyncInk Ticket Bot
-              </h2>
-              <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-                Full copy of the dedicated Ticket Dashboard from <code>D:\syncink ticket bot</code>. Configure private threads, custom emojis, panels, and encrypted transcripts.
-              </p>
-
-              {/* Live Feature Highlights */}
-              <div className="mt-5 space-y-2 text-xs">
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
-                  <span className="text-slate-400">Operating Mode</span>
-                  <span className="font-bold text-purple-400">Private Threads (No Spam)</span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
-                  <span className="text-slate-400">Configured Categories</span>
-                  <span className="font-bold text-white">6 Active Departments</span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
-                  <span className="text-slate-400">Auto-Transcripts</span>
-                  <span className="font-bold text-emerald-400">100% Retained HTML</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 space-y-2.5">
-              <Link
-                href="/dashboard/tickets"
-                className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs sm:text-sm transition-all shadow-[0_0_20px_rgba(147,51,234,0.4)] flex items-center justify-center gap-2"
-              >
-                <span>Launch Ticket Dashboard</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link
-                href="/dashboard/tickets?tab=transcripts"
-                className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition-all border border-white/10 flex items-center justify-center gap-1.5"
-              >
-                <span>Browse Transcripts Archive</span>
-                <ChevronRight className="w-3 h-3" />
-              </Link>
-            </div>
-          </div>
-
-          {/* CARD 2: VOICE BOT DASHBOARD */}
-          <div className="p-7 rounded-3xl bg-gradient-to-b from-[#0c1322] to-[#090d16] border border-cyan-500/30 shadow-2xl relative overflow-hidden flex flex-col justify-between group hover:border-cyan-500/60 transition-all duration-300">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
-
-            <div>
-              <div className="flex items-center justify-between mb-5">
-                <div className="w-14 h-14 rounded-2xl bg-cyan-600/20 border-2 border-cyan-500/40 flex items-center justify-center p-2 shadow-[0_0_20px_rgba(6,182,212,0.35)]">
-                  <img
-                    src="/voice-logo.png"
-                    alt="Voice Bot"
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = "none";
-                    }}
-                  />
-                </div>
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                  Dedicated Console
-                </span>
-              </div>
-
-              <h2 className="text-2xl font-black text-white group-hover:text-cyan-300 transition-colors">
-                SyncInk Voice Bot
-              </h2>
-              <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-                Full copy of the dedicated Voice Dashboard from <code>D:\SyncInk Voice</code>. Manage Join-to-Create hubs, custom naming templates, bitrate tuning, and auto-purge rules.
-              </p>
-
-              {/* Live Feature Highlights */}
-              <div className="mt-5 space-y-2 text-xs">
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
-                  <span className="text-slate-400">Generator Engine</span>
-                  <span className="font-bold text-cyan-400">Dynamic Join-to-Create</span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
-                  <span className="text-slate-400">Audio Bitrate</span>
-                  <span className="font-bold text-white">Up to 384 kbps Lossless</span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
-                  <span className="text-slate-400">Ghost Prevention</span>
-                  <span className="font-bold text-emerald-400">Auto-Purge Empty Rooms</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 space-y-2.5">
-              <Link
-                href="/dashboard/voice"
-                className="w-full py-3 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs sm:text-sm transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] flex items-center justify-center gap-2"
-              >
-                <span>Launch Voice Dashboard</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link
-                href="/dashboard/voice"
-                className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition-all border border-white/10 flex items-center justify-center gap-1.5"
-              >
-                <span>Voice Hub Controls</span>
-                <ChevronRight className="w-3 h-3" />
-              </Link>
-            </div>
-          </div>
-
-          {/* CARD 3: SUPPORT SERVER SECURITY DASHBOARD */}
-          <div className="p-7 rounded-3xl bg-gradient-to-b from-[#180d12] to-[#0d070a] border border-brand-red/30 shadow-2xl relative overflow-hidden flex flex-col justify-between group hover:border-brand-red/60 transition-all duration-300">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-brand-red/15 rounded-full blur-3xl pointer-events-none" />
-
-            <div>
-              <div className="flex items-center justify-between mb-5">
-                <div className="w-14 h-14 rounded-2xl bg-brand-red/20 border-2 border-brand-red/40 flex items-center justify-center p-2 shadow-[0_0_20px_rgba(231,76,60,0.35)]">
+              <div className="flex items-center justify-between mb-6">
+                <div className="w-16 h-16 rounded-full bg-brand-red/10 border-2 border-brand-red/40 flex items-center justify-center p-1 shadow-[0_0_25px_rgba(231,76,60,0.4)] overflow-hidden">
                   <img
                     src="/syncink-s-purple.jpg"
                     alt="SyncInk Shield"
-                    className="w-full h-full object-cover rounded-xl"
+                    className="w-full h-full object-cover rounded-full"
                   />
                 </div>
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-brand-red/20 text-brand-crimson border border-brand-red/30">
+                <span className="px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-brand-red/20 text-brand-crimson border border-brand-red/30 shadow-sm">
                   Internal Server Shield
                 </span>
               </div>
 
-              <h2 className="text-2xl font-black text-white group-hover:text-red-300 transition-colors">
-                Support Server Security
+              <h2 className="text-3xl font-black text-white group-hover:text-red-300 transition-colors">
+                Support Security
               </h2>
-              <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+              <p className="text-sm text-slate-300 mt-3 leading-relaxed">
                 Non-invitable security & automod bot dedicated strictly to keeping the official SyncInk Support Server safe with real-time raid velocity dampeners and auto-quarantine.
               </p>
 
               {/* Live Feature Highlights */}
-              <div className="mt-5 space-y-2 text-xs">
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
-                  <span className="text-slate-400">Raid State</span>
+              <div className="mt-6 space-y-2.5 text-sm">
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
+                  <span className="text-slate-400 font-medium">Raid State</span>
                   <span
                     className={`font-bold ${
-                      raidState === "NORMAL" ? "text-emerald-400" : "text-red-400"
+                      raidState === "NORMAL" ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" : "text-red-400 animate-pulse"
                     }`}
                   >
                     {raidState}
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
-                  <span className="text-slate-400">Quarantine Inmates</span>
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
+                  <span className="text-slate-400 font-medium">Quarantine Inmates</span>
                   <span className="font-bold text-white">
                     {loading ? "..." : `${securityStats.jailedCount} isolated`}
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
-                  <span className="text-slate-400">AutoMod Violations</span>
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
+                  <span className="text-slate-400 font-medium">AutoMod Violations</span>
                   <span className="font-bold text-amber-400">
-                    {loading ? "..." : `${securityStats.violationsCount} strikes recorded`}
+                    {loading ? "..." : `${securityStats.violationsCount} strikes`}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-8 space-y-2.5">
+            <div className="mt-8 space-y-3">
               <Link
                 href="/dashboard/security"
-                className="w-full py-3 px-4 rounded-xl bg-brand-red hover:bg-brand-crimson text-white font-bold text-xs sm:text-sm transition-all shadow-[0_0_20px_rgba(231,76,60,0.4)] flex items-center justify-center gap-2"
+                className="w-full py-3.5 px-4 rounded-2xl bg-brand-red hover:bg-brand-crimson text-white font-bold text-sm transition-all shadow-[0_0_20px_rgba(231,76,60,0.4)] hover:shadow-[0_0_30px_rgba(231,76,60,0.6)] flex items-center justify-center gap-2 transform hover:scale-[1.02]"
               >
-                <span>Launch Security Console</span>
+                <span>Launch Console</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <div className="w-full py-2.5 px-4 rounded-xl bg-white/5 text-slate-400 text-xs font-semibold text-center border border-white/5">
-                Official SyncInk Support Server (1520461877073674392)
+              <div className="w-full py-3 px-4 rounded-2xl bg-white/5 text-slate-400 text-xs font-semibold text-center border border-white/5">
+                Official SyncInk Support Server
               </div>
             </div>
           </div>
@@ -288,3 +162,4 @@ export default function MasterDashboardHub() {
     </div>
   );
 }
+
