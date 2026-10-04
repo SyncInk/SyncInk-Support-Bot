@@ -97,7 +97,7 @@ export function PublicNavbar() {
               className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-white bg-[#161b26] border border-white/10 hover:border-white/20 hover:bg-[#1c2331] transition-all duration-200 shadow-sm"
             >
               <Shield className="h-3.5 w-3.5 text-accent-cyan" />
-              <span>Security Console</span>
+              <span>Multi-Bot Console</span>
             </Link>
 
             <a
@@ -165,7 +165,7 @@ export function PublicNavbar() {
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-[#161b26] border border-white/10"
             >
               <Shield className="h-4 w-4 text-accent-cyan" />
-              <span>Security Console</span>
+              <span>Multi-Bot Console</span>
             </Link>
             <a
               href="https://discord.gg/syncink"

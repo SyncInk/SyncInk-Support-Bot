@@ -68,30 +68,92 @@ export default function MasterDashboardHub() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/[0.08]">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-red/10 border border-brand-red/30 text-brand-crimson text-xs font-bold uppercase tracking-wider mb-2">
-              <Shield className="w-3.5 h-3.5" />
-              <span>Internal Defense System</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#5865F2]/10 border border-[#5865F2]/30 text-[#5865F2] text-xs font-bold uppercase tracking-wider mb-2">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Unified Bot Management</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              Security Console
+              Bot Command Centers
             </h1>
             <p className="text-sm text-slate-400 mt-1 max-w-xl">
-              Real-time monitoring and automod control panel for the official SyncInk Support Server.
+              Select a bot below to open its specialized console and manage your server settings.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Security Engine Online</span>
+              <span>All 2 Dedicated Consoles Online</span>
             </div>
           </div>
         </div>
 
-        {/* 3 Distinct Bot Dashboard Cards */}
-        <div className="flex justify-center max-w-7xl mx-auto px-4 w-full">
-          {/* CARD 1: SUPPORT SERVER SECURITY DASHBOARD */}
-          <div className="w-full max-w-2xl p-8 rounded-[2rem] bg-gradient-to-b from-[#180d12] to-[#0d070a] border border-brand-red/30 shadow-[0_20px_60px_-15px_rgba(231,76,60,0.2)] relative overflow-hidden flex flex-col justify-between group hover:border-brand-red/60 hover:shadow-[0_20px_60px_-15px_rgba(231,76,60,0.4)] transition-all duration-500 hover:-translate-y-1">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto w-full">
+          {/* CARD 1: TICKET BOT DASHBOARD */}
+          <div className="w-full p-8 rounded-[2rem] bg-gradient-to-b from-[#0f111a] to-[#08090e] border border-[#5865F2]/30 shadow-[0_20px_60px_-15px_rgba(88,101,242,0.2)] relative overflow-hidden flex flex-col justify-between group hover:border-[#5865F2]/60 hover:shadow-[0_20px_60px_-15px_rgba(88,101,242,0.4)] transition-all duration-500 hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-[#5865F2]/15 rounded-full blur-3xl pointer-events-none group-hover:bg-[#5865F2]/25 transition-all duration-500" />
+
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div className="w-16 h-16 rounded-full bg-[#5865F2]/20 border-2 border-[#5865F2]/40 flex items-center justify-center p-2 shadow-[0_0_25px_rgba(88,101,242,0.4)] overflow-hidden">
+                  <img
+                    src="/ticket-logo.png"
+                    alt="Ticket Bot"
+                    className="w-full h-full object-contain rounded-full"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = "none";
+                    }}
+                  />
+                </div>
+                <span className="px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-[#5865F2]/20 text-blue-300 border border-[#5865F2]/30 shadow-sm">
+                  Dedicated Console
+                </span>
+              </div>
+
+              <h2 className="text-3xl font-black text-white group-hover:text-blue-300 transition-colors">
+                SyncInk Ticket Bot
+              </h2>
+              <p className="text-sm text-slate-300 mt-3 leading-relaxed">
+                Configure private threads, custom emojis, panels, and view encrypted HTML transcripts.
+              </p>
+
+              {/* Live Feature Highlights */}
+              <div className="mt-6 space-y-2.5 text-sm">
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
+                  <span className="text-slate-400 font-medium">Operating Mode</span>
+                  <span className="font-bold text-blue-400">Private Threads</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
+                  <span className="text-slate-400 font-medium">Configured Categories</span>
+                  <span className="font-bold text-amber-300">6 Departments</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
+                  <span className="text-slate-400 font-medium">Auto-Transcripts</span>
+                  <span className="font-bold text-emerald-400">Retained HTML</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 space-y-3">
+              <Link
+                href="/dashboard/tickets"
+                className="w-full py-3.5 px-4 rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-bold text-sm transition-all shadow-[0_0_20px_rgba(88,101,242,0.4)] hover:shadow-[0_0_30px_rgba(88,101,242,0.6)] flex items-center justify-center gap-2 transform hover:scale-[1.02]"
+              >
+                <span>Launch Ticket Dashboard</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/dashboard/tickets?tab=transcripts"
+                className="w-full py-3 px-4 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition-all border border-white/10 flex items-center justify-center gap-1.5"
+              >
+                <span>Browse Transcripts Archive</span>
+                <ChevronRight className="w-3 h-3" />
+              </Link>
+            </div>
+          </div>
+
+          {/* CARD 2: SUPPORT SERVER SECURITY DASHBOARD */}
+          <div className="w-full p-8 rounded-[2rem] bg-gradient-to-b from-[#180d12] to-[#0d070a] border border-brand-red/30 shadow-[0_20px_60px_-15px_rgba(231,76,60,0.2)] relative overflow-hidden flex flex-col justify-between group hover:border-brand-red/60 hover:shadow-[0_20px_60px_-15px_rgba(231,76,60,0.4)] transition-all duration-500 hover:-translate-y-1">
             <div className="absolute top-0 right-0 w-48 h-48 bg-brand-red/15 rounded-full blur-3xl pointer-events-none group-hover:bg-brand-red/25 transition-all duration-500" />
 
             <div>
