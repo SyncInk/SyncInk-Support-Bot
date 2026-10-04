@@ -52,7 +52,7 @@ const nextConfig = {
       {
         source: '/dashboard/voice/:path+',
         destination: 'https://syncink-voice.onrender.com/dashboard/voice/:path+',
-      },
+      }
     ];
   },
   async redirects() {
