@@ -4534,27 +4534,20 @@ canvas {
 }
 
 /* Mobile Server Selection Sheet */
-@media (max-width: 768px) {
-  .server-dropdown-menu {
-    position: fixed !important;
-    top: auto !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    border-radius: 28px 28px 0 0 !important;
-    max-height: 80vh !important;
-    z-index: 150 !important;
-    padding: 20px 18px calc(24px + env(safe-area-inset-bottom, 0px)) !important;
-    border: 1px solid rgba(139, 76, 255, 0.3) !important;
-    border-bottom: none !important;
-    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
+.mobile-server-sheet {
+  will-change: transform;
+  transform: translateZ(0);
 }
 
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+@keyframes mobileSheetSlideUp {
+  0% {
+    transform: translateY(100%);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 

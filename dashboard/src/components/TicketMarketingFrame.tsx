@@ -31,7 +31,7 @@ interface MarketingAction {
 }
 
 interface TicketMarketingFrameProps {
-  active?: "privacy" | "terms" | "faqs" | "guides" | "status" | "overview";
+  active?: "privacy" | "terms" | "faqs" | "guides" | "status" | "overview" | "rules";
   eyebrow?: string;
   title: string;
   description: string;
@@ -55,6 +55,7 @@ export function TicketMarketingFrame({
     { href: "/dashboard/tickets/guides", label: "Setup Guides", id: "guides" },
     { href: "/dashboard/tickets/faqs", label: "FAQ", id: "faqs" },
     { href: "/dashboard/tickets/status", label: "System Status", id: "status" },
+    { href: "/dashboard/tickets/rules", label: "Rules", id: "rules" },
     { href: "/dashboard/tickets/privacy", label: "Privacy Policy", id: "privacy" },
     { href: "/dashboard/tickets/terms", label: "Terms of Service", id: "terms" }
   ];
@@ -268,6 +269,7 @@ export function TicketMarketingFrame({
             <Link href="/dashboard/tickets/guides" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>Guides</Link>
             <Link href="/dashboard/tickets/faqs" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>FAQ</Link>
             <Link href="/dashboard/tickets/status" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>System Status</Link>
+            <Link href="/dashboard/tickets/rules" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>Rules</Link>
             <Link href="/dashboard/tickets/privacy" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>Privacy</Link>
             <Link href="/dashboard/tickets/terms" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none" }}>Terms</Link>
           </div>

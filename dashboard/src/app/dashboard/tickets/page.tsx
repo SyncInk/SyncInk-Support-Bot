@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useTransition } from "react";
+import { createPortal } from "react-dom";
+import Link from "next/link";
 import "./ticket-dashboard.css";
 import {
   Activity,
@@ -302,6 +304,122 @@ const PRIVACY_SECTIONS = [
   }
 ];
 
+const TICKET_RULES_DATA = [
+  {
+    id: "rule-1",
+    number: "Rule 1",
+    title: "Legitimate Purpose Required for Ticket Creation",
+    badge: "Mandatory Purpose",
+    channel: "# 🎟️・create-ticket",
+    desc: "Support tickets must only be opened for genuine questions, legitimate technical issues, user reports, or official appeals. Frivolous or empty tickets waste staff time.",
+    points: [
+      "Select the category dropdown that strictly reflects your inquiry.",
+      "Explain your issue thoroughly with relevant screenshots, IDs, or error codes.",
+      "Opening 'test tickets' without explicit administrator approval triggers an automated system warning."
+    ],
+    severity: "Immediate Closure -> Automated Warning"
+  },
+  {
+    id: "rule-2",
+    number: "Rule 2",
+    title: "Professional Conduct & Respect Toward Support Staff",
+    badge: "Staff Protection",
+    channel: "All Ticket Channels",
+    desc: "Treat all community support agents, moderators, and developers with mutual dignity and professionalism. Hostility and harassment inside tickets will not be tolerated.",
+    points: [
+      "Prohibited: Harassment, vulgar language, personal threats, derogatory slurs, or toxic demands toward staff.",
+      "Staff members assist multiple community members concurrently; maintain patience while your issue is reviewed.",
+      "Any hostile outburst inside a ticket will result in immediate ticket termination and punitive moderation."
+    ],
+    severity: "Ticket Closure -> Timeout -> Server Ban"
+  },
+  {
+    id: "rule-3",
+    number: "Rule 3",
+    title: "One Active Ticket Per Inquiry / No Duplicates",
+    badge: "Queue Integrity",
+    channel: "Platform-Wide",
+    desc: "Users may not open multiple simultaneous tickets regarding the same question or incident. Duplicate tickets clutter operational queues.",
+    points: [
+      "Wait for an assigned support agent to respond before opening another ticket or requesting status updates.",
+      "If you forgot additional information, send it as a follow-up message within your existing open ticket channel.",
+      "Rapidly creating and closing tickets to cycle channel names is flagged by the anti-abuse engine."
+    ],
+    severity: "Duplicate Merge -> Cooldown Throttle"
+  },
+  {
+    id: "rule-4",
+    number: "Rule 4",
+    title: "Zero Tolerance for Ticket Spam & Flooding",
+    badge: "Anti-Spam Shield",
+    channel: "All Server Channels",
+    desc: "Automated spamming, bot command flooding, repetitive copy-pasta text, or mass attachment dumping inside ticket channels triggers immediate anti-raid quarantines.",
+    points: [
+      "Prohibited: Rapid repeated messages, large attachment bombarding, mass mentions (@everyone, @here, or role pings).",
+      "Do not spam bot commands inside ticket channels; use the bot's interactive buttons and selectors as designed.",
+      "Using third-party macro tools or user-bots to generate mass tickets results in an instant network-wide blacklist."
+    ],
+    severity: "Instant Ticket Lockout -> Blacklist"
+  },
+  {
+    id: "rule-5",
+    number: "Rule 5",
+    title: "Confidentiality & Sensitive Data Safeguards",
+    badge: "Privacy First",
+    channel: "Private Ticket Threads",
+    desc: "Never disclose Discord account passwords, two-factor authentication recovery codes, or sensitive financial information inside any ticket channel.",
+    points: [
+      "SyncInk staff personnel will NEVER ask you for your Discord password, token, or private banking details.",
+      "All messages, images, and attachments sent inside tickets are logged in encrypted HTML transcripts accessible exclusively by authorized server leadership.",
+      "Do not post sensitive personal information (PII) belonging to third parties or doxxing material."
+    ],
+    severity: "Immediate Purge -> Security Ban"
+  },
+  {
+    id: "rule-6",
+    number: "Rule 6",
+    title: "No Circumventing Ticket Blacklists or Bans",
+    badge: "Anti-Evasion",
+    channel: "All Guild Channels",
+    desc: "Attempting to bypass a ticket cooldown, staff timeout, or ticket system blacklist using alternate Discord accounts (alts) is strictly forbidden.",
+    points: [
+      "If you are placed on a ticket cooldown or restricted role, you must wait out the sanction duration.",
+      "Using secondary accounts to re-open closed inquiries or harass staff results in permanent bans across all associated accounts.",
+      "Server owners maintain the right to revoke ticket creation permissions at their discretion."
+    ],
+    severity: "Permanent Ban across All Alt Accounts"
+  },
+  {
+    id: "rule-7",
+    number: "Rule 7",
+    title: "Ticket Staff Integrity & Claiming Ethics",
+    badge: "Staff Standards",
+    channel: "Staff Operations",
+    desc: "Designated moderators and support agents must handle user tickets in accordance with official ethical standards and prompt response protocols.",
+    points: [
+      "Claiming Tickets: Only claim a ticket if you are actively prepared to assist the user through resolution.",
+      "Transcript Integrity: Do not delete, tamper with, or conceal ticket transcripts stored in the web dashboard.",
+      "Closure Notices: Always provide a clear closing reason before executing the close button or command.",
+      "Escalation: Inquiries involving staff abuse must be escalated to Server Owners and never resolved by the accused party."
+    ],
+    severity: "Demotion -> Revocation of Dashboard Access"
+  },
+  {
+    id: "rule-8",
+    number: "Rule 8",
+    title: "Appeals, Disputes & Escalation Framework",
+    badge: "Fair Due Process",
+    channel: "# 🎟️・create-ticket",
+    desc: "If you believe your ticket was closed improperly, or wish to dispute a ticket blacklist or staff moderation decision, follow the official appeal process.",
+    points: [
+      "Do NOT debate, complain, or escalate arguments in public community chat channels (#general or #support-chat).",
+      "Open a single appeal ticket under the 'Staff Abuse' or 'Owner Contact' category with verifiable proof.",
+      "Appeals submitted with falsehoods or fabricated evidence will be permanently denied with prejudice."
+    ],
+    severity: "Formal Review by Server Leadership"
+  }
+];
+
 // Discord markdown and emoji tokenizer
 function tokenizeDiscordText(text: string) {
   const source = String(text || "");
@@ -423,6 +541,24 @@ export default function NativeTicketDashboardPage() {
   const [serverDropdownOpen, setServerDropdownOpen] = useState(false);
   const [serverSearch, setServerSearch] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (serverDropdownOpen && typeof window !== "undefined" && window.innerWidth <= 768) {
+      document.body.style.overflow = "hidden";
+    } else if (typeof document !== "undefined") {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = "";
+      }
+    };
+  }, [serverDropdownOpen]);
 
   // Transcripts State & Handlers
   const [selectedTranscript, setSelectedTranscript] = useState<TranscriptTicket | null>(null);
@@ -1078,12 +1214,14 @@ export default function NativeTicketDashboardPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
                 SyncInk Ticket Dashboard &bull; Free for everyone &bull; Built with <span style={{ color: "#a588ff", fontSize: "14px", lineHeight: 1 }}>&hearts;</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px" }}>
-                <button type="button" onClick={() => setActiveTab("terms")} className="glow-link" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}>Terms</button>
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                <Link href="/dashboard/tickets/terms" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>Terms</Link>
                 <span style={{ color: "var(--border-strong)", fontSize: "10px" }}>┃</span>
-                <button type="button" onClick={() => setActiveTab("privacy")} className="glow-link" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}>Privacy</button>
+                <Link href="/dashboard/tickets/privacy" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>Privacy</Link>
                 <span style={{ color: "var(--border-strong)", fontSize: "10px" }}>┃</span>
-                <button type="button" onClick={() => setActiveTab("faq")} className="glow-link" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}>FAQ</button>
+                <Link href="/dashboard/tickets/rules" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>Rules</Link>
+                <span style={{ color: "var(--border-strong)", fontSize: "10px" }}>┃</span>
+                <Link href="/dashboard/tickets/faqs" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>FAQ</Link>
               </div>
             </div>
           </div>
@@ -1206,22 +1344,24 @@ export default function NativeTicketDashboardPage() {
               <ChevronDown size={14} style={{ opacity: 0.6, flexShrink: 0 }} />
             </button>
 
-            {/* Server dropdown backdrop */}
+            {/* Desktop dropdown backdrop */}
             {serverDropdownOpen && (
               <div
-                style={{ position: "fixed", inset: 0, zIndex: 99, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+                className="hidden md:block"
+                style={{ position: "fixed", inset: 0, zIndex: 99, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)" }}
                 onClick={() => setServerDropdownOpen(false)}
               />
             )}
 
+            {/* Desktop Dropdown Popover */}
             {serverDropdownOpen && (
               <div
-                className="server-dropdown-menu"
+                className="hidden md:block server-dropdown-menu"
                 style={{
                   position: "absolute",
                   top: "calc(100% + 8px)",
                   left: 0,
-                  width: "290px",
+                  width: "300px",
                   background: "#0d0f1a",
                   borderRadius: "18px",
                   border: "1px solid rgba(139, 76, 255, 0.25)",
@@ -1308,6 +1448,297 @@ export default function NativeTicketDashboardPage() {
                   </a>
                 </div>
               </div>
+            )}
+
+            {/* Mobile Server Selector Bottom Sheet (Portaled to document.body) */}
+            {mounted && serverDropdownOpen && typeof document !== "undefined" && createPortal(
+              <div
+                className="md:hidden"
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 999999,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "flex-end"
+                }}
+              >
+                {/* Backdrop */}
+                <div
+                  style={{
+                    position: "fixed",
+                    inset: 0,
+                    background: "rgba(0, 0, 0, 0.8)",
+                    backdropFilter: "blur(12px)",
+                    WebkitBackdropFilter: "blur(12px)",
+                    zIndex: 999999
+                  }}
+                  onClick={() => setServerDropdownOpen(false)}
+                />
+
+                {/* Bottom Sheet */}
+                <div
+                  className="mobile-server-sheet"
+                  style={{
+                    position: "relative",
+                    zIndex: 1000000,
+                    width: "100%",
+                    maxHeight: "84vh",
+                    background: "#0c0e18",
+                    borderTop: "1px solid rgba(139, 76, 255, 0.4)",
+                    borderRadius: "28px 28px 0 0",
+                    padding: "16px 18px calc(24px + env(safe-area-inset-bottom, 16px))",
+                    display: "flex",
+                    flexDirection: "column",
+                    boxShadow: "0 -24px 60px rgba(0, 0, 0, 0.95)",
+                    animation: "mobileSheetSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards"
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Drag indicator pill */}
+                  <div
+                    style={{
+                      width: "40px",
+                      height: "4px",
+                      borderRadius: "2px",
+                      background: "rgba(255, 255, 255, 0.25)",
+                      margin: "0 auto 14px",
+                      flexShrink: 0
+                    }}
+                  />
+
+                  {/* Header */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "14px",
+                      flexShrink: 0
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div
+                        style={{
+                          width: "36px",
+                          height: "36px",
+                          borderRadius: "10px",
+                          background: "rgba(139, 76, 255, 0.15)",
+                          border: "1px solid rgba(139, 76, 255, 0.3)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "var(--accent)"
+                        }}
+                      >
+                        <Layers size={18} />
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#fff" }}>
+                          Select Server
+                        </h3>
+                        <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                          {guilds.length} connected {guilds.length === 1 ? "server" : "servers"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setServerDropdownOpen(false)}
+                      aria-label="Close server selector"
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "50%",
+                        background: "rgba(255, 255, 255, 0.08)",
+                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        color: "var(--text)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer"
+                      }}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {/* Filter Search */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      padding: "10px 14px",
+                      borderRadius: "14px",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      marginBottom: "12px",
+                      flexShrink: 0
+                    }}
+                  >
+                    <Search size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+                    <input
+                      type="text"
+                      value={serverSearch}
+                      onChange={(e) => setServerSearch(e.target.value)}
+                      placeholder="Search or filter servers..."
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "white",
+                        fontSize: "14px",
+                        outline: "none",
+                        width: "100%"
+                      }}
+                    />
+                    {serverSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setServerSearch("")}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "var(--text-muted)",
+                          cursor: "pointer",
+                          padding: "2px"
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Server Items */}
+                  <div
+                    style={{
+                      overflowY: "auto",
+                      overscrollBehavior: "contain",
+                      WebkitOverflowScrolling: "touch",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                      flex: 1,
+                      paddingRight: "2px"
+                    }}
+                  >
+                    {guilds
+                      .filter((g) => g.name.toLowerCase().includes(serverSearch.toLowerCase()))
+                      .map((g) => {
+                        const isSelected = g.id === selectedGuildId;
+                        return (
+                          <button
+                            key={g.id}
+                            type="button"
+                            onClick={() => {
+                              handleSelectGuild(g.id);
+                              setServerDropdownOpen(false);
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "12px",
+                              width: "100%",
+                              padding: "12px 14px",
+                              borderRadius: "14px",
+                              border: isSelected
+                                ? "1px solid rgba(139, 76, 255, 0.45)"
+                                : "1px solid rgba(255, 255, 255, 0.05)",
+                              background: isSelected
+                                ? "rgba(139, 76, 255, 0.18)"
+                                : "rgba(255, 255, 255, 0.03)",
+                              color: isSelected ? "white" : "var(--text)",
+                              cursor: "pointer",
+                              textAlign: "left",
+                              fontSize: "14px",
+                              fontWeight: isSelected ? 700 : 500,
+                              transition: "background 0.15s ease"
+                            }}
+                          >
+                            {g.icon ? (
+                              <img
+                                src={`https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png`}
+                                alt=""
+                                style={{
+                                  width: 36,
+                                  height: 36,
+                                  borderRadius: "10px",
+                                  flexShrink: 0
+                                }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: 36,
+                                  height: 36,
+                                  borderRadius: "10px",
+                                  background: "rgba(139, 76, 255, 0.2)",
+                                  color: "var(--accent)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "14px",
+                                  fontWeight: 700,
+                                  flexShrink: 0
+                                }}
+                              >
+                                {g.name.charAt(0)}
+                              </div>
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "14px", color: "white" }}>
+                                {g.name}
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "3px" }}>
+                                {renderTierBadge(g.dashboardTier || (g.owner ? "owner" : "admin"))}
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <CheckCircle2
+                                size={20}
+                                style={{ color: "var(--accent)", flexShrink: 0 }}
+                              />
+                            )}
+                          </button>
+                        );
+                      })}
+                  </div>
+
+                  {/* Add Bot to Another Server Action */}
+                  <div
+                    style={{
+                      borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                      paddingTop: "14px",
+                      marginTop: "12px",
+                      flexShrink: 0
+                    }}
+                  >
+                    <a
+                      href="https://discord.com/oauth2/authorize?client_id=1344248888060809228&permissions=8&integration_type=0&scope=bot+applications.commands"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        padding: "12px 14px",
+                        fontSize: "13px",
+                        color: "white",
+                        textDecoration: "none",
+                        fontWeight: 600,
+                        borderRadius: "14px",
+                        background: "linear-gradient(135deg, rgba(139, 76, 255, 0.25), rgba(91, 33, 182, 0.35))",
+                        border: "1px solid rgba(139, 76, 255, 0.4)"
+                      }}
+                    >
+                      <Plus size={16} /> Add Bot to Another Server
+                    </a>
+                  </div>
+                </div>
+              </div>,
+              document.body
             )}
           </div>
         </div>
@@ -1445,6 +1876,7 @@ export default function NativeTicketDashboardPage() {
               { id: "commands", label: "Bot Commands", icon: Terminal },
               { id: "status", label: "System Status", icon: Activity },
               { id: "guide", label: "Dashboard Guide", icon: BookOpen },
+              { id: "rules", label: "Ticket Rules", icon: BookOpen },
               { id: "faq", label: "FAQ", icon: HelpCircle },
               { id: "privacy", label: "Privacy Policy", icon: ShieldCheck },
               { id: "terms", label: "Terms of Service", icon: FileText }
@@ -1485,14 +1917,14 @@ export default function NativeTicketDashboardPage() {
 
         {/* Content Area */}
         <main className="dashboard-main-content">
-          {snapshotLoading && !snapshot && !["guide", "faq", "privacy", "terms", "status", "interface", "commands"].includes(activeTab) ? (
+          {snapshotLoading && !snapshot && !["guide", "faq", "rules", "privacy", "terms", "status", "interface", "commands"].includes(activeTab) ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "55vh", gap: "16px" }}>
               <RefreshCw size={36} className="spin" style={{ color: "var(--accent)" }} />
               <span style={{ fontSize: "14px", color: "var(--text-muted)", fontWeight: 500 }}>
                 Synchronizing server ticket telemetry...
               </span>
             </div>
-          ) : !snapshot && !["guide", "faq", "privacy", "terms", "status", "interface", "commands"].includes(activeTab) ? (
+          ) : !snapshot && !["guide", "faq", "rules", "privacy", "terms", "status", "interface", "commands"].includes(activeTab) ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "55vh", gap: "16px", textAlign: "center", padding: "40px 20px" }}>
               <div style={{ width: 56, height: 56, borderRadius: "16px", background: "rgba(245, 158, 11, 0.12)", color: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <AlertCircle size={28} />
@@ -1537,9 +1969,10 @@ export default function NativeTicketDashboardPage() {
                   </div>
                 </div>
                 <div className="legal-links">
-                  <button type="button" onClick={() => setActiveTab("privacy")} className="action-button"><Shield size={16} /> Privacy Policy</button>
-                  <button type="button" onClick={() => setActiveTab("terms")} className="action-button"><FileText size={16} /> Terms of Service</button>
-                  <button type="button" onClick={() => setActiveTab("faq")} className="action-button"><HelpCircle size={16} /> FAQ</button>
+                  <Link href="/dashboard/tickets/rules" className="action-button" style={{ textDecoration: "none" }}><BookOpen size={16} /> Rules</Link>
+                  <Link href="/dashboard/tickets/privacy" className="action-button" style={{ textDecoration: "none" }}><Shield size={16} /> Privacy Policy</Link>
+                  <Link href="/dashboard/tickets/terms" className="action-button" style={{ textDecoration: "none" }}><FileText size={16} /> Terms of Service</Link>
+                  <Link href="/dashboard/tickets/faqs" className="action-button" style={{ textDecoration: "none" }}><HelpCircle size={16} /> FAQ</Link>
                 </div>
               </div>
 
@@ -3481,6 +3914,150 @@ export default function NativeTicketDashboardPage() {
                     </div>
                   ))}
               </div>
+            </div>
+          )}
+
+          {/* TAB: RULES */}
+          {activeTab === "rules" && (
+            <div className="page-stack">
+              <div className="page-header">
+                <div>
+                  <div className="page-eyebrow">Operating Guidelines & Enforcement</div>
+                  <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "26px", fontWeight: 700 }}>
+                    <BookOpen size={26} color="var(--accent)" />
+                    Ticket Bot Rules & Conduct
+                  </h1>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginTop: "4px" }}>
+                    Clear, enforceable standards governing ticket creation, staff responsibilities, and anti-spam protocols across all servers.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  <Link
+                    href="/dashboard/tickets/rules"
+                    className="action-button tone-primary"
+                    style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <ExternalLink size={14} /> Full Rules Page
+                  </Link>
+                  <a
+                    href="https://discord.gg/rB6gNZaK9u"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="action-button tone-secondary"
+                    style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <MessageSquare size={14} /> Support Server
+                  </a>
+                </div>
+              </div>
+
+              {/* Quick Jump Anchor Pills */}
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", margin: "4px 0 16px" }}>
+                {TICKET_RULES_DATA.map((rule) => (
+                  <a
+                    key={rule.id}
+                    href={`#rule-item-${rule.id}`}
+                    style={{
+                      textDecoration: "none",
+                      padding: "6px 14px",
+                      borderRadius: "20px",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text-soft)",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    {rule.number}: {rule.title}
+                  </a>
+                ))}
+              </div>
+
+              <section className="section-card">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", borderBottom: "1px solid var(--border)", paddingBottom: "16px", marginBottom: "20px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <Shield size={18} color="var(--accent)" />
+                    <span style={{ fontSize: "14px", color: "white", fontWeight: 600 }}>SyncInk Ticket Rules & Conduct Protocols</span>
+                  </div>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)", background: "rgba(255,255,255,0.04)", padding: "4px 10px", borderRadius: "6px", border: "1px solid var(--border)" }}>
+                    Effective Platform-Wide
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                  {TICKET_RULES_DATA.map((rule) => (
+                    <div key={rule.id} id={`rule-item-${rule.id}`} style={{ scrollMarginTop: "100px", paddingBottom: "16px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <span style={{ fontSize: "11px", fontWeight: 800, color: "var(--accent)", background: "rgba(139, 76, 255, 0.12)", border: "1px solid rgba(139, 76, 255, 0.25)", padding: "2px 8px", borderRadius: "6px", fontFamily: "monospace" }}>
+                            {rule.number}
+                          </span>
+                          <h2 style={{ fontSize: "16px", color: "white", margin: 0, fontWeight: 700 }}>
+                            {rule.title}
+                          </h2>
+                        </div>
+                        <span className="command-badge">{rule.badge}</span>
+                      </div>
+
+                      <p style={{ fontSize: "13.5px", color: "#cbd5e1", lineHeight: 1.6, marginBottom: "12px" }}>
+                        {rule.desc}
+                      </p>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px" }}>
+                        {rule.points.map((pt, idx) => (
+                          <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "8px", fontSize: "12.5px", color: "var(--text-soft)", lineHeight: 1.5 }}>
+                            <span style={{ color: "var(--accent)", fontWeight: 700 }}>&bull;</span>
+                            <span>{pt}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", fontSize: "11.5px", color: "var(--text-muted)" }}>
+                        <span><strong>Scope:</strong> {rule.channel}</span>
+                        <span style={{ color: "#fb7185" }}><strong>Enforcement:</strong> {rule.severity}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Dispute & Appeals Callout Box */}
+                <div
+                  style={{
+                    borderRadius: "14px",
+                    marginTop: "28px",
+                    padding: "20px",
+                    background: "rgba(139, 76, 255, 0.06)",
+                    border: "1px solid rgba(139, 76, 255, 0.2)"
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                    <Scale size={18} style={{ color: "var(--accent)" }} />
+                    <h3 style={{ margin: 0, fontSize: "15px", color: "white", fontWeight: 700 }}>Staff Misconduct or Ticket Blacklist Appeal</h3>
+                  </div>
+                  <p style={{ fontSize: "13px", color: "var(--text-soft)", lineHeight: 1.6, marginBottom: "14px" }}>
+                    If you experienced staff abuse or were blacklisted from ticket creation unfairly, you may file a formal dispute with Server Leadership.
+                  </p>
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                    <a
+                      href="https://discord.gg/rB6gNZaK9u"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="action-button tone-primary"
+                      style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "12px" }}
+                    >
+                      <MessageSquare size={14} /> Open Appeal on Discord
+                    </a>
+                    <Link
+                      href="/dashboard/tickets/rules"
+                      className="action-button tone-secondary"
+                      style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "12px" }}
+                    >
+                      <ExternalLink size={14} /> Open Dedicated Rules Page
+                    </Link>
+                  </div>
+                </div>
+              </section>
             </div>
           )}
 
