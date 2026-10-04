@@ -1139,20 +1139,32 @@ export default function NativeTicketDashboardPage() {
 
   // 4. Authenticated & Has Servers: Full Dashboard Layout
   return (
-    <div className="dashboard-root" style={{ minHeight: "100vh", background: "#000000", color: "var(--text)" }}>
+    <div className="dashboard-root">
       {/* Top Header */}
-      <header className="dashboard-topbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "1px solid var(--border)", background: "rgba(5, 5, 5, 0.8)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+      <header className="dashboard-topbar">
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
           <button
             type="button"
             className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer" }}
+            onClick={() => setMobileMenuOpen(true)}
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid var(--border)",
+              borderRadius: "10px",
+              color: "var(--text)",
+              cursor: "pointer",
+              padding: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0
+            }}
+            aria-label="Open mobile menu"
           >
-            <Menu size={20} />
+            <Menu size={18} />
           </button>
 
-          <img src="/ticket-logo.png" alt="SyncInk" style={{ width: 34, height: 34, borderRadius: 10 }} />
+          <img src="/ticket-logo.png" alt="SyncInk" style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0 }} />
 
           {/* Server Switcher Dropdown */}
           <div style={{ position: "relative" }}>
@@ -1162,104 +1174,137 @@ export default function NativeTicketDashboardPage() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "10px",
-                padding: "8px 14px",
+                gap: "8px",
+                padding: "6px 12px",
                 borderRadius: "12px",
                 background: "rgba(255, 255, 255, 0.05)",
                 border: "1px solid var(--border)",
                 color: "var(--text)",
                 cursor: "pointer",
                 fontSize: "13px",
-                fontWeight: 600
+                fontWeight: 600,
+                maxWidth: "200px"
               }}
             >
               {selectedGuild?.icon ? (
                 <img
                   src={`https://cdn.discordapp.com/icons/${selectedGuild.id}/${selectedGuild.icon}.png`}
                   alt={selectedGuild.name}
-                  style={{ width: 22, height: 22, borderRadius: "50%" }}
+                  style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0 }}
                 />
               ) : (
-                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--accent)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px" }}>
+                <div style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--accent)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", flexShrink: 0 }}>
                   {selectedGuild?.name ? selectedGuild.name.charAt(0) : "S"}
                 </div>
               )}
-              <span style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {selectedGuild?.name || "Select Server"}
               </span>
-              {selectedGuild && renderTierBadge(selectedGuild.dashboardTier || (selectedGuild.owner ? "owner" : "admin"))}
-              <ChevronDown size={14} style={{ opacity: 0.6 }} />
+              <div className="hidden sm:block">
+                {selectedGuild && renderTierBadge(selectedGuild.dashboardTier || (selectedGuild.owner ? "owner" : "admin"))}
+              </div>
+              <ChevronDown size={14} style={{ opacity: 0.6, flexShrink: 0 }} />
             </button>
+
+            {/* Server dropdown backdrop */}
+            {serverDropdownOpen && (
+              <div
+                style={{ position: "fixed", inset: 0, zIndex: 99, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+                onClick={() => setServerDropdownOpen(false)}
+              />
+            )}
 
             {serverDropdownOpen && (
               <div
+                className="server-dropdown-menu"
                 style={{
                   position: "absolute",
                   top: "calc(100% + 8px)",
                   left: 0,
-                  width: "280px",
-                  background: "#0f1426",
-                  borderRadius: "16px",
-                  border: "1px solid var(--border)",
-                  boxShadow: "0 16px 40px rgba(0,0,0,0.6)",
-                  padding: "10px",
+                  width: "290px",
+                  background: "#0d0f1a",
+                  borderRadius: "18px",
+                  border: "1px solid rgba(139, 76, 255, 0.25)",
+                  boxShadow: "0 20px 50px rgba(0,0,0,0.8)",
+                  padding: "14px",
                   zIndex: 100
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", borderRadius: "10px", background: "rgba(0,0,0,0.3)", marginBottom: "8px" }}>
-                  <Search size={14} style={{ color: "var(--text-muted)" }} />
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    Select Server ({guilds.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setServerDropdownOpen(false)}
+                    style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "2px" }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", marginBottom: "10px" }}>
+                  <Search size={14} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
                   <input
                     type="text"
                     value={serverSearch}
                     onChange={(e) => setServerSearch(e.target.value)}
                     placeholder="Filter servers..."
-                    style={{ background: "transparent", border: "none", color: "white", fontSize: "12px", outline: "none", width: "100%" }}
+                    style={{ background: "transparent", border: "none", color: "white", fontSize: "13px", outline: "none", width: "100%" }}
                   />
+                  {serverSearch && (
+                    <button type="button" onClick={() => setServerSearch("")} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
 
-                <div style={{ maxHeight: "220px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <div style={{ maxHeight: "260px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px" }}>
                   {guilds
                     .filter((g) => g.name.toLowerCase().includes(serverSearch.toLowerCase()))
                     .map((g) => (
                       <button
                         key={g.id}
                         type="button"
-                        onClick={() => handleSelectGuild(g.id)}
+                        onClick={() => {
+                          handleSelectGuild(g.id);
+                          setServerDropdownOpen(false);
+                        }}
                         style={{
                           display: "flex",
                           alignItems: "center",
                           gap: "10px",
                           width: "100%",
-                          padding: "8px 10px",
-                          borderRadius: "8px",
+                          padding: "10px 12px",
+                          borderRadius: "10px",
                           border: "none",
-                          background: g.id === selectedGuildId ? "rgba(139, 76, 255, 0.12)" : "transparent",
+                          background: g.id === selectedGuildId ? "rgba(139, 76, 255, 0.15)" : "transparent",
                           color: g.id === selectedGuildId ? "var(--accent)" : "var(--text)",
                           cursor: "pointer",
                           textAlign: "left",
-                          fontSize: "12px",
+                          fontSize: "13px",
                           fontWeight: g.id === selectedGuildId ? 700 : 500
                         }}
                       >
                         {g.icon ? (
-                          <img src={`https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png`} alt="" style={{ width: 22, height: 22, borderRadius: "50%" }} />
+                          <img src={`https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png`} alt="" style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0 }} />
                         ) : (
-                          <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#333", color: "#ccc", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px" }}>{g.name.charAt(0)}</div>
+                          <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#222", color: "#ccc", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", flexShrink: 0 }}>{g.name.charAt(0)}</div>
                         )}
                         <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
-                        {g.id === selectedGuildId && <CheckCircle2 size={14} />}
+                        {g.id === selectedGuildId && <CheckCircle2 size={16} />}
                       </button>
                     ))}
                 </div>
 
-                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "8px" }}>
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "10px", marginTop: "10px" }}>
                   <a
                     href="https://discord.com/oauth2/authorize?client_id=1344248888060809228&permissions=8&integration_type=0&scope=bot+applications.commands"
                     target="_blank"
                     rel="noreferrer"
-                    style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", fontSize: "12px", color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}
+                    style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", fontSize: "12px", color: "var(--accent)", textDecoration: "none", fontWeight: 600, borderRadius: "10px", background: "rgba(139, 76, 255, 0.08)" }}
                   >
-                    <Plus size={14} /> Add Bot to Another Server
+                    <Plus size={15} /> Add Bot to Another Server
                   </a>
                 </div>
               </div>
@@ -1267,49 +1312,78 @@ export default function NativeTicketDashboardPage() {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <button
             type="button"
             onClick={() => selectedGuildId && fetchGuildSnapshot(selectedGuildId)}
             title="Refresh Server Data"
-            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", color: "var(--text-muted)", cursor: "pointer", fontSize: "12px" }}
+            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", color: "var(--text-muted)", cursor: "pointer", fontSize: "12px" }}
           >
             <RefreshCw size={13} className={snapshotLoading ? "spin" : ""} />
             <span className="hidden sm:inline">Sync</span>
           </button>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 12px", borderRadius: "12px", background: "rgba(255, 255, 255, 0.04)", border: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "5px 10px", borderRadius: "12px", background: "rgba(255, 255, 255, 0.04)", border: "1px solid var(--border)" }}>
             {user.avatar ? (
               <img src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`} alt="" style={{ width: 22, height: 22, borderRadius: "50%" }} />
             ) : (
-              <User size={16} />
+              <User size={15} />
             )}
             <span style={{ fontSize: "12px", fontWeight: 600 }} className="hidden sm:inline">{user.global_name || user.username}</span>
-            <button type="button" onClick={handleLogout} title="Log out" style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", marginLeft: "4px" }}>
-              <LogOut size={14} />
+            <button type="button" onClick={handleLogout} title="Log out" style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", marginLeft: "2px", padding: "4px" }}>
+              <LogOut size={13} />
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <div style={{ display: "flex", minHeight: "calc(100vh - 65px)" }}>
-        {/* Sidebar */}
-        <aside
-          style={{
-            width: "260px",
-            borderRight: "1px solid var(--border)",
-            background: "rgba(5, 5, 5, 0.95)",
-            padding: "20px 12px",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            flexShrink: 0
-          }}
-          className={`${mobileMenuOpen ? "block fixed inset-y-0 left-0 z-50 w-72" : "hidden md:flex"}`}
-        >
+      <div className="dashboard-layout-body">
+        {/* Backdrop for Mobile Sidebar Drawer */}
+        <div
+          className={`dashboard-sidebar-backdrop ${mobileMenuOpen ? "active" : ""}`}
+          onClick={() => setMobileMenuOpen(false)}
+        />
+
+        {/* Sidebar Drawer */}
+        <aside className={`dashboard-sidebar ${mobileMenuOpen ? "mobile-open" : ""}`}>
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <div style={{ padding: "0 12px 12px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            {/* Mobile Drawer Top Header (Visible on Mobile Only) */}
+            <div
+              className="lg:hidden"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "4px 8px 14px",
+                borderBottom: "1px solid var(--border)",
+                marginBottom: "12px"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <img src="/ticket-logo.png" alt="SyncInk" style={{ width: 28, height: 28, borderRadius: 8 }} />
+                <div>
+                  <h3 style={{ fontSize: "14px", fontWeight: 700, color: "white", margin: 0 }}>SyncInk Console</h3>
+                  <span style={{ fontSize: "11px", color: "var(--accent)" }}>{selectedGuild?.name || "Workspace"}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  color: "white",
+                  cursor: "pointer",
+                  padding: "6px"
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "0 12px 10px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Ticket Management
             </div>
 
@@ -1345,13 +1419,14 @@ export default function NativeTicketDashboardPage() {
                     padding: "10px 14px",
                     borderRadius: "10px",
                     border: "none",
-                    background: active ? "rgba(139, 76, 255, 0.12)" : "transparent",
+                    background: active ? "rgba(139, 76, 255, 0.15)" : "transparent",
                     color: active ? "var(--accent)" : "var(--text-soft)",
                     cursor: "pointer",
                     fontSize: "13px",
                     fontWeight: active ? 600 : 500,
                     textAlign: "left",
-                    transition: "all 0.15s ease"
+                    transition: "all 0.15s ease",
+                    minHeight: "42px"
                   }}
                 >
                   <Icon size={16} />
@@ -1362,8 +1437,8 @@ export default function NativeTicketDashboardPage() {
           </div>
 
           {/* Help & Legal Navigation */}
-          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "16px", marginTop: "16px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <div style={{ padding: "0 12px 8px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "14px", display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div style={{ padding: "0 12px 6px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Help & Resources
             </div>
             {[
@@ -1396,7 +1471,8 @@ export default function NativeTicketDashboardPage() {
                     cursor: "pointer",
                     fontSize: "12px",
                     fontWeight: 500,
-                    textAlign: "left"
+                    textAlign: "left",
+                    minHeight: "38px"
                   }}
                 >
                   <Icon size={15} />
@@ -1408,7 +1484,7 @@ export default function NativeTicketDashboardPage() {
         </aside>
 
         {/* Content Area */}
-        <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto", maxWidth: "1400px", margin: "0 auto", width: "100%" }}>
+        <main className="dashboard-main-content">
           {snapshotLoading && !snapshot && !["guide", "faq", "privacy", "terms", "status", "interface", "commands"].includes(activeTab) ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "55vh", gap: "16px" }}>
               <RefreshCw size={36} className="spin" style={{ color: "var(--accent)" }} />
@@ -3665,6 +3741,62 @@ export default function NativeTicketDashboardPage() {
     </main>
       </div>
 
+      {/* Floating Mobile Bottom Quick Navigation */}
+      <nav className="mobile-bottom-nav">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("overview");
+            setMobileMenuOpen(false);
+          }}
+          className={activeTab === "overview" ? "active" : ""}
+        >
+          <LayoutDashboard size={18} />
+          <span>Overview</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("panels");
+            setMobileMenuOpen(false);
+          }}
+          className={activeTab === "panels" ? "active" : ""}
+        >
+          <PanelsTopLeft size={18} />
+          <span>Panels</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("categories");
+            setMobileMenuOpen(false);
+          }}
+          className={activeTab === "categories" ? "active" : ""}
+        >
+          <MessageSquareMore size={18} />
+          <span>Categories</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("transcripts");
+            setMobileMenuOpen(false);
+          }}
+          className={activeTab === "transcripts" ? "active" : ""}
+        >
+          <FileText size={18} />
+          <span>Transcripts</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className={mobileMenuOpen ? "active" : ""}
+        >
+          <Menu size={18} />
+          <span>More</span>
+        </button>
+      </nav>
+
       {/* Online Discord Transcript Modal */}
       {(selectedTranscript || transcriptLoading || transcriptError) && (
         <div
@@ -3718,7 +3850,7 @@ export default function NativeTicketDashboardPage() {
 
       {/* Unsaved Changes Sticky Banner */}
       {isDirty && (
-        <div style={{ position: "fixed", bottom: "24px", left: "50%", transform: "translateX(-50%)", zIndex: 90, background: "rgba(10, 10, 10, 0.95)", border: "1px solid var(--accent)", borderRadius: "16px", padding: "12px 24px", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", display: "flex", alignItems: "center", gap: "20px" }}>
+        <div className="unsaved-changes-banner">
           <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "white", fontSize: "13px", fontWeight: 600 }}>
             <AlertTriangle size={16} color="var(--accent)" />
             <span>Careful &mdash; you have unsaved changes!</span>
@@ -3765,7 +3897,7 @@ export default function NativeTicketDashboardPage() {
       )}
 
       {/* Toast Viewport */}
-      <div style={{ position: "fixed", bottom: "20px", right: "20px", zIndex: 120, display: "flex", flexDirection: "column", gap: "8px" }}>
+      <div className="toast-viewport">
         {toasts.map((toast) => (
           <div
             key={toast.id}
