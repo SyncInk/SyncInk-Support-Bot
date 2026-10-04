@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
   const host = request.headers.get("x-forwarded-host") || url.host;
   const proto = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "");
-  let baseUrl = `${proto}://${host}`;
+  let baseUrl = "https://sync-ink-support-bot.vercel.app";
 
   const redirectUri = `${baseUrl}/api/auth/discord/callback`;
 
@@ -202,6 +202,7 @@ export async function GET(request: Request) {
     );
   }
 }
+
 
 
 
