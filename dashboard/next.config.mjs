@@ -44,16 +44,18 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    return [
-      {
-        source: '/dashboard/voice',
-        destination: 'https://syncink-voice.onrender.com/dashboard/voice/',
-      },
-      {
-        source: '/dashboard/voice/:path+',
-        destination: 'https://syncink-voice.onrender.com/dashboard/voice/:path+',
-      }
-    ];
+    return {
+      beforeFiles: [
+        {
+          source: '/dashboard/voice',
+          destination: 'https://syncink-voice.onrender.com/dashboard/voice',
+        },
+        {
+          source: '/dashboard/voice/:path*',
+          destination: 'https://syncink-voice.onrender.com/dashboard/voice/:path*',
+        },
+      ],
+    };
   },
   async redirects() {
     return [
