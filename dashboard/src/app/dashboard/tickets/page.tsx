@@ -1215,11 +1215,11 @@ export default function NativeTicketDashboardPage() {
                 SyncInk Ticket Dashboard &bull; Free for everyone &bull; Built with <span style={{ color: "#a588ff", fontSize: "14px", lineHeight: 1 }}>&hearts;</span>
               </div>
               <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                <Link href="/dashboard/tickets/terms" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>Terms</Link>
+                <Link href="/terms" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>Terms</Link>
                 <span style={{ color: "var(--border-strong)", fontSize: "10px" }}>┃</span>
-                <Link href="/dashboard/tickets/privacy" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>Privacy</Link>
+                <Link href="/privacy" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>Privacy</Link>
                 <span style={{ color: "var(--border-strong)", fontSize: "10px" }}>┃</span>
-                <Link href="/dashboard/tickets/rules" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>Rules</Link>
+                <Link href="/rules" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>Rules</Link>
                 <span style={{ color: "var(--border-strong)", fontSize: "10px" }}>┃</span>
                 <Link href="/dashboard/tickets/faqs" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>FAQ</Link>
               </div>
@@ -1969,9 +1969,9 @@ export default function NativeTicketDashboardPage() {
                   </div>
                 </div>
                 <div className="legal-links">
-                  <Link href="/dashboard/tickets/rules" className="action-button" style={{ textDecoration: "none" }}><BookOpen size={16} /> Rules</Link>
-                  <Link href="/dashboard/tickets/privacy" className="action-button" style={{ textDecoration: "none" }}><Shield size={16} /> Privacy Policy</Link>
-                  <Link href="/dashboard/tickets/terms" className="action-button" style={{ textDecoration: "none" }}><FileText size={16} /> Terms of Service</Link>
+                  <Link href="/rules" className="action-button" style={{ textDecoration: "none" }}><BookOpen size={16} /> Rules</Link>
+                  <Link href="/privacy" className="action-button" style={{ textDecoration: "none" }}><Shield size={16} /> Privacy Policy</Link>
+                  <Link href="/terms" className="action-button" style={{ textDecoration: "none" }}><FileText size={16} /> Terms of Service</Link>
                   <Link href="/dashboard/tickets/faqs" className="action-button" style={{ textDecoration: "none" }}><HelpCircle size={16} /> FAQ</Link>
                 </div>
               </div>
@@ -3933,7 +3933,7 @@ export default function NativeTicketDashboardPage() {
                 </div>
                 <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                   <Link
-                    href="/dashboard/tickets/rules"
+                    href="/rules"
                     className="action-button tone-primary"
                     style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
                   >
@@ -4049,7 +4049,7 @@ export default function NativeTicketDashboardPage() {
                       <MessageSquare size={14} /> Open Appeal on Discord
                     </a>
                     <Link
-                      href="/dashboard/tickets/rules"
+                      href="/rules"
                       className="action-button tone-secondary"
                       style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "12px" }}
                     >

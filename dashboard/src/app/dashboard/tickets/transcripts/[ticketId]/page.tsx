@@ -100,7 +100,7 @@ export default function StandaloneTranscriptPage() {
             <span>Cryptographically sealed and signed by SyncInk Discord Ticket Infrastructure.</span>
           </div>
           <Link
-            href="/dashboard/tickets/privacy"
+            href="/privacy"
             className="text-purple-400 hover:text-purple-300 font-medium transition-colors"
           >
             Privacy &amp; Data Retention
