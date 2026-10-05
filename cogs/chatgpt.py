@@ -121,11 +121,11 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "",
         "--- OFFICIAL SUPPORT SERVER RULES (<#1520460587522330634>) & WEBSITE DOCUMENTATION ---",
         "Discord Guide Channel: <#1520460587522330634> (Reference Post: https://discord.com/channels/1520457643842342912/1520460587522330634/1539582756001161238)",
-        "Official Website Rules Page (Public - No Login Required): https://sync-ink-support-bot.vercel.app/rules",
-        "Official Website FAQ Page (Public - No Login Required): https://sync-ink-support-bot.vercel.app/faq",
-        "Official Terms of Use (Public - No Login Required): https://sync-ink-support-bot.vercel.app/terms",
-        "Official Privacy Policy (Public - No Login Required): https://sync-ink-support-bot.vercel.app/privacy",
-        "Official Security & Defense Dashboard: https://sync-ink-support-bot.vercel.app/",
+        "Official Website Rules Page (Public - No Login Required): https://syncink.site/rules",
+        "Official Website FAQ Page (Public - No Login Required): https://syncink.site/faq",
+        "Official Terms of Use (Public - No Login Required): https://syncink.site/terms",
+        "Official Privacy Policy (Public - No Login Required): https://syncink.site/privacy",
+        "Official Security & Defense Dashboard: https://syncink.site/",
         "• Rule 1: Verification Required — All members must complete verification in <#1520748219100041348> before gaining access to the rest of the server.",
         "• Rule 2: Professional Conduct & Respect — Treat all members, staff, and developers with respect. Strictly prohibited: harassment, bullying, hate speech, discrimination, personal attacks, toxic behavior, provoking arguments.",
         "• Rule 3: Keep Discussions Relevant — Keep conversations in proper channels:",
@@ -361,7 +361,7 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
             "• **Rule 8: Enforcement Policy** — Warnings -> Timeouts -> Bans. Severe violations (such as NSFW) result in an immediate permanent ban!\n"
             "• **Rules for Use of AI**: 1-min cooldown per member, strictly no prompt injection/jailbreaking, PG-13 Truth or Dare interactions only, AI queries belong in <#1544361954574073916> or via `/ask`.\n\n"
             "📖 **Official Website Documentation (No Login Required):**\n"
-            "👉 **[View Complete Rules on Website](https://sync-ink-support-bot.vercel.app/rules)**"
+            "👉 **[View Complete Rules on Website](https://syncink.site/rules)**"
         )
 
     # 4b. FAQ (Frequently Asked Questions)
@@ -370,17 +370,17 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
             "**Official SyncInk Support Server FAQ** (<#1520460624864350218>):\n\n"
             "Find answers about Verification, Ticket Bot categories, Voice Bot temporary rooms, Security Bot, and Staff Applications.\n\n"
             "❓ **Official Website FAQ (No Login Required):**\n"
-            "👉 **[View Server FAQ on Website](https://sync-ink-support-bot.vercel.app/faq)**"
+            "👉 **[View Server FAQ on Website](https://syncink.site/faq)**"
         )
 
     # 4c. Terms of Use & Privacy Policy
     if p in ("terms", "terms of use", "terms of service", "tos", "privacy", "privacy policy", "data policy"):
         return (
             "**Official SyncInk Legal & Privacy Documentation** (Public - No Login Required):\n\n"
-            "• ⚖️ **Terms of Use:** [sync-ink-support-bot.vercel.app/terms](https://sync-ink-support-bot.vercel.app/terms)\n"
-            "• 🔒 **Privacy Policy:** [sync-ink-support-bot.vercel.app/privacy](https://sync-ink-support-bot.vercel.app/privacy)\n"
-            "• 📖 **Server Rules:** [sync-ink-support-bot.vercel.app/rules](https://sync-ink-support-bot.vercel.app/rules)\n"
-            "• ❓ **Frequently Asked Questions:** [sync-ink-support-bot.vercel.app/faq](https://sync-ink-support-bot.vercel.app/faq)"
+            "• ⚖️ **Terms of Use:** [syncink.site/terms](https://syncink.site/terms)\n"
+            "• 🔒 **Privacy Policy:** [syncink.site/privacy](https://syncink.site/privacy)\n"
+            "• 📖 **Server Rules:** [syncink.site/rules](https://syncink.site/rules)\n"
+            "• ❓ **Frequently Asked Questions:** [syncink.site/faq](https://syncink.site/faq)"
         )
 
     # 5. General Chat / Where to talk & hang out (Strict focused matching to avoid false positives)
@@ -1002,7 +1002,7 @@ class ChatGPT(commands.Cog):
             "   - Whether the query is about programming, algorithms, software development, Discord bot design, server administration, mathematics, physics, science, gaming (e.g. GTA 6), movies, tech, history, life advice, or general trivia, deliver a high-quality, comprehensive, and accurate response directly addressing what was asked.\n"
             "   - **NEVER** recite generic server navigation introductions ('I am SyncInk Assistant, here to navigate...') unless the user explicitly asks for server navigation or channel help.\n"
             "2. **DISCORD-STYLE PROFESSIONAL & SHORT MESSAGES**:\n"
-            "   - Format all responses using crisp Discord Markdown: clear bullet points (•), sub-bullets (╰), bold labels, and code blocks with syntax highlighting.\n"
+              "   - Format all responses using crisp Discord Markdown! Extensively use headings (`# Heading 1`, `## Heading 2`), bold text (`**bold**`), and typewriter code blocks (`` `inline` `` or triple backticks) to make your output highly styled and professional.\n"
             "   - Keep messages short, structured, professional, and directly to the point. Avoid conversational filler, wordy apologies, or repeating the user's prompt.\n"
             "3. **INCIDENT REPORTING & TICKET HANDLING (CRITICAL)**:\n"
             "   - When a member asks to write, draft, or submit a report for an incident (e.g. someone in general chat posting NSFW photos, harassment, toxicity, bot abuse, unauthorized advertising):\n"
