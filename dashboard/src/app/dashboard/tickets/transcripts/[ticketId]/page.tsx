@@ -61,7 +61,44 @@ export default function StandaloneTranscriptPage() {
 
   useEffect(() => {
     fetchTranscript();
-  }, [ticketId]);
+
+    // Auto-sync in the background every 5 seconds silently without UI spinners or notifications
+    const interval = setInterval(async () => {
+      if (!ticketId) return;
+      try {
+        let res = guildId ? await fetch(`/api/tickets/guilds/${guildId}/tickets/${ticketId}/transcript`) : null;
+        if (!res || !res.ok) {
+          res = await fetch(`/api/tickets/transcripts/${ticketId}`);
+        }
+        if (!res || !res.ok) {
+          const directUrl = guildId
+            ? `https://syncink-ticket.onrender.com/api/guilds/${guildId}/tickets/${ticketId}/transcript`
+            : `https://syncink-ticket.onrender.com/api/transcripts/${ticketId}`;
+          res = await fetch(directUrl);
+        }
+
+        const contentType = res?.headers?.get("content-type") || "";
+        if (res && res.ok && contentType.includes("application/json")) {
+          const data = await res.json();
+          if (data && (data.ticketId || data.messages)) {
+            setTicket((prev) => {
+              if (!prev || String(prev.ticketId) !== String(ticketId)) return data;
+              const prevLen = prev.messages?.length || 0;
+              const newLen = data.messages?.length || 0;
+              if (prevLen !== newLen || JSON.stringify(prev.messages) !== JSON.stringify(data.messages)) {
+                return { ...prev, ...data };
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (e) {
+        // Silent background update
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [ticketId, guildId]);
 
   return (
     <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-purple-600 selection:text-white">

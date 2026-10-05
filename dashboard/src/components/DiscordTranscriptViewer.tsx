@@ -382,21 +382,36 @@ export function DiscordTranscriptViewer({
     });
   };
 
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to latest messages when new chat items arrive
+  React.useEffect(() => {
+    if (messages.length > 0 && containerRef.current) {
+      const isAtBottom =
+        containerRef.current.scrollHeight - containerRef.current.scrollTop <=
+        containerRef.current.clientHeight + 200;
+      if (isAtBottom) {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  }, [messages.length]);
+
   return (
-    <div className={`flex flex-col bg-[#1e1f22] text-slate-100 rounded-2xl border border-white/[0.08] shadow-2xl overflow-hidden ${standalone ? "w-full" : "max-h-[85vh] w-full"}`}>
+    <div className={`flex flex-col bg-[#1e1f22] text-slate-100 rounded-2xl border border-white/[0.08] shadow-2xl overflow-hidden ${standalone ? "w-full" : "max-h-[92vh] sm:max-h-[85vh] w-full"}`}>
       {/* Top Banner / Navigation */}
-      <div className="bg-[#2b2d31] p-4 sm:p-5 border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
-            <FileText className="w-5 h-5" />
+      <div className="bg-[#2b2d31] p-3 sm:p-5 border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+              <h2 className="text-sm sm:text-lg font-bold text-white tracking-tight truncate">
                 {ticket?.ticketId ? `Ticket #${ticket.ticketId}` : "Discord Transcript"}
               </h2>
               <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider shrink-0 ${
                   ticket?.status === "open"
                     ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                     : "bg-purple-500/20 text-purple-300 border border-purple-500/30"
@@ -405,7 +420,7 @@ export function DiscordTranscriptViewer({
                 {ticket?.status || "closed"}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">
               Category: <span className="text-slate-200 font-medium">{ticket?.category?.label || ticket?.category?.value || "Support"}</span>
               {ticket?.closedAt && ` • Closed on ${new Date(ticket.closedAt).toLocaleDateString()}`}
             </p>
@@ -413,23 +428,23 @@ export function DiscordTranscriptViewer({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
           {ticket && (
             <>
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-xs font-semibold text-slate-300 hover:text-white transition-all border border-white/[0.08]"
+                className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-xs font-semibold text-slate-300 hover:text-white transition-all border border-white/[0.08]"
                 title="Copy direct link to this transcript"
               >
                 {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5 text-purple-400" />}
-                <span className="hidden sm:inline">{copiedLink ? "Copied Link!" : "Share Link"}</span>
+                <span className="hidden md:inline">{copiedLink ? "Copied Link!" : "Share"}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => exportTranscriptTxt(ticket)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-xs font-semibold text-slate-300 hover:text-white transition-all border border-white/[0.08]"
+                className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-xs font-semibold text-slate-300 hover:text-white transition-all border border-white/[0.08]"
                 title="Download raw .txt file"
               >
                 <Download className="w-3.5 h-3.5 text-purple-400" />
@@ -439,11 +454,11 @@ export function DiscordTranscriptViewer({
               <button
                 type="button"
                 onClick={() => exportTranscriptHtml(ticket)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-semibold text-white transition-all shadow-md shadow-purple-900/30 border border-purple-400/30"
+                className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-semibold text-white transition-all shadow-md shadow-purple-900/30 border border-purple-400/30"
                 title="Download interactive HTML chat transcript"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Export .HTML</span>
+                <span>Export<span className="hidden sm:inline"> .HTML</span></span>
               </button>
 
               {!standalone && (
@@ -523,7 +538,10 @@ export function DiscordTranscriptViewer({
       )}
 
       {/* Chat Messages Body */}
-      <div className="flex-1 overflow-y-auto bg-[#313338] p-4 sm:p-6 space-y-4 min-h-[360px] max-h-[65vh] select-text">
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-y-auto bg-[#313338] p-3 sm:p-6 space-y-3 sm:space-y-4 min-h-[320px] max-h-[70vh] sm:max-h-[65vh] select-text"
+      >
         {loading ? (
           <div className="py-20 text-center space-y-3">
             <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
@@ -552,13 +570,13 @@ export function DiscordTranscriptViewer({
             return (
               <div
                 key={index}
-                className="group flex items-start gap-3.5 p-2 rounded-xl hover:bg-black/15 transition-colors relative"
+                className="group flex items-start gap-2.5 sm:gap-3.5 p-1.5 sm:p-2 rounded-xl hover:bg-black/15 transition-colors relative"
               >
                 {/* Author Avatar */}
                 <img
                   src={msg.authorAvatar || "https://cdn.discordapp.com/embed/avatars/0.png"}
                   alt={displayName}
-                  className="w-10 h-10 rounded-full object-cover shrink-0 mt-0.5 border border-white/[0.06] bg-[#2b2d31]"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover shrink-0 mt-0.5 border border-white/[0.06] bg-[#2b2d31]"
                   loading="lazy"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = "https://cdn.discordapp.com/embed/avatars/0.png";
@@ -566,9 +584,9 @@ export function DiscordTranscriptViewer({
                 />
 
                 {/* Message Content */}
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex flex-wrap items-baseline gap-2">
-                    <span className="font-bold text-sm text-white hover:underline cursor-pointer">
+                <div className="flex-1 min-w-0 space-y-1 overflow-hidden">
+                  <div className="flex flex-wrap items-baseline gap-1.5 sm:gap-2">
+                    <span className="font-bold text-xs sm:text-sm text-white hover:underline cursor-pointer">
                       {displayName}
                     </span>
 
@@ -589,7 +607,7 @@ export function DiscordTranscriptViewer({
                       </span>
                     )}
 
-                    <span className="text-[11px] text-slate-400 font-sans">
+                    <span className="text-[10.5px] sm:text-[11px] text-slate-400 font-sans">
                       {new Date(msg.timestamp).toLocaleString(undefined, {
                         month: "short",
                         day: "numeric",
@@ -600,7 +618,7 @@ export function DiscordTranscriptViewer({
                   </div>
 
                   {/* Formatted Text */}
-                  <div className="text-[13.5px] leading-relaxed text-[#dbdee1] break-words whitespace-pre-wrap font-sans">
+                  <div className="text-[13px] sm:text-[13.5px] leading-relaxed text-[#dbdee1] break-words whitespace-pre-wrap font-sans overflow-hidden">
                     {renderFormattedContent(msg.content)}
                   </div>
 
@@ -653,6 +671,7 @@ export function DiscordTranscriptViewer({
             );
           })
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Image Lightbox Modal */}

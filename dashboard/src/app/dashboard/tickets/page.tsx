@@ -643,6 +643,49 @@ export default function NativeTicketDashboardPage() {
     loadTicketTranscript(t.ticketId || t.id, t.guildId || selectedGuildId);
   };
 
+  // Auto-sync active ticket transcript in the background every 5 seconds silently without UI notices
+  useEffect(() => {
+    if (!selectedTranscript?.ticketId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const ticketId = selectedTranscript.ticketId;
+        const targetGuildId = selectedTranscript.guildId || selectedGuildId;
+
+        let res = targetGuildId ? await fetch(`/api/tickets/guilds/${targetGuildId}/tickets/${ticketId}/transcript`) : null;
+        if (!res || !res.ok) {
+          res = await fetch(`/api/tickets/transcripts/${ticketId}`);
+        }
+        if (!res || !res.ok) {
+          const directUrl = targetGuildId
+            ? `https://syncink-ticket.onrender.com/api/guilds/${targetGuildId}/tickets/${ticketId}/transcript`
+            : `https://syncink-ticket.onrender.com/api/transcripts/${ticketId}`;
+          res = await fetch(directUrl);
+        }
+
+        const contentType = res?.headers?.get("content-type") || "";
+        if (res && res.ok && contentType.includes("application/json")) {
+          const data = await res.json();
+          if (data && (data.ticketId || data.messages)) {
+            setSelectedTranscript((prev) => {
+              if (!prev || String(prev.ticketId) !== String(ticketId)) return prev;
+              const prevLen = prev.messages?.length || 0;
+              const newLen = data.messages?.length || 0;
+              if (prevLen !== newLen || JSON.stringify(prev.messages) !== JSON.stringify(data.messages)) {
+                return { ...prev, ...data };
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (e) {
+        // Silent update
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [selectedTranscript?.ticketId, selectedTranscript?.guildId, selectedGuildId]);
+
   // Panel Form State
   const [panelForm, setPanelForm] = useState<PanelConfig>(DEFAULT_PANEL_CONFIG);
   const [panelChannelId, setPanelChannelId] = useState<string>("");
@@ -1304,12 +1347,12 @@ export default function NativeTicketDashboardPage() {
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <button
             type="button"
-            className="md:hidden"
+            className="mobile-menu-trigger"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer" }}
+            style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer", padding: "4px" }}
             aria-label="Toggle mobile menu"
           >
-            <Menu size={20} />
+            <Menu size={22} />
           </button>
 
           <img src="/ticket-logo.png" alt="SyncInk" style={{ width: 34, height: 34, borderRadius: 10 }} />
@@ -1764,28 +1807,15 @@ export default function NativeTicketDashboardPage() {
 
       {/* Main Container */}
       <div style={{ display: "flex", minHeight: "calc(100vh - 65px)" }}>
-        {/* Backdrop for Mobile Sidebar Drawer */}
-        {mobileMenuOpen && (
-          <div
-            className="md:hidden"
-            style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.75)", backdropFilter: "blur(8px)", zIndex: 110 }}
-            onClick={() => setMobileMenuOpen(false)}
-          />
-        )}
+        {/* Backdrop for Mobile/Tablet Sidebar Drawer */}
+        <div
+          className={`dashboard-sidebar-backdrop ${mobileMenuOpen ? "active" : ""}`}
+          onClick={() => setMobileMenuOpen(false)}
+        />
 
         {/* Sidebar */}
         <aside
-          style={{
-            width: "260px",
-            borderRight: "1px solid var(--border)",
-            background: "rgba(5, 5, 5, 0.95)",
-            padding: "20px 12px",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            flexShrink: 0
-          }}
-          className={`${mobileMenuOpen ? "block fixed inset-y-0 left-0 z-120 w-72" : "hidden md:flex"}`}
+          className={`dashboard-sidebar ${mobileMenuOpen ? "mobile-open" : ""}`}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             {/* Mobile Drawer Top Header (Visible on Mobile Only) */}
@@ -4384,25 +4414,14 @@ export default function NativeTicketDashboardPage() {
       {/* Online Discord Transcript Modal */}
       {(selectedTranscript || transcriptLoading || transcriptError) && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.85)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-            zIndex: 150,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px"
-          }}
+          className="fixed inset-0 z-[150] bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6"
           onClick={() => {
             setSelectedTranscript(null);
             setTranscriptError(null);
           }}
         >
           <div
-            style={{ width: "min(920px, 100%)", maxHeight: "90vh", display: "flex", flexDirection: "column" }}
+            className="w-full max-w-4xl max-h-[96vh] sm:max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <DiscordTranscriptViewer
