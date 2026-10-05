@@ -1277,32 +1277,21 @@ export default function NativeTicketDashboardPage() {
 
   // 4. Authenticated & Has Servers: Full Dashboard Layout
   return (
-    <div className="dashboard-root">
+    <div className="dashboard-root" style={{ minHeight: "100vh", background: "#000000", color: "var(--text)" }}>
       {/* Top Header */}
-      <header className="dashboard-topbar">
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+      <header className="dashboard-topbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "1px solid var(--border)", background: "rgba(5, 5, 5, 0.8)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <button
             type="button"
             className="md:hidden"
-            onClick={() => setMobileMenuOpen(true)}
-            style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid var(--border)",
-              borderRadius: "10px",
-              color: "var(--text)",
-              cursor: "pointer",
-              padding: "8px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0
-            }}
-            aria-label="Open mobile menu"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            style={{ background: "none", border: "none", color: "var(--text)", cursor: "pointer" }}
+            aria-label="Toggle mobile menu"
           >
-            <Menu size={18} />
+            <Menu size={20} />
           </button>
 
-          <img src="/ticket-logo.png" alt="SyncInk" style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0 }} />
+          <img src="/ticket-logo.png" alt="SyncInk" style={{ width: 34, height: 34, borderRadius: 10 }} />
 
           {/* Server Switcher Dropdown */}
           <div style={{ position: "relative" }}>
@@ -1312,43 +1301,40 @@ export default function NativeTicketDashboardPage() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
-                padding: "6px 12px",
+                gap: "10px",
+                padding: "8px 14px",
                 borderRadius: "12px",
                 background: "rgba(255, 255, 255, 0.05)",
                 border: "1px solid var(--border)",
                 color: "var(--text)",
                 cursor: "pointer",
                 fontSize: "13px",
-                fontWeight: 600,
-                maxWidth: "200px"
+                fontWeight: 600
               }}
             >
               {selectedGuild?.icon ? (
                 <img
                   src={`https://cdn.discordapp.com/icons/${selectedGuild.id}/${selectedGuild.icon}.png`}
                   alt={selectedGuild.name}
-                  style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0 }}
+                  style={{ width: 22, height: 22, borderRadius: "50%" }}
                 />
               ) : (
-                <div style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--accent)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", flexShrink: 0 }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--accent)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px" }}>
                   {selectedGuild?.name ? selectedGuild.name.charAt(0) : "S"}
                 </div>
               )}
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <span style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {selectedGuild?.name || "Select Server"}
               </span>
-              <div className="hidden sm:block">
-                {selectedGuild && renderTierBadge(selectedGuild.dashboardTier || (selectedGuild.owner ? "owner" : "admin"))}
-              </div>
-              <ChevronDown size={14} style={{ opacity: 0.6, flexShrink: 0 }} />
+              {selectedGuild && renderTierBadge(selectedGuild.dashboardTier || (selectedGuild.owner ? "owner" : "admin"))}
+              <ChevronDown size={14} style={{ opacity: 0.6 }} />
             </button>
 
-            {/* Desktop dropdown backdrop */}
+            {/* Desktop dropdown backdrop - invisible outside click catcher */}
             {serverDropdownOpen && (
               <div
                 className="hidden md:block"
-                style={{ position: "fixed", inset: 0, zIndex: 99, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)" }}
+                style={{ position: "fixed", inset: 0, zIndex: 99 }}
                 onClick={() => setServerDropdownOpen(false)}
               />
             )}
@@ -1356,50 +1342,37 @@ export default function NativeTicketDashboardPage() {
             {/* Desktop Dropdown Popover */}
             {serverDropdownOpen && (
               <div
-                className="hidden md:block server-dropdown-menu"
+                className="hidden md:block"
                 style={{
                   position: "absolute",
                   top: "calc(100% + 8px)",
                   left: 0,
-                  width: "300px",
-                  background: "#0d0f1a",
-                  borderRadius: "18px",
-                  border: "1px solid rgba(139, 76, 255, 0.25)",
-                  boxShadow: "0 20px 50px rgba(0,0,0,0.8)",
-                  padding: "14px",
+                  width: "280px",
+                  background: "#0f1426",
+                  borderRadius: "16px",
+                  border: "1px solid var(--border)",
+                  boxShadow: "0 16px 40px rgba(0,0,0,0.6)",
+                  padding: "10px",
                   zIndex: 100
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-                  <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Select Server ({guilds.length})
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setServerDropdownOpen(false)}
-                    style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "2px" }}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", marginBottom: "10px" }}>
-                  <Search size={14} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", borderRadius: "10px", background: "rgba(0,0,0,0.3)", marginBottom: "8px" }}>
+                  <Search size={14} style={{ color: "var(--text-muted)" }} />
                   <input
                     type="text"
                     value={serverSearch}
                     onChange={(e) => setServerSearch(e.target.value)}
                     placeholder="Filter servers..."
-                    style={{ background: "transparent", border: "none", color: "white", fontSize: "13px", outline: "none", width: "100%" }}
+                    style={{ background: "transparent", border: "none", color: "white", fontSize: "12px", outline: "none", width: "100%" }}
                   />
                   {serverSearch && (
-                    <button type="button" onClick={() => setServerSearch("")} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                    <button type="button" onClick={() => setServerSearch("")} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: 0 }}>
                       <X size={12} />
                     </button>
                   )}
                 </div>
 
-                <div style={{ maxHeight: "260px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <div style={{ maxHeight: "220px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px" }}>
                   {guilds
                     .filter((g) => g.name.toLowerCase().includes(serverSearch.toLowerCase()))
                     .map((g) => (
@@ -1415,36 +1388,36 @@ export default function NativeTicketDashboardPage() {
                           alignItems: "center",
                           gap: "10px",
                           width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: "10px",
+                          padding: "8px 10px",
+                          borderRadius: "8px",
                           border: "none",
-                          background: g.id === selectedGuildId ? "rgba(139, 76, 255, 0.15)" : "transparent",
+                          background: g.id === selectedGuildId ? "rgba(139, 76, 255, 0.12)" : "transparent",
                           color: g.id === selectedGuildId ? "var(--accent)" : "var(--text)",
                           cursor: "pointer",
                           textAlign: "left",
-                          fontSize: "13px",
+                          fontSize: "12px",
                           fontWeight: g.id === selectedGuildId ? 700 : 500
                         }}
                       >
                         {g.icon ? (
-                          <img src={`https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png`} alt="" style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0 }} />
+                          <img src={`https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png`} alt="" style={{ width: 22, height: 22, borderRadius: "50%" }} />
                         ) : (
-                          <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#222", color: "#ccc", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", flexShrink: 0 }}>{g.name.charAt(0)}</div>
+                          <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#333", color: "#ccc", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px" }}>{g.name.charAt(0)}</div>
                         )}
                         <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
-                        {g.id === selectedGuildId && <CheckCircle2 size={16} />}
+                        {g.id === selectedGuildId && <CheckCircle2 size={14} />}
                       </button>
                     ))}
                 </div>
 
-                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "10px", marginTop: "10px" }}>
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "8px" }}>
                   <a
                     href="https://discord.com/oauth2/authorize?client_id=1344248888060809228&permissions=8&integration_type=0&scope=bot+applications.commands"
                     target="_blank"
                     rel="noreferrer"
-                    style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", fontSize: "12px", color: "var(--accent)", textDecoration: "none", fontWeight: 600, borderRadius: "10px", background: "rgba(139, 76, 255, 0.08)" }}
+                    style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", fontSize: "12px", color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}
                   >
-                    <Plus size={15} /> Add Bot to Another Server
+                    <Plus size={14} /> Add Bot to Another Server
                   </a>
                 </div>
               </div>
@@ -1743,45 +1716,60 @@ export default function NativeTicketDashboardPage() {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <button
             type="button"
             onClick={() => selectedGuildId && fetchGuildSnapshot(selectedGuildId)}
             title="Refresh Server Data"
-            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", color: "var(--text-muted)", cursor: "pointer", fontSize: "12px" }}
+            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", color: "var(--text-muted)", cursor: "pointer", fontSize: "12px" }}
           >
             <RefreshCw size={13} className={snapshotLoading ? "spin" : ""} />
             <span className="hidden sm:inline">Sync</span>
           </button>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "5px 10px", borderRadius: "12px", background: "rgba(255, 255, 255, 0.04)", border: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 12px", borderRadius: "12px", background: "rgba(255, 255, 255, 0.04)", border: "1px solid var(--border)" }}>
             {user.avatar ? (
               <img src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`} alt="" style={{ width: 22, height: 22, borderRadius: "50%" }} />
             ) : (
-              <User size={15} />
+              <User size={16} />
             )}
             <span style={{ fontSize: "12px", fontWeight: 600 }} className="hidden sm:inline">{user.global_name || user.username}</span>
-            <button type="button" onClick={handleLogout} title="Log out" style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", marginLeft: "2px", padding: "4px" }}>
-              <LogOut size={13} />
+            <button type="button" onClick={handleLogout} title="Log out" style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", marginLeft: "4px" }}>
+              <LogOut size={14} />
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <div className="dashboard-layout-body">
+      <div style={{ display: "flex", minHeight: "calc(100vh - 65px)" }}>
         {/* Backdrop for Mobile Sidebar Drawer */}
-        <div
-          className={`dashboard-sidebar-backdrop ${mobileMenuOpen ? "active" : ""}`}
-          onClick={() => setMobileMenuOpen(false)}
-        />
+        {mobileMenuOpen && (
+          <div
+            className="md:hidden"
+            style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.75)", backdropFilter: "blur(8px)", zIndex: 110 }}
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
 
-        {/* Sidebar Drawer */}
-        <aside className={`dashboard-sidebar ${mobileMenuOpen ? "mobile-open" : ""}`}>
+        {/* Sidebar */}
+        <aside
+          style={{
+            width: "260px",
+            borderRight: "1px solid var(--border)",
+            background: "rgba(5, 5, 5, 0.95)",
+            padding: "20px 12px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            flexShrink: 0
+          }}
+          className={`${mobileMenuOpen ? "block fixed inset-y-0 left-0 z-120 w-72" : "hidden md:flex"}`}
+        >
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             {/* Mobile Drawer Top Header (Visible on Mobile Only) */}
             <div
-              className="lg:hidden"
+              className="md:hidden"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -1814,7 +1802,7 @@ export default function NativeTicketDashboardPage() {
               </button>
             </div>
 
-            <div style={{ padding: "0 12px 10px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <div style={{ padding: "0 12px 12px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Ticket Management
             </div>
 
@@ -1850,14 +1838,13 @@ export default function NativeTicketDashboardPage() {
                     padding: "10px 14px",
                     borderRadius: "10px",
                     border: "none",
-                    background: active ? "rgba(139, 76, 255, 0.15)" : "transparent",
+                    background: active ? "rgba(139, 76, 255, 0.12)" : "transparent",
                     color: active ? "var(--accent)" : "var(--text-soft)",
                     cursor: "pointer",
                     fontSize: "13px",
                     fontWeight: active ? 600 : 500,
                     textAlign: "left",
-                    transition: "all 0.15s ease",
-                    minHeight: "42px"
+                    transition: "all 0.15s ease"
                   }}
                 >
                   <Icon size={16} />
@@ -1868,8 +1855,8 @@ export default function NativeTicketDashboardPage() {
           </div>
 
           {/* Help & Legal Navigation */}
-          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "14px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <div style={{ padding: "0 12px 6px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "16px", marginTop: "16px", display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div style={{ padding: "0 12px 8px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Help & Resources
             </div>
             {[
@@ -1903,8 +1890,7 @@ export default function NativeTicketDashboardPage() {
                     cursor: "pointer",
                     fontSize: "12px",
                     fontWeight: 500,
-                    textAlign: "left",
-                    minHeight: "38px"
+                    textAlign: "left"
                   }}
                 >
                   <Icon size={15} />
@@ -1916,7 +1902,7 @@ export default function NativeTicketDashboardPage() {
         </aside>
 
         {/* Content Area */}
-        <main className="dashboard-main-content">
+        <main className="dashboard-main-content" style={{ flex: 1, padding: "28px 32px", overflowY: "auto", maxWidth: "1400px", margin: "0 auto", width: "100%" }}>
           {snapshotLoading && !snapshot && !["guide", "faq", "rules", "privacy", "terms", "status", "interface", "commands"].includes(activeTab) ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "55vh", gap: "16px" }}>
               <RefreshCw size={36} className="spin" style={{ color: "var(--accent)" }} />
@@ -4427,7 +4413,24 @@ export default function NativeTicketDashboardPage() {
 
       {/* Unsaved Changes Sticky Banner */}
       {isDirty && (
-        <div className="unsaved-changes-banner">
+        <div
+          className="unsaved-changes-banner"
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 90,
+            background: "rgba(10, 10, 10, 0.95)",
+            border: "1px solid var(--accent)",
+            borderRadius: "16px",
+            padding: "12px 24px",
+            boxShadow: "0 12px 40px rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            gap: "20px"
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "white", fontSize: "13px", fontWeight: 600 }}>
             <AlertTriangle size={16} color="var(--accent)" />
             <span>Careful &mdash; you have unsaved changes!</span>
@@ -4474,7 +4477,10 @@ export default function NativeTicketDashboardPage() {
       )}
 
       {/* Toast Viewport */}
-      <div className="toast-viewport">
+      <div
+        className="toast-viewport"
+        style={{ position: "fixed", bottom: "20px", right: "20px", zIndex: 120, display: "flex", flexDirection: "column", gap: "8px" }}
+      >
         {toasts.map((toast) => (
           <div
             key={toast.id}
