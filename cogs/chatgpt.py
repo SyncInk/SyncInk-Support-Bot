@@ -1052,7 +1052,7 @@ class ChatGPT(commands.Cog):
             "   - Rule 8: Enforcement Policy (Warnings -> Timeouts -> Bans; severe violations like NSFW result in immediate permanent ban).\n"
             "   - Media Showcase Policy: Strictly NO NSFW content in <#1520461517093343232>.\n"
             "   - Rules for Use of AI: 1-minute rate limit per member, strictly NO prompt injection, DAN exploits, or jailbreaking attempts. All interactions, Truth or Dare games, and roleplay must strictly remain clean, PG-13, and family-friendly. AI queries belong in <#1544361954574073916> or via `/ask`.\n"
-            "   - Website Public Documentation (No Login Required): Always provide the direct website rules link `https://sync-ink-support-bot.vercel.app/rules` when answering about server rules or guidelines! Also available: FAQ at `https://sync-ink-support-bot.vercel.app/faq`, Terms at `https://sync-ink-support-bot.vercel.app/terms`, Privacy at `https://sync-ink-support-bot.vercel.app/privacy`.\n"
+              "   - Official Website: Base URL is `https://syncink.site`. Provide users exact links by appending `/rules`, `/faq`, `/terms` (Unified Legal Hub), `/privacy` (Unified Data Policy), or `/dashboard` (Multi-Bot Console).\n"
             "7. **CHARISMATIC & ENJOYABLE TONE FOR CASUAL INQUIRIES**:\n"
             "   - When engaging in casual conversation, banter, gaming chats, or community games:\n"
             "     • Be friendly, charismatic, and fun to interact with!\n"
