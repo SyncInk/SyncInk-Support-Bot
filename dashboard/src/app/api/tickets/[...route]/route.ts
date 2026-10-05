@@ -91,6 +91,13 @@ async function proxyRequest(request: Request, { params }: { params: { route: str
     // Forward redirects (e.g. for OAuth login/callback)
     if (backendRes.status >= 300 && backendRes.status < 400) {
       const location = backendRes.headers.get("location");
+      // If backend redirects an API route to the web dashboard, it means the API route was not found on backend
+      if (location && (location.includes("/dashboard/tickets") || location.includes("syncink.site/dashboard"))) {
+        return NextResponse.json(
+          { error: "Endpoint not found on ticket backend." },
+          { status: 404, headers: resHeaders }
+        );
+      }
       if (location) {
         resHeaders.set("Location", location);
         return new NextResponse(null, { status: backendRes.status, headers: resHeaders });
@@ -100,6 +107,14 @@ async function proxyRequest(request: Request, { params }: { params: { route: str
     if (resContentType.includes("application/json")) {
       const data = await backendRes.json();
       return NextResponse.json(data, { status: backendRes.status, headers: resHeaders });
+    }
+
+    // If backend returned HTML (e.g. error page or redirect body), do not return HTML for an API request
+    if (resContentType.includes("text/html")) {
+      return NextResponse.json(
+        { error: "Ticket backend returned non-JSON response.", status: backendRes.status },
+        { status: backendRes.status >= 400 ? backendRes.status : 404, headers: resHeaders }
+      );
     }
 
     const text = await backendRes.text();

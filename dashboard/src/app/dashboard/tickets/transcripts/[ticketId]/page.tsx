@@ -16,24 +16,40 @@ export default function StandaloneTranscriptPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const guildId = searchParams?.get("guildId");
+
   const fetchTranscript = async () => {
     if (!ticketId) return;
     setLoading(true);
     setError(null);
 
     try {
-      // 1. Try local proxy
-      let res = await fetch(`/api/tickets/transcripts/${ticketId}`);
-      if (!res.ok) {
-        // 2. Direct Render backend fallback
-        res = await fetch(`https://syncink-ticket.onrender.com/api/transcripts/${ticketId}`);
+      // 1. Try guild-scoped proxy first if guildId is available
+      let res = guildId ? await fetch(`/api/tickets/guilds/${guildId}/tickets/${ticketId}/transcript`) : null;
+
+      // 2. Try global transcript proxy
+      if (!res || !res.ok) {
+        res = await fetch(`/api/tickets/transcripts/${ticketId}`);
       }
 
-      if (!res.ok) {
+      // 3. Direct Render backend fallback
+      if (!res || !res.ok) {
+        const directUrl = guildId
+          ? `https://syncink-ticket.onrender.com/api/guilds/${guildId}/tickets/${ticketId}/transcript`
+          : `https://syncink-ticket.onrender.com/api/transcripts/${ticketId}`;
+        res = await fetch(directUrl);
+      }
+
+      const contentType = res?.headers?.get("content-type") || "";
+      if (!res || !res.ok || !contentType.includes("application/json")) {
         throw new Error(`Transcript for ticket #${ticketId} was not found or is still archiving.`);
       }
 
       const data = await res.json();
+      if (!data || !data.ticketId) {
+        throw new Error(`Transcript for ticket #${ticketId} not found.`);
+      }
       setTicket(data);
     } catch (err: any) {
       console.error("[TRANSCRIPT] Load error:", err);

@@ -571,43 +571,63 @@ export default function NativeTicketDashboardPage() {
     if (!ticketId) return;
     setTranscriptLoading(true);
     setTranscriptError(null);
-    setSelectedTranscript({ ticketId, messages: [] });
+
+    // Look for ticket in current snapshot immediately so the user sees ticket info right away
+    const fromSnap = (snapshot?.tickets || []).find((t: any) => String(t.ticketId) === String(ticketId));
+    if (fromSnap) {
+      setSelectedTranscript(fromSnap);
+    } else {
+      setSelectedTranscript({ ticketId, messages: [] });
+    }
 
     try {
-      const gId = guildId || selectedGuildId;
+      const gId = guildId || fromSnap?.guildId || selectedGuildId || snapshot?.guild?.id;
       const proxyUrl = gId
         ? `/api/tickets/guilds/${gId}/tickets/${ticketId}/transcript`
         : `/api/tickets/transcripts/${ticketId}`;
 
       let res = await fetch(proxyUrl);
       if (!res.ok) {
-        // Direct Render backend fallback
-        res = await fetch(`https://syncink-ticket.onrender.com/api/transcripts/${ticketId}`);
+        // Direct Render backend fallback with guildId if available
+        const fallbackUrl = gId
+          ? `https://syncink-ticket.onrender.com/api/guilds/${gId}/tickets/${ticketId}/transcript`
+          : `https://syncink-ticket.onrender.com/api/transcripts/${ticketId}`;
+        res = await fetch(fallbackUrl);
       }
 
-      if (!res.ok) {
+      const contentType = res.headers.get("content-type") || "";
+      if (!res.ok || !contentType.includes("application/json")) {
         throw new Error(`Failed to load transcript for #${ticketId}`);
       }
 
       const data = await res.json();
-      setSelectedTranscript(data);
+      if (data && (data.ticketId || data.messages)) {
+        setSelectedTranscript(data);
+        setTranscriptError(null);
+      } else if (fromSnap) {
+        setTranscriptError(null);
+      } else {
+        throw new Error(`Ticket #${ticketId} was not found in database.`);
+      }
     } catch (err: any) {
-      console.error("[TRANSCRIPTS] Error loading transcript:", err);
-      setTranscriptError(err.message || "Failed to load ticket transcript from database.");
-      const fromSnap = (snapshot?.tickets || []).find((t: any) => t.ticketId === ticketId);
-      if (fromSnap) {
+      console.warn("[TRANSCRIPTS] Notice loading live transcript messages:", err.message);
+      const currentSnap = fromSnap || (snapshot?.tickets || []).find((t: any) => String(t.ticketId) === String(ticketId));
+      if (currentSnap) {
         setSelectedTranscript({
-          ...fromSnap,
-          messages: fromSnap.messages || [
+          ...currentSnap,
+          messages: (currentSnap.messages && currentSnap.messages.length > 0) ? currentSnap.messages : [
             {
-              authorTag: fromSnap.creator?.displayName || "Creator",
-              authorAvatar: fromSnap.creator?.avatarUrl || "https://cdn.discordapp.com/embed/avatars/0.png",
-              content: `Ticket #${ticketId} created in category ${fromSnap.category?.label || "Support"}.`,
-              timestamp: fromSnap.createdAt || Date.now(),
+              authorTag: currentSnap.creator?.displayName || currentSnap.creator?.username || "Creator",
+              authorAvatar: currentSnap.creator?.avatarUrl || "https://cdn.discordapp.com/embed/avatars/0.png",
+              content: `Ticket #${ticketId} created in category "${currentSnap.category?.label || currentSnap.type || 'Support'}". Status: ${currentSnap.status || 'closed'}.`,
+              timestamp: currentSnap.createdAt || Date.now(),
               attachments: []
             }
           ]
         });
+        setTranscriptError(null);
+      } else {
+        setTranscriptError(`Transcript for Ticket #${ticketId} is currently being archived by the bot.`);
       }
     } finally {
       setTranscriptLoading(false);
@@ -706,12 +726,13 @@ export default function NativeTicketDashboardPage() {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get("tab");
       const ticketIdParam = params.get("ticketId");
+      const guildIdParam = params.get("guildId");
       if (tabParam) {
         setActiveTab(tabParam);
       }
       if (ticketIdParam) {
         setActiveTab("transcripts");
-        loadTicketTranscript(ticketIdParam);
+        loadTicketTranscript(ticketIdParam, guildIdParam);
       }
     }
   }, []);
