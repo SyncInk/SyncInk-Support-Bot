@@ -79,110 +79,14 @@ export default function HomePage() {
     const interval = setInterval(fetchMonitoring, 6000);
     return () => clearInterval(interval);
   }, []);
-
-  // Canvas particle animation with luminous blue/violet gradient dots
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let animationFrameId: number;
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
-
-    const handleResize = () => {
-      if (!canvas) return;
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-    };
-    window.addEventListener("resize", handleResize);
-
-    const particles: Array<{
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      radius: number;
-      alpha: number;
-    }> = [];
-
-    const particleCount = Math.min(Math.floor(window.innerWidth / 25), 45);
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        radius: Math.random() * 1.5 + 0.5,
-        alpha: Math.random() * 0.45 + 0.15,
-      });
-    }
-
-    const render = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      // Draw connection lines
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < 90) {
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(157, 124, 255, ${0.1 * (1 - dist / 90)})`;
-            ctx.lineWidth = 0.85;
-            ctx.stroke();
-          }
-        }
-      }
-
-      // Draw particles
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-
-        if (p.x < 0) p.x = width;
-        if (p.x > width) p.x = 0;
-        if (p.y < 0) p.y = height;
-        if (p.y > height) p.y = 0;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(168, 85, 247, ${p.alpha})`;
-        ctx.fill();
-      }
-
-      animationFrameId = requestAnimationFrame(render);
-    };
-
-    render();
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-brand-blue selection:text-white relative overflow-x-hidden">
-      {/* Background Particle Canvas */}
-      <canvas
-        ref={canvasRef}
-        className="fixed inset-0 pointer-events-none z-0 opacity-85"
-      />
 
-      {/* Radiant Glow Lights (Electric blue / Violet / Lilac) */}
+      
       <div
-        className="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[750px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none z-0 will-change-transform" />
+        className="fixed bottom-1/4 right-10 w-[550px] h-[550px] bg-indigo-600/10 rounded-full blur-[64px] pointer-events-none z-0 will-change-transform" />
       <div
-        className="fixed bottom-1/4 right-10 w-[550px] h-[550px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none z-0 will-change-transform" />
-      <div
-        className="fixed top-2/3 left-10 w-[480px] h-[480px] bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none z-0 will-change-transform" />
+        className="fixed top-2/3 left-10 w-[480px] h-[480px] bg-cyan-500/10 rounded-full blur-[64px] pointer-events-none z-0 will-change-transform" />
 
       {/* Navigation */}
       <PublicNavbar />
@@ -264,7 +168,7 @@ export default function HomePage() {
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
             variants={fadeIn}
-            className="p-6 sm:p-8 rounded-3xl bg-[#0b0e1a]/90 border border-blue-500/25 backdrop-blur-xl shadow-2xl relative overflow-hidden group hover:border-blue-500/40 transition-colors duration-500"
+            className="p-6 sm:p-8 rounded-full bg-[#0b0e1a]/90 border border-blue-500/25 backdrop-blur-xl shadow-2xl relative overflow-hidden group hover:border-blue-500/40 transition-colors duration-500"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
@@ -367,7 +271,7 @@ export default function HomePage() {
                 <motion.div 
                   whileHover={{ rotate: [0, -10, 10, 0], scale: 1.05 }}
                   transition={{ duration: 0.5 }}
-                  className="w-24 h-24 rounded-3xl bg-blue-600/20 border-2 border-blue-500/40 shadow-[0_0_30px_rgba(147,51,234,0.4)] flex items-center justify-center p-2.5 shrink-0"
+                  className="w-24 h-24 rounded-full bg-blue-600/20 border-2 border-blue-500/40 shadow-[0_0_30px_rgba(147,51,234,0.4)] flex items-center justify-center p-2.5 shrink-0"
                 >
                   <img
                     src="/ticket-logo.png"
@@ -539,7 +443,7 @@ export default function HomePage() {
                 <motion.div 
                   whileHover={{ rotate: [0, 10, -10, 0], scale: 1.05 }}
                   transition={{ duration: 0.5 }}
-                  className="w-24 h-24 rounded-3xl bg-cyan-600/20 border-2 border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.35)] flex items-center justify-center p-2.5 shrink-0"
+                  className="w-24 h-24 rounded-full bg-cyan-600/20 border-2 border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.35)] flex items-center justify-center p-2.5 shrink-0"
                 >
                   <img
                     src="/voice-logo.png"
@@ -664,7 +568,7 @@ export default function HomePage() {
             <div className="absolute top-0 right-0 w-96 h-96 bg-pink-600/10 rounded-full blur-3xl pointer-events-none transition-transform duration-700 group-hover:scale-110" />
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 pb-8 border-b border-white/[0.08] relative z-10">
               <div className="flex items-start sm:items-center gap-6">
-                <div className="w-24 h-24 rounded-3xl bg-pink-600/10 border-2 border-pink-500/20 flex items-center justify-center shrink-0 shadow-lg">
+                <div className="w-24 h-24 rounded-full bg-pink-600/10 border-2 border-pink-500/20 flex items-center justify-center shrink-0 shadow-lg">
                   <Music className="w-12 h-12 text-pink-400/70" />
                 </div>
                 <div>
@@ -736,10 +640,10 @@ export default function HomePage() {
               <div className="flex items-start sm:items-center gap-6">
                 <motion.div 
                   whileHover={{ scale: 1.05 }}
-                  className="w-24 h-24 rounded-3xl bg-blue-600/20 border-2 border-blue-500/40 shadow-[0_0_40px_rgba(157,124,255,0.4)] flex items-center justify-center shrink-0 overflow-hidden"
+                  className="w-24 h-24 rounded-full bg-blue-600/20 border-2 border-blue-500/40 shadow-[0_0_40px_rgba(157,124,255,0.4)] flex items-center justify-center shrink-0 overflow-hidden"
                 >
                   <img
-                    src="/syncink-s-blue.jpg"
+                    src="/syncink-main-logo.png"
                     alt="SyncInk Support Bot"
                     className="w-full h-full object-cover"
                   />
@@ -828,7 +732,7 @@ export default function HomePage() {
               <motion.div 
                 animate={{ rotate: [0, 5, -5, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="w-16 h-16 rounded-3xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center mx-auto text-blue-400 shadow-[0_0_30px_rgba(157,124,255,0.4)]"
+                className="w-16 h-16 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center mx-auto text-blue-400 shadow-[0_0_30px_rgba(157,124,255,0.4)]"
               >
                 <Users className="w-8 h-8" />
               </motion.div>
@@ -841,11 +745,11 @@ export default function HomePage() {
                   href="/apply"
                   className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm sm:text-base transition-all shadow-[0_0_20px_rgba(157,124,255,0.4)] hover:shadow-[0_0_30px_rgba(157,124,255,0.6)] flex items-center gap-2 hover:-translate-y-1"
                 >
-                  <span>Apply Now (No Discord ID Input Needed)</span>
+                  <span>Apply Now </span>
                   <ArrowRight className="w-5 h-5" />
                 </Link>
                 <a
-                  href="https://discord.gg/syncink"
+                  href="https://discord.gg/rB6gNZaK9u"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-8 py-4 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-sm sm:text-base transition-all border border-white/10 flex items-center gap-2 hover:-translate-y-1"

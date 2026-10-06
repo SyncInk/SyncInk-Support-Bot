@@ -1115,43 +1115,9 @@ export default function DashboardPage() {
         {/* --- MULTI-BOT CONSOLE SWITCHER --- */}
         <div className="border-t border-border/60 bg-[#0a0d15] px-4 sm:px-6 lg:px-8 py-2.5">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/40 border border-white/10">
-              <button
-                type="button"
-                onClick={() => setBotSystem("security")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  botSystem === "security"
-                    ? "bg-brand-red text-white shadow-glow"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                <Shield className="h-3.5 w-3.5 text-brand-crimson" />
-                <span>🛡️ Security & AutoMod</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setBotSystem("ticket")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  botSystem === "ticket"
-                    ? "bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.4)]"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                <MessageSquare className="h-3.5 w-3.5 text-purple-400" />
-                <span>🎟️ Ticket System</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setBotSystem("voice")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  botSystem === "voice"
-                    ? "bg-cyan-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                <Radio className="h-3.5 w-3.5 text-cyan-400" />
-                <span>🔊 Dynamic Voice</span>
-              </button>
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-brand-crimson" />
+              <span className="text-sm font-bold text-white tracking-wide uppercase">Security Engine</span>
             </div>
 
             <div className="flex items-center gap-3">
