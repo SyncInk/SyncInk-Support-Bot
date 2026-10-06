@@ -83,14 +83,14 @@ export default function MasterDashboardHub() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>All 2 Dedicated Consoles Online</span>
+              <span>All 3 Dedicated Consoles Online</span>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto w-full">
           {/* CARD 1: TICKET BOT DASHBOARD */}
-          <div className="w-full p-8 rounded-[2rem] bg-gradient-to-b from-[#0f111a] to-[#08090e] border border-[#5865F2]/30 shadow-[0_20px_60px_-15px_rgba(88,101,242,0.2)] relative overflow-hidden flex flex-col justify-between group hover:border-[#5865F2]/60 hover:shadow-[0_20px_60px_-15px_rgba(88,101,242,0.4)] transition-all duration-500 hover:-translate-y-1">
+          <div className="w-full p-6 sm:p-8 rounded-[2rem] bg-gradient-to-b from-[#0f111a] to-[#08090e] border border-[#5865F2]/30 shadow-[0_20px_60px_-15px_rgba(88,101,242,0.2)] relative overflow-hidden flex flex-col justify-between group hover:border-[#5865F2]/60 hover:shadow-[0_20px_60px_-15px_rgba(88,101,242,0.4)] transition-all duration-500 hover:-translate-y-1">
             <div className="absolute top-0 right-0 w-48 h-48 bg-[#5865F2]/15 rounded-full blur-3xl pointer-events-none group-hover:bg-[#5865F2]/25 transition-all duration-500" />
 
             <div>
@@ -110,7 +110,7 @@ export default function MasterDashboardHub() {
                 </span>
               </div>
 
-              <h2 className="text-3xl font-black text-white group-hover:text-blue-300 transition-colors">
+              <h2 className="text-2xl sm:text-3xl font-black text-white group-hover:text-blue-300 transition-colors">
                 SyncInk Ticket Bot
               </h2>
               <p className="text-sm text-slate-300 mt-3 leading-relaxed">
@@ -152,8 +152,73 @@ export default function MasterDashboardHub() {
             </div>
           </div>
 
-          {/* CARD 2: SUPPORT SERVER SECURITY DASHBOARD */}
-          <div className="w-full p-8 rounded-[2rem] bg-gradient-to-b from-[#180d12] to-[#0d070a] border border-brand-red/30 shadow-[0_20px_60px_-15px_rgba(231,76,60,0.2)] relative overflow-hidden flex flex-col justify-between group hover:border-brand-red/60 hover:shadow-[0_20px_60px_-15px_rgba(231,76,60,0.4)] transition-all duration-500 hover:-translate-y-1">
+          {/* CARD 2: VOICE BOT DASHBOARD */}
+          <div className="w-full p-6 sm:p-8 rounded-[2rem] bg-gradient-to-b from-[#0a151f] to-[#060c12] border border-cyan-500/30 shadow-[0_20px_60px_-15px_rgba(6,182,212,0.2)] relative overflow-hidden flex flex-col justify-between group hover:border-cyan-500/60 hover:shadow-[0_20px_60px_-15px_rgba(6,182,212,0.4)] transition-all duration-500 hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none group-hover:bg-cyan-500/25 transition-all duration-500" />
+
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div className="w-16 h-16 rounded-full bg-cyan-600/20 border-2 border-cyan-500/40 flex items-center justify-center shadow-[0_0_25px_rgba(6,182,212,0.4)] overflow-hidden shrink-0">
+                  <img
+                    src="/voice-logo.png"
+                    alt="Voice Bot"
+                    className="w-full h-full object-cover rounded-full"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = "none";
+                    }}
+                  />
+                </div>
+                <span className="px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm">
+                  Dedicated Console
+                </span>
+              </div>
+
+              <h2 className="text-2xl sm:text-3xl font-black text-white group-hover:text-cyan-300 transition-colors">
+                SyncInk Voice Bot
+              </h2>
+              <p className="text-sm text-slate-300 mt-3 leading-relaxed">
+                Configure join-to-create voice hubs, customizable room naming schemes, bitrate limits, and auto-cleanup.
+              </p>
+
+              {/* Live Feature Highlights */}
+              <div className="mt-6 space-y-2.5 text-sm">
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
+                  <span className="text-slate-400 font-medium">Channel Engine</span>
+                  <span className="font-bold text-cyan-400">Join-to-Create</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
+                  <span className="text-slate-400 font-medium">Empty Purge Delay</span>
+                  <span className="font-bold text-emerald-400">1.5s Auto-Delete</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
+                  <span className="text-slate-400 font-medium">Room Controls</span>
+                  <span className="font-bold text-indigo-300">Lock, Hide & Limit</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 space-y-3">
+              <Link
+                href="/dashboard/voice"
+                className="w-full py-3.5 px-4 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] flex items-center justify-center gap-2 transform hover:scale-[1.02]"
+              >
+                <span>Launch Voice Dashboard</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <a
+                href="https://discord.com/oauth2/authorize?client_id=1516578887109181520&permissions=285220880&integration_type=0&scope=bot+applications.commands"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition-all border border-white/10 flex items-center justify-center gap-1.5"
+              >
+                <span>Invite Voice Bot</span>
+                <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+              </a>
+            </div>
+          </div>
+
+          {/* CARD 3: SUPPORT SERVER SECURITY DASHBOARD */}
+          <div className="w-full p-6 sm:p-8 rounded-[2rem] bg-gradient-to-b from-[#180d12] to-[#0d070a] border border-brand-red/30 shadow-[0_20px_60px_-15px_rgba(231,76,60,0.2)] relative overflow-hidden flex flex-col justify-between group hover:border-brand-red/60 hover:shadow-[0_20px_60px_-15px_rgba(231,76,60,0.4)] transition-all duration-500 hover:-translate-y-1">
             <div className="absolute top-0 right-0 w-48 h-48 bg-brand-red/15 rounded-full blur-3xl pointer-events-none group-hover:bg-brand-red/25 transition-all duration-500" />
 
             <div>
@@ -170,7 +235,7 @@ export default function MasterDashboardHub() {
                 </span>
               </div>
 
-              <h2 className="text-3xl font-black text-white group-hover:text-red-300 transition-colors">
+              <h2 className="text-2xl sm:text-3xl font-black text-white group-hover:text-red-300 transition-colors">
                 Support Security
               </h2>
               <p className="text-sm text-slate-300 mt-3 leading-relaxed">
@@ -224,4 +289,3 @@ export default function MasterDashboardHub() {
     </div>
   );
 }
-
