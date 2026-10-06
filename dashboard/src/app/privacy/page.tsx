@@ -1,249 +1,393 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Headphones, Ticket, Lock, CheckCircle2, Database, EyeOff, Trash2 } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  Shield,
+  Ticket,
+  Headphones,
+  Lock,
+  ExternalLink,
+  ChevronRight,
+  CheckCircle2,
+  FileText,
+  HelpCircle,
+  BookOpen,
+  Activity,
+  ArrowRight,
+  Database,
+  EyeOff,
+  Trash2,
+  Layers,
+} from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
 
-const BOTS = [
-  {
-    id: "support",
-    name: "SyncInk Support Bot",
-    icon: Shield,
-    color: "text-brand-crimson",
-    bgLight: "bg-brand-red/10",
-    border: "border-brand-red/30",
-    bgActive: "bg-brand-red/20",
-    lastUpdated: "October 2026",
-    sections: [
-      {
-        title: "1. Data Collection & Security",
-        content: "The SyncInk Support Bot automatically collects server telemetry, user violation counts, and quarantine status strictly for the purpose of maintaining server security and defending against raid attacks."
-      },
-      {
-        title: "2. Information We Monitor",
-        content: "To perform its security duties, the Support Bot temporarily buffers:",
-        points: [
-          "Chat messages (for spam and NSFW detection) which are discarded immediately after analysis.",
-          "Account creation dates and join velocities (to trigger anti-raid dampeners).",
-          "Automod infraction logs and warning histories."
-        ]
-      },
-      {
-        title: "3. No Third-Party Selling",
-        content: "We never sell your data, distribute personal information to third-party advertisers, or use your warning history for any purpose other than maintaining the safety of the official Support Server."
-      },
-      {
-        title: "4. Data Deletion",
-        content: "If you leave the Support Server, your warning points decay over time. Permanent bans are retained indefinitely in our security database to prevent evasion."
-      }
-    ]
-  },
-  {
-    id: "ticket",
-    name: "SyncInk Ticket Bot",
-    icon: Ticket,
-    color: "text-brand-purple",
-    bgLight: "bg-purple-500/10",
-    border: "border-purple-500/30",
-    bgActive: "bg-purple-500/20",
-    lastUpdated: "October 2026",
-    sections: [
-      {
-        title: "1. Ticket Data & Transcripts",
-        content: "The Ticket Bot is designed to securely manage private support inquiries. When a ticket is closed, the bot generates a secure HTML transcript of the conversation."
-      },
-      {
-        title: "2. Encryption & Storage",
-        content: "All transcripts are stored using AES-256 encryption. Only authorized server staff members with specific role permissions can decrypt and view these logs via the dashboard."
-      },
-      {
-        title: "3. Data Retention",
-        content: "We retain ticket data for server administrators to reference. However, server owners may configure automatic deletion policies to purge transcripts older than 30, 60, or 90 days."
-      },
-      {
-        title: "4. Personal Identifiable Information (PII)",
-        content: "We strongly advise against sharing passwords, credit cards, or sensitive PII in tickets. SyncInk is not responsible for data exposure caused by compromised server staff accounts."
-      }
-    ]
-  },
-  {
-    id: "voice",
-    name: "SyncInk Voice Bot",
-    icon: Headphones,
-    color: "text-cyan-400",
-    bgLight: "bg-cyan-500/10",
-    border: "border-cyan-500/30",
-    bgActive: "bg-cyan-500/20",
-    lastUpdated: "July 2026",
-    sections: [
-      {
-        title: "1. Voice Channel Monitoring",
-        content: "The Voice Bot does NOT record, listen to, or store any audio transmitted in the dynamic voice channels. It strictly manages the creation and deletion of the channels themselves."
-      },
-      {
-        title: "2. Metadata Collection",
-        content: "To function, the bot requires access to:",
-        points: [
-          "Voice state updates (when you join/leave a channel).",
-          "Your Discord User ID (to assign you as the room owner).",
-          "Channel configurations (names, limits, bitrates)."
-        ]
-      },
-      {
-        title: "3. Temporary Data",
-        content: "Once all users leave a temporary voice channel, the channel is deleted by the bot, and all associated tracking data for that specific session is immediately purged from our active memory."
-      },
-      {
-        title: "4. User Privacy",
-        content: "Your custom room names and settings are saved to your profile so they persist across sessions. You may request deletion of your Voice Bot profile data at any time in our Support Server."
-      }
-    ]
-  }
-];
-
 export default function UnifiedPrivacyPage() {
-  const [activeTab, setActiveTab] = useState(BOTS[0].id);
-  const activeBot = BOTS.find(b => b.id === activeTab)!;
-
   return (
-    <div className="min-h-screen bg-[#080a0f] text-slate-100 flex flex-col selection:bg-brand-purple selection:text-white">
+    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-brand-purple selection:text-white">
       <PublicNavbar />
 
       {/* Header Banner */}
-      <section className="relative overflow-hidden pt-16 pb-12 border-b border-white/[0.08] bg-gradient-to-b from-[#111624] via-[#0b0e15] to-[#080a0f]">
+      <section className="relative overflow-hidden pt-16 sm:pt-20 pb-12 border-b border-white/[0.08] bg-gradient-to-b from-[#0f1322] via-[#090c17] to-[#060812]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/50 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-4 shadow-sm">
             <Lock className="h-3.5 w-3.5" />
-            Unified Data Privacy
+            <span>Platform Privacy & Compliance</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
             Privacy Policy Hub
           </h1>
-          <p className="mt-4 text-sm text-slate-400 max-w-2xl mx-auto">
-            Select a SyncInk ecosystem bot below to understand exactly how it handles your data, transcripts, and personal information.
+          <p className="mt-4 text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
+            Every SyncInk service maintains its own dedicated, transparent data governance policy. Select your target service below to view its official policy.
           </p>
         </div>
       </section>
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1 w-full flex flex-col lg:flex-row gap-8">
+      {/* Main Content Layout */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 flex-1 w-full flex flex-col lg:flex-row gap-8 lg:gap-10">
         
-        {/* Sidebar Tabs */}
-        <div className="lg:w-80 flex-shrink-0">
-          <div className="sticky top-24 space-y-3">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-4">Select a Service</h2>
-            <div className="flex flex-col gap-3">
-              {BOTS.map((bot) => {
-                const isActive = activeTab === bot.id;
-                const Icon = bot.icon;
-                return (
-                  <button
-                    key={bot.id}
-                    onClick={() => setActiveTab(bot.id)}
-                    className={`relative flex items-center gap-4 w-full p-4 rounded-2xl text-left transition-all duration-300 ${
-                      isActive 
-                        ? `bg-white/[0.04] border ${bot.border} shadow-lg` 
-                        : 'border border-transparent hover:bg-white/[0.02] text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeTabIndicatorPrivacy"
-                        className={`absolute inset-0 rounded-2xl border ${bot.border} bg-gradient-to-r from-transparent to-white/[0.01]`}
-                        initial={false}
-                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                      />
-                    )}
-                    <div className={`relative z-10 p-2.5 rounded-xl ${isActive ? bot.bgActive : 'bg-white/5'} ${isActive ? bot.color : 'text-slate-400'}`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <span className={`relative z-10 font-bold text-[15px] ${isActive ? 'text-white' : ''}`}>
-                      {bot.name}
-                    </span>
-                  </button>
-                );
-              })}
+        {/* Sidebar Service Selector */}
+        <aside className="lg:w-80 flex-shrink-0">
+          <div className="sticky top-24 space-y-4">
+            <div className="pl-1">
+              <span className="text-xs font-extrabold text-slate-400 uppercase tracking-widest">
+                Select Service Policy
+              </span>
             </div>
-          </div>
-        </div>
 
-        {/* Dynamic Content Area */}
-        <div className="flex-1 min-w-0">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="bg-[#0e121d] border border-white/[0.08] rounded-[2rem] p-6 sm:p-10 shadow-2xl relative overflow-hidden"
-            >
-              {/* Background Glow */}
-              <div className={`absolute top-0 right-0 w-72 h-72 rounded-full blur-[120px] pointer-events-none opacity-30 ${activeBot.bgLight}`} />
-
-              <div className="relative z-10">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/[0.06] pb-6 mb-8 gap-4">
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-3">
-                      <activeBot.icon className={`w-7 h-7 sm:w-8 sm:h-8 ${activeBot.color}`} />
-                      {activeBot.name} Privacy
-                    </h2>
-                    <p className="text-sm text-slate-400 mt-2">
-                      Full transparency on how we process and protect your data.
-                    </p>
+            <div className="flex flex-col gap-3">
+              {/* Option 1: Support Bot (Current Page) */}
+              <div
+                className="relative flex items-center justify-between p-4 rounded-2xl bg-white/[0.04] border border-brand-red/40 shadow-lg text-left"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="p-2.5 rounded-xl bg-brand-red/20 text-brand-crimson">
+                    <Shield className="w-5 h-5" />
                   </div>
-                  <span className={`self-start sm:self-auto px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${activeBot.border} ${activeBot.bgLight} ${activeBot.color}`}>
-                    Updated {activeBot.lastUpdated}
-                  </span>
-                </div>
-
-                <div className="space-y-10">
-                  {activeBot.sections.map((sec, idx) => (
-                    <div key={idx} className="space-y-3">
-                      <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                        <span className={activeBot.color}>§</span> {sec.title}
-                      </h3>
-                      <p className="text-sm text-slate-300 leading-relaxed">
-                        {sec.content}
-                      </p>
-                      {sec.points && (
-                        <div className="mt-3 space-y-2.5 pl-2">
-                          {sec.points.map((pt, pIdx) => (
-                            <div key={pIdx} className="flex items-start gap-2.5 text-sm text-slate-400">
-                              <CheckCircle2 className={`w-4 h-4 shrink-0 mt-0.5 ${activeBot.color}`} />
-                              <span className="leading-relaxed">{pt}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                  <div>
+                    <div className="font-bold text-sm text-white">SyncInk Support Bot</div>
+                    <div className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      Active On This Page
                     </div>
-                  ))}
-                </div>
-
-                {/* Callout to Dedicated Ticket Privacy Policy & Support Server */}
-                <div className="mt-10 p-5 sm:p-6 rounded-2xl bg-purple-950/30 border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <h4 className="text-sm sm:text-base font-bold text-white">SyncInk Ticket Bot Dedicated Policy</h4>
-                    <p className="text-xs text-slate-300 mt-1">Review complete ticket transcripts storage, GDPR/CCPA rights, and data purge instructions.</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                    <Link href="/dashboard/tickets/privacy" className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white transition-all">
-                      Ticket Privacy Policy
-                    </Link>
-                    <a href="https://discord.gg/rB6gNZaK9u" target="_blank" rel="noopener noreferrer" className="px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-xs font-semibold text-slate-200 border border-white/10 transition-all">
-                      Support Server
-                    </a>
                   </div>
                 </div>
               </div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
 
+              {/* Option 2: Ticket Bot (Direct Redirect Link) */}
+              <Link
+                href="/dashboard/tickets/privacy"
+                className="group relative flex items-center justify-between p-4 rounded-2xl bg-[#0c101d] border border-white/10 hover:border-blue-500/50 hover:bg-[#11172a] transition-all duration-200 text-left"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 transition-colors">
+                    <Ticket className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm text-slate-200 group-hover:text-white transition-colors">
+                      SyncInk Ticket Bot
+                    </div>
+                    <div className="text-[11px] text-slate-400 group-hover:text-blue-300 transition-colors">
+                      Dedicated Ticket Policy
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-blue-400 font-semibold px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 group-hover:bg-blue-500/20 transition-all">
+                  <span>Open</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </div>
+              </Link>
+
+              {/* Option 3: Voice Bot (Direct Redirect Link) */}
+              <Link
+                href="/dashboard/voice/privacy"
+                className="group relative flex items-center justify-between p-4 rounded-2xl bg-[#0a141b] border border-white/10 hover:border-cyan-500/50 hover:bg-[#0e1d27] transition-all duration-200 text-left"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20 transition-colors">
+                    <Headphones className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm text-slate-200 group-hover:text-white transition-colors">
+                      SyncInk Voice Bot
+                    </div>
+                    <div className="text-[11px] text-slate-400 group-hover:text-cyan-300 transition-colors">
+                      Dedicated Voice Policy
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-cyan-400 font-semibold px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20 group-hover:bg-cyan-500/20 transition-all">
+                  <span>Open</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </div>
+              </Link>
+            </div>
+
+            {/* Quick Helper Box */}
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2 mt-4 text-xs text-slate-400 leading-relaxed">
+              <div className="font-semibold text-slate-300 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                Dedicated Endpoints
+              </div>
+              <p>
+                Each bot operates on an isolated architecture with its own audited privacy practices. Clicking any bot above directs you to its official documentation.
+              </p>
+            </div>
+          </div>
+        </aside>
+
+        {/* Content Pane */}
+        <div className="flex-1 min-w-0 space-y-10">
+          
+          {/* Main Card: Support Bot Official Privacy Policy */}
+          <div className="bg-[#0b0e18] border border-white/10 rounded-[2rem] p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-brand-red/10 rounded-full blur-[100px] pointer-events-none" />
+
+            <div className="relative z-10">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/[0.08] pb-6 mb-8 gap-4">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-brand-red/20 border border-brand-red/30 flex items-center justify-center text-brand-crimson shrink-0">
+                      <Shield className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl sm:text-3xl font-black text-white">
+                        SyncInk Support Bot Privacy Policy
+                      </h2>
+                      <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+                        Official Data Protection Directive for the SyncInk Support Server
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-brand-red/15 text-brand-crimson border border-brand-red/30">
+                    Updated October 2026
+                  </span>
+                </div>
+              </div>
+
+              {/* Policy Body Clauses */}
+              <div className="space-y-8 text-slate-300 leading-relaxed">
+                <section className="space-y-3">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <span className="text-brand-crimson font-mono">§ 1.</span>
+                    Scope of Security & Operational Telemetry
+                  </h3>
+                  <p className="text-sm text-slate-300 leading-relaxed">
+                    The SyncInk Support Bot operates exclusively within the official SyncInk Support Server (Server ID: <code className="text-blue-300 bg-white/5 px-1.5 py-0.5 rounded font-mono text-xs">1520461877073674392</code>). Its sole purpose is server security, velocity join dampening, spam interception, and automod defense.
+                  </p>
+                </section>
+
+                <section className="space-y-3">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <span className="text-brand-crimson font-mono">§ 2.</span>
+                    Information We Process & Ephemeral Buffering
+                  </h3>
+                  <p className="text-sm text-slate-300">
+                    To maintain 24/7 raid defense and keep the community secure, the bot processes the following data:
+                  </p>
+                  <ul className="space-y-2 text-sm text-slate-300 pl-1">
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>Real-Time Message Analysis:</strong> Messages are analyzed in memory for spam velocity, unauthorized advertisements, and NSFW material. Content is discarded immediately after scan.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>Join Velocity & Account Age:</strong> Account creation timestamps and join intervals are monitored to calculate risk factors and trigger panic shields during mass raid events.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>Infraction Logs:</strong> Warning tallies, timeout durations, and quarantine events are stored securely in our PostgreSQL database for staff moderation records.</span>
+                    </li>
+                  </ul>
+                </section>
+
+                <section className="space-y-3">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <span className="text-brand-crimson font-mono">§ 3.</span>
+                    Zero Data Selling & Third-Party Disclosure
+                  </h3>
+                  <p className="text-sm text-slate-300">
+                    We maintain a strict zero-monetization policy regarding user data. We do not sell, rent, monetize, or trade telemetry to external marketing agencies or data brokers under any circumstances.
+                  </p>
+                </section>
+
+                <section className="space-y-3">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <span className="text-brand-crimson font-mono">§ 4.</span>
+                    Data Retention & Decay Rights
+                  </h3>
+                  <p className="text-sm text-slate-300">
+                    Warning points decay over configured timeframes. Members who leave the Support Server have their non-critical activity metrics purged automatically. Security audit logs of malicious raid attacks are preserved indefinitely to safeguard infrastructure.
+                  </p>
+                </section>
+              </div>
+            </div>
+          </div>
+
+          {/* Dedicated Directory Section for All Other Bots */}
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                Ecosystem Bot Legal & Resource Directories
+              </h3>
+              <p className="text-sm text-slate-400 mt-1">
+                Access the official privacy policies, terms, guides, and status dashboards for our other ecosystem bots:
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Card 1: Ticket Bot Complete Directory */}
+              <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-b from-[#0f1222] to-[#090b14] border border-blue-500/25 shadow-xl space-y-5 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-300">
+                        <Ticket className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-white text-base">SyncInk Ticket Bot</h4>
+                        <span className="text-xs text-blue-400 font-semibold">Enterprise Support</span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-300 border border-blue-500/30">
+                      5 Pages Live
+                    </span>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    Review Ticket Bot's specialized privacy standards regarding encrypted private threads, transcript storage, and staff access.
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-white/[0.06]">
+                  {/* Primary Link: Privacy Policy */}
+                  <Link
+                    href="/dashboard/tickets/privacy"
+                    className="flex items-center justify-between p-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all shadow-[0_0_15px_rgba(88,101,242,0.35)]"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Lock className="w-4 h-4" />
+                      Official Privacy Policy
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+
+                  {/* Secondary Resource Links */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <Link
+                      href="/dashboard/tickets/terms"
+                      className="flex items-center gap-1.5 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 transition-colors"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Terms of Service</span>
+                    </Link>
+                    <Link
+                      href="/dashboard/tickets/faq"
+                      className="flex items-center gap-1.5 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 transition-colors"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5 text-blue-400" />
+                      <span>FAQ Page</span>
+                    </Link>
+                    <Link
+                      href="/dashboard/tickets/guides"
+                      className="flex items-center gap-1.5 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 transition-colors"
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Setup Guides</span>
+                    </Link>
+                    <Link
+                      href="/dashboard/tickets/status"
+                      className="flex items-center gap-1.5 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 transition-colors"
+                    >
+                      <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>System Status</span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Voice Bot Complete Directory */}
+              <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-b from-[#09151c] to-[#060c11] border border-cyan-500/25 shadow-xl space-y-5 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-300">
+                        <Headphones className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-white text-base">SyncInk Voice Bot</h4>
+                        <span className="text-xs text-cyan-400 font-semibold">Dynamic Audio Hub</span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+                      5 Pages Live
+                    </span>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    Review Voice Bot's zero-audio-recording guarantee, temporary room session cleanup, and user ownership metadata policies.
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-white/[0.06]">
+                  {/* Primary Link: Privacy Policy */}
+                  <Link
+                    href="/dashboard/voice/privacy"
+                    className="flex items-center justify-between p-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs sm:text-sm transition-all shadow-[0_0_15px_rgba(6,182,212,0.35)]"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Lock className="w-4 h-4" />
+                      Official Privacy Policy
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+
+                  {/* Secondary Resource Links */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <Link
+                      href="/dashboard/voice/terms"
+                      className="flex items-center gap-1.5 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 transition-colors"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Terms of Service</span>
+                    </Link>
+                    <Link
+                      href="/dashboard/voice/faq"
+                      className="flex items-center gap-1.5 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 transition-colors"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>FAQ Page</span>
+                    </Link>
+                    <Link
+                      href="/dashboard/voice/guide"
+                      className="flex items-center gap-1.5 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 transition-colors"
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Setup Guide</span>
+                    </Link>
+                    <Link
+                      href="/dashboard/voice/status"
+                      className="flex items-center gap-1.5 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 transition-colors"
+                    >
+                      <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>System Status</span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
       </main>
+
       <PublicFooter />
     </div>
   );
