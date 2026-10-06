@@ -101,7 +101,7 @@ export function PublicNavbar() {
             </Link>
 
             <a
-              href="https://discord.gg/syncink"
+              href="https://discord.gg/rB6gNZaK9u"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-white bg-[#5865F2] hover:bg-[#4752c4] border border-[#5865F2]/50 shadow-[0_0_15px_rgba(88,101,242,0.3)] transition-all duration-200"
@@ -168,7 +168,7 @@ export function PublicNavbar() {
               <span>Multi-Bot Console</span>
             </Link>
             <a
-              href="https://discord.gg/syncink"
+              href="https://discord.gg/rB6gNZaK9u"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-[#5865F2]"

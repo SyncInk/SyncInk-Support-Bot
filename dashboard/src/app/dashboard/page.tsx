@@ -95,11 +95,11 @@ export default function MasterDashboardHub() {
 
             <div>
               <div className="flex items-center justify-between mb-6">
-                <div className="w-16 h-16 rounded-full bg-[#5865F2]/20 border-2 border-[#5865F2]/40 flex items-center justify-center p-2 shadow-[0_0_25px_rgba(88,101,242,0.4)] overflow-hidden">
+                <div className="w-16 h-16 rounded-full bg-[#5865F2]/20 border-2 border-[#5865F2]/40 flex items-center justify-center shadow-[0_0_25px_rgba(88,101,242,0.4)] overflow-hidden shrink-0">
                   <img
                     src="/ticket-logo.png"
                     alt="Ticket Bot"
-                    className="w-full h-full object-contain rounded-full"
+                    className="w-full h-full object-cover rounded-full"
                     onError={(e) => {
                       (e.target as HTMLElement).style.display = "none";
                     }}
@@ -158,9 +158,9 @@ export default function MasterDashboardHub() {
 
             <div>
               <div className="flex items-center justify-between mb-6">
-                <div className="w-16 h-16 rounded-full bg-brand-red/10 border-2 border-brand-red/40 flex items-center justify-center p-1 shadow-[0_0_25px_rgba(231,76,60,0.4)] overflow-hidden">
+                <div className="w-16 h-16 rounded-full bg-brand-red/10 border-2 border-brand-red/40 flex items-center justify-center shadow-[0_0_25px_rgba(231,76,60,0.4)] overflow-hidden shrink-0">
                   <img
-                    src="/syncink-s-purple.jpg"
+                    src="/syncink-main-logo.png"
                     alt="SyncInk Shield"
                     className="w-full h-full object-cover rounded-full"
                   />
