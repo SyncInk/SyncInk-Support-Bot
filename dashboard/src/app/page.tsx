@@ -86,15 +86,6 @@ export default function HomePage() {
         {/* HERO SECTION */}
         {/* ========================================================= */}
         <section className="pt-20 sm:pt-28 pb-14 sm:pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
-          <motion.div 
-            initial={{ opacity: 0, y: -15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[11px] sm:text-xs font-extrabold uppercase tracking-widest mb-6 shadow-[0_0_15px_rgba(157,124,255,0.25)]"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
-            <span>SyncInk Ecosystem • syncink.site</span>
-          </motion.div>
 
           <motion.h1 
             initial={{ opacity: 0, scale: 0.98 }}
