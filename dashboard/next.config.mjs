@@ -69,14 +69,7 @@ const nextConfig = {
         destination: '/dashboard/tickets',
         permanent: false,
       },
-      { source: '/dashboard/tickets/privacy', destination: '/privacy', permanent: true },
-      { source: '/dashboard/tickets/terms', destination: '/terms', permanent: true },
       { source: '/dashboard/tickets/rules', destination: '/rules', permanent: true },
-      {
-        source: '/dashboard/tickets/faq',
-        destination: '/dashboard/tickets/faqs',
-        permanent: false,
-      },
       {
         source: '/dashboard/tickets/guide',
         destination: '/dashboard/tickets/guides',
