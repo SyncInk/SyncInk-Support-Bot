@@ -53,11 +53,11 @@ export function TicketMarketingFrame({
   const navLinks = [
     { href: "/dashboard/tickets", label: "Ticket Console", id: "overview" },
     { href: "/dashboard/tickets/guides", label: "Setup Guides", id: "guides" },
-    { href: "/dashboard/tickets/faqs", label: "FAQ", id: "faqs" },
+    { href: "/dashboard/tickets/faq", label: "FAQ", id: "faqs" },
     { href: "/dashboard/tickets/status", label: "System Status", id: "status" },
     { href: "/rules", label: "Rules", id: "rules" },
-    { href: "/privacy", label: "Privacy Policy", id: "privacy" },
-    { href: "/terms", label: "Terms of Service", id: "terms" }
+    { href: "/dashboard/tickets/privacy", label: "Privacy Policy", id: "privacy" },
+    { href: "/dashboard/tickets/terms", label: "Terms of Service", id: "terms" }
   ];
 
   return (

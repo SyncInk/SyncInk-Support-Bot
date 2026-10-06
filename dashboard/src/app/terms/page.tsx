@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Headphones, Ticket, Scale, CheckCircle2, ChevronRight, ExternalLink } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
@@ -226,6 +227,22 @@ export default function UnifiedTermsPage() {
                       )}
                     </div>
                   ))}
+                </div>
+
+                {/* Callout to Dedicated Ticket Terms of Service & Support Server */}
+                <div className="mt-10 p-5 sm:p-6 rounded-2xl bg-purple-950/30 border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm sm:text-base font-bold text-white">SyncInk Ticket Bot Dedicated Terms</h4>
+                    <p className="text-xs text-slate-300 mt-1">Review the binding usage agreement, transcript access rules, and administrator SLA.</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                    <Link href="/dashboard/tickets/terms" className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white transition-all">
+                      Ticket Terms of Service
+                    </Link>
+                    <a href="https://discord.gg/rB6gNZaK9u" target="_blank" rel="noopener noreferrer" className="px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-xs font-semibold text-slate-200 border border-white/10 transition-all">
+                      Support Server
+                    </a>
+                  </div>
                 </div>
               </div>
             </motion.div>

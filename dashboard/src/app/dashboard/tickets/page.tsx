@@ -763,13 +763,37 @@ export default function NativeTicketDashboardPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
 
-  // Read URL params (for transcripts direct link)
+  // Read URL params (for transcripts direct link and dedicated page redirection)
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get("tab");
       const ticketIdParam = params.get("ticketId");
       const guildIdParam = params.get("guildId");
+      if (tabParam === "privacy") {
+        window.location.href = "/dashboard/tickets/privacy";
+        return;
+      }
+      if (tabParam === "terms") {
+        window.location.href = "/dashboard/tickets/terms";
+        return;
+      }
+      if (tabParam === "faq" || tabParam === "faqs") {
+        window.location.href = "/dashboard/tickets/faq";
+        return;
+      }
+      if (tabParam === "rules") {
+        window.location.href = "/rules";
+        return;
+      }
+      if (tabParam === "guide" || tabParam === "guides") {
+        window.location.href = "/dashboard/tickets/guides";
+        return;
+      }
+      if (tabParam === "status") {
+        window.location.href = "/dashboard/tickets/status";
+        return;
+      }
       if (tabParam) {
         setActiveTab(tabParam);
       }
@@ -1905,50 +1929,211 @@ export default function NativeTicketDashboardPage() {
             })}
           </div>
 
-          {/* Help & Legal Navigation */}
-          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "16px", marginTop: "16px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <div style={{ padding: "0 12px 8px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          {/* Legal Category Navigation */}
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "14px", display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div style={{ padding: "0 12px 6px", fontSize: "11px", fontWeight: 700, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.08em", display: "flex", alignItems: "center", gap: "6px" }}>
+              <Shield size={12} />
+              <span>Legal</span>
+            </div>
+            <Link
+              href="/dashboard/tickets/privacy"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                background: "transparent",
+                color: "var(--text-muted)",
+                fontSize: "12px",
+                fontWeight: 500,
+                textDecoration: "none",
+                transition: "all 0.15s ease"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "white";
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--text-muted)";
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <ShieldCheck size={15} />
+              <span>Privacy Policy</span>
+            </Link>
+            <Link
+              href="/dashboard/tickets/terms"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                background: "transparent",
+                color: "var(--text-muted)",
+                fontSize: "12px",
+                fontWeight: 500,
+                textDecoration: "none",
+                transition: "all 0.15s ease"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "white";
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--text-muted)";
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <FileText size={15} />
+              <span>Terms of Service</span>
+            </Link>
+          </div>
+
+          {/* Help & Resources Navigation */}
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "14px", marginTop: "14px", display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div style={{ padding: "0 12px 6px", fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Help & Resources
             </div>
-            {[
-              { id: "commands", label: "Bot Commands", icon: Terminal },
-              { id: "status", label: "System Status", icon: Activity },
-              { id: "guide", label: "Dashboard Guide", icon: BookOpen },
-              { id: "rules", label: "Ticket Rules", icon: BookOpen },
-              { id: "faq", label: "FAQ", icon: HelpCircle },
-              { id: "privacy", label: "Privacy Policy", icon: ShieldCheck },
-              { id: "terms", label: "Terms of Service", icon: FileText }
-            ].map((h) => {
-              const Icon = h.icon;
-              const active = activeTab === h.id;
-              return (
-                <button
-                  key={h.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(h.id);
-                    setMobileMenuOpen(false);
-                  }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    padding: "8px 14px",
-                    borderRadius: "8px",
-                    border: "none",
-                    background: active ? "rgba(139, 76, 255, 0.12)" : "transparent",
-                    color: active ? "var(--accent)" : "var(--text-muted)",
-                    cursor: "pointer",
-                    fontSize: "12px",
-                    fontWeight: 500,
-                    textAlign: "left"
-                  }}
-                >
-                  <Icon size={15} />
-                  <span>{h.label}</span>
-                </button>
-              );
-            })}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("commands");
+                setMobileMenuOpen(false);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                border: "none",
+                background: activeTab === "commands" ? "rgba(139, 76, 255, 0.12)" : "transparent",
+                color: activeTab === "commands" ? "var(--accent)" : "var(--text-muted)",
+                cursor: "pointer",
+                fontSize: "12px",
+                fontWeight: 500,
+                textAlign: "left"
+              }}
+            >
+              <Terminal size={15} />
+              <span>Bot Commands</span>
+            </button>
+            <Link
+              href="/dashboard/tickets/guides"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                background: "transparent",
+                color: "var(--text-muted)",
+                fontSize: "12px",
+                fontWeight: 500,
+                textDecoration: "none",
+                transition: "all 0.15s ease"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "white";
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--text-muted)";
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <BookOpen size={15} />
+              <span>Dashboard Guide</span>
+            </Link>
+            <Link
+              href="/dashboard/tickets/status"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                background: "transparent",
+                color: "var(--text-muted)",
+                fontSize: "12px",
+                fontWeight: 500,
+                textDecoration: "none",
+                transition: "all 0.15s ease"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "white";
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--text-muted)";
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <Activity size={15} />
+              <span>System Status</span>
+            </Link>
+            <Link
+              href="/rules"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                background: "transparent",
+                color: "var(--text-muted)",
+                fontSize: "12px",
+                fontWeight: 500,
+                textDecoration: "none",
+                transition: "all 0.15s ease"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "white";
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--text-muted)";
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <BookOpen size={15} />
+              <span>Ticket Rules</span>
+            </Link>
+            <Link
+              href="/dashboard/tickets/faq"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                background: "transparent",
+                color: "var(--text-muted)",
+                fontSize: "12px",
+                fontWeight: 500,
+                textDecoration: "none",
+                transition: "all 0.15s ease"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "white";
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--text-muted)";
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <HelpCircle size={15} />
+              <span>FAQ</span>
+            </Link>
           </div>
         </aside>
 
@@ -2007,9 +2192,9 @@ export default function NativeTicketDashboardPage() {
                 </div>
                 <div className="legal-links">
                   <Link href="/rules" className="action-button" style={{ textDecoration: "none" }}><BookOpen size={16} /> Rules</Link>
-                  <Link href="/privacy" className="action-button" style={{ textDecoration: "none" }}><Shield size={16} /> Privacy Policy</Link>
-                  <Link href="/terms" className="action-button" style={{ textDecoration: "none" }}><FileText size={16} /> Terms of Service</Link>
-                  <Link href="/dashboard/tickets/faqs" className="action-button" style={{ textDecoration: "none" }}><HelpCircle size={16} /> FAQ</Link>
+                  <Link href="/dashboard/tickets/privacy" className="action-button" style={{ textDecoration: "none" }}><Shield size={16} /> Privacy Policy</Link>
+                  <Link href="/dashboard/tickets/terms" className="action-button" style={{ textDecoration: "none" }}><FileText size={16} /> Terms of Service</Link>
+                  <Link href="/dashboard/tickets/faq" className="action-button" style={{ textDecoration: "none" }}><HelpCircle size={16} /> FAQ</Link>
                 </div>
               </div>
 

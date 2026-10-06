@@ -105,20 +105,20 @@ export function PublicFooter() {
             <ul className="space-y-2 text-xs">
               <li>
                 <Link
-                  href="/bots/terms"
+                  href="/dashboard/tickets/terms"
                   className="hover:text-white transition-colors flex items-center gap-1.5"
                 >
                   <FileCheck className="h-3 w-3 text-blue-400" />
-                  <span>Bots Terms of Service</span>
+                  <span>Ticket Bot Terms of Service</span>
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/bots/privacy"
+                  href="/dashboard/tickets/privacy"
                   className="hover:text-white transition-colors flex items-center gap-1.5"
                 >
                   <Lock className="h-3 w-3 text-emerald-400" />
-                  <span>Bots Privacy Policy</span>
+                  <span>Ticket Bot Privacy Policy</span>
                 </Link>
               </li>
               <li>
