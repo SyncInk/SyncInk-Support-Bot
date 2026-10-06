@@ -94,47 +94,41 @@ export default function DedicatedStatusPage() {
         { label: "Join Discord Community", href: "https://discord.gg/rB6gNZaK9u", external: true, tone: "secondary" }
       ]}
     >
-      <div className="status-page-wrapper" style={{ maxWidth: "1000px", margin: "0 auto" }}>
+      <div className="space-y-6">
         {/* Main Operational Banner */}
-        <div className="status-incident-card ok" style={{ borderRadius: "20px", marginBottom: "24px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-            <span
-              style={{
-                position: "relative",
-                width: "14px",
-                height: "14px",
-                borderRadius: "50%",
-                background: "#10b981",
-                boxShadow: "0 0 12px #10b981"
-              }}
-            />
+        <div className="rounded-2xl border border-emerald-500/30 bg-[#0c1412] p-5 sm:p-6 shadow-[0_0_25px_rgba(16,185,129,0.1)]">
+          <div className="flex items-center gap-3.5">
+            <span className="relative flex h-3.5 w-3.5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 shadow-[0_0_12px_#10b981]" />
+            </span>
             <div>
-              <strong style={{ fontSize: "18px", color: "#fff", display: "block" }}>All Systems Fully Operational</strong>
-              <span style={{ fontSize: "13px", color: "var(--text-soft)" }}>
+              <h3 className="text-base sm:text-lg font-bold text-white leading-tight">All Systems Fully Operational</h3>
+              <p className="text-xs text-slate-400 mt-0.5">
                 All Discord bot clusters, websocket shards, queue workers, and database APIs are operating normally.
-              </span>
+              </p>
             </div>
           </div>
         </div>
 
         {/* Quick Highlights Bar */}
-        <div className="mk-highlights-bar" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "28px" }}>
-          <div className="mk-highlight-item" style={{ background: "rgba(10, 12, 24, 0.7)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "16px", padding: "18px 20px" }}>
-            <strong style={{ fontSize: "24px", color: "#fff", display: "block" }}>99.96%</strong>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Overall 90-Day Uptime</span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-5 rounded-2xl bg-[#0e121d] border border-white/[0.08] flex flex-col gap-1">
+            <span className="text-2xl font-extrabold text-white">99.96%</span>
+            <span className="text-xs text-slate-400">Overall 90-Day Uptime</span>
           </div>
-          <div className="mk-highlight-item" style={{ background: "rgba(10, 12, 24, 0.7)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "16px", padding: "18px 20px" }}>
-            <strong style={{ fontSize: "24px", color: "#10b981", display: "block" }}>21ms</strong>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Avg Cluster Latency</span>
+          <div className="p-5 rounded-2xl bg-[#0e121d] border border-white/[0.08] flex flex-col gap-1">
+            <span className="text-2xl font-extrabold text-emerald-400">21ms</span>
+            <span className="text-xs text-slate-400">Avg Cluster Latency</span>
           </div>
-          <div className="mk-highlight-item" style={{ background: "rgba(10, 12, 24, 0.7)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "16px", padding: "18px 20px" }}>
-            <strong style={{ fontSize: "24px", color: "#a78bfa", display: "block" }}>0 Active</strong>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Service Disruptions</span>
+          <div className="p-5 rounded-2xl bg-[#0e121d] border border-white/[0.08] flex flex-col gap-1">
+            <span className="text-2xl font-extrabold text-purple-400">0 Active</span>
+            <span className="text-xs text-slate-400">Service Disruptions</span>
           </div>
         </div>
 
         {/* 90-Day Historical Uptime Bars by Component */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+        <div className="space-y-4">
           {COMPONENTS.map((comp) => {
             const Icon = comp.icon;
             const { bars, finalUptime } = generateBars(comp.id, comp.baseUptime);
@@ -143,44 +137,37 @@ export default function DedicatedStatusPage() {
             return (
               <div
                 key={comp.id}
-                className="status-card"
-                style={{
-                  background: "rgba(10, 12, 24, 0.7)",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                  borderRadius: "16px",
-                  padding: "20px 24px",
-                  boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)"
-                }}
+                className="group rounded-2xl border border-white/[0.08] bg-[#0e121d] p-5 sm:p-6 hover:border-purple-500/30 transition-all space-y-4"
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "14px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(157, 124, 255, 0.12)", border: "1px solid rgba(157, 124, 255, 0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Icon size={16} color="var(--accent)" />
+                <div className="flex justify-between items-center flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/25 flex items-center justify-center">
+                      <Icon className="h-4 w-4 text-purple-400" />
                     </div>
                     <div>
-                      <h3 style={{ fontSize: "15px", color: "white", margin: 0, fontWeight: 700 }}>{comp.name}</h3>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                      <h3 className="text-sm sm:text-base font-bold text-white m-0">{comp.name}</h3>
+                      <span className="text-xs text-slate-400">
                         {comp.nodes} Active Shards • {comp.latency} ping
                       </span>
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 700, color: Number(finalUptime) >= 99.9 ? "#10b981" : "#ffd166" }}>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-sm font-bold font-mono ${Number(finalUptime) >= 99.9 ? "text-emerald-400" : "text-amber-400"}`}>
                       {finalUptime}%
                     </span>
                     <button
                       type="button"
                       onClick={() => toggleRow(comp.id)}
-                      style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center" }}
+                      className="p-1 rounded-md text-slate-500 hover:text-white transition-colors"
                     >
-                      <ChevronDown size={16} style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
+                      <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? "rotate-180" : "rotate-0"}`} />
                     </button>
                   </div>
                 </div>
 
                 {/* 90-Day Visual Bar Grid */}
-                <div style={{ display: "flex", gap: "2px", height: "32px", alignItems: "center" }}>
+                <div className="flex gap-[2px] h-8 items-center">
                   {bars.map((bar, bIdx) => {
                     const bgColor =
                       bar.status === "operational"
@@ -206,16 +193,16 @@ export default function DedicatedStatusPage() {
                   })}
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-muted)", marginTop: "8px" }}>
+                <div className="flex justify-between text-[11px] text-slate-500 font-mono">
                   <span>90 days ago</span>
-                  <span>Today (100% Operational)</span>
+                  <span className="text-emerald-400">Today (100% Operational)</span>
                 </div>
 
                 {isExpanded && (
-                  <div style={{ marginTop: "14px", paddingTop: "14px", borderTop: "1px solid rgba(255, 255, 255, 0.05)", fontSize: "12px", color: "var(--text-soft)", display: "flex", gap: "24px" }}>
-                    <div><strong>Total Monitored Days:</strong> 90 Days</div>
-                    <div><strong>Service Response:</strong> Healthy ({comp.latency})</div>
-                    <div><strong>Verification Hash:</strong> SHA-256 Verified</div>
+                  <div className="pt-3 border-t border-white/[0.06] text-xs text-slate-300 flex flex-wrap gap-6 font-mono">
+                    <div><strong className="text-white">Monitored Window:</strong> 90 Days</div>
+                    <div><strong className="text-white">Service Response:</strong> Healthy ({comp.latency})</div>
+                    <div><strong className="text-white">Verification Hash:</strong> SHA-256 Validated</div>
                   </div>
                 )}
               </div>

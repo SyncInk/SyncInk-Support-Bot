@@ -18,7 +18,8 @@ import {
   Scale,
   CheckCircle2,
   Copy,
-  Check
+  Check,
+  Share2
 } from "lucide-react";
 import { TicketMarketingFrame } from "@/components/TicketMarketingFrame";
 
@@ -188,21 +189,24 @@ const PRIVACY_SECTIONS: PrivacySection[] = [
 ];
 
 export default function DedicatedPrivacyPage() {
-  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedRuleId, setCopiedRuleId] = useState<string | null>(null);
 
-  const handleCopyLink = () => {
+  const handleCopyLink = (secId?: string) => {
     if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2500);
+      const url = secId
+        ? `${window.location.origin}/dashboard/tickets/privacy#${secId}`
+        : `${window.location.origin}/dashboard/tickets/privacy`;
+      navigator.clipboard.writeText(url);
+      setCopiedRuleId(secId || "all");
+      setTimeout(() => setCopiedRuleId(null), 2000);
     }
   };
 
   return (
     <TicketMarketingFrame
       active="privacy"
-      eyebrow="Legal & Compliance"
-      title="Privacy Policy & Data Protection"
+      eyebrow="Official Data Protection & Legal Disclosures"
+      title="Privacy Policy & Data Security"
       description="Official legal disclosures detailing how SyncInk Ticket Bot collects, encrypts, processes, and protects your server telemetry and ticket communications."
       actions={[
         {
@@ -223,7 +227,7 @@ export default function DedicatedPrivacyPage() {
         }
       ]}
     >
-      <div className="space-y-8">
+      <div className="space-y-10">
         {/* Compliance Highlights Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[
@@ -236,7 +240,7 @@ export default function DedicatedPrivacyPage() {
             return (
               <div
                 key={idx}
-                className="p-3.5 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-md flex flex-col gap-1.5"
+                className="p-4 rounded-2xl bg-[#0e121d] border border-white/[0.08] flex flex-col gap-1.5"
               >
                 <div className="flex items-center gap-2">
                   <Icon className={`w-4 h-4 ${item.color}`} />
@@ -249,83 +253,123 @@ export default function DedicatedPrivacyPage() {
         </div>
 
         {/* Quick Navigation Anchor Pills */}
-        <div className="flex flex-wrap items-center gap-2 p-3 sm:p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2">Jump to Section:</span>
+        <div className="flex flex-wrap items-center gap-2 p-4 rounded-2xl bg-[#0e121d] border border-white/[0.08]">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2 font-mono">Jump to Section:</span>
           {PRIVACY_SECTIONS.map((sec) => (
             <a
               key={sec.id}
               href={`#${sec.id}`}
-              className="px-3 py-1 rounded-full text-xs font-semibold bg-white/[0.05] hover:bg-purple-600/30 hover:border-purple-500/40 border border-white/[0.08] text-slate-300 hover:text-white transition-all"
+              className="px-3 py-1 rounded-full text-xs font-semibold bg-white/[0.04] hover:bg-emerald-600/20 hover:border-emerald-500/40 border border-white/[0.08] text-slate-300 hover:text-white transition-all"
             >
               {sec.number}. {sec.badge}
             </a>
           ))}
           <button
             type="button"
-            onClick={handleCopyLink}
-            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 transition-all"
+            onClick={() => handleCopyLink()}
+            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30 transition-all"
           >
-            {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedLink ? "Link Copied!" : "Share Policy"}</span>
+            {copiedRuleId === "all" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copiedRuleId === "all" ? "Link Copied!" : "Share Policy"}</span>
           </button>
         </div>
 
         {/* Detailed Legal Sections */}
-        <div className="space-y-6">
-          {PRIVACY_SECTIONS.map((sec) => (
-            <section
-              key={sec.id}
-              id={sec.id}
-              className="scroll-mt-28 p-5 sm:p-7 rounded-2xl bg-white/[0.025] border border-white/[0.08] hover:border-purple-500/30 transition-all relative overflow-hidden"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div className="flex items-center gap-3">
-                  <span className="w-7 h-7 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-400 font-mono text-xs font-bold flex items-center justify-center">
-                    {sec.number}
-                  </span>
-                  <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                    {sec.title}
-                  </h2>
-                </div>
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white/[0.06] text-purple-300 border border-purple-500/20">
-                  {sec.badge}
-                </span>
-              </div>
+        <section className="space-y-6">
+          <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2.5">
+                <ShieldCheck className="h-6 w-6 text-emerald-400" />
+                Data Protection & Privacy Clauses
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Official privacy terms, encryption standards, and retention schedules.
+              </p>
+            </div>
+            <span className="text-xs text-slate-400 font-mono">
+              Showing {PRIVACY_SECTIONS.length} of {PRIVACY_SECTIONS.length} Sections
+            </span>
+          </div>
 
-              {/* Takeaway Highlight Box */}
-              <div className="p-3 sm:p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/25 text-xs text-purple-200 mb-5 flex items-start gap-2.5">
-                <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white font-semibold">Summary: </strong>
-                  {sec.takeaway}
-                </div>
-              </div>
-
-              {/* Detailed Points */}
-              <div className="space-y-4">
-                {sec.points.map((pt, pIdx) => (
-                  <div key={pIdx} className="pl-3.5 border-l-2 border-purple-500/30 space-y-1">
-                    <h3 className="text-sm font-semibold text-white">
-                      {pt.subtitle}
+          <div className="grid grid-cols-1 gap-5">
+            {PRIVACY_SECTIONS.map((sec) => (
+              <div
+                key={sec.id}
+                id={sec.id}
+                className="group relative rounded-2xl border border-white/[0.08] bg-[#0e121d] p-6 hover:border-emerald-500/40 hover:shadow-[0_4px_24px_rgba(16,185,129,0.12)] transition-all duration-300 scroll-mt-24"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-black text-white uppercase tracking-wider px-2.5 py-1 rounded-md bg-white/[0.06] border border-white/10 font-mono">
+                      SECTION {sec.number}
+                    </span>
+                    <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">
+                      {sec.title}
                     </h3>
-                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                      {pt.desc}
-                    </p>
                   </div>
-                ))}
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border bg-emerald-950/60 text-emerald-400 border-emerald-800/50">
+                      {sec.badge}
+                    </span>
+                    <button
+                      onClick={() => handleCopyLink(sec.id)}
+                      title="Copy link to this section"
+                      className="p-1 rounded-md text-slate-500 hover:text-white hover:bg-white/[0.06] transition-colors"
+                    >
+                      {copiedRuleId === sec.id ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-400" />
+                      ) : (
+                        <Share2 className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+                  {sec.takeaway}
+                </p>
+
+                {/* Sub details bullet points matching /rules */}
+                <div className="mt-4 pt-3 border-t border-white/[0.06] space-y-2">
+                  {sec.points.map((pt, pIdx) => (
+                    <div
+                      key={pIdx}
+                      className="flex items-start gap-2 text-xs text-slate-300 leading-relaxed"
+                    >
+                      <span className="text-emerald-400 font-bold mt-0.5">•</span>
+                      <div>
+                        <strong className="text-white font-semibold">{pt.subtitle}: </strong>
+                        <span className="text-slate-400">{pt.desc}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Footer metadata */}
+                <div className="mt-4 pt-3 border-t border-white/[0.04] flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-slate-400">Security Standard:</span>
+                    <span>AES-256 Encryption at Rest</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-slate-400">Compliance:</span>
+                    <span className="text-emerald-400 font-medium">GDPR & CCPA Aligned</span>
+                  </div>
+                </div>
               </div>
-            </section>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
 
         {/* Server Data Purge Request Box */}
-        <div className="p-5 sm:p-7 rounded-2xl bg-red-950/20 border border-red-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-red-400 font-bold text-sm sm:text-base">
-              <Trash2 className="w-5 h-5 text-red-400" />
+        <div className="p-6 rounded-2xl bg-[#0e121d] border border-white/[0.08] hover:border-red-500/30 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-rose-400 font-bold text-sm sm:text-base">
+              <Trash2 className="w-5 h-5 text-rose-400" />
               <span>Request Full Server Data Purge</span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
               Need to permanently purge all transcripts, interaction metrics, and bot configurations stored for your Discord server? Verified server owners can initiate a total data erasure request in our official support server.
             </p>
           </div>
@@ -340,7 +384,7 @@ export default function DedicatedPrivacyPage() {
           </a>
         </div>
 
-        {/* Footer Navigation Bar */}
+        {/* Bottom Metadata Bar - NO RULES BUTTON */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-white/[0.08] text-xs text-slate-400">
           <div>
             Last updated: <span className="text-slate-200 font-medium">October 2026</span> • Version 2.4 (Enterprise)
@@ -352,10 +396,10 @@ export default function DedicatedPrivacyPage() {
             <Link href="/dashboard/tickets/faq" className="hover:text-white transition-colors">
               FAQ
             </Link>
-            <Link href="/rules" className="hover:text-white transition-colors">
-              Rules
+            <Link href="/dashboard/tickets/status" className="hover:text-white transition-colors">
+              System Status
             </Link>
-            <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 transition-colors">
+            <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 transition-colors">
               Discord Support Server
             </a>
           </div>

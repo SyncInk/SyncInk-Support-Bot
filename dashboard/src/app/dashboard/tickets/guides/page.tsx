@@ -75,75 +75,85 @@ export default function DedicatedGuidesPage() {
         { label: "Discord Support", href: SUPPORT_URL, external: true, tone: "secondary" }
       ]}
     >
-      <section className="mk-grid mk-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px" }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {guideSteps.map((step) => (
-          <article key={step.title} className="mk-panel" style={{ display: "flex", flexDirection: "column" }}>
-            <div className="mk-panel-header" style={{ marginBottom: "14px" }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                  <span className="mk-step-badge">{step.step}</span>
-                  <span className="mk-command-badge">{step.badge}</span>
+          <article
+            key={step.title}
+            className="group relative rounded-2xl border border-white/[0.08] bg-[#0e121d] p-6 hover:border-purple-500/40 hover:shadow-[0_4px_24px_rgba(139,76,255,0.12)] transition-all duration-300 flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-black text-white uppercase tracking-wider px-2.5 py-1 rounded-md bg-white/[0.06] border border-white/10 font-mono">
+                    {step.step}
+                  </span>
+                  <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-purple-400 transition-colors">
+                    {step.title}
+                  </h3>
                 </div>
-                <h2 style={{ fontSize: "18px", color: "#fff", margin: "4px 0 6px" }}>{step.title}</h2>
-                <p style={{ fontSize: "13px", color: "var(--text-soft)" }}>{step.description}</p>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border bg-purple-950/60 text-purple-400 border-purple-800/50">
+                  {step.badge}
+                </span>
+              </div>
+
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+                {step.description}
+              </p>
+
+              {/* Step items checklist */}
+              <div className="space-y-2 mt-4 pt-3 border-t border-white/[0.06]">
+                {step.items.map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-300 leading-relaxed">
+                    <CheckCircle2 className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
+                    <span>{item}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="mk-step-list" style={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
-              {step.items.map((item, idx) => (
-                <div key={idx} className="mk-step-item" style={{ display: "flex", gap: "10px", alignItems: "flex-start", padding: "12px 14px", fontSize: "12.5px", lineHeight: 1.6 }}>
-                  <CheckCircle2 size={16} style={{ color: "var(--accent)", flexShrink: 0, marginTop: "2px" }} />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-
             {/* Pro Tip Callout */}
-            <div
-              style={{
-                marginTop: "14px",
-                padding: "12px 14px",
-                borderRadius: "14px",
-                background: "rgba(139, 76, 255, 0.08)",
-                border: "1px solid rgba(139, 76, 255, 0.2)",
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "10px"
-              }}
-            >
-              <Lightbulb size={16} style={{ color: "#ffd166", flexShrink: 0, marginTop: "1px" }} />
-              <div style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.85)" }}>
-                <strong style={{ color: "#ffd166" }}>Pro Tip: </strong>
-                {step.proTip}
+            <div className="mt-4 p-3.5 rounded-xl bg-purple-950/40 border border-purple-800/40 text-xs text-purple-200 flex items-start gap-2.5">
+              <Lightbulb className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-amber-400 font-semibold">Pro Tip: </strong>
+                <span>{step.proTip}</span>
               </div>
             </div>
           </article>
         ))}
-      </section>
+      </div>
 
       {/* Assistance Card */}
-      <section className="mk-panel" style={{ marginTop: "32px" }}>
-        <div className="mk-panel-header">
-          <div>
-            <span className="mk-panel-label" style={{ fontSize: "11px", fontWeight: 700, color: "var(--accent)", textTransform: "uppercase" }}>Dedicated Support</span>
-            <h2 style={{ fontSize: "18px", color: "white", margin: "4px 0" }}>Need Help With Complex Permissions or Customization?</h2>
-            <p style={{ fontSize: "13px", color: "var(--text-soft)", margin: 0 }}>
-              Our support team and developer community are ready to assist you in getting your server configured smoothly.
-            </p>
+      <div className="p-6 rounded-2xl bg-[#0e121d] border border-white/[0.08] hover:border-purple-500/30 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mt-8">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-purple-300 font-bold text-sm sm:text-base">
+            <ShieldCheck className="w-5 h-5 text-purple-400" />
+            <span>Need Help With Complex Permissions or Customization?</span>
           </div>
-          <div className="mk-card-icon" style={{ width: "42px", height: "42px" }}>
-            <ShieldCheck size={22} color="var(--accent)" />
-          </div>
+          <p className="text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
+            Our support team and developer community are ready to assist you in getting your server configured smoothly.
+          </p>
         </div>
-        <div className="mk-actions-row mk-actions-row-left" style={{ marginTop: "16px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="mk-action mk-action-primary">
-            Join Discord Support Server
+        <div className="flex items-center gap-3 shrink-0 flex-wrap">
+          <a
+            href={SUPPORT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs sm:text-sm font-bold text-white transition-all shadow-lg shadow-purple-950/50 border border-purple-400/40"
+          >
+            <span>Join Discord Support</span>
+            <ExternalLink className="w-4 h-4" />
           </a>
-          <a href={INVITE_URL} target="_blank" rel="noopener noreferrer" className="mk-action mk-action-secondary">
-            Invite Bot to Server
+          <a
+            href={INVITE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#161b26] hover:bg-[#1c2331] text-xs sm:text-sm font-semibold text-slate-200 hover:text-white border border-white/10 transition-all"
+          >
+            <span>Invite Bot</span>
           </a>
         </div>
-      </section>
+      </div>
     </TicketMarketingFrame>
   );
 }

@@ -1307,8 +1307,6 @@ export default function NativeTicketDashboardPage() {
                 <span style={{ color: "var(--border-strong)", fontSize: "10px" }}>┃</span>
                 <Link href="/privacy" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>Privacy</Link>
                 <span style={{ color: "var(--border-strong)", fontSize: "10px" }}>┃</span>
-                <Link href="/rules" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>Rules</Link>
-                <span style={{ color: "var(--border-strong)", fontSize: "10px" }}>┃</span>
                 <Link href="/dashboard/tickets/faqs" className="glow-link" style={{ color: "inherit", textDecoration: "none" }}>FAQ</Link>
               </div>
             </div>
@@ -2079,34 +2077,6 @@ export default function NativeTicketDashboardPage() {
               <span>System Status</span>
             </Link>
             <Link
-              href="/rules"
-              onClick={() => setMobileMenuOpen(false)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "8px 14px",
-                borderRadius: "8px",
-                background: "transparent",
-                color: "var(--text-muted)",
-                fontSize: "12px",
-                fontWeight: 500,
-                textDecoration: "none",
-                transition: "all 0.15s ease"
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "white";
-                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "var(--text-muted)";
-                e.currentTarget.style.background = "transparent";
-              }}
-            >
-              <BookOpen size={15} />
-              <span>Ticket Rules</span>
-            </Link>
-            <Link
               href="/dashboard/tickets/faq"
               onClick={() => setMobileMenuOpen(false)}
               style={{
@@ -2191,7 +2161,6 @@ export default function NativeTicketDashboardPage() {
                   </div>
                 </div>
                 <div className="legal-links">
-                  <Link href="/rules" className="action-button" style={{ textDecoration: "none" }}><BookOpen size={16} /> Rules</Link>
                   <Link href="/dashboard/tickets/privacy" className="action-button" style={{ textDecoration: "none" }}><Shield size={16} /> Privacy Policy</Link>
                   <Link href="/dashboard/tickets/terms" className="action-button" style={{ textDecoration: "none" }}><FileText size={16} /> Terms of Service</Link>
                   <Link href="/dashboard/tickets/faq" className="action-button" style={{ textDecoration: "none" }}><HelpCircle size={16} /> FAQ</Link>
