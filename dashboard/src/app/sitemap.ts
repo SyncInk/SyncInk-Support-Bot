@@ -10,6 +10,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
     },
     {
+      url: `${baseUrl}/about`,
+      lastModified: now,
+    },
+    {
       url: `${baseUrl}/apply`,
       lastModified: now,
     },

@@ -15,6 +15,7 @@ import {
   Sparkles,
   ChevronRight,
   Layers,
+  Info,
 } from "lucide-react";
 
 export function PublicNavbar() {
@@ -23,6 +24,7 @@ export function PublicNavbar() {
 
   const navLinks = [
     { href: "/#bots", label: "Bots Showcase", icon: Layers },
+    { href: "/about", label: "About", icon: Info },
     { href: "/apply", label: "Apply (Staff & Dev)", icon: Sparkles },
     { href: "/rules", label: "Rules", icon: BookOpen },
     { href: "/faq", label: "FAQ", icon: HelpCircle },

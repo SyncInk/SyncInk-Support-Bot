@@ -12,6 +12,7 @@ import {
   Bot,
   Radio,
   Sparkles,
+  Layers,
 } from "lucide-react";
 
 export function PublicFooter() {
@@ -49,6 +50,15 @@ export function PublicFooter() {
               Support Server Docs
             </h4>
             <ul className="space-y-2 text-xs">
+              <li>
+                <Link
+                  href="/about"
+                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                >
+                  <Layers className="h-3 w-3 text-blue-400" />
+                  <span>About SyncInk Platform</span>
+                </Link>
+              </li>
               <li>
                 <Link
                   href="/rules"
@@ -170,6 +180,10 @@ export function PublicFooter() {
             © {new Date().getFullYear()} SyncInk. All rights reserved.
           </div>
           <div className="flex items-center gap-4">
+            <Link href="/about" className="hover:text-slate-300 transition-colors">
+              About
+            </Link>
+            <span className="text-slate-600">•</span>
             <Link href="/rules" className="hover:text-slate-300 transition-colors">
               Rules
             </Link>
