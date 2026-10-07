@@ -11,30 +11,29 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://syncink.site"),
   title: {
-    default: "SyncInk | Official Discord Bot Ecosystem & Multi-Bot Console",
-    template: "%s | SyncInk (syncink.site)",
+    default: "SyncInk — Discord Bots, Automation & Community Tools",
+    template: "%s | SyncInk",
   },
   description:
-    "Official SyncInk Discord bot infrastructure. Featuring enterprise-grade Ticket Bot with private threads, Dynamic Temporary Voice Generator, and 24/7 Support Security Automod shields.",
+    "SyncInk builds professional Discord bots, automation tools, dashboards and community solutions for modern online communities.",
   keywords: [
     "SyncInk",
     "SyncInk bot",
     "syncink.site",
+    "Discord bots",
     "Discord ticket bot",
     "Discord voice bot",
     "Discord security bot",
-    "Discord automod",
-    "Discord bot dashboard",
-    "Discord temporary voice",
-    "Discord transcripts",
-    "Discord private threads",
-    "Discord server management",
+    "Discord automation",
+    "Discord community tools",
+    "temporary voice channels",
+    "server protection",
   ],
   authors: [{ name: "SyncInk Operations Team", url: "https://syncink.site" }],
   creator: "SyncInk",
   publisher: "SyncInk",
   alternates: {
-    canonical: "https://syncink.site",
+    canonical: "/",
   },
   icons: {
     icon: [
@@ -49,9 +48,9 @@ export const metadata: Metadata = {
   },
   manifest: "/site.webmanifest",
   openGraph: {
-    title: "SyncInk | Official Discord Bot Ecosystem & Multi-Bot Console",
+    title: "SyncInk — Discord Bots, Automation & Community Tools",
     description:
-      "Enterprise Discord bot infrastructure: Ticket System with private threads, Dynamic Voice Generator, and 24/7 Automod Security shield.",
+      "SyncInk builds professional Discord bots, automation tools, dashboards and community solutions for modern online communities.",
     url: "https://syncink.site",
     siteName: "SyncInk",
     images: [
@@ -73,9 +72,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "SyncInk | Official Discord Bot Ecosystem",
+    title: "SyncInk — Discord Bots, Automation & Community Tools",
     description:
-      "Enterprise Discord bot infrastructure: Ticket Bot, Voice Bot, and Security Shield.",
+      "SyncInk builds professional Discord bots, automation tools, dashboards and community solutions for modern online communities.",
     images: ["https://syncink.site/favicon.png"],
     creator: "@SyncInk",
   },
@@ -106,7 +105,7 @@ export default function RootLayout({
         "@type": "Organization",
         "@id": "https://syncink.site/#organization",
         name: "SyncInk",
-        url: "https://syncink.site",
+        url: "https://syncink.site/",
         logo: {
           "@type": "ImageObject",
           url: "https://syncink.site/favicon.png",
@@ -115,14 +114,15 @@ export default function RootLayout({
         },
         sameAs: [
           "https://discord.gg/rB6gNZaK9u",
+          "https://github.com/SyncInk",
         ],
         description:
-          "High-performance Discord bot ecosystem powering tickets, dynamic voice channels, and server security.",
+          "SyncInk builds professional Discord bots, automation tools, dashboards and community solutions for modern online communities.",
       },
       {
         "@type": "WebSite",
         "@id": "https://syncink.site/#website",
-        url: "https://syncink.site",
+        url: "https://syncink.site/",
         name: "SyncInk",
         publisher: {
           "@id": "https://syncink.site/#organization",
@@ -135,7 +135,7 @@ export default function RootLayout({
         name: "SyncInk Ticket Bot",
         applicationCategory: "BusinessApplication",
         operatingSystem: "Discord",
-        url: "https://syncink.site/dashboard/tickets",
+        url: "https://syncink.site",
         description:
           "Enterprise Discord support ticket bot with private thread isolation, customizable categories, and encrypted HTML transcripts.",
         offers: {
@@ -149,7 +149,7 @@ export default function RootLayout({
         name: "SyncInk Voice Bot",
         applicationCategory: "UtilitiesApplication",
         operatingSystem: "Discord",
-        url: "https://syncink.site/dashboard/voice",
+        url: "https://syncink.site",
         description:
           "Dynamic temporary voice channel manager with join-to-create generator hubs, user permissions, and automatic cleanup.",
         offers: {
@@ -163,7 +163,7 @@ export default function RootLayout({
         name: "SyncInk Support Bot",
         applicationCategory: "SecurityApplication",
         operatingSystem: "Discord",
-        url: "https://syncink.site/dashboard/security",
+        url: "https://syncink.site",
         description:
           "Real-time raid dampener, automated quarantine, and automod defense bot for community security.",
         offers: {

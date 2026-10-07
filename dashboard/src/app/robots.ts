@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/dashboard/*/transcripts/*", "/login"],
+        disallow: ["/dashboard/", "/api/", "/login"],
       },
       {
         userAgent: [
@@ -24,7 +24,7 @@ export default function robots(): MetadataRoute.Robots {
           "cohere-ai",
         ],
         allow: "/",
-        disallow: ["/api/", "/login"],
+        disallow: ["/dashboard/", "/api/", "/login"],
       },
     ],
     sitemap: "https://syncink.site/sitemap.xml",
