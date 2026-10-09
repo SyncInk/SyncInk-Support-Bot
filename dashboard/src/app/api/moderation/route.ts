@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { checkRequestAuth, checkRequestAdminAuth, getCurrentUser } from "@/lib/auth";
+import { checkRequestAuth, checkRequestAdminAuth, getCurrentUser, verifyUserGuildAccess } from "@/lib/auth";
 import { query, queryOne, resolveGuildId } from "@/lib/db";
+import { validateCsrfOrigin, redactSensitive } from "@/lib/security";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +11,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const clientIp = getClientIp(request);
+  const rateLimit = rateLimiter.check(`mod_get_${clientIp}`, 60, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+  }
+
   try {
     const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
     const guildId = await resolveGuildId(searchParams.get("guildId") || user?.guildId);
+
+    // BOLA Check (Item 5 & 14)
+    if (!verifyUserGuildAccess(user, guildId)) {
+      return NextResponse.json({ error: "Access Denied: You do not have permissions for this server." }, { status: 403 });
+    }
 
     const actionFilter = searchParams.get("action");
     const searchQuery = searchParams.get("search")?.trim() || "";
@@ -31,7 +44,7 @@ export async function GET(request: Request) {
     }
 
     if (searchQuery) {
-      params.push(`%${searchQuery}%`);
+      params.push(`%${searchQuery.slice(0, 100)}%`);
       sql += ` AND (user_id::text LIKE $${params.length} OR mod_id::text LIKE $${params.length} OR reason ILIKE $${params.length})`;
     }
 
@@ -39,7 +52,7 @@ export async function GET(request: Request) {
     params.push(limit);
 
     const cases = await query(sql, params).catch(async (err) => {
-      console.warn("mod_cases query error, creating table if not exists:", err);
+      console.warn("mod_cases query error, creating table if not exists:", redactSensitive(err.message || ""));
       await query(`
         CREATE TABLE IF NOT EXISTS mod_cases (
           case_id SERIAL PRIMARY KEY,
@@ -72,15 +85,28 @@ export async function GET(request: Request) {
       }
     );
   } catch (error: any) {
-    console.error("Moderation API Error:", error);
+    console.error("Moderation API Error:", redactSensitive(error.message || ""));
     return NextResponse.json(
-      { error: error.message || "Failed to query moderation cases" },
+      { error: "Failed to query moderation cases" },
       { status: 500 }
     );
   }
 }
 
 export async function POST(request: Request) {
+  // 1. CSRF Protection (Item 3)
+  if (!validateCsrfOrigin(request)) {
+    return NextResponse.json({ error: "Invalid request origin (CSRF validation failed)" }, { status: 403 });
+  }
+
+  // 2. Rate Limiting (Item 6)
+  const clientIp = getClientIp(request);
+  const rateLimit = rateLimiter.check(`mod_post_${clientIp}`, 30, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many moderation requests. Please slow down." }, { status: 429 });
+  }
+
+  // 3. Admin Authorization (Item 13)
   if (!checkRequestAdminAuth(request)) {
     return NextResponse.json(
       { error: "Access Denied: Only Server Owner & Administrators can issue moderation actions." },
@@ -94,6 +120,11 @@ export async function POST(request: Request) {
     const { userId, action, reason, durationMins, guildId: reqGuildId } = body;
     const guildId = await resolveGuildId(reqGuildId || user?.guildId);
 
+    // 4. BOLA Check (Item 5 & 14)
+    if (!verifyUserGuildAccess(user, guildId)) {
+      return NextResponse.json({ error: "Access Denied: You do not have permissions for this server." }, { status: 403 });
+    }
+
     if (!userId || !action) {
       return NextResponse.json(
         { error: "User ID and action type are required" },
@@ -101,11 +132,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const cleanUserId = String(userId).replace(/[<@!>]/g, "").trim();
+    const cleanUserId = String(userId).replace(/[^0-9]/g, "").trim();
+    if (!cleanUserId || cleanUserId.length < 5) {
+      return NextResponse.json({ error: "Invalid Discord User ID format." }, { status: 400 });
+    }
+
+    const allowedActions = ["BAN", "UNBAN", "KICK", "WARN", "TIMEOUT", "UNTIMEOUT", "MUTE", "UNMUTE"];
     const cleanAction = String(action).toUpperCase().trim();
-    const cleanReason = String(reason || "Action applied via Web Dashboard").trim();
+    if (!allowedActions.includes(cleanAction)) {
+      return NextResponse.json({ error: `Invalid moderation action: ${cleanAction}` }, { status: 400 });
+    }
+
+    const cleanReason = String(reason || "Action applied via Web Dashboard").slice(0, 500).trim();
     const modId = user?.id === "admin" ? 0 : (user?.id || 0);
-    const parsedMins = durationMins ? parseInt(durationMins, 10) : null;
+    const parsedMins = durationMins ? Math.min(43200, Math.max(1, parseInt(durationMins, 10))) : null;
 
     const result = await queryOne(
       `INSERT INTO mod_cases (guild_id, user_id, mod_id, action, reason)
@@ -137,7 +177,7 @@ export async function POST(request: Request) {
       [guildId, cleanUserId, cleanAction, modId, cleanReason, parsedMins]
     );
 
-    // Also log incident in forensics
+    // Forensic incident logging
     await query(
       `INSERT INTO security_incidents (guild_id, user_id, module, action_taken, severity, risk_score, details)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -158,15 +198,21 @@ export async function POST(request: Request) {
       message: `Successfully executed moderation case for ${cleanUserId} (${cleanAction}). Bot is applying action in Discord.`,
     });
   } catch (error: any) {
-    console.error("Moderation Post Error:", error);
+    console.error("Moderation POST Error:", redactSensitive(error.message || ""));
     return NextResponse.json(
-      { error: error.message || "Failed to record moderation action" },
+      { error: "Failed to record moderation action" },
       { status: 500 }
     );
   }
 }
 
 export async function DELETE(request: Request) {
+  // 1. CSRF Protection (Item 3)
+  if (!validateCsrfOrigin(request)) {
+    return NextResponse.json({ error: "Invalid request origin (CSRF validation failed)" }, { status: 403 });
+  }
+
+  // 2. Admin Authorization (Item 13)
   if (!checkRequestAdminAuth(request)) {
     return NextResponse.json(
       { error: "Access Denied: Only Server Owner & Administrators can remove moderation cases." },
@@ -175,23 +221,34 @@ export async function DELETE(request: Request) {
   }
 
   try {
+    const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
     const caseId = searchParams.get("caseId");
+    const guildId = await resolveGuildId(searchParams.get("guildId") || user?.guildId);
+
+    // 3. BOLA Check (Item 5 & 14)
+    if (!verifyUserGuildAccess(user, guildId)) {
+      return NextResponse.json({ error: "Access Denied: You do not have permissions for this server." }, { status: 403 });
+    }
 
     if (!caseId) {
       return NextResponse.json({ error: "caseId is required" }, { status: 400 });
     }
 
-    await query("DELETE FROM mod_cases WHERE case_id = $1", [parseInt(caseId, 10)]);
+    // Tenant-scoped deletion (prevents IDOR where admin from Guild A deletes Guild B's cases)
+    await query(
+      "DELETE FROM mod_cases WHERE case_id = $1 AND guild_id = $2",
+      [parseInt(caseId, 10), guildId]
+    );
 
     return NextResponse.json({
       success: true,
       message: `Case #${caseId} successfully removed.`,
     });
   } catch (error: any) {
-    console.error("Moderation Delete Error:", error);
+    console.error("Moderation DELETE Error:", redactSensitive(error.message || ""));
     return NextResponse.json(
-      { error: error.message || "Failed to delete case" },
+      { error: "Failed to delete case" },
       { status: 500 }
     );
   }

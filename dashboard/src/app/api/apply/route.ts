@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit";
+import {
+  validateCsrfOrigin,
+  MAX_FILE_SIZE_BYTES,
+  ALLOWED_MIME_TYPES,
+  validateMagicBytes,
+  sanitizeFileName,
+  redactSensitive,
+} from "@/lib/security";
 
 export const dynamic = "force-dynamic";
-
-// In-memory rate limiting map: identifier -> array of submission timestamps
-const submissionRateMap = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-const MAX_SUBMISSIONS_PER_WINDOW = 3;
 
 // Webhook URLs (securely held server-side, never delivered to the client)
 const STAFF_WEBHOOK =
@@ -17,28 +21,19 @@ const DEV_WEBHOOK =
   process.env.DEV_APPLICATION_WEBHOOK ||
   "https://discord.com/api/webhooks/1542537924766335036/o3C7rHB-HEP7utGCbFfHPeoVGnzK_sGnvy3cKCCfdWy4GhtYAmERopWpHRHP1B-k5eMh";
 
-function isRateLimited(key: string): boolean {
-  const now = Date.now();
-  const timestamps = submissionRateMap.get(key) || [];
-  const validTimestamps = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-
-  if (validTimestamps.length >= MAX_SUBMISSIONS_PER_WINDOW) {
-    return true;
-  }
-
-  validTimestamps.push(now);
-  submissionRateMap.set(key, validTimestamps);
-  return false;
-}
-
 function cleanString(str: any, maxLen = 2000): string {
   if (typeof str !== "string") return "";
   return str.trim().slice(0, maxLen);
 }
 
 export async function POST(request: Request) {
+  // 1. CSRF Protection (Item 3)
+  if (!validateCsrfOrigin(request)) {
+    return NextResponse.json({ error: "Invalid request origin (CSRF validation failed)" }, { status: 403 });
+  }
+
   try {
-    // 1. Authenticate user from Discord OAuth session cookie
+    // 2. Authenticate user from Discord OAuth session cookie
     const user = await getCurrentUser();
     if (!user || !user.id || user.id === "admin") {
       return NextResponse.json(
@@ -49,20 +44,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Check rate limit per Discord user ID & client IP
-    const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown-ip";
-    const rateLimitKey = `${user.id}_${clientIp}`;
-
-    if (isRateLimited(rateLimitKey)) {
+    // 3. Sliding-window rate limit: 3 applications per hour per user/IP (Item 6)
+    const clientIp = getClientIp(request);
+    const rateLimit = rateLimiter.check(`apply_${user.id}_${clientIp}`, 3, 60 * 60 * 1000);
+    if (!rateLimit.allowed) {
       return NextResponse.json(
         {
-          error: "You have submitted too many applications recently. Please wait an hour before submitting again.",
+          error: "You have submitted too many applications recently. Please wait before submitting again.",
         },
         { status: 429 }
       );
     }
 
-    // 3. Parse Request Content (supports both multipart FormData and JSON)
+    // 4. Parse Request Content (supports both multipart FormData and JSON)
     const contentType = request.headers.get("content-type") || "";
     let appType = "";
     let age = 0;
@@ -78,6 +72,8 @@ export async function POST(request: Request) {
     let bot_exp = "";
     let complex = "";
     let attachmentFile: File | null = null;
+    let attachmentBuffer: Buffer | null = null;
+    let cleanFileName = "";
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
@@ -98,6 +94,39 @@ export async function POST(request: Request) {
       const file = formData.get("attachment");
       if (file && typeof file === "object" && "arrayBuffer" in file && (file as File).size > 0) {
         attachmentFile = file as File;
+
+        // ==========================================
+        // 5. FILE UPLOAD VALIDATION (Item 4)
+        // ==========================================
+        // A. File Size Validation
+        if (attachmentFile.size > MAX_FILE_SIZE_BYTES) {
+          return NextResponse.json(
+            { error: "Uploaded attachment exceeds the maximum allowed size of 8 MB." },
+            { status: 400 }
+          );
+        }
+
+        // B. MIME Type Validation
+        const rawMime = (attachmentFile.type || "").toLowerCase();
+        if (!ALLOWED_MIME_TYPES.has(rawMime)) {
+          return NextResponse.json(
+            { error: "Invalid file type. Only PNG, JPEG, WebP, GIF, and PDF documents are allowed." },
+            { status: 400 }
+          );
+        }
+
+        // C. Magic Byte Inspection
+        const arrayBuf = await attachmentFile.arrayBuffer();
+        attachmentBuffer = Buffer.from(arrayBuf);
+        if (!validateMagicBytes(attachmentBuffer)) {
+          return NextResponse.json(
+            { error: "File verification failed. The uploaded file content does not match its claimed format." },
+            { status: 400 }
+          );
+        }
+
+        // D. Filename Sanitization
+        cleanFileName = sanitizeFileName(attachmentFile.name);
       }
     } else {
       const body = await request.json();
@@ -237,9 +266,8 @@ export async function POST(request: Request) {
       };
     }
 
-    // 4. Dispatch to Discord Webhook
-    if (attachmentFile) {
-      const cleanFileName = attachmentFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+    // 6. Dispatch to Discord Webhook
+    if (attachmentFile && attachmentBuffer) {
       if (attachmentFile.type.startsWith("image/")) {
         payload.embeds[0].image = { url: `attachment://${cleanFileName}` };
       }
@@ -255,7 +283,7 @@ export async function POST(request: Request) {
 
       if (!discordRes.ok) {
         const errText = await discordRes.text();
-        console.error("Discord webhook dispatch error:", errText);
+        console.error("Discord webhook dispatch error:", redactSensitive(errText));
         return NextResponse.json({ error: "Failed to dispatch application to Discord. Please try again later." }, { status: 502 });
       }
     } else {
@@ -267,7 +295,7 @@ export async function POST(request: Request) {
 
       if (!discordRes.ok) {
         const errText = await discordRes.text();
-        console.error("Discord webhook dispatch error:", errText);
+        console.error("Discord webhook dispatch error:", redactSensitive(errText));
         return NextResponse.json({ error: "Failed to dispatch application to Discord. Please try again later." }, { status: 502 });
       }
     }
@@ -277,7 +305,7 @@ export async function POST(request: Request) {
       message: "Application submitted successfully! Our management team will review your application soon.",
     });
   } catch (error: any) {
-    console.error("Application submission handler error:", error);
-    return NextResponse.json({ error: error.message || "An unexpected error occurred." }, { status: 500 });
+    console.error("Application submission handler error:", redactSensitive(error.message || ""));
+    return NextResponse.json({ error: "An unexpected error occurred processing your application." }, { status: 500 });
   }
 }

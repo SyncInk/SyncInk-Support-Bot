@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { checkRequestAuth, checkRequestAdminAuth, getCurrentUser } from "@/lib/auth";
+import { checkRequestAuth, checkRequestAdminAuth, getCurrentUser, verifyUserGuildAccess } from "@/lib/auth";
 import { query, resolveGuildId } from "@/lib/db";
+import { validateCsrfOrigin, redactSensitive } from "@/lib/security";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +29,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Rate Limiting (Item 6)
+  const clientIp = getClientIp(request);
+  const rateLimit = rateLimiter.check(`sec_quar_get_${clientIp}`, 60, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+  }
+
   try {
     const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
     const guildId = await resolveGuildId(searchParams.get("guildId") || user?.guildId);
+
+    // BOLA Check (Item 5 & 14)
+    if (!verifyUserGuildAccess(user, guildId)) {
+      return NextResponse.json({ error: "Access Denied: You do not have permissions for this server." }, { status: 403 });
+    }
 
     const jailedUsers = await query(
       `SELECT id, guild_id, user_id, mod_id, reason, jailed_at, release_at, case_id
@@ -57,11 +71,25 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ jailedUsers: jailedUsers || [] });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to fetch quarantine roster" }, { status: 500 });
+    console.error("Quarantine GET Error:", redactSensitive(error.message || ""));
+    return NextResponse.json({ error: "Failed to fetch quarantine roster" }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
+  // 1. CSRF Protection (Item 3)
+  if (!validateCsrfOrigin(request)) {
+    return NextResponse.json({ error: "Invalid request origin (CSRF validation failed)" }, { status: 403 });
+  }
+
+  // 2. Rate Limiting (Item 6)
+  const clientIp = getClientIp(request);
+  const rateLimit = rateLimiter.check(`sec_quar_post_${clientIp}`, 30, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many quarantine actions. Please slow down." }, { status: 429 });
+  }
+
+  // 3. Admin Authorization (Item 13)
   if (!checkRequestAdminAuth(request)) {
     return NextResponse.json({ error: "Access Denied: Only Server Owner & Administrators can modify quarantine." }, { status: 403 });
   }
@@ -72,17 +100,27 @@ export async function POST(request: Request) {
     const { userId, action = "unjail", reason, durationMins, guildId: reqGuildId } = body;
     const guildId = await resolveGuildId(reqGuildId || user?.guildId);
 
+    // 4. BOLA Check (Item 5 & 14)
+    if (!verifyUserGuildAccess(user, guildId)) {
+      return NextResponse.json({ error: "Access Denied: You do not have permissions for this server." }, { status: 403 });
+    }
+
     if (!userId) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }
 
-    const cleanUserId = String(userId).replace(/[<@!>]/g, "").trim();
+    // Sanitize snowflake to pure digits
+    const cleanUserId = String(userId).replace(/[^0-9]/g, "").trim();
+    if (!cleanUserId || cleanUserId.length < 5) {
+      return NextResponse.json({ error: "Invalid Discord User ID." }, { status: 400 });
+    }
+
     await ensureActionQueueTable();
 
     if (action === "jail") {
-      const cleanReason = String(reason || "Quarantined via Web Dashboard").trim();
+      const cleanReason = String(reason || "Quarantined via Web Dashboard").slice(0, 500).trim();
       const modId = user?.id === "admin" ? 0 : (user?.id || 0);
-      const mins = durationMins ? parseInt(durationMins, 10) : null;
+      const mins = durationMins ? Math.min(43200, Math.max(1, parseInt(durationMins, 10))) : null;
       const releaseAt = mins ? new Date(Date.now() + mins * 60000).toISOString() : null;
 
       // 1. Check existing record in automod_jails
@@ -137,7 +175,7 @@ export async function POST(request: Request) {
     // Default: UNJAIL
     const modId = user?.id === "admin" ? 0 : (user?.id || 0);
 
-    // 1. Mark automod_jails as expiring immediately (so previous_roles is preserved for the bot's unjail worker)
+    // 1. Mark automod_jails as expiring immediately
     await query(
       `UPDATE automod_jails 
        SET release_at = CURRENT_TIMESTAMP - INTERVAL '1 second', reason = 'Unjailed via Web Dashboard'
@@ -145,7 +183,7 @@ export async function POST(request: Request) {
       [guildId, cleanUserId]
     );
 
-    // 2. Queue real-time Discord action for the bot to strip jail role & restore original roles
+    // 2. Queue real-time Discord action for the bot
     await query(
       `INSERT INTO pending_bot_actions (guild_id, user_id, action, mod_id, reason)
        VALUES ($1, $2, 'UNJAIL', $3, $4)`,
@@ -171,6 +209,7 @@ export async function POST(request: Request) {
       message: `User ${cleanUserId} unjail command queued. Bot is restoring Discord roles.`
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to process quarantine request" }, { status: 500 });
+    console.error("Quarantine POST Error:", redactSensitive(error.message || ""));
+    return NextResponse.json({ error: "Failed to process quarantine request" }, { status: 500 });
   }
 }

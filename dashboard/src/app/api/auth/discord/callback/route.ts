@@ -1,22 +1,45 @@
 import { NextResponse } from "next/server";
 import { createDiscordSessionToken, DISCORD_COOKIE_NAME } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { verifySignedToken, redactSensitive } from "@/lib/security";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const host = request.headers.get("x-forwarded-host") || url.host;
-  const proto = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "");
-  let baseUrl = "https://syncink.site";
-
+  const rawState = url.searchParams.get("state");
+  const baseUrl = "https://syncink.site";
   const redirectUri = `${baseUrl}/api/auth/discord/callback`;
+
+  // 1. Rate limiting on OAuth callback to prevent code brute-forcing (Item 6)
+  const clientIp = getClientIp(request);
+  const rateLimit = rateLimiter.check(`oauth_callback_${clientIp}`, 10, 5 * 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.redirect(`${baseUrl}/login?error=Too+many+login+attempts.+Please+wait+a+few+minutes.`);
+  }
 
   if (!code) {
     return NextResponse.redirect(`${baseUrl}/login?error=No+authorization+code+provided`);
   }
 
+  // 2. Validate OAuth state parameter to prevent CSRF & Open Redirects (Item 3 & 16)
+  let targetPath = "/dashboard";
+  if (rawState) {
+    const verifiedState = verifySignedToken<{ redirect?: string; exp?: number }>(rawState);
+    if (verifiedState && verifiedState.redirect) {
+      const p = verifiedState.redirect;
+      if (p.startsWith("/") && !p.startsWith("//") && !p.includes(":")) {
+        targetPath = p;
+      }
+    } else if (rawState.startsWith("/") && !rawState.startsWith("//") && !rawState.includes(":")) {
+      // Backwards compatibility for pre-existing flows
+      targetPath = rawState;
+    }
+  }
+
+  // 3. Keep API secrets server-side (Item 8)
   const clientId = (process.env.DISCORD_CLIENT_ID || "").trim();
   const clientSecret = (process.env.DISCORD_CLIENT_SECRET || "").trim();
   const targetGuildId = (process.env.DEFAULT_GUILD_ID || "1520461877073674392").trim();
@@ -31,7 +54,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    // 1. Exchange code for OAuth2 access token
+    // 4. Exchange code for OAuth2 access token
     const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -46,27 +69,14 @@ export async function GET(request: Request) {
 
     if (!tokenRes.ok) {
       const errText = await tokenRes.text();
-      console.error("Discord Token Exchange Failed:", errText);
-      let detail = "Failed to exchange Discord token";
-      try {
-        const parsed = JSON.parse(errText);
-        if (parsed.error_description) {
-          detail = `Discord: ${parsed.error_description}`;
-        } else if (parsed.error === "invalid_client") {
-          detail = "Invalid Client Secret or Client ID. Ensure DISCORD_CLIENT_SECRET in Vercel matches the OAuth2 Client Secret (not bot token).";
-        } else if (parsed.error) {
-          detail = `Discord OAuth error: ${parsed.error}`;
-        }
-      } catch {
-        detail = `Discord token exchange failed: ${errText.slice(0, 100)}`;
-      }
-      return NextResponse.redirect(`${baseUrl}/login?error=${encodeURIComponent(detail)}`);
+      console.error("Discord Token Exchange Failed:", redactSensitive(errText));
+      return NextResponse.redirect(`${baseUrl}/login?error=Failed+to+exchange+Discord+token`);
     }
 
     const tokenData = await tokenRes.json();
     const accessToken = tokenData.access_token;
 
-    // 2. Fetch authenticated Discord user info
+    // 5. Fetch authenticated Discord user info
     const userRes = await fetch("https://discord.com/api/users/@me", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
@@ -77,14 +87,11 @@ export async function GET(request: Request) {
 
     const discordUser = await userRes.json();
 
-    // 3. Permission & Dynamic Role Detection:
+    // 6. Permission & Dynamic Role Detection (Item 13)
     let isOwner = false;
     let isAdmin = false;
-    let isMember = false;
-    let isAuthorized = authorizedIds.includes(discordUser.id);
     let detectedGuild: { id: string; name: string; owner?: boolean; permissions?: string } | null = null;
 
-    // Fetch user's Discord guilds
     const guildsRes = await fetch("https://discord.com/api/users/@me/guilds", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
@@ -93,23 +100,20 @@ export async function GET(request: Request) {
       const guilds: Array<{ id: string; name: string; owner: boolean; permissions: string }> =
         await guildsRes.json();
 
-      // A. Try to find guild by targetGuildId
       if (targetGuildId) {
         detectedGuild = guilds.find((g) => g.id === targetGuildId) || null;
       }
 
-      // B. If not found, check if any guild registered in PostgreSQL matches
       if (!detectedGuild) {
         try {
           const dbRows = await query<{ guild_id: string }>("SELECT guild_id FROM guild_settings LIMIT 20");
           const dbIds = dbRows.map((r) => String(r.guild_id));
           detectedGuild = guilds.find((g) => dbIds.includes(String(g.id))) || null;
         } catch (e) {
-          console.error("DB guild match error:", e);
+          // Ignore matching error
         }
       }
 
-      // C. If still not found, search for server owned by user or named SyncInk
       if (!detectedGuild) {
         detectedGuild =
           guilds.find((g) => g.owner && g.name.toLowerCase().includes("syncink")) ||
@@ -120,7 +124,6 @@ export async function GET(request: Request) {
       }
 
       if (detectedGuild) {
-        isMember = true;
         const ownsThis = Boolean(detectedGuild.owner);
         const ownsAny = guilds.some((g) => g.owner === true);
         isOwner = ownsThis || ownsAny;
@@ -138,36 +141,29 @@ export async function GET(request: Request) {
       }
     }
 
-    // Check if user is in AUTHORIZED_DISCORD_IDS
     if (authorizedIds.includes(discordUser.id)) {
       isOwner = true;
       isAdmin = true;
-      isAuthorized = true;
     }
 
-    // Bot Creator / Brand Owner detection: username matching syncink
     const lowerName = (discordUser.username || "").toLowerCase();
     const lowerGlobal = (discordUser.global_name || "").toLowerCase();
     if (lowerName === "syncink" || lowerName.includes("syncink") || lowerGlobal.includes("syncink")) {
       isOwner = true;
       isAdmin = true;
-      isAuthorized = true;
     }
 
-    // Determine actual role title
     let roleLabel = "Server Member";
     if (isOwner) {
       roleLabel = "Server Owner";
     } else if (isAdmin) {
       roleLabel = "Server Admin";
-    } else {
-      roleLabel = "Server Member";
     }
 
     const finalGuildId = detectedGuild ? detectedGuild.id : targetGuildId;
     const finalGuildName = detectedGuild ? detectedGuild.name : "SyncInk Support";
 
-    // 4. Create Discord session cookie with accurate role & guild info
+    // 7. Cryptographically signed session cookie (Item 7 & 12)
     const sessionToken = createDiscordSessionToken({
       id: discordUser.id,
       username: discordUser.username,
@@ -179,9 +175,6 @@ export async function GET(request: Request) {
       guildId: finalGuildId,
       guildName: finalGuildName,
     });
-
-    const rawState = url.searchParams.get("state") || "/dashboard";
-    const targetPath = rawState.startsWith("/") && !rawState.startsWith("//") ? rawState : "/dashboard";
 
     const response = NextResponse.redirect(`${baseUrl}${targetPath}`);
     response.cookies.set({
@@ -196,13 +189,7 @@ export async function GET(request: Request) {
 
     return response;
   } catch (error: any) {
-    console.error("Discord OAuth Error:", error);
-    return NextResponse.redirect(
-      `${baseUrl}/login?error=${encodeURIComponent(error.message || "OAuth Authentication error")}`
-    );
+    console.error("Discord OAuth Error:", redactSensitive(error.message || ""));
+    return NextResponse.redirect(`${baseUrl}/login?error=OAuth+Authentication+error`);
   }
 }
-
-
-
-

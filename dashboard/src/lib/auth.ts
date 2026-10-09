@@ -1,4 +1,9 @@
 import { cookies } from "next/headers";
+import {
+  timingSafeCompare,
+  createSignedToken,
+  verifySignedToken,
+} from "./security";
 
 const AUTH_COOKIE_NAME = "syncink_admin_session";
 const DISCORD_COOKIE_NAME = "syncink_discord_session";
@@ -15,32 +20,75 @@ export interface DiscordUser {
   guildName?: string;
 }
 
+// Generate an ephemeral fallback for local dev if ADMIN_ACCESS_KEY is missing
+let ephemeralDevKey: string | null = null;
+
 export function getAdminKey(): string {
-  return process.env.ADMIN_ACCESS_KEY || "syncink_admin_default_pass";
-}
-
-export function isValidKey(key: string): boolean {
-  if (!key) return false;
-  return key.trim() === getAdminKey().trim();
-}
-
-export function createSessionToken(): string {
-  return Buffer.from(getAdminKey()).toString("base64");
-}
-
-export function createDiscordSessionToken(user: DiscordUser): string {
-  return Buffer.from(JSON.stringify(user)).toString("base64url");
-}
-
-export function parseDiscordSession(token: string): DiscordUser | null {
-  try {
-    const jsonStr = Buffer.from(token, "base64url").toString("utf-8");
-    return JSON.parse(jsonStr);
-  } catch {
-    return null;
+  const envKey = process.env.ADMIN_ACCESS_KEY;
+  if (envKey && envKey !== "syncink_admin_default_pass") {
+    return envKey;
   }
+
+  // In production, NEVER allow default credentials
+  if (process.env.NODE_ENV === "production") {
+    console.error("SECURITY ALERT: ADMIN_ACCESS_KEY is not set or using default value in production!");
+    return "DISALLOW_INSECURE_DEFAULT_IN_PRODUCTION";
+  }
+
+  if (!ephemeralDevKey) {
+    ephemeralDevKey = "dev_local_" + Math.random().toString(36).substring(2, 15);
+  }
+  return ephemeralDevKey;
 }
 
+/**
+ * Constant-time password / key verification (Item 9 & Item 18)
+ */
+export function isValidKey(key: string): boolean {
+  if (!key || typeof key !== "string") return false;
+  const adminKey = getAdminKey();
+  if (adminKey === "DISALLOW_INSECURE_DEFAULT_IN_PRODUCTION") return false;
+  return timingSafeCompare(key.trim(), adminKey.trim());
+}
+
+/**
+ * Creates cryptographically signed admin session token (Item 7)
+ */
+export function createSessionToken(): string {
+  return createSignedToken({
+    role: "admin",
+    created: Date.now(),
+    type: "admin_passkey",
+  });
+}
+
+/**
+ * Validates cryptographically signed admin session token (Item 7)
+ */
+export function isValidAdminSessionToken(token: string): boolean {
+  if (!token) return false;
+  const payload = verifySignedToken<{ role: string; type: string }>(token);
+  return Boolean(payload && payload.role === "admin" && payload.type === "admin_passkey");
+}
+
+/**
+ * Creates cryptographically signed Discord session token (Item 7)
+ */
+export function createDiscordSessionToken(user: DiscordUser): string {
+  return createSignedToken<DiscordUser>(user);
+}
+
+/**
+ * Parses and cryptographically validates Discord session token (Item 7)
+ */
+export function parseDiscordSession(token: string): DiscordUser | null {
+  if (!token) return null;
+  return verifySignedToken<DiscordUser>(token);
+}
+
+/**
+ * Retrieves currently authenticated user from secure HTTP-only cookies
+ */
 export async function getCurrentUser(): Promise<DiscordUser | null> {
   const cookieStore = cookies();
   const discordToken = cookieStore.get(DISCORD_COOKIE_NAME)?.value;
@@ -50,18 +98,49 @@ export async function getCurrentUser(): Promise<DiscordUser | null> {
   }
 
   const adminToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
-  if (adminToken && adminToken === createSessionToken()) {
+  if (adminToken && isValidAdminSessionToken(adminToken)) {
     return {
       id: "admin",
       username: "Server Administrator",
       global_name: "Admin Passkey",
       isOwner: true,
+      isAdmin: true,
     };
   }
 
   return null;
 }
 
+/**
+ * Verifies if user has permission to manage the specified target guild (Item 5 & Item 13)
+ */
+export function verifyUserGuildAccess(user: DiscordUser | null, targetGuildId: string): boolean {
+  if (!user || !targetGuildId) return false;
+
+  // Master admin passkey has access across all managed guilds
+  if (user.id === "admin") return true;
+
+  // Authorized Super Admins / Creator
+  const authorizedIds = process.env.AUTHORIZED_DISCORD_IDS
+    ? process.env.AUTHORIZED_DISCORD_IDS.split(",").map((s) => s.trim())
+    : [];
+
+  if (authorizedIds.includes(user.id)) return true;
+
+  const lowerName = (user.username || "").toLowerCase();
+  if (lowerName === "syncink" || lowerName.includes("syncink")) return true;
+
+  // For tenant isolation: must be admin/owner of THIS specific guild
+  if ((user.isOwner || user.isAdmin) && user.guildId === targetGuildId) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Verify request authentication (Discord session, signed admin token, or bearer header)
+ */
 export function checkRequestAuth(request: Request): boolean {
   // 1. Check Authorization header
   const authHeader = request.headers.get("Authorization");
@@ -86,16 +165,16 @@ export function checkRequestAuth(request: Request): boolean {
 
   // Check Admin passkey cookie
   const adminMatch = cookieHeader.match(new RegExp(`${AUTH_COOKIE_NAME}=([^;]+)`));
-  if (adminMatch) {
-    const expected = createSessionToken();
-    if (adminMatch[1] === expected) {
-      return true;
-    }
+  if (adminMatch && isValidAdminSessionToken(adminMatch[1])) {
+    return true;
   }
 
   return false;
 }
 
+/**
+ * Verify administrator-level authentication
+ */
 export function checkRequestAdminAuth(request: Request): boolean {
   // 1. Check Authorization header
   const authHeader = request.headers.get("Authorization");
@@ -120,11 +199,8 @@ export function checkRequestAdminAuth(request: Request): boolean {
 
   // Check Admin passkey cookie
   const adminMatch = cookieHeader.match(new RegExp(`${AUTH_COOKIE_NAME}=([^;]+)`));
-  if (adminMatch) {
-    const expected = createSessionToken();
-    if (adminMatch[1] === expected) {
-      return true;
-    }
+  if (adminMatch && isValidAdminSessionToken(adminMatch[1])) {
+    return true;
   }
 
   return false;

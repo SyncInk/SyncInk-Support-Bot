@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { checkRequestAuth, checkRequestAdminAuth, getCurrentUser } from "@/lib/auth";
+import { checkRequestAuth, checkRequestAdminAuth, getCurrentUser, verifyUserGuildAccess } from "@/lib/auth";
 import { query, queryOne } from "@/lib/db";
+import { validateCsrfOrigin, redactSensitive } from "@/lib/security";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -9,17 +11,28 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Rate Limiting (Item 6)
+  const clientIp = getClientIp(request);
+  const rateLimit = rateLimiter.check(`channels_get_${clientIp}`, 60, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+  }
+
   try {
     const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
     
-    // Dynamic guild ID fallback - query database if not in query or session
     let guildId = searchParams.get("guildId") || user?.guildId;
     if (!guildId) {
       const existing = await queryOne<{ guild_id: string }>(
         "SELECT guild_id FROM guild_settings ORDER BY guild_id LIMIT 1"
       ).catch(() => null);
       guildId = existing?.guild_id ? String(existing.guild_id) : process.env.DEFAULT_GUILD_ID || "1520457643842342912";
+    }
+
+    // BOLA Check (Item 5 & 14)
+    if (!verifyUserGuildAccess(user, guildId)) {
+      return NextResponse.json({ error: "Access Denied: You do not have permissions for this server." }, { status: 403 });
     }
 
     let settings = await queryOne(
@@ -93,15 +106,28 @@ export async function GET(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error("Channels API Error:", error);
+    console.error("Channels API Error:", redactSensitive(error.message || ""));
     return NextResponse.json(
-      { error: error.message || "Failed to fetch channel configuration" },
+      { error: "Failed to fetch channel configuration" },
       { status: 500 }
     );
   }
 }
 
 export async function POST(request: Request) {
+  // 1. CSRF Protection (Item 3)
+  if (!validateCsrfOrigin(request)) {
+    return NextResponse.json({ error: "Invalid request origin (CSRF validation failed)" }, { status: 403 });
+  }
+
+  // 2. Rate Limiting (Item 6)
+  const clientIp = getClientIp(request);
+  const rateLimit = rateLimiter.check(`channels_post_${clientIp}`, 30, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many updates. Please slow down." }, { status: 429 });
+  }
+
+  // 3. Admin Authorization (Item 13)
   if (!checkRequestAdminAuth(request)) {
     return NextResponse.json(
       { error: "Access Denied: Only Server Owner & Administrators can modify channel routing." },
@@ -122,7 +148,12 @@ export async function POST(request: Request) {
       guildId = existing?.guild_id ? String(existing.guild_id) : process.env.DEFAULT_GUILD_ID || "1520457643842342912";
     }
 
-    // Helper to sanitize discord mentions (<#1234...>) to pure BigInt string or null
+    // 4. BOLA Check (Item 5 & 14)
+    if (!verifyUserGuildAccess(user, guildId)) {
+      return NextResponse.json({ error: "Access Denied: You do not have permissions for this server." }, { status: 403 });
+    }
+
+    // Sanitize snowflake to pure BigInt digits
     const cleanSnowflake = (val: any): string | null => {
       if (!val) return null;
       const digits = String(val).replace(/[^0-9]/g, "");
@@ -149,7 +180,7 @@ export async function POST(request: Request) {
     const rUnverif = cleanSnowflake(roles?.unverified_role_id);
     const rQuar = cleanSnowflake(roles?.quarantine_role_id);
 
-    const welcomeMsg = welcome?.welcome_message ? String(welcome.welcome_message).trim() : null;
+    const welcomeMsg = welcome?.welcome_message ? String(welcome.welcome_message).slice(0, 2000).trim() : null;
     const dmWelcome = Boolean(welcome?.dm_welcome);
     const autoDeleteWelcome = Boolean(welcome?.auto_delete_welcome);
 
@@ -228,7 +259,7 @@ export async function POST(request: Request) {
       ]
     );
 
-    // Also log incident in forensics
+    // Forensic logging
     await query(
       `INSERT INTO security_incidents (guild_id, user_id, module, action_taken, severity, risk_score, details)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -248,9 +279,9 @@ export async function POST(request: Request) {
       message: "Channel & role destinations saved successfully. Synced to bot.",
     });
   } catch (error: any) {
-    console.error("Channels Save Error:", error);
+    console.error("Channels Save Error:", redactSensitive(error.message || ""));
     return NextResponse.json(
-      { error: error.message || "Failed to save channel routing" },
+      { error: "Failed to save channel routing" },
       { status: 500 }
     );
   }

@@ -1,16 +1,37 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { isSafeOutboundUrl, validateCsrfOrigin, redactSensitive } from "@/lib/security";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-const TICKET_BACKEND_URL = (
-  process.env.TICKET_BOT_API_URL || "https://syncink-ticket.onrender.com"
-).replace(/\/+$/, "");
+const DEFAULT_BACKEND = "https://syncink-ticket.onrender.com";
+const TICKET_BACKEND_URL = (process.env.TICKET_BOT_API_URL || DEFAULT_BACKEND).replace(/\/+$/, "");
 
 async function proxyRequest(request: Request, { params }: { params: { route: string[] } }) {
-  const path = (params.route || []).join("/");
+  // 1. CSRF Protection for mutating proxy requests (Item 3)
+  if (!validateCsrfOrigin(request)) {
+    return NextResponse.json({ error: "Invalid request origin (CSRF validation failed)" }, { status: 403 });
+  }
+
+  // 2. Rate limiting proxy requests: 60 requests per minute per IP (Item 6)
+  const clientIp = getClientIp(request);
+  const rateLimit = rateLimiter.check(`tickets_proxy_${clientIp}`, 60, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many ticket requests. Please slow down." }, { status: 429 });
+  }
+
+  const path = (params.route || []).map((seg) => encodeURIComponent(seg)).join("/");
   const url = new URL(request.url);
   const targetUrl = `${TICKET_BACKEND_URL}/api/${path}${url.search}`;
+
+  // 3. SSRF Protection: Ensure target is safe outbound URL (Item 16)
+  if (!isSafeOutboundUrl(targetUrl)) {
+    return NextResponse.json(
+      { error: "Target URL failed SSRF security inspection." },
+      { status: 400 }
+    );
+  }
 
   const user = await getCurrentUser();
 
@@ -80,18 +101,14 @@ async function proxyRequest(request: Request, { params }: { params: { route: str
       resHeaders.set("Content-Type", resContentType);
     }
 
-    // Forward Set-Cookie headers properly to fix third-party cookie issues
     const setCookieHeader = backendRes.headers.get("set-cookie");
     if (setCookieHeader) {
-      // Sometimes multiple cookies are comma-separated, but fetch API combines them. 
-      // For connect.sid it's usually just one.
       resHeaders.set("Set-Cookie", setCookieHeader);
     }
 
-    // Forward redirects (e.g. for OAuth login/callback)
+    // Forward redirects safely
     if (backendRes.status >= 300 && backendRes.status < 400) {
       const location = backendRes.headers.get("location");
-      // If backend redirects an API route to the web dashboard, it means the API route was not found on backend
       if (location && (location.includes("/dashboard/tickets") || location.includes("syncink.site/dashboard"))) {
         return NextResponse.json(
           { error: "Endpoint not found on ticket backend." },
@@ -109,7 +126,6 @@ async function proxyRequest(request: Request, { params }: { params: { route: str
       return NextResponse.json(data, { status: backendRes.status, headers: resHeaders });
     }
 
-    // If backend returned HTML (e.g. error page or redirect body), do not return HTML for an API request
     if (resContentType.includes("text/html")) {
       return NextResponse.json(
         { error: "Ticket backend returned non-JSON response.", status: backendRes.status },
@@ -123,12 +139,11 @@ async function proxyRequest(request: Request, { params }: { params: { route: str
       headers: resHeaders,
     });
   } catch (err: any) {
-    console.error(`[TICKETS PROXY ERROR] Failed to forward request to ${targetUrl}:`, err.message);
+    // Keep internal URLs and stack traces out of logs and client responses (Item 8 & 19)
+    console.error("[TICKETS PROXY ERROR]:", redactSensitive(err.message || "Failed to forward request"));
     return NextResponse.json(
       {
         error: "Ticket Bot backend is currently waking up or unreachable.",
-        details: err.message,
-        targetUrl,
       },
       { status: 502 }
     );

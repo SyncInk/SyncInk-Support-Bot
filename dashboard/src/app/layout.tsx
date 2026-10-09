@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { safeJsonLdString } from "@/lib/security";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -183,7 +184,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLdString(jsonLd) }}
         />
       </head>
       <body className="min-h-screen bg-background text-slate-100 antialiased selection:bg-brand-red selection:text-white">

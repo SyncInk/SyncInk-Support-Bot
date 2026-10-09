@@ -1,9 +1,16 @@
 import asyncpg
 import asyncio
 import os
+import re
 from typing import Any, List, Optional
 from utils.logger import log
 from utils.exceptions import DatabaseError
+
+def _redact_sensitive(text: str) -> str:
+    """Redacts credentials from database connection strings and logs (Checklist Item 19)."""
+    if not text:
+        return ""
+    return re.sub(r'(postgres(?:ql)?://[^:]+:)([^@]+)(@)', r'\1***REDACTED***\3', str(text))
 
 class DatabaseManager:
     def __init__(self):
@@ -62,8 +69,9 @@ class DatabaseManager:
             await migration_manager.run_migrations()
             
         except Exception as e:
-            log.error(f"Failed to connect to the database: {e}")
-            raise DatabaseError(f"Database connection failed: {e}")
+            redacted_err = _redact_sensitive(str(e))
+            log.error(f"Failed to connect to the database: {redacted_err}")
+            raise DatabaseError(f"Database connection failed: {redacted_err}")
 
     # Migration logic is now handled by MigrationManager
 
@@ -79,8 +87,9 @@ class DatabaseManager:
                 await self.connect()
                 async with self.pool.acquire() as conn:
                     return await conn.fetch(query, *args)
-            log.error(f"DB Fetch Error: {e} | Query: {query}")
-            raise DatabaseError(str(e))
+            redacted_err = _redact_sensitive(str(e))
+            log.error(f"DB Fetch Error: {redacted_err} | Query: {query}")
+            raise DatabaseError(redacted_err)
 
     async def fetchrow(self, query: str, *args) -> Optional[asyncpg.Record]:
         """Fetch a single row with automatic self-healing reconnect."""
@@ -94,8 +103,9 @@ class DatabaseManager:
                 await self.connect()
                 async with self.pool.acquire() as conn:
                     return await conn.fetchrow(query, *args)
-            log.error(f"DB FetchRow Error: {e} | Query: {query}")
-            raise DatabaseError(str(e))
+            redacted_err = _redact_sensitive(str(e))
+            log.error(f"DB FetchRow Error: {redacted_err} | Query: {query}")
+            raise DatabaseError(redacted_err)
 
     async def fetchval(self, query: str, *args) -> Any:
         """Fetch a single value with automatic self-healing reconnect."""
@@ -109,8 +119,9 @@ class DatabaseManager:
                 await self.connect()
                 async with self.pool.acquire() as conn:
                     return await conn.fetchval(query, *args)
-            log.error(f"DB FetchVal Error: {e} | Query: {query}")
-            raise DatabaseError(str(e))
+            redacted_err = _redact_sensitive(str(e))
+            log.error(f"DB FetchVal Error: {redacted_err} | Query: {query}")
+            raise DatabaseError(redacted_err)
 
     async def execute(self, query: str, *args) -> str:
         """Execute a query without returning rows with automatic self-healing reconnect."""
@@ -124,8 +135,9 @@ class DatabaseManager:
                 await self.connect()
                 async with self.pool.acquire() as conn:
                     return await conn.execute(query, *args)
-            log.error(f"DB Execute Error: {e} | Query: {query}")
-            raise DatabaseError(str(e))
+            redacted_err = _redact_sensitive(str(e))
+            log.error(f"DB Execute Error: {redacted_err} | Query: {query}")
+            raise DatabaseError(redacted_err)
 
     async def close(self):
         """Closes the connection pool."""

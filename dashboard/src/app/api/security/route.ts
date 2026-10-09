@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { checkRequestAuth, getCurrentUser } from "@/lib/auth";
+import { checkRequestAuth, getCurrentUser, verifyUserGuildAccess } from "@/lib/auth";
 import { query, queryOne, resolveGuildId } from "@/lib/db";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit";
+import { redactSensitive } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -9,12 +11,24 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Rate limiting (Item 6)
+  const clientIp = getClientIp(request);
+  const rateLimit = rateLimiter.check(`sec_get_${clientIp}`, 60, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+  }
+
   try {
     const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
     const guildId = await resolveGuildId(searchParams.get("guildId") || user?.guildId);
 
-    // 1. Fetch guild settings
+    // BOLA Check: Verify user has rights to view this guild (Item 5 & 13)
+    if (!verifyUserGuildAccess(user, guildId)) {
+      return NextResponse.json({ error: "Access Denied: You do not have permission to view this server's security telemetry." }, { status: 403 });
+    }
+
+    // 1. Fetch guild settings (Row-Level Security - Item 14)
     let settings = await queryOne(
       "SELECT * FROM guild_settings WHERE guild_id = $1",
       [guildId]
@@ -85,9 +99,9 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error("Security API Error:", error);
+    console.error("Security API Error:", redactSensitive(error.message || ""));
     return NextResponse.json(
-      { error: error.message || "Failed to query security state" },
+      { error: "Failed to query security state" },
       { status: 500 }
     );
   }

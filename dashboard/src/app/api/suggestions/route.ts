@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { checkRequestAuth, checkRequestAdminAuth, getCurrentUser } from "@/lib/auth";
+import { checkRequestAuth, checkRequestAdminAuth, getCurrentUser, verifyUserGuildAccess } from "@/lib/auth";
 import { query, resolveGuildId } from "@/lib/db";
+import { validateCsrfOrigin, redactSensitive } from "@/lib/security";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +11,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const clientIp = getClientIp(request);
+  const rateLimit = rateLimiter.check(`sugg_get_${clientIp}`, 60, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+  }
+
   try {
     const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
     const guildId = await resolveGuildId(searchParams.get("guildId") || user?.guildId);
+
+    // BOLA Check (Item 5 & 14)
+    if (!verifyUserGuildAccess(user, guildId)) {
+      return NextResponse.json({ error: "Access Denied: You do not have permissions for this server." }, { status: 403 });
+    }
 
     const statusFilter = searchParams.get("status");
 
@@ -53,15 +66,28 @@ export async function GET(request: Request) {
       suggestions: suggestions || [],
     });
   } catch (error: any) {
-    console.error("Suggestions GET Error:", error);
+    console.error("Suggestions GET Error:", redactSensitive(error.message || ""));
     return NextResponse.json(
-      { error: error.message || "Failed to fetch suggestions" },
+      { error: "Failed to fetch suggestions" },
       { status: 500 }
     );
   }
 }
 
 export async function PATCH(request: Request) {
+  // 1. CSRF Protection (Item 3)
+  if (!validateCsrfOrigin(request)) {
+    return NextResponse.json({ error: "Invalid request origin (CSRF validation failed)" }, { status: 403 });
+  }
+
+  // 2. Rate Limiting (Item 6)
+  const clientIp = getClientIp(request);
+  const rateLimit = rateLimiter.check(`sugg_patch_${clientIp}`, 30, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+  }
+
+  // 3. Admin Authorization (Item 13)
   if (!checkRequestAdminAuth(request)) {
     return NextResponse.json(
       { error: "Access Denied: Only Server Owner & Administrators can update suggestion status." },
@@ -70,8 +96,15 @@ export async function PATCH(request: Request) {
   }
 
   try {
+    const user = await getCurrentUser();
     const body = await request.json();
-    const { id, status } = body;
+    const { id, status, guildId: reqGuildId } = body;
+    const guildId = await resolveGuildId(reqGuildId || user?.guildId);
+
+    // 4. BOLA Check (Item 5 & 14)
+    if (!verifyUserGuildAccess(user, guildId)) {
+      return NextResponse.json({ error: "Access Denied: You do not have permissions for this server." }, { status: 403 });
+    }
 
     if (!id || !status) {
       return NextResponse.json({ error: "id and status are required" }, { status: 400 });
@@ -84,9 +117,10 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: `Invalid status: ${status}` }, { status: 400 });
     }
 
+    // Tenant-isolated update
     await query(
-      "UPDATE feature_requests SET status = $1 WHERE id = $2",
-      [cleanStatus, parseInt(id, 10)]
+      "UPDATE feature_requests SET status = $1 WHERE id = $2 AND guild_id = $3",
+      [cleanStatus, parseInt(id, 10), guildId]
     );
 
     return NextResponse.json({
@@ -95,15 +129,21 @@ export async function PATCH(request: Request) {
       message: `Suggestion #${id} updated to ${cleanStatus}.`,
     });
   } catch (error: any) {
-    console.error("Suggestions PATCH Error:", error);
+    console.error("Suggestions PATCH Error:", redactSensitive(error.message || ""));
     return NextResponse.json(
-      { error: error.message || "Failed to update suggestion status" },
+      { error: "Failed to update suggestion status" },
       { status: 500 }
     );
   }
 }
 
 export async function DELETE(request: Request) {
+  // 1. CSRF Protection (Item 3)
+  if (!validateCsrfOrigin(request)) {
+    return NextResponse.json({ error: "Invalid request origin (CSRF validation failed)" }, { status: 403 });
+  }
+
+  // 2. Admin Authorization (Item 13)
   if (!checkRequestAdminAuth(request)) {
     return NextResponse.json(
       { error: "Access Denied: Only Server Owner & Administrators can delete suggestions." },
@@ -112,23 +152,34 @@ export async function DELETE(request: Request) {
   }
 
   try {
+    const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+    const guildId = await resolveGuildId(searchParams.get("guildId") || user?.guildId);
+
+    // 3. BOLA Check (Item 5 & 14)
+    if (!verifyUserGuildAccess(user, guildId)) {
+      return NextResponse.json({ error: "Access Denied: You do not have permissions for this server." }, { status: 403 });
+    }
 
     if (!id) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
-    await query("DELETE FROM feature_requests WHERE id = $1", [parseInt(id, 10)]);
+    // Tenant-isolated deletion
+    await query(
+      "DELETE FROM feature_requests WHERE id = $1 AND guild_id = $2",
+      [parseInt(id, 10), guildId]
+    );
 
     return NextResponse.json({
       success: true,
       message: `Suggestion #${id} deleted.`,
     });
   } catch (error: any) {
-    console.error("Suggestions DELETE Error:", error);
+    console.error("Suggestions DELETE Error:", redactSensitive(error.message || ""));
     return NextResponse.json(
-      { error: error.message || "Failed to delete suggestion" },
+      { error: "Failed to delete suggestion" },
       { status: 500 }
     );
   }

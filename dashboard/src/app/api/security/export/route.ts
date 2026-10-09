@@ -1,12 +1,35 @@
 import { NextResponse } from "next/server";
-import { checkRequestAdminAuth, getCurrentUser } from "@/lib/auth";
+import { checkRequestAdminAuth, getCurrentUser, verifyUserGuildAccess } from "@/lib/auth";
 import { query, resolveGuildId } from "@/lib/db";
+import { redactSensitive } from "@/lib/security";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Sanitize CSV cell values to prevent CSV formula injection (Item 2)
+ */
+function sanitizeCsvCell(value: any): string {
+  if (value === null || value === undefined) return '""';
+  let str = String(value);
+  // Neutralize formula triggers
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
 export async function GET(request: Request) {
+  // 1. Admin Authorization (Item 13)
   if (!checkRequestAdminAuth(request)) {
     return NextResponse.json({ error: "Access Denied: Admin privileges required." }, { status: 403 });
+  }
+
+  // 2. Rate Limiting (Item 6)
+  const clientIp = getClientIp(request);
+  const rateLimit = rateLimiter.check(`sec_export_${clientIp}`, 10, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many export requests. Please wait a minute." }, { status: 429 });
   }
 
   try {
@@ -14,8 +37,13 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const guildId = await resolveGuildId(searchParams.get("guildId") || user?.guildId);
 
+    // 3. BOLA Check (Item 5 & 14)
+    if (!verifyUserGuildAccess(user, guildId)) {
+      return NextResponse.json({ error: "Access Denied: You do not have permissions for this server." }, { status: 403 });
+    }
+
     const format = searchParams.get("format") || "csv";
-    const type = searchParams.get("type") || "incidents"; // "incidents" or "cases"
+    const type = searchParams.get("type") || "incidents";
 
     if (type === "cases") {
       const rows = await query(
@@ -35,12 +63,18 @@ export async function GET(request: Request) {
         });
       }
 
-      // CSV format
+      // Safe CSV export with formula injection protection
       const headers = "Case ID,User ID,Moderator ID,Action,Reason,Created At\n";
       const csvLines = rows
-        .map(
-          (r) =>
-            `"${r.case_id}","${r.user_id}","${r.mod_id}","${r.action}","${(r.reason || "").replace(/"/g, '""')}","${r.created_at}"`
+        .map((r) =>
+          [
+            sanitizeCsvCell(r.case_id),
+            sanitizeCsvCell(r.user_id),
+            sanitizeCsvCell(r.mod_id),
+            sanitizeCsvCell(r.action),
+            sanitizeCsvCell(r.reason),
+            sanitizeCsvCell(r.created_at),
+          ].join(",")
         )
         .join("\n");
 
@@ -70,12 +104,19 @@ export async function GET(request: Request) {
       });
     }
 
-    // CSV format
     const headers = "ID,User ID,Module,Action Taken,Severity,Risk Score,Details,Timestamp\n";
     const csvLines = rows
-      .map(
-        (r) =>
-          `"${r.id}","${r.user_id}","${r.module}","${r.action_taken}","${r.severity}","${r.risk_score}","${(r.details || "").replace(/"/g, '""')}","${r.created_at}"`
+      .map((r) =>
+        [
+          sanitizeCsvCell(r.id),
+          sanitizeCsvCell(r.user_id),
+          sanitizeCsvCell(r.module),
+          sanitizeCsvCell(r.action_taken),
+          sanitizeCsvCell(r.severity),
+          sanitizeCsvCell(r.risk_score),
+          sanitizeCsvCell(r.details),
+          sanitizeCsvCell(r.created_at),
+        ].join(",")
       )
       .join("\n");
 
@@ -86,9 +127,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error("Export API Error:", error);
+    console.error("Export API Error:", redactSensitive(error.message || ""));
     return NextResponse.json(
-      { error: error.message || "Failed to export records" },
+      { error: "Failed to export records" },
       { status: 500 }
     );
   }

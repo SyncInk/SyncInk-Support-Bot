@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { redactSensitive } from "./security";
 
 declare global {
   var _pgPool: Pool | undefined;
@@ -56,6 +57,8 @@ export async function query<T = any>(text: string, params: any[] = []): Promise<
       const retryRes = await pool.query(text, params);
       return retryRes.rows;
     }
+    // Sanitize error message to ensure credentials are never leaked in error logs or traces
+    err.message = redactSensitive(err.message || "");
     throw err;
   }
 }

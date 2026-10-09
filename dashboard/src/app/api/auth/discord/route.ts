@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
+import { createSignedToken } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -15,14 +17,24 @@ export async function GET(request: Request) {
     );
   }
 
-  // Derive base URL from request or environment
   const url = new URL(request.url);
-  const host = request.headers.get("x-forwarded-host") || url.host;
-  const proto = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "");
-  let baseUrl = "https://syncink.site";
-
+  const baseUrl = "https://syncink.site";
   const redirectUri = `${baseUrl}/api/auth/discord/callback`;
-  const redirectTo = url.searchParams.get("redirect_to") || "/dashboard";
+
+  // Validate redirectTo to prevent open redirects
+  const rawRedirectTo = url.searchParams.get("redirect_to") || "/dashboard";
+  const safeRedirectTo =
+    rawRedirectTo.startsWith("/") && !rawRedirectTo.startsWith("//") && !rawRedirectTo.includes(":")
+      ? rawRedirectTo
+      : "/dashboard";
+
+  // Create cryptographically signed state token with nonce and expiry (OAuth CSRF protection - Item 3 & 7)
+  const statePayload = {
+    redirect: safeRedirectTo,
+    nonce: crypto.randomBytes(16).toString("hex"),
+    exp: Date.now() + 15 * 60 * 1000, // 15 minutes validity
+  };
+  const stateToken = createSignedToken(statePayload);
 
   const discordAuthUrl =
     `https://discord.com/oauth2/authorize?` +
@@ -32,12 +44,8 @@ export async function GET(request: Request) {
       redirect_uri: redirectUri,
       scope: "identify guilds",
       prompt: "consent",
-      state: redirectTo,
+      state: stateToken,
     }).toString();
 
   return NextResponse.redirect(discordAuthUrl);
 }
-
-
-
-
