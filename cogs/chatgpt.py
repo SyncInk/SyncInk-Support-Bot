@@ -118,6 +118,8 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "15. Apply for Developer Channel: <#1539301185423413398> (Form: [Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer) - check requirements in <#1539301185423413398>)",
         "16. Apply for Staff Channel: <#1539319001673367604> (Form: [Apply for Staff](https://discord.com/channels/1520457643842342912/1539319001673367604/1539371523188596916) - check requirements in <#1539319001673367604>)",
         "17. Ask AI Channel: <#1544361954574073916> (Dedicated channel for AI questions)",
+        "18. Server Boosters Channel: <#1558585414829211668> (Where server boosts are celebrated with the Boosters Webhook)",
+        "19. VIP Support Chat: <#1558589470469525504> (Dedicated VIP lounge & priority support channel exclusive to Server Boosters)",
         "",
         "--- OFFICIAL SUPPORT SERVER RULES (<#1520460587522330634>) & WEBSITE DOCUMENTATION ---",
         "Discord Guide Channel: <#1520460587522330634> (Reference Post: https://discord.com/channels/1520457643842342912/1520460587522330634/1539582756001161238)",
@@ -200,7 +202,19 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         f"  - Staff: {EmojiManager.get_role_emoji(guild, 'staff')} <@&1520466655321522486> (Support and moderation staff keeping community safe; apply in <#1539319001673367604>)",
         "• Community & Partnerships:",
         f"  - Partner: {EmojiManager.get_role_emoji(guild, 'partner')} <@&1551337053185114242> (Official server partners and affiliated communities)",
-        f"  - Verified: {EmojiManager.get_role_emoji(guild, 'verified')} <@&1520871574088056952> (Community members who completed verification checkpoint in <#1520748219100041348>)"
+        f"  - Verified: {EmojiManager.get_role_emoji(guild, 'verified')} <@&1520871574088056952> (Community members who completed verification checkpoint in <#1520748219100041348>)",
+        "• Server Boosters & VIP:",
+        f"  - Server Booster: <:booster:1558595630660714616> <@&1558584451724738640> (Awarded automatically to members who boost the server)",
+        "",
+        "--- SERVER BOOSTER PERKS & INFORMATION ---",
+        "• Booster Announcement Channel: <#1558585414829211668> (Connected to dedicated Boosters webhook)",
+        "• Official Booster Role: <:booster:1558595630660714616> <@&1558584451724738640>",
+        "• Exclusive Perks for Boosters:",
+        "  1. VIP Support Chat (<#1558589470469525504>): Private VIP chat channel for priority communication, direct developer assistance, and lounge discussions.",
+        "  2. Media & Upload Privileges: Permission to send images, video clips, and file attachments.",
+        "  3. Priority Support: Tickets opened by boosters in <#1520460764937322566> are inquired faster and kept on main priority (*all tickets created will be resolved if no rush but for boosters it will be on main priority*).",
+        "  4. Booster Role & Badge: Distinguished <:booster:1558595630660714616> role on server member list.",
+        "• Booster Emojis: <:booster:1558595630660714616>, <:neonheart:1558594319227813949>, <a:heartpop:1558594180937424896>, <a:scribbleheart:1558596661087969300>"
     ]
     return "\n".join(lines)
 
@@ -1078,6 +1092,17 @@ class ChatGPT(commands.Cog):
             "     • Community & Partnerships:\n"
             f"       - Partner: {partner_emoji} <@&1551337053185114242> (Partnered servers & collabs)\n"
             f"       - Verified: {verified_emoji} <@&1520871574088056952> (Verify in <#1520748219100041348>)\n"
+            "     • Server Boosters & VIP:\n"
+            f"       - Server Booster: <:booster:1558595630660714616> <@&1558584451724738640> (Awarded automatically upon boosting the server)\n"
+            "11. **SERVER BOOSTERS & EXCLUSIVE VIP PERKS (<#1558585414829211668>)**:\n"
+            "   - When anyone asks about boosting the server, booster perks, or booster rewards:\n"
+            "   - Congratulate and warmly greet boosters with compliments! Server Boosters are absolute royalty in our server.\n"
+            "   - Detail the official booster perks:\n"
+            "     • <:booster:1558595630660714616> **Booster Role**: Automatically awarded <@&1558584451724738640> and the booster badge on member lists.\n"
+            "     • **VIP Support Chat**: Exclusive access to <#1558589470469525504> for fast, direct support and private chats with developers.\n"
+            "     • **Media & Upload Privileges**: Full permissions to share pictures, video clips, and file attachments.\n"
+            "     • **Priority Ticket Support**: Tickets created by boosters in <#1520460764937322566> are inquired faster and kept on main priority (*all tickets created will be resolved if no rush but for boosters it will be on main priority*).\n"
+            "     • Emojis to use when mentioning boosters: <:booster:1558595630660714616>, <:neonheart:1558594319227813949>, <a:heartpop:1558594180937424896>, <a:scribbleheart:1558596661087969300>.\n"
         )
         if server_context:
             system_prompt += f"--- SERVER STRUCTURE & CHANNELS ---\n{server_context}\n\n"

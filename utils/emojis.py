@@ -28,6 +28,10 @@ class Emojis:
     ROLE_STAFF = "🛡️"
     ROLE_PARTNER = "<:partnered:1551337413660381255>"
     ROLE_VERIFIED = "<:verified:1551336293017845822>"
+    ROLE_BOOSTER = "<:booster:1558595630660714616>"
+    NEON_HEART = "<:neonheart:1558594319227813949>"
+    HEART_POP = "<a:heartpop:1558594180937424896>"
+    SCRIBBLE_HEART = "<a:scribbleheart:1558596661087969300>"
 
     # Official Ticket Category Emojis (<:name:id>)
     TICKET_PRODUCT = "<:SyncProductSupport:1553532855278116956>"
@@ -80,6 +84,10 @@ class EmojiPartials:
     ROLE_STAFF = discord.PartialEmoji(name="🛡️")
     ROLE_PARTNER = discord.PartialEmoji(name="partnered", id=1551337413660381255, animated=False)
     ROLE_VERIFIED = discord.PartialEmoji(name="verified", id=1551336293017845822, animated=False)
+    ROLE_BOOSTER = discord.PartialEmoji(name="booster", id=1558595630660714616, animated=False)
+    NEON_HEART = discord.PartialEmoji(name="neonheart", id=1558594319227813949, animated=False)
+    HEART_POP = discord.PartialEmoji(name="heartpop", id=1558594180937424896, animated=True)
+    SCRIBBLE_HEART = discord.PartialEmoji(name="scribbleheart", id=1558596661087969300, animated=True)
 
     # Ticket category partials
     TICKET_PRODUCT = discord.PartialEmoji(name="SyncProductSupport", id=1553532855278116956, animated=False)
@@ -170,6 +178,17 @@ EMOJI_NAME_MAP = {
     "pending": "<a:pending:1547110867466985532>",
     "members": "<:members:1547109992212205608>",
     "cancelled": "<:cancelled:1547111776267804692>",
+
+    # Booster Emojis
+    "booster": "<:booster:1558595630660714616>",
+    "role_booster": "<:booster:1558595630660714616>",
+    "serverbooster": "<:booster:1558595630660714616>",
+    "neonheart": "<:neonheart:1558594319227813949>",
+    "neon_heart": "<:neonheart:1558594319227813949>",
+    "heartpop": "<a:heartpop:1558594180937424896>",
+    "heart_pop": "<a:heartpop:1558594180937424896>",
+    "scribbleheart": "<a:scribbleheart:1558596661087969300>",
+    "scribble_heart": "<a:scribbleheart:1558596661087969300>",
 }
 
 def format_discord_emojis(text: str) -> str:

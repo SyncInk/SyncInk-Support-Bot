@@ -48,6 +48,12 @@ class EmojiManager:
             "file": "verified.png",
             "fallback": "<:verified:1551336293017845822>"
         },
+        {
+            "key": "booster",
+            "names": ["booster", "serverbooster"],
+            "file": "booster.png",
+            "fallback": "<:booster:1558595630660714616>"
+        },
     ]
 
     TICKET_SPECS = [
