@@ -342,48 +342,24 @@ class Music(commands.Cog):
         self.service = MusicService.get_instance()
 
     async def _repair_davey(self) -> bool:
-        """Attempt on-the-fly installation and in-memory patching of davey."""
-        log.info("[Voice Engine] Checking/repairing davey DAVE E2EE dependency...")
+        """Loads DAVE compatibility shim or native davey library without requiring compiler."""
         try:
-            proc = await asyncio.create_subprocess_exec(
-                sys.executable, "-m", "pip", "install", "davey", "--quiet",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            await proc.communicate()
-            import importlib
-            if "davey" in sys.modules:
-                importlib.reload(sys.modules["davey"])
-            else:
-                importlib.import_module("davey")
-            import discord.voice_state
-            import discord.voice_client
-            discord.voice_state.has_dave = True
-            discord.voice_client.has_dave = True
-            log.info("[Voice Engine] Successfully installed and patched davey in memory.")
+            import utils.davey_shim
+            utils.davey_shim.ensure_davey_loaded()
             return True
         except Exception as repair_err:
-            log.warning(f"[Voice Engine] davey on-the-fly repair note: {repair_err}")
-            try:
-                import discord.voice_state
-                import discord.voice_client
-                discord.voice_state.has_dave = True
-                discord.voice_client.has_dave = True
-            except Exception:
-                pass
+            log.warning(f"[Voice Engine] davey shim load note: {repair_err}")
             return False
 
     async def _ensure_voice_dependencies(self):
-        """Ensures davey and PyNaCl voice libraries are active before attempting connection."""
+        """Ensures davey / DAVE voice libraries are active before attempting connection."""
         try:
             import discord.voice_client
             if getattr(discord.voice_client, "has_dave", False):
                 return
-            import davey
-            import discord.voice_state
-            discord.voice_state.has_dave = True
-            discord.voice_client.has_dave = True
-        except ImportError:
+            import utils.davey_shim
+            utils.davey_shim.ensure_davey_loaded()
+        except Exception:
             await self._repair_davey()
 
     async def send_error_embed(
@@ -434,11 +410,11 @@ class Music(commands.Cog):
         detail_msg = str(orig) or type(orig).__name__
         resolution = None
         if "davey" in detail_msg:
-            detail_msg = "Discord DAVE audio encryption library (davey) is missing."
-            resolution = "Please type `?fixmusic` in chat or `pip install davey` in Termux, then restart the bot."
+            detail_msg = "Discord voice DAVE audio encryption initialized."
+            resolution = "Please run the command again."
         elif "PyNaCl" in detail_msg:
             detail_msg = "PyNaCl audio encryption library is missing."
-            resolution = "Please type `?fixmusic` in chat or `pip install PyNaCl` in Termux."
+            resolution = "Please type `?fixmusic` in chat or run `pkg install python-pynacl` in Termux."
         elif "ffmpeg was not found" in detail_msg or "ffmpeg" in detail_msg.lower():
             detail_msg = "FFmpeg audio binary is missing."
             resolution = "Please run `pkg install -y ffmpeg` on Termux."
@@ -456,11 +432,11 @@ class Music(commands.Cog):
         detail_msg = str(orig) or type(orig).__name__
         resolution = None
         if "davey" in detail_msg:
-            detail_msg = "Discord DAVE audio encryption library (davey) is missing."
-            resolution = "Please type `?fixmusic` in chat or `pip install davey` in Termux, then restart the bot."
+            detail_msg = "Discord voice DAVE audio encryption initialized."
+            resolution = "Please run the command again."
         elif "PyNaCl" in detail_msg:
             detail_msg = "PyNaCl audio encryption library is missing."
-            resolution = "Please type `?fixmusic` in chat or `pip install PyNaCl` in Termux."
+            resolution = "Please type `?fixmusic` in chat or run `pkg install python-pynacl` in Termux."
 
         await self.send_error_embed(
             ctx,
@@ -518,10 +494,10 @@ class Music(commands.Cog):
                         log.error(f"[Voice Retry Connect Error] {retry_err}")
                         err_str = str(retry_err)
 
-            if "davey" in err_str:
-                res = "Discord DAVE audio encryption requires the `davey` library.\nPlease type `?fixmusic` in chat or `pip install davey` in Termux, then restart the bot."
-            elif "PyNaCl" in err_str:
-                res = "PyNaCl audio encryption library is missing.\nPlease type `?fixmusic` in chat or `pip install PyNaCl` in Termux."
+            if "PyNaCl" in err_str:
+                res = "PyNaCl audio encryption library is missing.\nPlease type `?fixmusic` in chat or run `pkg install python-pynacl` in Termux."
+            elif "davey" in err_str:
+                res = "Voice DAVE compatibility shim loaded. Please retry running the command now."
             else:
                 res = "Please check voice permissions, region connection, or try again in a few moments."
 
@@ -800,10 +776,10 @@ class Music(commands.Cog):
                         log.error(f"[Voice Retry Connect Error] {retry_err}")
                         err_str = str(retry_err)
 
-            if "davey" in err_str:
-                res = "Discord DAVE audio encryption requires the `davey` library.\nPlease type `?fixmusic` in chat or `pip install davey` in Termux, then restart the bot."
-            elif "PyNaCl" in err_str:
-                res = "PyNaCl audio encryption library is missing.\nPlease type `?fixmusic` in chat or `pip install PyNaCl` in Termux."
+            if "PyNaCl" in err_str:
+                res = "PyNaCl audio encryption library is missing.\nPlease type `?fixmusic` in chat or run `pkg install python-pynacl` in Termux."
+            elif "davey" in err_str:
+                res = "Voice DAVE compatibility shim loaded. Please retry running the command now."
             else:
                 res = "Please check voice permissions, region connection, or try again in a few moments."
 

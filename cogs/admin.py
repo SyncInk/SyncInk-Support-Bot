@@ -318,27 +318,21 @@ class Admin(commands.Cog):
             await proc_pkg.communicate()
 
             proc = await asyncio.create_subprocess_exec(
-                sys.executable, "-m", "pip", "install", "davey", "yt-dlp", "PyNaCl", "--quiet",
+                sys.executable, "-m", "pip", "install", "yt-dlp", "PyNaCl", "--quiet",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
             await proc.communicate()
 
-            # Dynamically patch discord.py voice state in memory
-            try:
-                import davey
-                import discord.voice_state
-                import discord.voice_client
-                discord.voice_state.has_dave = True
-                discord.voice_client.has_dave = True
-            except Exception:
-                pass
+            # Dynamically ensure DAVE voice shim is active
+            import utils.davey_shim
+            utils.davey_shim.ensure_davey_loaded()
 
             if "cogs.music" in self.bot.extensions:
                 await self.bot.reload_extension("cogs.music")
             else:
                 await self.bot.load_extension("cogs.music")
-            await msg.edit(content="✅ **Music engine and Discord voice DAVE dependencies (`davey`, `yt-dlp`, `PyNaCl`, `ffmpeg`) are active and operational!**")
+            await msg.edit(content="✅ **Music engine and Discord voice dependencies (`yt-dlp`, `PyNaCl`, `ffmpeg`, DAVE shim) are active and operational!**")
         except Exception as e:
             await msg.edit(content=f"⚠️ **Command finished with notice:** `{e}`")
 

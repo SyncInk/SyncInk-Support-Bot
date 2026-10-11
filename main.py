@@ -17,15 +17,9 @@ from database import db
 # Load environment variables
 load_dotenv()
 
-# Ensure Discord voice DAVE E2EE encryption dependency is recognized
-try:
-    import davey
-    import discord.voice_state
-    import discord.voice_client
-    discord.voice_state.has_dave = True
-    discord.voice_client.has_dave = True
-except ImportError:
-    pass
+# Ensure Discord voice DAVE E2EE encryption shim is active for Termux & Android
+import utils.davey_shim
+utils.davey_shim.ensure_davey_loaded()
 
 class SyncInkBot(commands.Bot):
     def __init__(self, enable_presences: bool = True):
