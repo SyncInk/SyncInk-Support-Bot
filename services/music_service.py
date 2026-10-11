@@ -8,8 +8,46 @@ from typing import Any, Callable, Dict, List, Optional
 import aiohttp
 import discord
 import yt_dlp
+import discord.opus
 from utils.emojis import Emojis, EmojiPartials
 from utils.logger import log
+
+def ensure_opus_loaded() -> bool:
+    """Ensures native libopus C library is loaded for smooth, stutter-free Discord voice encoding."""
+    if discord.opus.is_loaded():
+        return True
+    try:
+        discord.opus._load_default()
+        if discord.opus.is_loaded():
+            log.info("[Audio Engine] Native libopus library successfully loaded via default loader.")
+            return True
+    except Exception as e:
+        log.debug(f"[Audio Engine] _load_default: {e}")
+
+    candidates = [
+        "libopus-0.x64.dll",
+        "libopus.so.0",
+        "libopus.so",
+        "/data/data/com.termux/files/usr/lib/libopus.so",
+        "/usr/lib/x86_64-linux-gnu/libopus.so.0",
+        "/usr/lib/aarch64-linux-gnu/libopus.so.0",
+        "/usr/local/lib/libopus.so",
+        "libopus.dylib",
+    ]
+    for candidate in candidates:
+        try:
+            discord.opus.load_opus(candidate)
+            if discord.opus.is_loaded():
+                log.info(f"[Audio Engine] Native libopus loaded from {candidate}")
+                return True
+        except Exception:
+            continue
+
+    log.warning("[Audio Engine] Could not load native libopus library; software fallback will be used.")
+    return False
+
+# Initialize Opus engine immediately on module import
+ensure_opus_loaded()
 
 def get_ffmpeg_path() -> str:
     """Finds the best ffmpeg executable available."""
@@ -206,7 +244,7 @@ class MusicService:
     def __init__(self):
         self.queues: Dict[int, GuildMusicQueue] = {}
         self.ydl_opts = {
-            'format': 'bestaudio/best',
+            'format': 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
             'noplaylist': True,
             'quiet': True,
             'no_warnings': True,
@@ -214,6 +252,7 @@ class MusicService:
             'extract_flat': False,
             'source_address': '0.0.0.0',
             'skip_download': True,
+            'js_runtimes': {'node': {}},
         }
 
     @classmethod
@@ -334,8 +373,15 @@ class MusicService:
     def create_audio_source(self, track: Track, volume: int = 100) -> discord.AudioSource:
         """Constructs an FFmpeg-backed PCMVolumeTransformer with resilient streaming options."""
         ffmpeg_bin = get_ffmpeg_path()
-        before_options = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -nostdin"
-        options = "-vn -b:a 192k"
+        before_options = (
+            "-reconnect 1 "
+            "-reconnect_streamed 1 "
+            "-reconnect_delay_max 5 "
+            "-probesize 10000000 "
+            "-analyzeduration 15000000 "
+            "-nostdin"
+        )
+        options = "-vn -ar 48000 -ac 2 -b:a 192k"
 
         pcm = discord.FFmpegPCMAudio(
             track.stream_url,
