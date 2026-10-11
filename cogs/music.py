@@ -1,0 +1,734 @@
+import asyncio
+import os
+import random
+import time
+from typing import Optional, Literal
+import discord
+from discord.ext import commands
+from discord import app_commands
+
+from services.music_service import (
+    MusicService,
+    GuildMusicQueue,
+    Track,
+    RADIO_STATIONS,
+    clean_title,
+    format_duration,
+)
+from utils.emojis import Emojis, EmojiPartials
+from utils.logger import log
+
+ERROR_MESSAGE = (
+    "### <a:refused:1547035200926654624> Something went wrong while running the command, "
+    "please try again or contact server administrator on "
+    "https://discord.com/channels/1520457643842342912/1520460764937322566"
+)
+
+BRAND_COLOR = 0x7b2cbf  # SyncInk Cyber Violet
+BRAND_LOGO_URL = "https://files.catbox.moe/74l9su.png"
+
+def make_error_embed() -> discord.Embed:
+    embed = discord.Embed(description=ERROR_MESSAGE, color=0xED4245)
+    embed.set_author(name="SyncInk Platform", icon_url=BRAND_LOGO_URL)
+    return embed
+
+def build_now_playing_embed(queue: GuildMusicQueue) -> discord.Embed:
+    current = queue.current_track
+    if not current:
+        embed = discord.Embed(
+            description=f"{Emojis.SYNCINK_MUSIC} **Nothing is currently playing.**\nUse `/play` or `/radio` to begin playback.",
+            color=BRAND_COLOR,
+        )
+        embed.set_author(name="SyncInk Radio • Pure Audio", icon_url=BRAND_LOGO_URL)
+        return embed
+
+    next_track = queue.tracks[0] if queue.tracks else None
+    if next_track:
+        up_next = f"**[{next_track.clean_title}]({next_track.url})** by **{next_track.author}** [{next_track.formatted_duration}]"
+    elif queue.autoplay:
+        up_next = f"{Emojis.RADIO} **Smart Autoplay Recommendation**"
+    elif queue.active_radio_station:
+        up_next = f"{Emojis.RADIO} **24/7 Continuous Radio Station**"
+    else:
+        up_next = "End of queue (Add tracks with `/play`)"
+
+    embed = discord.Embed(
+        title=f"{current.clean_title[:80]}",
+        url=current.url,
+        color=BRAND_COLOR,
+    )
+    embed.set_author(name="SyncInk Radio • Now Playing", icon_url=BRAND_LOGO_URL)
+
+    station_tag = f" • 📻 `{RADIO_STATIONS[queue.active_radio_station]['genre']}`" if queue.active_radio_station and queue.active_radio_station in RADIO_STATIONS else ""
+    loop_tag = f" • 🔁 `{queue.repeat_mode.upper()}`" if queue.repeat_mode != "off" else ""
+
+    embed.description = (
+        f"{current.platform_emoji} **Artist:** {current.author} [{current.formatted_duration}]\n\n"
+        f"{Emojis.TIME} `{queue.get_progress_bar()}`\n\n"
+        f"👤 **Requested by:** <@{current.requested_by.id}> • {current.platform.capitalize()}{station_tag}{loop_tag}\n\n"
+        f"⏭️ **Up Next:** {up_next}"
+    )
+
+    if current.thumbnail and current.thumbnail.startswith("http"):
+        embed.set_thumbnail(url=current.thumbnail)
+
+    embed.set_footer(
+        text=f"SyncInk Platform • Pure Audio Experience • {queue.size} in queue • Volume: {queue.volume}%",
+        icon_url=BRAND_LOGO_URL,
+    )
+    return embed
+
+class MusicPlayerView(discord.ui.View):
+    def __init__(self, music_cog: 'Music', queue: GuildMusicQueue):
+        super().__init__(timeout=None)
+        self.music_cog = music_cog
+        self.queue = queue
+        self.update_buttons()
+
+    def update_buttons(self):
+        # Update pause/resume button appearance
+        is_paused = self.queue.voice_client and self.queue.voice_client.is_paused()
+        self.btn_pause_resume.emoji = EmojiPartials.PLAY_BUTTON if is_paused else EmojiPartials.PAUSE_BUTTON
+        self.btn_pause_resume.style = discord.ButtonStyle.green if is_paused else discord.ButtonStyle.primary
+
+        # Update repeat button appearance
+        if self.queue.repeat_mode == "track":
+            self.btn_repeat.style = discord.ButtonStyle.primary
+        else:
+            self.btn_repeat.style = discord.ButtonStyle.secondary
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if not interaction.user.voice or not interaction.guild.voice_client:
+            await interaction.response.send_message(
+                f"{Emojis.REFUSED} You must be in the voice channel to use music controls.",
+                ephemeral=True
+            )
+            return False
+        if interaction.user.voice.channel.id != interaction.guild.voice_client.channel.id:
+            await interaction.response.send_message(
+                f"{Emojis.WARNING} You must be in the same voice channel as the bot.",
+                ephemeral=True
+            )
+            return False
+        return True
+
+    @discord.ui.button(custom_id="music_prev", emoji=EmojiPartials.PREVIOUS, style=discord.ButtonStyle.secondary, row=0)
+    async def btn_prev(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not self.queue.history:
+            await interaction.response.send_message(f"{Emojis.WARNING} No previous track in history.", ephemeral=True)
+            return
+        prev_track = self.queue.history.pop()
+        if self.queue.current_track:
+            self.queue.tracks.insert(0, self.queue.current_track)
+        self.queue.tracks.insert(0, prev_track)
+        if self.queue.voice_client:
+            self.queue.voice_client.stop()
+        await interaction.response.send_message(f"{Emojis.PREVIOUS} Jumped back to previous track: **{prev_track.clean_title}**", ephemeral=True)
+
+    @discord.ui.button(custom_id="music_pause_resume", emoji=EmojiPartials.PAUSE_BUTTON, style=discord.ButtonStyle.primary, row=0)
+    async def btn_pause_resume(self, interaction: discord.Interaction, button: discord.ui.Button):
+        vc = self.queue.voice_client
+        if not vc:
+            await interaction.response.send_message(f"{Emojis.WARNING} Not currently connected to voice.", ephemeral=True)
+            return
+        if vc.is_paused():
+            vc.resume()
+            if self.queue.paused_at is not None:
+                self.queue.total_paused_duration += (time.time() - self.queue.paused_at)
+                self.queue.paused_at = None
+            msg = f"{Emojis.PLAY_BUTTON} Music playback resumed."
+        else:
+            vc.pause()
+            self.queue.paused_at = time.time()
+            msg = f"{Emojis.PAUSE_BUTTON} Music playback paused."
+
+        self.update_buttons()
+        await interaction.response.edit_message(embed=build_now_playing_embed(self.queue), view=self)
+        await interaction.followup.send(msg, ephemeral=True)
+
+    @discord.ui.button(custom_id="music_skip", emoji=EmojiPartials.NEXT, style=discord.ButtonStyle.secondary, row=0)
+    async def btn_skip(self, interaction: discord.Interaction, button: discord.ui.Button):
+        vc = self.queue.voice_client
+        if not vc or not self.queue.current_track:
+            await interaction.response.send_message(f"{Emojis.WARNING} Nothing is currently playing.", ephemeral=True)
+            return
+        skipped_name = self.queue.current_track.clean_title
+        vc.stop()
+        await interaction.response.send_message(f"{Emojis.NEXT} Skipped: **{skipped_name}**", ephemeral=True)
+
+    @discord.ui.button(custom_id="music_repeat", emoji=EmojiPartials.REPEAT, style=discord.ButtonStyle.secondary, row=0)
+    async def btn_repeat(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.queue.repeat_mode == "off":
+            self.queue.repeat_mode = "track"
+            label = "Repeating current track"
+        elif self.queue.repeat_mode == "track":
+            self.queue.repeat_mode = "queue"
+            label = "Repeating entire queue"
+        else:
+            self.queue.repeat_mode = "off"
+            label = "Repeat disabled"
+
+        self.update_buttons()
+        await interaction.response.edit_message(embed=build_now_playing_embed(self.queue), view=self)
+        await interaction.followup.send(f"{Emojis.REPEAT} Mode updated: **{label}**", ephemeral=True)
+
+    @discord.ui.button(custom_id="music_stop", emoji=EmojiPartials.DELETE, style=discord.ButtonStyle.danger, row=0)
+    async def btn_stop(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.queue.tracks.clear()
+        self.queue.active_radio_station = None
+        self.queue.autoplay = False
+        if self.queue.voice_client:
+            self.queue.voice_client.stop()
+        embed = discord.Embed(
+            description=f"{Emojis.DELETE} Playback stopped and queue cleared.",
+            color=BRAND_COLOR
+        )
+        embed.set_author(name="SyncInk Radio", icon_url=BRAND_LOGO_URL)
+        await interaction.response.send_message(embed=embed)
+
+    @discord.ui.button(custom_id="music_queue", emoji=EmojiPartials.QUEUE, style=discord.ButtonStyle.secondary, row=1)
+    async def btn_queue(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = self.music_cog.build_queue_embed(self.queue)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @discord.ui.button(custom_id="music_shuffle", emoji=EmojiPartials.SHUFFLE, style=discord.ButtonStyle.secondary, row=1)
+    async def btn_shuffle(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if len(self.queue.tracks) < 2:
+            await interaction.response.send_message(f"{Emojis.WARNING} Need at least 2 tracks in the queue to shuffle.", ephemeral=True)
+            return
+        random.shuffle(self.queue.tracks)
+        await interaction.response.send_message(f"{Emojis.SHUFFLE} Randomized **{len(self.queue.tracks)}** upcoming tracks!", ephemeral=True)
+        if self.queue.now_playing_message:
+            try:
+                await self.queue.now_playing_message.edit(embed=build_now_playing_embed(self.queue), view=self)
+            except Exception:
+                pass
+
+    @discord.ui.button(custom_id="music_radio", emoji=EmojiPartials.RADIO, style=discord.ButtonStyle.secondary, row=1)
+    async def btn_radio(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = RadioSelectView(self.music_cog, interaction.user)
+        await interaction.response.send_message("📻 **Select a 24/7 Radio Station:**", view=view, ephemeral=True)
+
+class RadioSelectView(discord.ui.View):
+    def __init__(self, music_cog: 'Music', user: discord.Member):
+        super().__init__(timeout=60.0)
+        self.music_cog = music_cog
+        self.user = user
+
+        options = [
+            discord.SelectOption(label="24/7 Lofi & Chill Beats", value="lofi", description="Relaxing study and focus beats", emoji="☕"),
+            discord.SelectOption(label="80s Synthwave / Retro Chill", value="synthwave", description="Outrun retro electronic waves", emoji="🌆"),
+            discord.SelectOption(label="Smooth Coffee Shop Jazz", value="coffee", description="Acoustic lounge and jazz piano", emoji="🎷"),
+            discord.SelectOption(label="Deep Sleep Ambient", value="sleep", description="Calm peaceful sleep soundscapes", emoji="🌙"),
+            discord.SelectOption(label="NCS EDM Gaming Radio", value="gaming", description="High-energy electronic gaming tracks", emoji="🎮"),
+        ]
+        select = discord.ui.Select(placeholder="Tune into a continuous radio station...", options=options)
+        select.callback = self.select_callback
+        self.add_item(select)
+
+    async def select_callback(self, interaction: discord.Interaction):
+        station_id = interaction.data["values"][0]
+        await interaction.response.defer(ephemeral=True)
+        await self.music_cog.start_radio_for_interaction(interaction, station_id)
+
+class SearchPickerView(discord.ui.View):
+    def __init__(self, music_cog: 'Music', user: discord.Member, tracks: list[Track]):
+        super().__init__(timeout=45.0)
+        self.music_cog = music_cog
+        self.user = user
+        self.tracks = tracks
+
+        for i in range(min(5, len(tracks))):
+            btn = discord.ui.Button(
+                label=f"{i + 1}",
+                style=discord.ButtonStyle.primary,
+                custom_id=f"search_pick_{i}"
+            )
+            btn.callback = self.make_callback(i)
+            self.add_item(btn)
+
+        cancel_btn = discord.ui.Button(label="Cancel", style=discord.ButtonStyle.danger, custom_id="search_cancel", emoji=EmojiPartials.REFUSED)
+        cancel_btn.callback = self.cancel_callback
+        self.add_item(cancel_btn)
+
+    def make_callback(self, index: int):
+        async def _callback(interaction: discord.Interaction):
+            if interaction.user.id != self.user.id:
+                await interaction.response.send_message(f"{Emojis.REFUSED} Only the search requester can select.", ephemeral=True)
+                return
+            selected = self.tracks[index]
+            self.stop()
+            await interaction.response.defer()
+            await self.music_cog.enqueue_and_play(interaction, [selected])
+        return _callback
+
+    async def cancel_callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user.id:
+            await interaction.response.send_message(f"{Emojis.REFUSED} Only the search requester can cancel.", ephemeral=True)
+            return
+        self.stop()
+        embed = discord.Embed(description=f"{Emojis.REFUSED} Search menu closed.", color=BRAND_COLOR)
+        await interaction.response.edit_message(embed=embed, view=None)
+
+class Music(commands.Cog):
+    """High-fidelity Discord Radio & Music Playback System."""
+
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        self.service = MusicService.get_instance()
+
+    async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+        log.error(f"[Music AppCommand Error] {error}")
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=make_error_embed(), ephemeral=True)
+            else:
+                await interaction.response.send_message(embed=make_error_embed(), ephemeral=True)
+        except Exception:
+            pass
+
+    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
+        log.error(f"[Music Command Error] {error}")
+        try:
+            await ctx.send(embed=make_error_embed())
+        except Exception:
+            pass
+
+    async def ensure_voice(self, interaction: discord.Interaction) -> Optional[discord.VoiceClient]:
+        if not interaction.user.voice or not interaction.user.voice.channel:
+            await interaction.response.send_message(
+                f"{Emojis.WARNING} Please join a voice channel first, then try again.",
+                ephemeral=True
+            )
+            return None
+
+        channel = interaction.user.voice.channel
+        permissions = channel.permissions_for(interaction.guild.me)
+        if not permissions.connect or not permissions.speak:
+            await interaction.response.send_message(
+                f"{Emojis.REFUSED} I do not have permission to connect or speak in {channel.mention}.",
+                ephemeral=True
+            )
+            return None
+
+        vc = interaction.guild.voice_client
+        if not vc:
+            vc = await channel.connect(self_deaf=True)
+        elif vc.channel.id != channel.id:
+            await vc.move_to(channel)
+        return vc
+
+    def build_queue_embed(self, queue: GuildMusicQueue) -> discord.Embed:
+        embed = discord.Embed(title="📜 Music Queue", color=BRAND_COLOR)
+        embed.set_author(name="SyncInk Radio • Queue", icon_url=BRAND_LOGO_URL)
+
+        current = queue.current_track
+        desc = ""
+        if current:
+            desc += f"▶ **Now Playing:**\n[{current.clean_title}]({current.url})  •  `{current.formatted_duration}`  •  *{current.author}*\n\n"
+        else:
+            desc += f"{Emojis.WARNING} Queue is currently empty.\n\n"
+
+        if queue.tracks:
+            lines = []
+            for i, t in enumerate(queue.tracks[:10]):
+                lines.append(f"**{i + 1}.** [{t.clean_title}]({t.url})  •  `{t.formatted_duration}`  •  *{t.author}*")
+            desc += f"**Up Next ({queue.size} total):**\n" + "\n".join(lines)
+            if queue.size > 10:
+                desc += f"\n*...and {queue.size - 10} more track(s)*"
+        else:
+            desc += "No upcoming tracks in queue."
+
+        embed.description = desc
+        embed.set_footer(text=f"SyncInk Platform • Volume: {queue.volume}% • 24/7: {'On' if queue.is_247 else 'Off'}")
+        return embed
+
+    async def enqueue_and_play(self, interaction: discord.Interaction, tracks: list[Track]):
+        queue = self.service.get_queue(interaction.guild_id)
+        queue.text_channel = interaction.channel
+        queue.cancel_inactivity()
+
+        is_first = queue.current_track is None and not (queue.voice_client and queue.voice_client.is_playing())
+
+        if is_first:
+            first_track = tracks.pop(0)
+            queue.tracks.extend(tracks)
+            await self.play_track(queue, first_track)
+
+            view = MusicPlayerView(self, queue)
+            embed = build_now_playing_embed(queue)
+            if interaction.response.is_done():
+                msg = await interaction.followup.send(embed=embed, view=view)
+            else:
+                msg = await interaction.response.send_message(embed=embed, view=view)
+            queue.now_playing_message = msg
+        else:
+            queue.tracks.extend(tracks)
+            added_track = tracks[0]
+            embed = discord.Embed(title="➕ Track Added to Queue", color=BRAND_COLOR)
+            embed.set_author(name="SyncInk Radio", icon_url=BRAND_LOGO_URL)
+            embed.description = (
+                f"{Emojis.QUEUE_ADD} **[{added_track.clean_title}]({added_track.url})**\n\n"
+                f"• **Position in Queue:** `#{queue.size}`\n"
+                f"• **Artist:** {added_track.author}\n"
+                f"• **Duration:** `{added_track.formatted_duration}`\n"
+                f"• **Requested by:** <@{interaction.user.id}> • {added_track.platform.capitalize()}\n\n"
+                f"▶ **Currently Playing:** **{queue.current_track.clean_title if queue.current_track else 'None'}**"
+            )
+            if added_track.thumbnail:
+                embed.set_thumbnail(url=added_track.thumbnail)
+            embed.set_footer(text=f"SyncInk Platform • {queue.size} track(s) waiting")
+
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=embed)
+            else:
+                await interaction.response.send_message(embed=embed)
+
+    async def play_track(self, queue: GuildMusicQueue, track: Track):
+        queue.current_track = track
+        queue.start_time = time.time()
+        queue.paused_at = None
+        queue.total_paused_duration = 0.0
+
+        audio_source = self.service.create_audio_source(track, volume=queue.volume)
+
+        def _after_playback(error):
+            if error:
+                log.error(f"[Audio Playback Error] {error}")
+            asyncio.run_coroutine_threadsafe(self.advance_queue(queue), self.bot.loop)
+
+        if queue.voice_client:
+            queue.voice_client.play(audio_source, after=_after_playback)
+
+    async def advance_queue(self, queue: GuildMusicQueue):
+        if queue.repeat_mode == "track" and queue.current_track:
+            next_track = queue.current_track
+        elif queue.repeat_mode == "queue" and queue.current_track:
+            queue.history.append(queue.current_track)
+            queue.tracks.append(queue.current_track)
+            next_track = queue.tracks.pop(0) if queue.tracks else None
+        else:
+            if queue.current_track:
+                queue.history.append(queue.current_track)
+            next_track = queue.tracks.pop(0) if queue.tracks else None
+
+        if next_track:
+            await self.play_track(queue, next_track)
+            if queue.text_channel:
+                view = MusicPlayerView(self, queue)
+                embed = build_now_playing_embed(queue)
+                try:
+                    queue.now_playing_message = await queue.text_channel.send(embed=embed, view=view)
+                except Exception as e:
+                    log.warning(f"Failed to send Now Playing embed: {e}")
+            return
+
+        # Queue is empty - Check 24/7 radio or Autoplay
+        if queue.active_radio_station:
+            station = RADIO_STATIONS.get(queue.active_radio_station)
+            if station:
+                query = random.choice(station["queries"])
+                tracks = await self.service.search_and_extract(query, queue.current_track.requested_by, platform="radio", limit=5)
+                chosen = tracks[0]
+                for t in tracks:
+                    if t.url not in queue.radio_recent_urls:
+                        chosen = t
+                        break
+                chosen.is_radio = True
+                chosen.radio_station_id = queue.active_radio_station
+                queue.radio_recent_urls.append(chosen.url)
+                await self.play_track(queue, chosen)
+                if queue.text_channel:
+                    view = MusicPlayerView(self, queue)
+                    queue.now_playing_message = await queue.text_channel.send(embed=build_now_playing_embed(queue), view=view)
+                return
+
+        if queue.autoplay and queue.history:
+            last = queue.history[-1]
+            rec_query = f"{last.author} {last.clean_title} related song"
+            rec_tracks = await self.service.search_and_extract(rec_query, last.requested_by, limit=3)
+            if rec_tracks:
+                await self.play_track(queue, rec_tracks[0])
+                if queue.text_channel:
+                    view = MusicPlayerView(self, queue)
+                    queue.now_playing_message = await queue.text_channel.send(embed=build_now_playing_embed(queue), view=view)
+                return
+
+        # End of queue reached
+        queue.current_track = None
+        if queue.text_channel:
+            embed_finished = discord.Embed(
+                description="### Reached the end of the queue. Please queue some track(s) again!",
+                color=BRAND_COLOR
+            )
+            embed_finished.set_author(name="SyncInk Radio • Queue Complete", icon_url=BRAND_LOGO_URL)
+            await queue.text_channel.send(embed=embed_finished)
+
+        # Inactivity countdown (leave VC after 60s if not in 24/7 mode)
+        if not queue.is_247:
+            queue.cancel_inactivity()
+            queue.inactivity_task = asyncio.create_task(self._inactivity_countdown(queue.guild_id))
+
+    async def _inactivity_countdown(self, guild_id: int):
+        await asyncio.sleep(60)
+        queue = self.service.get_queue(guild_id)
+        if not queue.tracks and queue.current_track is None and not queue.is_247:
+            vc = queue.voice_client
+            if vc and vc.is_connected():
+                await vc.disconnect(force=True)
+                if queue.text_channel:
+                    embed_leave = discord.Embed(
+                        description="### Left the voice channel due to empty queue",
+                        color=0xED4245
+                    )
+                    embed_leave.set_author(name="SyncInk Radio", icon_url=BRAND_LOGO_URL)
+                    await queue.text_channel.send(embed=embed_leave)
+            self.service.remove_queue(guild_id)
+
+    async def start_radio_for_interaction(self, interaction: discord.Interaction, station_id: str):
+        vc = await self.ensure_voice(interaction)
+        if not vc:
+            return
+        queue = self.service.get_queue(interaction.guild_id)
+        queue.voice_client = vc
+        queue.text_channel = interaction.channel
+        queue.cancel_inactivity()
+
+        station = RADIO_STATIONS.get(station_id, RADIO_STATIONS['lofi'])
+        track = await self.service.start_radio_station(vc.channel, interaction.channel, interaction.user, station_id)
+
+        await self.play_track(queue, track)
+        view = MusicPlayerView(self, queue)
+        embed = build_now_playing_embed(queue)
+
+        if interaction.response.is_done():
+            msg = await interaction.followup.send(embed=embed, view=view)
+        else:
+            msg = await interaction.response.send_message(embed=embed, view=view)
+        queue.now_playing_message = msg
+
+    # ==========================================
+    # SLASH & HYBRID COMMANDS
+    # ==========================================
+
+    @app_commands.command(name="play", description="Search & stream high-fidelity audio from YouTube, Spotify, etc.")
+    @app_commands.describe(query="Song title, artist, or music URL", platform="Preferred streaming platform")
+    async def slash_play(self, interaction: discord.Interaction, query: str, platform: Literal["auto", "youtube", "spotify", "soundcloud", "applemusic", "deezer", "tidal"] = "auto"):
+        vc = await self.ensure_voice(interaction)
+        if not vc:
+            return
+
+        queue = self.service.get_queue(interaction.guild_id)
+        queue.voice_client = vc
+        queue.text_channel = interaction.channel
+
+        await interaction.response.defer()
+        tracks = await self.service.search_and_extract(query, interaction.user, platform=platform, limit=1)
+        if not tracks:
+            embed = discord.Embed(description=f"{Emojis.REFUSED} No tracks found for: **{query}**", color=0xED4245)
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        await self.enqueue_and_play(interaction, tracks)
+
+    @app_commands.command(name="radio", description="Tune into endless 24/7 curated audio stations.")
+    @app_commands.describe(station="Choose your radio vibe")
+    async def slash_radio(self, interaction: discord.Interaction, station: Literal["lofi", "synthwave", "coffee", "sleep", "gaming"] = "lofi"):
+        await self.start_radio_for_interaction(interaction, station)
+
+    @app_commands.command(name="lofi", description="Stream 24/7 relaxing lofi study and chill beats.")
+    async def slash_lofi(self, interaction: discord.Interaction):
+        await self.start_radio_for_interaction(interaction, "lofi")
+
+    @app_commands.command(name="search", description="Interactive 5-result music picker.")
+    @app_commands.describe(query="Search query", platform="Streaming provider")
+    async def slash_search(self, interaction: discord.Interaction, query: str, platform: Literal["auto", "youtube", "spotify", "soundcloud"] = "auto"):
+        vc = await self.ensure_voice(interaction)
+        if not vc:
+            return
+
+        queue = self.service.get_queue(interaction.guild_id)
+        queue.voice_client = vc
+        queue.text_channel = interaction.channel
+
+        await interaction.response.defer()
+        tracks = await self.service.search_and_extract(query, interaction.user, platform=platform, limit=5)
+        if not tracks:
+            embed = discord.Embed(description=f"{Emojis.REFUSED} No results found for **{query}**.", color=0xED4245)
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        embed = discord.Embed(title="🔍 Search Results", color=BRAND_COLOR)
+        embed.set_author(name="SyncInk Radio", icon_url=BRAND_LOGO_URL)
+        lines = []
+        for i, t in enumerate(tracks):
+            lines.append(f"**{i + 1}.** [{t.clean_title}]({t.url})\n{Emojis.TIME} `{t.formatted_duration}`  •  *{t.author}*")
+        embed.description = f"Query: **{query}**\n\n" + "\n\n".join(lines)
+        embed.set_footer(text="Click a numbered button below to queue your track, or Cancel.")
+
+        view = SearchPickerView(self, interaction.user, tracks)
+        await interaction.followup.send(embed=embed, view=view)
+
+    @app_commands.command(name="pause", description="Pause active music playback.")
+    async def slash_pause(self, interaction: discord.Interaction):
+        queue = self.service.get_queue(interaction.guild_id)
+        if not queue.voice_client or not queue.voice_client.is_playing():
+            await interaction.response.send_message(f"{Emojis.WARNING} Nothing is currently playing.", ephemeral=True)
+            return
+        queue.voice_client.pause()
+        queue.paused_at = time.time()
+        await interaction.response.send_message(f"{Emojis.PAUSE_BUTTON} Playback paused. Resume anytime with `/resume`.")
+        if queue.now_playing_message:
+            try:
+                await queue.now_playing_message.edit(embed=build_now_playing_embed(queue), view=MusicPlayerView(self, queue))
+            except Exception:
+                pass
+
+    @app_commands.command(name="resume", description="Resume paused music playback.")
+    async def slash_resume(self, interaction: discord.Interaction):
+        queue = self.service.get_queue(interaction.guild_id)
+        if not queue.voice_client or not queue.voice_client.is_paused():
+            await interaction.response.send_message(f"{Emojis.WARNING} Playback is not paused.", ephemeral=True)
+            return
+        queue.voice_client.resume()
+        if queue.paused_at is not None:
+            queue.total_paused_duration += (time.time() - queue.paused_at)
+            queue.paused_at = None
+        await interaction.response.send_message(f"{Emojis.PLAY_BUTTON} Playback resumed.")
+        if queue.now_playing_message:
+            try:
+                await queue.now_playing_message.edit(embed=build_now_playing_embed(queue), view=MusicPlayerView(self, queue))
+            except Exception:
+                pass
+
+    @app_commands.command(name="skip", description="Skip current track forward.")
+    @app_commands.describe(count="Number of tracks to skip")
+    async def slash_skip(self, interaction: discord.Interaction, count: int = 1):
+        queue = self.service.get_queue(interaction.guild_id)
+        if not queue.voice_client or not queue.current_track:
+            await interaction.response.send_message(f"{Emojis.WARNING} Nothing is currently playing to skip.", ephemeral=True)
+            return
+        to_drop = max(0, count - 1)
+        for _ in range(min(to_drop, len(queue.tracks))):
+            queue.tracks.pop(0)
+        skipped = queue.current_track.clean_title
+        queue.voice_client.stop()
+        await interaction.response.send_message(f"{Emojis.NEXT} Skipped: **{skipped}**")
+
+    @app_commands.command(name="previous", description="Replay the previous track in history.")
+    async def slash_previous(self, interaction: discord.Interaction):
+        queue = self.service.get_queue(interaction.guild_id)
+        if not queue.history:
+            await interaction.response.send_message(f"{Emojis.WARNING} No history available.", ephemeral=True)
+            return
+        prev = queue.history.pop()
+        if queue.current_track:
+            queue.tracks.insert(0, queue.current_track)
+        queue.tracks.insert(0, prev)
+        if queue.voice_client:
+            queue.voice_client.stop()
+        await interaction.response.send_message(f"{Emojis.PREVIOUS} Replaying previous track: **{prev.clean_title}**")
+
+    @app_commands.command(name="stop", description="Stop music and clear the queue.")
+    async def slash_stop(self, interaction: discord.Interaction):
+        queue = self.service.get_queue(interaction.guild_id)
+        queue.tracks.clear()
+        queue.active_radio_station = None
+        queue.autoplay = False
+        if queue.voice_client:
+            queue.voice_client.stop()
+        embed = discord.Embed(description=f"{Emojis.DELETE} Stopped playback and cleared the session.", color=BRAND_COLOR)
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="leave", description="Disconnect from voice channel.")
+    async def slash_leave(self, interaction: discord.Interaction):
+        queue = self.service.get_queue(interaction.guild_id)
+        if queue.voice_client and queue.voice_client.is_connected():
+            await queue.voice_client.disconnect(force=True)
+            self.service.remove_queue(interaction.guild_id)
+            embed = discord.Embed(description=f"{Emojis.DELETE} Left the voice channel and cleared active session.", color=BRAND_COLOR)
+            await interaction.response.send_message(embed=embed)
+        else:
+            await interaction.response.send_message(f"{Emojis.WARNING} Not currently connected to voice.", ephemeral=True)
+
+    @app_commands.command(name="queue", description="Manage or display the music queue.")
+    @app_commands.describe(action="View or clear the upcoming queue")
+    async def slash_queue(self, interaction: discord.Interaction, action: Literal["list", "clear"] = "list"):
+        queue = self.service.get_queue(interaction.guild_id)
+        if action == "clear":
+            count = len(queue.tracks)
+            queue.tracks.clear()
+            embed = discord.Embed(description=f"{Emojis.APPROVED} Cleared **{count}** track(s) from the upcoming queue.", color=BRAND_COLOR)
+            await interaction.response.send_message(embed=embed)
+        else:
+            embed = self.build_queue_embed(queue)
+            await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="np", description="Display the interactive now playing music card.")
+    async def slash_np(self, interaction: discord.Interaction):
+        queue = self.service.get_queue(interaction.guild_id)
+        if not queue.current_track:
+            await interaction.response.send_message(f"{Emojis.WARNING} Nothing is currently playing.", ephemeral=True)
+            return
+        embed = build_now_playing_embed(queue)
+        view = MusicPlayerView(self, queue)
+        await interaction.response.send_message(embed=embed, view=view)
+
+    @app_commands.command(name="shuffle", description="Randomize upcoming tracks in queue.")
+    async def slash_shuffle(self, interaction: discord.Interaction):
+        queue = self.service.get_queue(interaction.guild_id)
+        if len(queue.tracks) < 2:
+            await interaction.response.send_message(f"{Emojis.WARNING} Need at least 2 tracks in queue to shuffle.", ephemeral=True)
+            return
+        random.shuffle(queue.tracks)
+        await interaction.response.send_message(f"{Emojis.SHUFFLE} Randomized **{len(queue.tracks)}** upcoming tracks!")
+
+    @app_commands.command(name="loop", description="Toggle loop mode.")
+    @app_commands.describe(mode="Repeat mode")
+    async def slash_loop(self, interaction: discord.Interaction, mode: Literal["off", "track", "queue"]):
+        queue = self.service.get_queue(interaction.guild_id)
+        queue.repeat_mode = mode
+        await interaction.response.send_message(f"{Emojis.REPEAT} Repeat mode set to: **{mode.upper()}**")
+
+    @app_commands.command(name="volume", description="Set audio gain volume (1% to 200%).")
+    @app_commands.describe(percent="Volume percentage")
+    async def slash_volume(self, interaction: discord.Interaction, percent: int):
+        val = max(1, min(200, percent))
+        queue = self.service.get_queue(interaction.guild_id)
+        queue.volume = val
+        if queue.voice_client and queue.voice_client.source and hasattr(queue.voice_client.source, "volume"):
+            queue.voice_client.source.volume = val / 100.0
+        await interaction.response.send_message(f"{Emojis.SYNCBOT} Volume adjusted to **{val}%**.")
+
+    @app_commands.command(name="autoplay", description="Endless related song recommendation.")
+    @app_commands.describe(mode="Enable or disable smart autoplay")
+    async def slash_autoplay(self, interaction: discord.Interaction, mode: Literal["on", "off"]):
+        queue = self.service.get_queue(interaction.guild_id)
+        queue.autoplay = (mode == "on")
+        status = "ENABLED" if queue.autoplay else "DISABLED"
+        await interaction.response.send_message(f"{Emojis.RADIO} Autoplay is now **{status}**.")
+
+    @app_commands.command(name="247", description="Keep bot in voice channel 24/7.")
+    @app_commands.describe(mode="Enable or disable 24/7 mode")
+    async def slash_247(self, interaction: discord.Interaction, mode: Literal["on", "off"]):
+        queue = self.service.get_queue(interaction.guild_id)
+        queue.is_247 = (mode == "on")
+        if queue.is_247:
+            queue.cancel_inactivity()
+        status = "ENABLED" if queue.is_247 else "DISABLED"
+        await interaction.response.send_message(f"{Emojis.SYNCINK_MUSIC} 24/7 Voice Channel Mode is now **{status}**.")
+
+    @app_commands.command(name="replay", description="Replay current track from the beginning.")
+    async def slash_replay(self, interaction: discord.Interaction):
+        queue = self.service.get_queue(interaction.guild_id)
+        if not queue.current_track or not queue.voice_client:
+            await interaction.response.send_message(f"{Emojis.WARNING} Nothing is currently playing.", ephemeral=True)
+            return
+        curr = queue.current_track
+        queue.tracks.insert(0, curr)
+        queue.voice_client.stop()
+        await interaction.response.send_message(f"{Emojis.PREVIOUS} Replaying: **{curr.clean_title}**")
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(Music(bot))
+    log.info("[SyncInk Support] Music & Radio Cog successfully loaded.")

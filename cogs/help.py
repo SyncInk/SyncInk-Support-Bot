@@ -194,6 +194,7 @@ class Help(commands.Cog):
             (Emojis.SUGGESTION, "Suggestions & Feature Requests", "Submit and vote on ideas in #suggestions"),
             (Emojis.SETTINGS, "Platform & Utilities", "Bot latency, operational status, products, and links"),
             (Emojis.AI, "AI Assistant", "Ask questions to the integrated SyncInk AI assistant"),
+            (Emojis.RADIO, "Music & 24/7 Radio", "High-fidelity audio streaming, interactive controls, and genre radio"),
         ]
 
         select_options = [
@@ -220,6 +221,12 @@ class Help(commands.Cog):
                 value="3",
                 description="Ask questions to the SyncInk AI assistant",
                 emoji=EmojiPartials.AI
+            ),
+            discord.SelectOption(
+                label="Music & 24/7 Radio",
+                value="4",
+                description="High-fidelity music playback and 24/7 radio",
+                emoji=EmojiPartials.RADIO
             )
         ]
 
@@ -249,6 +256,24 @@ class Help(commands.Cog):
                 [
                     ("?ask <question>", "Ask any question to the integrated SyncInk AI assistant (Alias: `?ai`).")
                 ]
+            ),
+            (
+                f"{Emojis.RADIO} **Music & 24/7 Radio**",
+                [
+                    ("/play <query> [platform]", "Search and play music from YouTube, Spotify, SoundCloud, etc."),
+                    ("/radio [station]", "Tune into 24/7 curated stations (lofi, synthwave, coffee, sleep, gaming)."),
+                    ("/lofi", "Start continuous 24/7 relaxing study and focus lofi beats."),
+                    ("/search <query>", "Interactive 5-result picker to select and play songs."),
+                    ("/np", "Display the interactive Now Playing player card with controls."),
+                    ("/pause • /resume", "Pause or resume active music playback."),
+                    ("/skip [count] • /previous", "Skip forward or jump back to previous track in history."),
+                    ("/stop • /leave", "Stop playback, clear the queue, or disconnect from voice."),
+                    ("/queue [list/clear]", "View upcoming track list or clear the queue."),
+                    ("/shuffle • /loop <mode>", "Randomize queue or loop current track/queue."),
+                    ("/volume <percent>", "Adjust digital audio volume from 1% to 200%."),
+                    ("/autoplay <on/off>", "Enable smart automatic song recommendations when queue finishes."),
+                    ("/247 <on/off>", "Keep the bot in the voice channel 24/7 without auto-disconnecting.")
+                ]
             )
         ]
 
@@ -259,7 +284,7 @@ class Help(commands.Cog):
             select_options.append(
                 discord.SelectOption(
                     label="Moderator Actions & Security",
-                    value="4",
+                    value="5",
                     description="Staff disciplinary actions, anti-nuke & config",
                     emoji=EmojiPartials.MODERATION
                 )

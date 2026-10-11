@@ -60,9 +60,29 @@ class Emojis:
     SYNCINK_LOGO = "<:syncinkmainlogo:1529117858859061331>"
     # Feature request custom emojis
     LOADING = "<a:Loading:1547095365679849492>"
-    PENDING = "<a:pending:1547110867466985532>"
     MEMBERS = "<:members:1547109992212205608>"
     CANCELLED = "<:cancelled:1547111776267804692>"
+
+    # Official Music Player Emojis (<:name:id>)
+    PLAY_BUTTON = "<:playbutton:1558913195119222814>"
+    PAUSE_BUTTON = "<:pausebutton:1558913299221979289>"
+    PREVIOUS = "<:previous:1558917154294997062>"
+    NEXT = "<:next:1558917288621777016>"
+    QUEUE = "<:queue:1558916019089575936>"
+    QUEUE_ADD = "<:queueadd:1558915041896562860>"
+    REPEAT = "<:repeat:1558916635866308719>"
+    SHUFFLE = "<:shuffle:1558914298544136192>"
+    RADIO = "<:radio:1558918719881740490>"
+    TIME = "<:time:1558913072842678383>"
+    SYNCINK_MUSIC = "<:syncinkmusic:1558918836303044688>"
+    YOUTUBEMUSIC = "<:youtubemusic:1558919067354792037>"
+    SPOTIFY = "<:spotify:1558919000044478604>"
+    APPLEMUSIC = "<:applemusic:1558919113303265370>"
+    DEEZER = "<:deezer:1558919156772896818>"
+    DELETE = "<:delete:1558918533214380243>"
+    TIDAL = "<:tidal:1558919190461685840>"
+    LOOKING = "<:looking:1558919508855357531>"
+    SOUNDCLOUD = "<:soundcloud:1558919344199700620>"
 
 class EmojiPartials:
     """discord.PartialEmoji instances for interactive UI components (Buttons, Menus)."""
@@ -124,6 +144,27 @@ class EmojiPartials:
     QUESTION = discord.PartialEmoji(name="syncinkquestion", id=1547033451029594222, animated=False)
     MEMBERS = discord.PartialEmoji(name="members", id=1547109992212205608, animated=False)
     CANCELLED = discord.PartialEmoji(name="cancelled", id=1547111776267804692, animated=False)
+
+    # Official Music Player Partials
+    PLAY_BUTTON = discord.PartialEmoji(name="playbutton", id=1558913195119222814, animated=False)
+    PAUSE_BUTTON = discord.PartialEmoji(name="pausebutton", id=1558913299221979289, animated=False)
+    PREVIOUS = discord.PartialEmoji(name="previous", id=1558917154294997062, animated=False)
+    NEXT = discord.PartialEmoji(name="next", id=1558917288621777016, animated=False)
+    QUEUE = discord.PartialEmoji(name="queue", id=1558916019089575936, animated=False)
+    QUEUE_ADD = discord.PartialEmoji(name="queueadd", id=1558915041896562860, animated=False)
+    REPEAT = discord.PartialEmoji(name="repeat", id=1558916635866308719, animated=False)
+    SHUFFLE = discord.PartialEmoji(name="shuffle", id=1558914298544136192, animated=False)
+    RADIO = discord.PartialEmoji(name="radio", id=1558918719881740490, animated=False)
+    TIME = discord.PartialEmoji(name="time", id=1558913072842678383, animated=False)
+    SYNCINK_MUSIC = discord.PartialEmoji(name="syncinkmusic", id=1558918836303044688, animated=False)
+    YOUTUBEMUSIC = discord.PartialEmoji(name="youtubemusic", id=1558919067354792037, animated=False)
+    SPOTIFY = discord.PartialEmoji(name="spotify", id=1558919000044478604, animated=False)
+    APPLEMUSIC = discord.PartialEmoji(name="applemusic", id=1558919113303265370, animated=False)
+    DEEZER = discord.PartialEmoji(name="deezer", id=1558919156772896818, animated=False)
+    DELETE = discord.PartialEmoji(name="delete", id=1558918533214380243, animated=False)
+    TIDAL = discord.PartialEmoji(name="tidal", id=1558919190461685840, animated=False)
+    LOOKING = discord.PartialEmoji(name="looking", id=1558919508855357531, animated=False)
+    SOUNDCLOUD = discord.PartialEmoji(name="soundcloud", id=1558919344199700620, animated=False)
 
 import re
 
@@ -219,9 +260,30 @@ EMOJI_NAME_MAP = {
     "pengubonk": "<a:pengubonk:1558803021507600506>",
     "7049earthblurple": "<a:earthblurple:1558803274813935666>",
     "earthblurple": "<a:earthblurple:1558803274813935666>",
-    "earth_blurple": "<a:earthblurple:1558803274813935666>",
     "syncinkradio": "<:syncinkradio:1558804305044045844>",
     "syncink_radio": "<:syncinkradio:1558804305044045844>",
+
+    # Music Player Emojis
+    "playbutton": "<:playbutton:1558913195119222814>",
+    "pausebutton": "<:pausebutton:1558913299221979289>",
+    "previous": "<:previous:1558917154294997062>",
+    "next": "<:next:1558917288621777016>",
+    "queue": "<:queue:1558916019089575936>",
+    "queue_add": "<:queueadd:1558915041896562860>",
+    "queueadd": "<:queueadd:1558915041896562860>",
+    "repeat": "<:repeat:1558916635866308719>",
+    "shuffle": "<:shuffle:1558914298544136192>",
+    "radio": "<:radio:1558918719881740490>",
+    "syncinkmusic": "<:syncinkmusic:1558918836303044688>",
+    "syncink_music": "<:syncinkmusic:1558918836303044688>",
+    "youtubemusic": "<:youtubemusic:1558919067354792037>",
+    "spotify": "<:spotify:1558919000044478604>",
+    "applemusic": "<:applemusic:1558919113303265370>",
+    "deezer": "<:deezer:1558919156772896818>",
+    "delete": "<:delete:1558918533214380243>",
+    "tidal": "<:tidal:1558919190461685840>",
+    "looking": "<:looking:1558919508855357531>",
+    "soundcloud": "<:soundcloud:1558919344199700620>",
 }
 
 def format_discord_emojis(text: str) -> str:
