@@ -7,14 +7,15 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 import aiohttp
 import discord
+from utils.logger import log
+from utils.emojis import Emojis, EmojiPartials
+import discord.opus
+
 try:
     import yt_dlp
 except ImportError:
     yt_dlp = None
     log.warning("[Music Service] yt-dlp is not installed. Run ?fixmusic to auto-install dependencies.")
-import discord.opus
-from utils.emojis import Emojis, EmojiPartials
-from utils.logger import log
 
 def ensure_opus_loaded() -> bool:
     """Ensures native libopus C library is loaded for smooth, stutter-free Discord voice encoding."""

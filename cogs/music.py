@@ -1,8 +1,9 @@
 import asyncio
 import os
 import random
+import sys
 import time
-from typing import Optional, Literal
+from typing import Optional, Literal, Union
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -27,13 +28,39 @@ ERROR_MESSAGE = (
 BRAND_COLOR = 0x7b2cbf  # SyncInk Cyber Violet
 BRAND_LOGO_URL = "https://files.catbox.moe/74l9su.png"
 
-def make_error_embed(details: Optional[str] = None) -> discord.Embed:
-    desc = ERROR_MESSAGE
+def make_error_embed(
+    description: str = ERROR_MESSAGE,
+    details: Optional[str] = None,
+    is_warning: bool = False
+) -> discord.Embed:
+    icon = Emojis.WARNING if is_warning else Emojis.REFUSED
+    color = 0xFEE75C if is_warning else 0xED4245
+
+    formatted_desc = description
+    if not (description.startswith("<") or description.startswith(":") or description.startswith("⚠️") or description.startswith("❌") or description.startswith("###")):
+        formatted_desc = f"{icon} **{description}**"
+
     if details:
-        desc += f"\n\n> **Error Details:** {details}"
-    embed = discord.Embed(description=desc, color=0xED4245)
+        formatted_desc += f"\n\n> {details}"
+
+    embed = discord.Embed(
+        description=formatted_desc,
+        color=color
+    )
     embed.set_author(name="SyncInk Platform", icon_url=BRAND_LOGO_URL)
+    embed.set_footer(
+        text="⏱️ This message will automatically delete in 30 seconds • SyncInk Support",
+        icon_url=BRAND_LOGO_URL
+    )
     return embed
+
+async def _delayed_delete_msg(msg: discord.Message, delay: int = 30):
+    """Safely delete a message after delay seconds."""
+    try:
+        await asyncio.sleep(delay)
+        await msg.delete()
+    except Exception:
+        pass
 
 def build_now_playing_embed(queue: GuildMusicQueue) -> discord.Embed:
     current = queue.current_track
@@ -102,15 +129,19 @@ class MusicPlayerView(discord.ui.View):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if not interaction.user.voice or not interaction.guild.voice_client:
-            await interaction.response.send_message(
-                f"{Emojis.REFUSED} You must be in the voice channel to use music controls.",
-                ephemeral=True
+            await self.music_cog.send_error_embed(
+                interaction,
+                description="You must be in the voice channel to use music controls.",
+                is_warning=True,
+                delay=30
             )
             return False
         if interaction.user.voice.channel.id != interaction.guild.voice_client.channel.id:
-            await interaction.response.send_message(
-                f"{Emojis.WARNING} You must be in the same voice channel as the bot.",
-                ephemeral=True
+            await self.music_cog.send_error_embed(
+                interaction,
+                description="You must be in the same voice channel as the bot.",
+                is_warning=True,
+                delay=30
             )
             return False
         return True
@@ -118,7 +149,12 @@ class MusicPlayerView(discord.ui.View):
     @discord.ui.button(custom_id="music_prev", emoji=EmojiPartials.PREVIOUS, style=discord.ButtonStyle.secondary, row=0)
     async def btn_prev(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not self.queue.history:
-            await interaction.response.send_message(f"{Emojis.WARNING} No previous track in history.", ephemeral=True)
+            await self.music_cog.send_error_embed(
+                interaction,
+                description="No previous track in history.",
+                is_warning=True,
+                delay=30
+            )
             return
         prev_track = self.queue.history.pop()
         if self.queue.current_track:
@@ -132,7 +168,12 @@ class MusicPlayerView(discord.ui.View):
     async def btn_pause_resume(self, interaction: discord.Interaction, button: discord.ui.Button):
         vc = self.queue.voice_client
         if not vc:
-            await interaction.response.send_message(f"{Emojis.WARNING} Not currently connected to voice.", ephemeral=True)
+            await self.music_cog.send_error_embed(
+                interaction,
+                description="Not currently connected to voice.",
+                is_warning=True,
+                delay=30
+            )
             return
         if vc.is_paused():
             vc.resume()
@@ -153,7 +194,12 @@ class MusicPlayerView(discord.ui.View):
     async def btn_skip(self, interaction: discord.Interaction, button: discord.ui.Button):
         vc = self.queue.voice_client
         if not vc or not self.queue.current_track:
-            await interaction.response.send_message(f"{Emojis.WARNING} Nothing is currently playing.", ephemeral=True)
+            await self.music_cog.send_error_embed(
+                interaction,
+                description="Nothing is currently playing.",
+                is_warning=True,
+                delay=30
+            )
             return
         skipped_name = self.queue.current_track.clean_title
         vc.stop()
@@ -197,7 +243,12 @@ class MusicPlayerView(discord.ui.View):
     @discord.ui.button(custom_id="music_shuffle", emoji=EmojiPartials.SHUFFLE, style=discord.ButtonStyle.secondary, row=1)
     async def btn_shuffle(self, interaction: discord.Interaction, button: discord.ui.Button):
         if len(self.queue.tracks) < 2:
-            await interaction.response.send_message(f"{Emojis.WARNING} Need at least 2 tracks in the queue to shuffle.", ephemeral=True)
+            await self.music_cog.send_error_embed(
+                interaction,
+                description="Need at least 2 tracks in the queue to shuffle.",
+                is_warning=True,
+                delay=30
+            )
             return
         random.shuffle(self.queue.tracks)
         await interaction.response.send_message(f"{Emojis.SHUFFLE} Randomized **{len(self.queue.tracks)}** upcoming tracks!", ephemeral=True)
@@ -257,7 +308,12 @@ class SearchPickerView(discord.ui.View):
     def make_callback(self, index: int):
         async def _callback(interaction: discord.Interaction):
             if interaction.user.id != self.user.id:
-                await interaction.response.send_message(f"{Emojis.REFUSED} Only the search requester can select.", ephemeral=True)
+                await self.music_cog.send_error_embed(
+                    interaction,
+                    description="Only the search requester can select tracks.",
+                    is_warning=True,
+                    delay=30
+                )
                 return
             selected = self.tracks[index]
             self.stop()
@@ -267,7 +323,12 @@ class SearchPickerView(discord.ui.View):
 
     async def cancel_callback(self, interaction: discord.Interaction):
         if interaction.user.id != self.user.id:
-            await interaction.response.send_message(f"{Emojis.REFUSED} Only the search requester can cancel.", ephemeral=True)
+            await self.music_cog.send_error_embed(
+                interaction,
+                description="Only the search requester can cancel this search.",
+                is_warning=True,
+                delay=30
+            )
             return
         self.stop()
         embed = discord.Embed(description=f"{Emojis.REFUSED} Search menu closed.", color=BRAND_COLOR)
@@ -280,6 +341,86 @@ class Music(commands.Cog):
         self.bot = bot
         self.service = MusicService.get_instance()
 
+    async def _repair_davey(self) -> bool:
+        """Attempt on-the-fly installation and in-memory patching of davey."""
+        log.info("[Voice Engine] Checking/repairing davey DAVE E2EE dependency...")
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                sys.executable, "-m", "pip", "install", "davey", "--quiet",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await proc.communicate()
+            import importlib
+            if "davey" in sys.modules:
+                importlib.reload(sys.modules["davey"])
+            else:
+                importlib.import_module("davey")
+            import discord.voice_state
+            import discord.voice_client
+            discord.voice_state.has_dave = True
+            discord.voice_client.has_dave = True
+            log.info("[Voice Engine] Successfully installed and patched davey in memory.")
+            return True
+        except Exception as repair_err:
+            log.warning(f"[Voice Engine] davey on-the-fly repair note: {repair_err}")
+            try:
+                import discord.voice_state
+                import discord.voice_client
+                discord.voice_state.has_dave = True
+                discord.voice_client.has_dave = True
+            except Exception:
+                pass
+            return False
+
+    async def _ensure_voice_dependencies(self):
+        """Ensures davey and PyNaCl voice libraries are active before attempting connection."""
+        try:
+            import discord.voice_client
+            if getattr(discord.voice_client, "has_dave", False):
+                return
+            import davey
+            import discord.voice_state
+            discord.voice_state.has_dave = True
+            discord.voice_client.has_dave = True
+        except ImportError:
+            await self._repair_davey()
+
+    async def send_error_embed(
+        self,
+        target: Union[discord.Interaction, commands.Context, discord.abc.Messageable],
+        description: str,
+        details: Optional[str] = None,
+        delay: int = 30,
+        is_warning: bool = False,
+    ) -> Optional[discord.Message]:
+        """Sends a standardized error embed and schedules its automatic deletion after delay seconds."""
+        embed = make_error_embed(description, details=details, is_warning=is_warning)
+        sent_msg = None
+
+        try:
+            if isinstance(target, discord.Interaction):
+                if target.response.is_done():
+                    sent_msg = await target.followup.send(embed=embed, ephemeral=False)
+                else:
+                    await target.response.send_message(embed=embed, ephemeral=False)
+                    try:
+                        sent_msg = await target.original_response()
+                    except Exception:
+                        pass
+                if sent_msg:
+                    asyncio.create_task(_delayed_delete_msg(sent_msg, delay))
+            elif isinstance(target, commands.Context):
+                sent_msg = await target.send(embed=embed, delete_after=delay)
+                if target.message:
+                    asyncio.create_task(_delayed_delete_msg(target.message, delay))
+            elif hasattr(target, "send"):
+                sent_msg = await target.send(embed=embed, delete_after=delay)
+        except Exception as e:
+            log.error(f"[send_error_embed Error] {e}")
+
+        return sent_msg
+
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         orig = getattr(error, "original", error)
         log.error(f"[Music AppCommand Error] {type(orig).__name__}: {orig}")
@@ -291,27 +432,42 @@ class Music(commands.Cog):
             return
 
         detail_msg = str(orig) or type(orig).__name__
-        if "PyNaCl" in detail_msg:
-            detail_msg = "PyNaCl audio encryption library is missing. Run `?installmusic` in chat to auto-install dependencies."
-        elif "ffmpeg was not found" in detail_msg:
-            detail_msg = "FFmpeg audio binary is missing on Termux. Run `pkg install -y ffmpeg` to install it."
+        resolution = None
+        if "davey" in detail_msg:
+            detail_msg = "Discord DAVE audio encryption library (davey) is missing."
+            resolution = "Please type `?fixmusic` in chat or `pip install davey` in Termux, then restart the bot."
+        elif "PyNaCl" in detail_msg:
+            detail_msg = "PyNaCl audio encryption library is missing."
+            resolution = "Please type `?fixmusic` in chat or `pip install PyNaCl` in Termux."
+        elif "ffmpeg was not found" in detail_msg or "ffmpeg" in detail_msg.lower():
+            detail_msg = "FFmpeg audio binary is missing."
+            resolution = "Please run `pkg install -y ffmpeg` on Termux."
 
-        embed = make_error_embed(f"`{detail_msg}`")
-        try:
-            if interaction.response.is_done():
-                await interaction.followup.send(embed=embed, ephemeral=True)
-            else:
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-        except Exception:
-            pass
+        await self.send_error_embed(
+            interaction,
+            description=f"Command Error: `{detail_msg}`",
+            details=resolution,
+            delay=30
+        )
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
         orig = getattr(error, "original", error)
         log.error(f"[Music Command Error] {type(orig).__name__}: {orig}")
-        try:
-            await ctx.send(embed=make_error_embed(f"`{orig}`"))
-        except Exception:
-            pass
+        detail_msg = str(orig) or type(orig).__name__
+        resolution = None
+        if "davey" in detail_msg:
+            detail_msg = "Discord DAVE audio encryption library (davey) is missing."
+            resolution = "Please type `?fixmusic` in chat or `pip install davey` in Termux, then restart the bot."
+        elif "PyNaCl" in detail_msg:
+            detail_msg = "PyNaCl audio encryption library is missing."
+            resolution = "Please type `?fixmusic` in chat or `pip install PyNaCl` in Termux."
+
+        await self.send_error_embed(
+            ctx,
+            description=f"Command Error: `{detail_msg}`",
+            details=resolution,
+            delay=30
+        )
 
     async def ensure_voice(self, interaction: discord.Interaction) -> Optional[discord.VoiceClient]:
         member = interaction.user
@@ -319,22 +475,25 @@ class Music(commands.Cog):
             member = interaction.guild.get_member(interaction.user.id) or interaction.user
 
         if not hasattr(member, "voice") or not member.voice or not member.voice.channel:
-            msg = f"{Emojis.WARNING} **You must be in a voice channel first!** Please join a voice channel and try again."
-            if interaction.response.is_done():
-                await interaction.followup.send(msg, ephemeral=True)
-            else:
-                await interaction.response.send_message(msg, ephemeral=True)
+            await self.send_error_embed(
+                interaction,
+                description="You must be in a voice channel first! Please join a voice channel and try again.",
+                is_warning=True,
+                delay=30
+            )
             return None
 
         channel = member.voice.channel
         permissions = channel.permissions_for(interaction.guild.me)
         if not permissions.connect or not permissions.speak:
-            msg = f"{Emojis.REFUSED} **I do not have permission to connect or speak in {channel.mention}.**"
-            if interaction.response.is_done():
-                await interaction.followup.send(msg, ephemeral=True)
-            else:
-                await interaction.response.send_message(msg, ephemeral=True)
+            await self.send_error_embed(
+                interaction,
+                description=f"I do not have permission to connect or speak in {channel.mention}.",
+                delay=30
+            )
             return None
+
+        await self._ensure_voice_dependencies()
 
         vc = interaction.guild.voice_client
         try:
@@ -349,13 +508,29 @@ class Music(commands.Cog):
                 await vc.move_to(channel)
         except Exception as e:
             log.error(f"[Voice Connect Error] {e}")
-            msg = f"{Emojis.REFUSED} **Voice connection failed:** `{e}`"
-            if "PyNaCl" in str(e):
-                msg = f"{Emojis.REFUSED} **Voice Error:** PyNaCl is missing. Please type `?installmusic` in chat to auto-install audio dependencies on Termux."
-            if interaction.response.is_done():
-                await interaction.followup.send(msg, ephemeral=True)
+            err_str = str(e)
+            if "davey" in err_str:
+                repaired = await self._repair_davey()
+                if repaired:
+                    try:
+                        return await channel.connect(self_deaf=True, timeout=15.0, reconnect=True)
+                    except Exception as retry_err:
+                        log.error(f"[Voice Retry Connect Error] {retry_err}")
+                        err_str = str(retry_err)
+
+            if "davey" in err_str:
+                res = "Discord DAVE audio encryption requires the `davey` library.\nPlease type `?fixmusic` in chat or `pip install davey` in Termux, then restart the bot."
+            elif "PyNaCl" in err_str:
+                res = "PyNaCl audio encryption library is missing.\nPlease type `?fixmusic` in chat or `pip install PyNaCl` in Termux."
             else:
-                await interaction.response.send_message(msg, ephemeral=True)
+                res = "Please check voice permissions, region connection, or try again in a few moments."
+
+            await self.send_error_embed(
+                interaction,
+                description=f"Voice connection failed: `{e}`",
+                details=res,
+                delay=30
+            )
             return None
 
         return vc
@@ -437,7 +612,12 @@ class Music(commands.Cog):
         except Exception as src_err:
             log.error(f"[Audio Source Error] {src_err}")
             if queue.text_channel:
-                await queue.text_channel.send(f"{Emojis.REFUSED} **Audio Decoder Error:** `{src_err}`")
+                await self.send_error_embed(
+                    queue.text_channel,
+                    description=f"Audio Decoder Error: `{src_err}`",
+                    details="The audio stream could not be loaded or decoded.",
+                    delay=30
+                )
             await self.advance_queue(queue)
             return
 
@@ -454,7 +634,12 @@ class Music(commands.Cog):
             except Exception as play_err:
                 log.error(f"[Playback Play Error] {play_err}")
                 if queue.text_channel:
-                    await queue.text_channel.send(f"{Emojis.REFUSED} **Playback Start Error:** `{play_err}`")
+                    await self.send_error_embed(
+                        queue.text_channel,
+                        description=f"Playback Start Error: `{play_err}`",
+                        details="Could not stream audio to voice channel.",
+                        delay=30
+                    )
 
     async def advance_queue(self, queue: GuildMusicQueue):
         if queue.repeat_mode == "track" and queue.current_track:
@@ -558,8 +743,11 @@ class Music(commands.Cog):
             await self.play_track(queue, track)
         except Exception as e:
             log.error(f"[Radio Start Error] {e}")
-            embed = make_error_embed(f"Could not load radio station: `{e}`")
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await self.send_error_embed(
+                interaction,
+                description=f"Could not load radio station: `{e}`",
+                delay=30
+            )
             return
 
         view = MusicPlayerView(self, queue)
@@ -569,14 +757,25 @@ class Music(commands.Cog):
 
     async def ensure_voice_ctx(self, ctx: commands.Context) -> Optional[discord.VoiceClient]:
         if not ctx.author.voice or not ctx.author.voice.channel:
-            await ctx.send(f"{Emojis.WARNING} **Please join a voice channel first, then try again.**")
+            await self.send_error_embed(
+                ctx,
+                description="Please join a voice channel first, then try again.",
+                is_warning=True,
+                delay=30
+            )
             return None
 
         channel = ctx.author.voice.channel
         permissions = channel.permissions_for(ctx.guild.me)
         if not permissions.connect or not permissions.speak:
-            await ctx.send(f"{Emojis.REFUSED} **I do not have permission to connect or speak in {channel.mention}.**")
+            await self.send_error_embed(
+                ctx,
+                description=f"I do not have permission to connect or speak in {channel.mention}.",
+                delay=30
+            )
             return None
+
+        await self._ensure_voice_dependencies()
 
         vc = ctx.guild.voice_client
         try:
@@ -591,10 +790,29 @@ class Music(commands.Cog):
                 await vc.move_to(channel)
         except Exception as e:
             log.error(f"[Voice Connect Error] {e}")
-            msg = f"{Emojis.REFUSED} **Voice connection failed:** `{e}`"
-            if "PyNaCl" in str(e):
-                msg = f"{Emojis.REFUSED} **Voice Engine Error:** PyNaCl is missing. Please type `?installmusic` in chat to auto-install dependencies on Termux."
-            await ctx.send(msg)
+            err_str = str(e)
+            if "davey" in err_str:
+                repaired = await self._repair_davey()
+                if repaired:
+                    try:
+                        return await channel.connect(self_deaf=True, timeout=15.0, reconnect=True)
+                    except Exception as retry_err:
+                        log.error(f"[Voice Retry Connect Error] {retry_err}")
+                        err_str = str(retry_err)
+
+            if "davey" in err_str:
+                res = "Discord DAVE audio encryption requires the `davey` library.\nPlease type `?fixmusic` in chat or `pip install davey` in Termux, then restart the bot."
+            elif "PyNaCl" in err_str:
+                res = "PyNaCl audio encryption library is missing.\nPlease type `?fixmusic` in chat or `pip install PyNaCl` in Termux."
+            else:
+                res = "Please check voice permissions, region connection, or try again in a few moments."
+
+            await self.send_error_embed(
+                ctx,
+                description=f"Voice connection failed: `{e}`",
+                details=res,
+                delay=30
+            )
             return None
 
         return vc
@@ -645,7 +863,7 @@ class Music(commands.Cog):
         try:
             track = await self.service.start_radio_station(vc.channel, ctx.channel, ctx.author, station_id)
         except Exception as e:
-            await ctx.send(f"{Emojis.REFUSED} Failed to start radio station: `{e}`")
+            await self.send_error_embed(ctx, description=f"Failed to start radio station: `{e}`", delay=30)
             return
 
         await self.play_track(queue, track)
@@ -678,13 +896,11 @@ class Music(commands.Cog):
             tracks = await self.service.search_and_extract(query, interaction.user, platform=platform, limit=1)
         except Exception as e:
             log.error(f"[Music Search Error] {e}")
-            embed = make_error_embed(f"Track lookup failed: `{e}`")
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await self.send_error_embed(interaction, description=f"Track lookup failed: `{e}`", delay=30)
             return
 
         if not tracks:
-            embed = discord.Embed(description=f"{Emojis.REFUSED} No tracks found for: **{query}**", color=0xED4245)
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await self.send_error_embed(interaction, description=f"No tracks found for: **{query}**", delay=30)
             return
 
         # 4. Play
@@ -692,8 +908,7 @@ class Music(commands.Cog):
             await self.enqueue_and_play(interaction, tracks)
         except Exception as e:
             log.error(f"[Enqueue Error] {e}")
-            embed = make_error_embed(f"Could not start playback: `{e}`")
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await self.send_error_embed(interaction, description=f"Could not start playback: `{e}`", delay=30)
 
     @app_commands.command(name="radio", description="Tune into endless 24/7 curated audio stations.")
     @app_commands.describe(station="Choose your radio vibe")
@@ -724,13 +939,11 @@ class Music(commands.Cog):
             tracks = await self.service.search_and_extract(query, interaction.user, platform=platform, limit=5)
         except Exception as e:
             log.error(f"[Music Search Error] {e}")
-            embed = make_error_embed(f"Search failed: `{e}`")
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await self.send_error_embed(interaction, description=f"Search failed: `{e}`", delay=30)
             return
 
         if not tracks:
-            embed = discord.Embed(description=f"{Emojis.REFUSED} No results found for **{query}**.", color=0xED4245)
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await self.send_error_embed(interaction, description=f"No results found for **{query}**.", delay=30)
             return
 
         embed = discord.Embed(title="🔍 Search Results", color=BRAND_COLOR)
@@ -748,7 +961,7 @@ class Music(commands.Cog):
     async def slash_pause(self, interaction: discord.Interaction):
         queue = self.service.get_queue(interaction.guild_id)
         if not queue.voice_client or not queue.voice_client.is_playing():
-            await interaction.response.send_message(f"{Emojis.WARNING} Nothing is currently playing.", ephemeral=True)
+            await self.send_error_embed(interaction, description="Nothing is currently playing.", is_warning=True, delay=30)
             return
         queue.voice_client.pause()
         queue.paused_at = time.time()
@@ -763,7 +976,7 @@ class Music(commands.Cog):
     async def slash_resume(self, interaction: discord.Interaction):
         queue = self.service.get_queue(interaction.guild_id)
         if not queue.voice_client or not queue.voice_client.is_paused():
-            await interaction.response.send_message(f"{Emojis.WARNING} Playback is not paused.", ephemeral=True)
+            await self.send_error_embed(interaction, description="Playback is not paused.", is_warning=True, delay=30)
             return
         queue.voice_client.resume()
         if queue.paused_at is not None:
@@ -781,7 +994,7 @@ class Music(commands.Cog):
     async def slash_skip(self, interaction: discord.Interaction, count: int = 1):
         queue = self.service.get_queue(interaction.guild_id)
         if not queue.voice_client or not queue.current_track:
-            await interaction.response.send_message(f"{Emojis.WARNING} Nothing is currently playing to skip.", ephemeral=True)
+            await self.send_error_embed(interaction, description="Nothing is currently playing to skip.", is_warning=True, delay=30)
             return
         to_drop = max(0, count - 1)
         for _ in range(min(to_drop, len(queue.tracks))):
@@ -794,7 +1007,7 @@ class Music(commands.Cog):
     async def slash_previous(self, interaction: discord.Interaction):
         queue = self.service.get_queue(interaction.guild_id)
         if not queue.history:
-            await interaction.response.send_message(f"{Emojis.WARNING} No history available.", ephemeral=True)
+            await self.send_error_embed(interaction, description="No history available.", is_warning=True, delay=30)
             return
         prev = queue.history.pop()
         if queue.current_track:
@@ -824,7 +1037,7 @@ class Music(commands.Cog):
             embed = discord.Embed(description=f"{Emojis.DELETE} Left the voice channel and cleared active session.", color=BRAND_COLOR)
             await interaction.response.send_message(embed=embed)
         else:
-            await interaction.response.send_message(f"{Emojis.WARNING} Not currently connected to voice.", ephemeral=True)
+            await self.send_error_embed(interaction, description="Not currently connected to voice.", is_warning=True, delay=30)
 
     @app_commands.command(name="queue", description="Manage or display the music queue.")
     @app_commands.describe(action="View or clear the upcoming queue")
@@ -843,7 +1056,7 @@ class Music(commands.Cog):
     async def slash_np(self, interaction: discord.Interaction):
         queue = self.service.get_queue(interaction.guild_id)
         if not queue.current_track:
-            await interaction.response.send_message(f"{Emojis.WARNING} Nothing is currently playing.", ephemeral=True)
+            await self.send_error_embed(interaction, description="Nothing is currently playing.", is_warning=True, delay=30)
             return
         embed = build_now_playing_embed(queue)
         view = MusicPlayerView(self, queue)
@@ -853,7 +1066,7 @@ class Music(commands.Cog):
     async def slash_shuffle(self, interaction: discord.Interaction):
         queue = self.service.get_queue(interaction.guild_id)
         if len(queue.tracks) < 2:
-            await interaction.response.send_message(f"{Emojis.WARNING} Need at least 2 tracks in queue to shuffle.", ephemeral=True)
+            await self.send_error_embed(interaction, description="Need at least 2 tracks in queue to shuffle.", is_warning=True, delay=30)
             return
         random.shuffle(queue.tracks)
         await interaction.response.send_message(f"{Emojis.SHUFFLE} Randomized **{len(queue.tracks)}** upcoming tracks!")
@@ -897,7 +1110,7 @@ class Music(commands.Cog):
     async def slash_replay(self, interaction: discord.Interaction):
         queue = self.service.get_queue(interaction.guild_id)
         if not queue.current_track or not queue.voice_client:
-            await interaction.response.send_message(f"{Emojis.WARNING} Nothing is currently playing.", ephemeral=True)
+            await self.send_error_embed(interaction, description="Nothing is currently playing.", is_warning=True, delay=30)
             return
         curr = queue.current_track
         queue.tracks.insert(0, curr)
@@ -919,7 +1132,13 @@ class Music(commands.Cog):
                     queue.paused_at = None
                 await ctx.send(f"{Emojis.PLAY_BUTTON} Playback resumed.")
                 return
-            await ctx.send(f"ℹ️ **Usage:** `?play <song title, artist, or music URL>`\n*Example:* `?play lofi hip hop` or `?play https://...`")
+            await self.send_error_embed(
+                ctx,
+                description="Usage: `?play <song title, artist, or music URL>`",
+                details="*Example:* `?play lofi hip hop` or `?play https://...`",
+                is_warning=True,
+                delay=30
+            )
             return
 
         vc = await self.ensure_voice_ctx(ctx)
@@ -937,8 +1156,7 @@ class Music(commands.Cog):
                 await msg.delete()
             except Exception:
                 pass
-            embed = make_error_embed(f"Track lookup failed: `{e}`")
-            await ctx.send(embed=embed)
+            await self.send_error_embed(ctx, description=f"Track lookup failed: `{e}`", delay=30)
             return
 
         try:
@@ -947,15 +1165,13 @@ class Music(commands.Cog):
             pass
 
         if not tracks:
-            embed = discord.Embed(description=f"{Emojis.REFUSED} No tracks found for: **{query}**", color=0xED4245)
-            await ctx.send(embed=embed)
+            await self.send_error_embed(ctx, description=f"No tracks found for: **{query}**", delay=30)
             return
 
         try:
             await self.enqueue_and_play_ctx(ctx, tracks)
         except Exception as e:
-            embed = make_error_embed(f"Could not begin playback: `{e}`")
-            await ctx.send(embed=embed)
+            await self.send_error_embed(ctx, description=f"Could not begin playback: `{e}`", delay=30)
 
     @commands.command(name="radio", description="Tune into endless 24/7 curated audio stations.")
     async def cmd_radio(self, ctx: commands.Context, station: Optional[str] = None):
@@ -966,7 +1182,13 @@ class Music(commands.Cog):
         st = station.lower().strip()
         if st not in RADIO_STATIONS:
             stations_list = ", ".join(f"`{k}`" for k in RADIO_STATIONS.keys())
-            await ctx.send(f"{Emojis.WARNING} Unknown station `{station}`. Available stations: {stations_list}")
+            await self.send_error_embed(
+                ctx,
+                description=f"Unknown station `{station}`.",
+                details=f"Available stations: {stations_list}",
+                is_warning=True,
+                delay=30
+            )
             return
         await self.start_radio_for_ctx(ctx, st)
 
@@ -992,8 +1214,7 @@ class Music(commands.Cog):
                 await msg.delete()
             except Exception:
                 pass
-            embed = make_error_embed(f"Search failed: `{e}`")
-            await ctx.send(embed=embed)
+            await self.send_error_embed(ctx, description=f"Search failed: `{e}`", delay=30)
             return
 
         try:
@@ -1002,8 +1223,7 @@ class Music(commands.Cog):
             pass
 
         if not tracks:
-            embed = discord.Embed(description=f"{Emojis.REFUSED} No results found for **{query}**.", color=0xED4245)
-            await ctx.send(embed=embed)
+            await self.send_error_embed(ctx, description=f"No results found for **{query}**.", delay=30)
             return
 
         embed = discord.Embed(title="🔍 Search Results", color=BRAND_COLOR)
@@ -1021,7 +1241,7 @@ class Music(commands.Cog):
     async def cmd_pause(self, ctx: commands.Context):
         queue = self.service.get_queue(ctx.guild.id)
         if not queue.voice_client or not queue.voice_client.is_playing():
-            await ctx.send(f"{Emojis.WARNING} Nothing is currently playing.")
+            await self.send_error_embed(ctx, description="Nothing is currently playing.", is_warning=True, delay=30)
             return
         queue.voice_client.pause()
         queue.paused_at = time.time()
@@ -1036,7 +1256,7 @@ class Music(commands.Cog):
     async def cmd_resume(self, ctx: commands.Context):
         queue = self.service.get_queue(ctx.guild.id)
         if not queue.voice_client or not queue.voice_client.is_paused():
-            await ctx.send(f"{Emojis.WARNING} Playback is not paused.")
+            await self.send_error_embed(ctx, description="Playback is not paused.", is_warning=True, delay=30)
             return
         queue.voice_client.resume()
         if queue.paused_at is not None:
@@ -1053,7 +1273,7 @@ class Music(commands.Cog):
     async def cmd_skip(self, ctx: commands.Context, count: int = 1):
         queue = self.service.get_queue(ctx.guild.id)
         if not queue.voice_client or not queue.current_track:
-            await ctx.send(f"{Emojis.WARNING} Nothing is currently playing to skip.")
+            await self.send_error_embed(ctx, description="Nothing is currently playing to skip.", is_warning=True, delay=30)
             return
         to_drop = max(0, count - 1)
         for _ in range(min(to_drop, len(queue.tracks))):
@@ -1066,7 +1286,7 @@ class Music(commands.Cog):
     async def cmd_previous(self, ctx: commands.Context):
         queue = self.service.get_queue(ctx.guild.id)
         if not queue.history:
-            await ctx.send(f"{Emojis.WARNING} No history available.")
+            await self.send_error_embed(ctx, description="No history available.", is_warning=True, delay=30)
             return
         prev = queue.history.pop()
         if queue.current_track:
@@ -1096,7 +1316,7 @@ class Music(commands.Cog):
             embed = discord.Embed(description=f"{Emojis.DELETE} Left the voice channel and cleared active session.", color=BRAND_COLOR)
             await ctx.send(embed=embed)
         else:
-            await ctx.send(f"{Emojis.WARNING} Not currently connected to voice.")
+            await self.send_error_embed(ctx, description="Not currently connected to voice.", is_warning=True, delay=30)
 
     @commands.command(name="queue", aliases=["q"], description="Manage or display the music queue.")
     async def cmd_queue(self, ctx: commands.Context, action: str = "list"):
@@ -1114,7 +1334,7 @@ class Music(commands.Cog):
     async def cmd_np(self, ctx: commands.Context):
         queue = self.service.get_queue(ctx.guild.id)
         if not queue.current_track:
-            await ctx.send(f"{Emojis.WARNING} Nothing is currently playing.")
+            await self.send_error_embed(ctx, description="Nothing is currently playing.", is_warning=True, delay=30)
             return
         embed = build_now_playing_embed(queue)
         view = MusicPlayerView(self, queue)
@@ -1124,7 +1344,7 @@ class Music(commands.Cog):
     async def cmd_shuffle(self, ctx: commands.Context):
         queue = self.service.get_queue(ctx.guild.id)
         if len(queue.tracks) < 2:
-            await ctx.send(f"{Emojis.WARNING} Need at least 2 tracks in queue to shuffle.")
+            await self.send_error_embed(ctx, description="Need at least 2 tracks in queue to shuffle.", is_warning=True, delay=30)
             return
         random.shuffle(queue.tracks)
         await ctx.send(f"{Emojis.SHUFFLE} Randomized **{len(queue.tracks)}** upcoming tracks!")
@@ -1184,7 +1404,7 @@ class Music(commands.Cog):
     async def cmd_replay(self, ctx: commands.Context):
         queue = self.service.get_queue(ctx.guild.id)
         if not queue.current_track or not queue.voice_client:
-            await ctx.send(f"{Emojis.WARNING} Nothing is currently playing.")
+            await self.send_error_embed(ctx, description="Nothing is currently playing.", is_warning=True, delay=30)
             return
         curr = queue.current_track
         queue.tracks.insert(0, curr)

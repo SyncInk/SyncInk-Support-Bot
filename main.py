@@ -17,6 +17,16 @@ from database import db
 # Load environment variables
 load_dotenv()
 
+# Ensure Discord voice DAVE E2EE encryption dependency is recognized
+try:
+    import davey
+    import discord.voice_state
+    import discord.voice_client
+    discord.voice_state.has_dave = True
+    discord.voice_client.has_dave = True
+except ImportError:
+    pass
+
 class SyncInkBot(commands.Bot):
     def __init__(self, enable_presences: bool = True):
         intents = discord.Intents.default()

@@ -304,30 +304,41 @@ class Admin(commands.Cog):
         except Exception as e:
             await interaction.followup.send(f"❌ **Sync failed:** `{e}`")
 
-    @commands.command(name="installmusic", aliases=["fixmusic"], description="Check and auto-install audio dependencies (yt-dlp, PyNaCl).")
+    @commands.command(name="installmusic", aliases=["fixmusic"], description="Check and auto-install audio dependencies (davey, yt-dlp, PyNaCl, ffmpeg).")
     @commands.has_permissions(administrator=True)
     async def install_music_cmd(self, ctx: commands.Context):
-        msg = await ctx.send("⏳ **Checking and installing music dependencies (`yt-dlp`, `PyNaCl`)...**")
+        msg = await ctx.send("⏳ **Checking and installing music & Discord DAVE dependencies (`davey`, `yt-dlp`, `PyNaCl`, `ffmpeg`)...**")
         try:
             # Install system packages on Termux if pkg is available
             proc_pkg = await asyncio.create_subprocess_shell(
-                "pkg install -y python-pynacl ffmpeg libopus libsodium >/dev/null 2>&1 || true",
+                "pkg install -y python-pynacl ffmpeg libopus libsodium clang make python-dev libffi >/dev/null 2>&1 || true",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
             await proc_pkg.communicate()
 
             proc = await asyncio.create_subprocess_exec(
-                sys.executable, "-m", "pip", "install", "yt-dlp", "PyNaCl", "--quiet",
+                sys.executable, "-m", "pip", "install", "davey", "yt-dlp", "PyNaCl", "--quiet",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
             await proc.communicate()
+
+            # Dynamically patch discord.py voice state in memory
+            try:
+                import davey
+                import discord.voice_state
+                import discord.voice_client
+                discord.voice_state.has_dave = True
+                discord.voice_client.has_dave = True
+            except Exception:
+                pass
+
             if "cogs.music" in self.bot.extensions:
                 await self.bot.reload_extension("cogs.music")
             else:
                 await self.bot.load_extension("cogs.music")
-            await msg.edit(content="✅ **Music engine and audio dependencies (yt-dlp, PyNaCl, ffmpeg) are active and operational!**")
+            await msg.edit(content="✅ **Music engine and Discord voice DAVE dependencies (`davey`, `yt-dlp`, `PyNaCl`, `ffmpeg`) are active and operational!**")
         except Exception as e:
             await msg.edit(content=f"⚠️ **Command finished with notice:** `{e}`")
 
