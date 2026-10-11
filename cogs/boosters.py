@@ -101,7 +101,7 @@ class Boosters(commands.Cog):
                 f"{EMOJI_ARROW} **Media & Upload Privileges:** Enjoy unrestricted permission to upload media, images, video clips, and attachments.\n"
                 f"{EMOJI_ARROW} **Priority Ticket Support:** Inquired faster & kept on main priority.\n"
                 f"{EMOJI_ARROW} **Booster Badge & Role:** Equipped with the {EMOJI_BOOSTER} <@&{BOOSTER_ROLE_ID}> role!\n\n"
-                f"-# all tickets created will be resolved if no rush but for boosters it will be on main priority"
+                f"-# all tickets created will be resolved if no rush but for boosters it will be on main priority {EMOJI_SCRIBBLE_HEART}"
             ),
             color=0xF47FFF,  # Discord Nitro Pink
             timestamp=discord.utils.utcnow()

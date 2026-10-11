@@ -39,7 +39,7 @@ class Emojis:
     S_ARROW = "<:s_arrow:1558799699102793801>"
     TIME = "<:time:1558804154963468288>"
     PENGUBONK = "<a:pengubonk:1558803021507600506>"
-    EARTH_BLURPLE = "<a:7049earthblurple:1558803274813935666>"
+    EARTH_BLURPLE = "<a:earthblurple:1558803274813935666>"
     SYNCINK_RADIO = "<:syncinkradio:1558804305044045844>"
 
     # Official Ticket Category Emojis (<:name:id>)
@@ -104,7 +104,7 @@ class EmojiPartials:
     S_ARROW = discord.PartialEmoji(name="s_arrow", id=1558799699102793801, animated=False)
     TIME = discord.PartialEmoji(name="time", id=1558804154963468288, animated=False)
     PENGUBONK = discord.PartialEmoji(name="pengubonk", id=1558803021507600506, animated=True)
-    EARTH_BLURPLE = discord.PartialEmoji(name="7049earthblurple", id=1558803274813935666, animated=True)
+    EARTH_BLURPLE = discord.PartialEmoji(name="earthblurple", id=1558803274813935666, animated=True)
     SYNCINK_RADIO = discord.PartialEmoji(name="syncinkradio", id=1558804305044045844, animated=False)
 
     # Ticket category partials
@@ -137,6 +137,7 @@ OLD_TAG_MAP = {
     "<:others~1:1513337572078911488>": "<:others:1553533697364598814>",
     "<:others:1513337572078911488>": "<:others:1553533697364598814>",
     "<:SyncPartnership:1522289808599290006>": "<:SyncPartnership:1553532869950046340>",
+    "<a:7049earthblurple:1558803274813935666>": "<a:earthblurple:1558803274813935666>",
 }
 
 # Comprehensive mapping of raw emoji names to valid custom Discord emoji tags
@@ -216,8 +217,9 @@ EMOJI_NAME_MAP = {
     "sarrow": "<:s_arrow:1558799699102793801>",
     "time": "<:time:1558804154963468288>",
     "pengubonk": "<a:pengubonk:1558803021507600506>",
-    "7049earthblurple": "<a:7049earthblurple:1558803274813935666>",
-    "earthblurple": "<a:7049earthblurple:1558803274813935666>",
+    "7049earthblurple": "<a:earthblurple:1558803274813935666>",
+    "earthblurple": "<a:earthblurple:1558803274813935666>",
+    "earth_blurple": "<a:earthblurple:1558803274813935666>",
     "syncinkradio": "<:syncinkradio:1558804305044045844>",
     "syncink_radio": "<:syncinkradio:1558804305044045844>",
 }
