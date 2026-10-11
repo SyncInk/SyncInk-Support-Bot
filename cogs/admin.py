@@ -309,6 +309,14 @@ class Admin(commands.Cog):
     async def install_music_cmd(self, ctx: commands.Context):
         msg = await ctx.send("⏳ **Checking and installing music dependencies (`yt-dlp`, `PyNaCl`)...**")
         try:
+            # Install system packages on Termux if pkg is available
+            proc_pkg = await asyncio.create_subprocess_shell(
+                "pkg install -y python-pynacl ffmpeg libopus libsodium >/dev/null 2>&1 || true",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await proc_pkg.communicate()
+
             proc = await asyncio.create_subprocess_exec(
                 sys.executable, "-m", "pip", "install", "yt-dlp", "PyNaCl", "--quiet",
                 stdout=asyncio.subprocess.PIPE,
@@ -319,7 +327,7 @@ class Admin(commands.Cog):
                 await self.bot.reload_extension("cogs.music")
             else:
                 await self.bot.load_extension("cogs.music")
-            await msg.edit(content="✅ **Music engine and audio dependencies are active and operational!**")
+            await msg.edit(content="✅ **Music engine and audio dependencies (yt-dlp, PyNaCl, ffmpeg) are active and operational!**")
         except Exception as e:
             await msg.edit(content=f"⚠️ **Command finished with notice:** `{e}`")
 

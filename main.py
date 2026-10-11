@@ -160,6 +160,16 @@ def main():
             log.error(f"Ignoring exception in app command {interaction.command}: {error}")
             traceback.print_exception(type(error), error, error.__traceback__)
             
+            # If the command's Cog defines its own cog_app_command_error, don't double-send
+            cog = interaction.command.binding if interaction.command else None
+            if cog and hasattr(cog, "cog_app_command_error"):
+                return
+
+            # Avoid responding if the interaction was already finished or timed out
+            orig = getattr(error, 'original', error)
+            if isinstance(orig, discord.errors.NotFound) and orig.code == 10062:
+                return
+
             try:
                 if interaction.response.is_done():
                     await interaction.followup.send(embed=ErrorEmbed(i18n.get("error_generic")), ephemeral=True)

@@ -27,8 +27,11 @@ ERROR_MESSAGE = (
 BRAND_COLOR = 0x7b2cbf  # SyncInk Cyber Violet
 BRAND_LOGO_URL = "https://files.catbox.moe/74l9su.png"
 
-def make_error_embed() -> discord.Embed:
-    embed = discord.Embed(description=ERROR_MESSAGE, color=0xED4245)
+def make_error_embed(details: Optional[str] = None) -> discord.Embed:
+    desc = ERROR_MESSAGE
+    if details:
+        desc += f"\n\n> **Error Details:** {details}"
+    embed = discord.Embed(description=desc, color=0xED4245)
     embed.set_author(name="SyncInk Platform", icon_url=BRAND_LOGO_URL)
     return embed
 
@@ -278,44 +281,83 @@ class Music(commands.Cog):
         self.service = MusicService.get_instance()
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
-        log.error(f"[Music AppCommand Error] {error}")
+        orig = getattr(error, "original", error)
+        log.error(f"[Music AppCommand Error] {type(orig).__name__}: {orig}")
+        import traceback
+        traceback.print_exception(type(orig), orig, orig.__traceback__)
+
+        if isinstance(orig, discord.errors.NotFound) and getattr(orig, "code", None) == 10062:
+            log.warning("[Music] Ignored expired interaction 10062.")
+            return
+
+        detail_msg = str(orig) or type(orig).__name__
+        if "PyNaCl" in detail_msg:
+            detail_msg = "PyNaCl audio encryption library is missing. Run `?installmusic` in chat to auto-install dependencies."
+        elif "ffmpeg was not found" in detail_msg:
+            detail_msg = "FFmpeg audio binary is missing on Termux. Run `pkg install -y ffmpeg` to install it."
+
+        embed = make_error_embed(f"`{detail_msg}`")
         try:
             if interaction.response.is_done():
-                await interaction.followup.send(embed=make_error_embed(), ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
             else:
-                await interaction.response.send_message(embed=make_error_embed(), ephemeral=True)
+                await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception:
             pass
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
-        log.error(f"[Music Command Error] {error}")
+        orig = getattr(error, "original", error)
+        log.error(f"[Music Command Error] {type(orig).__name__}: {orig}")
         try:
-            await ctx.send(embed=make_error_embed())
+            await ctx.send(embed=make_error_embed(f"`{orig}`"))
         except Exception:
             pass
 
     async def ensure_voice(self, interaction: discord.Interaction) -> Optional[discord.VoiceClient]:
-        if not interaction.user.voice or not interaction.user.voice.channel:
-            await interaction.response.send_message(
-                f"{Emojis.WARNING} Please join a voice channel first, then try again.",
-                ephemeral=True
-            )
+        member = interaction.user
+        if not isinstance(member, discord.Member):
+            member = interaction.guild.get_member(interaction.user.id) or interaction.user
+
+        if not hasattr(member, "voice") or not member.voice or not member.voice.channel:
+            msg = f"{Emojis.WARNING} **You must be in a voice channel first!** Please join a voice channel and try again."
+            if interaction.response.is_done():
+                await interaction.followup.send(msg, ephemeral=True)
+            else:
+                await interaction.response.send_message(msg, ephemeral=True)
             return None
 
-        channel = interaction.user.voice.channel
+        channel = member.voice.channel
         permissions = channel.permissions_for(interaction.guild.me)
         if not permissions.connect or not permissions.speak:
-            await interaction.response.send_message(
-                f"{Emojis.REFUSED} I do not have permission to connect or speak in {channel.mention}.",
-                ephemeral=True
-            )
+            msg = f"{Emojis.REFUSED} **I do not have permission to connect or speak in {channel.mention}.**"
+            if interaction.response.is_done():
+                await interaction.followup.send(msg, ephemeral=True)
+            else:
+                await interaction.response.send_message(msg, ephemeral=True)
             return None
 
         vc = interaction.guild.voice_client
-        if not vc:
-            vc = await channel.connect(self_deaf=True)
-        elif vc.channel.id != channel.id:
-            await vc.move_to(channel)
+        try:
+            if not vc or not vc.is_connected():
+                if vc:
+                    try:
+                        await vc.disconnect(force=True)
+                    except Exception:
+                        pass
+                vc = await channel.connect(self_deaf=True, timeout=15.0, reconnect=True)
+            elif vc.channel.id != channel.id:
+                await vc.move_to(channel)
+        except Exception as e:
+            log.error(f"[Voice Connect Error] {e}")
+            msg = f"{Emojis.REFUSED} **Voice connection failed:** `{e}`"
+            if "PyNaCl" in str(e):
+                msg = f"{Emojis.REFUSED} **Voice Error:** PyNaCl is missing. Please type `?installmusic` in chat to auto-install audio dependencies on Termux."
+            if interaction.response.is_done():
+                await interaction.followup.send(msg, ephemeral=True)
+            else:
+                await interaction.response.send_message(msg, ephemeral=True)
+            return None
+
         return vc
 
     def build_queue_embed(self, queue: GuildMusicQueue) -> discord.Embed:
@@ -390,7 +432,14 @@ class Music(commands.Cog):
         queue.paused_at = None
         queue.total_paused_duration = 0.0
 
-        audio_source = self.service.create_audio_source(track, volume=queue.volume)
+        try:
+            audio_source = self.service.create_audio_source(track, volume=queue.volume)
+        except Exception as src_err:
+            log.error(f"[Audio Source Error] {src_err}")
+            if queue.text_channel:
+                await queue.text_channel.send(f"{Emojis.REFUSED} **Audio Decoder Error:** `{src_err}`")
+            await self.advance_queue(queue)
+            return
 
         def _after_playback(error):
             if error:
@@ -398,7 +447,14 @@ class Music(commands.Cog):
             asyncio.run_coroutine_threadsafe(self.advance_queue(queue), self.bot.loop)
 
         if queue.voice_client:
-            queue.voice_client.play(audio_source, after=_after_playback)
+            try:
+                if queue.voice_client.is_playing() or queue.voice_client.is_paused():
+                    queue.voice_client.stop()
+                queue.voice_client.play(audio_source, after=_after_playback)
+            except Exception as play_err:
+                log.error(f"[Playback Play Error] {play_err}")
+                if queue.text_channel:
+                    await queue.text_channel.send(f"{Emojis.REFUSED} **Playback Start Error:** `{play_err}`")
 
     async def advance_queue(self, queue: GuildMusicQueue):
         if queue.repeat_mode == "track" and queue.current_track:
@@ -486,6 +542,9 @@ class Music(commands.Cog):
             self.service.remove_queue(guild_id)
 
     async def start_radio_for_interaction(self, interaction: discord.Interaction, station_id: str):
+        if not interaction.response.is_done():
+            await interaction.response.defer()
+
         vc = await self.ensure_voice(interaction)
         if not vc:
             return
@@ -494,35 +553,50 @@ class Music(commands.Cog):
         queue.text_channel = interaction.channel
         queue.cancel_inactivity()
 
-        station = RADIO_STATIONS.get(station_id, RADIO_STATIONS['lofi'])
-        track = await self.service.start_radio_station(vc.channel, interaction.channel, interaction.user, station_id)
+        try:
+            track = await self.service.start_radio_station(vc.channel, interaction.channel, interaction.user, station_id)
+            await self.play_track(queue, track)
+        except Exception as e:
+            log.error(f"[Radio Start Error] {e}")
+            embed = make_error_embed(f"Could not load radio station: `{e}`")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
 
-        await self.play_track(queue, track)
         view = MusicPlayerView(self, queue)
         embed = build_now_playing_embed(queue)
-
-        if interaction.response.is_done():
-            msg = await interaction.followup.send(embed=embed, view=view)
-        else:
-            msg = await interaction.response.send_message(embed=embed, view=view)
+        msg = await interaction.followup.send(embed=embed, view=view)
         queue.now_playing_message = msg
 
     async def ensure_voice_ctx(self, ctx: commands.Context) -> Optional[discord.VoiceClient]:
         if not ctx.author.voice or not ctx.author.voice.channel:
-            await ctx.send(f"{Emojis.WARNING} Please join a voice channel first, then try again.")
+            await ctx.send(f"{Emojis.WARNING} **Please join a voice channel first, then try again.**")
             return None
 
         channel = ctx.author.voice.channel
         permissions = channel.permissions_for(ctx.guild.me)
         if not permissions.connect or not permissions.speak:
-            await ctx.send(f"{Emojis.REFUSED} I do not have permission to connect or speak in {channel.mention}.")
+            await ctx.send(f"{Emojis.REFUSED} **I do not have permission to connect or speak in {channel.mention}.**")
             return None
 
         vc = ctx.guild.voice_client
-        if not vc:
-            vc = await channel.connect(self_deaf=True)
-        elif vc.channel.id != channel.id:
-            await vc.move_to(channel)
+        try:
+            if not vc or not vc.is_connected():
+                if vc:
+                    try:
+                        await vc.disconnect(force=True)
+                    except Exception:
+                        pass
+                vc = await channel.connect(self_deaf=True, timeout=15.0, reconnect=True)
+            elif vc.channel.id != channel.id:
+                await vc.move_to(channel)
+        except Exception as e:
+            log.error(f"[Voice Connect Error] {e}")
+            msg = f"{Emojis.REFUSED} **Voice connection failed:** `{e}`"
+            if "PyNaCl" in str(e):
+                msg = f"{Emojis.REFUSED} **Voice Engine Error:** PyNaCl is missing. Please type `?installmusic` in chat to auto-install dependencies on Termux."
+            await ctx.send(msg)
+            return None
+
         return vc
 
     async def enqueue_and_play_ctx(self, ctx: commands.Context, tracks: list[Track]):
@@ -587,6 +661,10 @@ class Music(commands.Cog):
     @app_commands.command(name="play", description="Search & stream high-fidelity audio from YouTube, Spotify, etc.")
     @app_commands.describe(query="Song title, artist, or music URL", platform="Preferred streaming platform")
     async def slash_play(self, interaction: discord.Interaction, query: str, platform: Literal["auto", "youtube", "spotify", "soundcloud", "applemusic", "deezer", "tidal"] = "auto"):
+        # 1. Defer immediately to avoid Discord 3-second interaction timeout
+        await interaction.response.defer()
+
+        # 2. Check and connect to voice
         vc = await self.ensure_voice(interaction)
         if not vc:
             return
@@ -595,27 +673,45 @@ class Music(commands.Cog):
         queue.voice_client = vc
         queue.text_channel = interaction.channel
 
-        await interaction.response.defer()
-        tracks = await self.service.search_and_extract(query, interaction.user, platform=platform, limit=1)
+        # 3. Search and extract
+        try:
+            tracks = await self.service.search_and_extract(query, interaction.user, platform=platform, limit=1)
+        except Exception as e:
+            log.error(f"[Music Search Error] {e}")
+            embed = make_error_embed(f"Track lookup failed: `{e}`")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
         if not tracks:
             embed = discord.Embed(description=f"{Emojis.REFUSED} No tracks found for: **{query}**", color=0xED4245)
             await interaction.followup.send(embed=embed, ephemeral=True)
             return
 
-        await self.enqueue_and_play(interaction, tracks)
+        # 4. Play
+        try:
+            await self.enqueue_and_play(interaction, tracks)
+        except Exception as e:
+            log.error(f"[Enqueue Error] {e}")
+            embed = make_error_embed(f"Could not start playback: `{e}`")
+            await interaction.followup.send(embed=embed, ephemeral=True)
 
     @app_commands.command(name="radio", description="Tune into endless 24/7 curated audio stations.")
     @app_commands.describe(station="Choose your radio vibe")
     async def slash_radio(self, interaction: discord.Interaction, station: Literal["lofi", "synthwave", "coffee", "sleep", "gaming"] = "lofi"):
+        await interaction.response.defer()
         await self.start_radio_for_interaction(interaction, station)
 
     @app_commands.command(name="lofi", description="Stream 24/7 relaxing lofi study and chill beats.")
     async def slash_lofi(self, interaction: discord.Interaction):
+        await interaction.response.defer()
         await self.start_radio_for_interaction(interaction, "lofi")
 
     @app_commands.command(name="search", description="Interactive 5-result music picker.")
     @app_commands.describe(query="Search query", platform="Streaming provider")
     async def slash_search(self, interaction: discord.Interaction, query: str, platform: Literal["auto", "youtube", "spotify", "soundcloud"] = "auto"):
+        # 1. Defer immediately
+        await interaction.response.defer()
+
         vc = await self.ensure_voice(interaction)
         if not vc:
             return
@@ -624,8 +720,14 @@ class Music(commands.Cog):
         queue.voice_client = vc
         queue.text_channel = interaction.channel
 
-        await interaction.response.defer()
-        tracks = await self.service.search_and_extract(query, interaction.user, platform=platform, limit=5)
+        try:
+            tracks = await self.service.search_and_extract(query, interaction.user, platform=platform, limit=5)
+        except Exception as e:
+            log.error(f"[Music Search Error] {e}")
+            embed = make_error_embed(f"Search failed: `{e}`")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
         if not tracks:
             embed = discord.Embed(description=f"{Emojis.REFUSED} No results found for **{query}**.", color=0xED4245)
             await interaction.followup.send(embed=embed, ephemeral=True)
@@ -828,7 +930,17 @@ class Music(commands.Cog):
         queue.text_channel = ctx.channel
 
         msg = await ctx.send(f"🔍 Searching for **{query}**...")
-        tracks = await self.service.search_and_extract(query, ctx.author, platform="auto", limit=1)
+        try:
+            tracks = await self.service.search_and_extract(query, ctx.author, platform="auto", limit=1)
+        except Exception as e:
+            try:
+                await msg.delete()
+            except Exception:
+                pass
+            embed = make_error_embed(f"Track lookup failed: `{e}`")
+            await ctx.send(embed=embed)
+            return
+
         try:
             await msg.delete()
         except Exception:
@@ -839,7 +951,11 @@ class Music(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        await self.enqueue_and_play_ctx(ctx, tracks)
+        try:
+            await self.enqueue_and_play_ctx(ctx, tracks)
+        except Exception as e:
+            embed = make_error_embed(f"Could not begin playback: `{e}`")
+            await ctx.send(embed=embed)
 
     @commands.command(name="radio", description="Tune into endless 24/7 curated audio stations.")
     async def cmd_radio(self, ctx: commands.Context, station: Optional[str] = None):
@@ -869,7 +985,17 @@ class Music(commands.Cog):
         queue.text_channel = ctx.channel
 
         msg = await ctx.send(f"🔍 Searching results for **{query}**...")
-        tracks = await self.service.search_and_extract(query, ctx.author, platform="auto", limit=5)
+        try:
+            tracks = await self.service.search_and_extract(query, ctx.author, platform="auto", limit=5)
+        except Exception as e:
+            try:
+                await msg.delete()
+            except Exception:
+                pass
+            embed = make_error_embed(f"Search failed: `{e}`")
+            await ctx.send(embed=embed)
+            return
+
         try:
             await msg.delete()
         except Exception:

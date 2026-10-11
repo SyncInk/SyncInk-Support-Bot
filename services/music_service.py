@@ -54,13 +54,20 @@ def ensure_opus_loaded() -> bool:
 ensure_opus_loaded()
 
 def get_ffmpeg_path() -> str:
-    """Finds the best ffmpeg executable available."""
+    """Finds the best ffmpeg executable available across Termux, Linux, and Windows."""
     env_path = os.getenv("FFMPEG_PATH")
-    if env_path and os.path.exists(env_path):
+    if env_path and (os.path.exists(env_path) or shutil.which(env_path)):
         return env_path
-    local_win = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ffmpeg.exe")
-    if os.path.exists(local_win):
-        return local_win
+    candidates = [
+        "/data/data/com.termux/files/usr/bin/ffmpeg",
+        "/usr/bin/ffmpeg",
+        "/usr/local/bin/ffmpeg",
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "ffmpeg.exe"),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "ffmpeg"),
+    ]
+    for c in candidates:
+        if c and os.path.exists(c):
+            return c
     sys_path = shutil.which("ffmpeg")
     if sys_path:
         return sys_path
@@ -256,7 +263,12 @@ class MusicService:
             'extract_flat': False,
             'source_address': '0.0.0.0',
             'skip_download': True,
-            'js_runtimes': {'node': {}},
+            'socket_timeout': 15,
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'web', 'mweb'],
+                }
+            },
         }
 
     @classmethod
@@ -338,7 +350,29 @@ class MusicService:
             with yt_dlp.YoutubeDL(opts) as ydl:
                 return ydl.extract_info(search_query, download=False)
 
-        info = await loop.run_in_executor(None, _extract)
+        info = None
+        try:
+            info = await loop.run_in_executor(None, _extract)
+        except Exception as primary_err:
+            log.warning(f"[Music Extract] Primary extraction failed for '{search_query}': {primary_err}")
+            # If search query is not a direct URL and not soundcloud, attempt soundcloud fallback
+            if not query.startswith("http://") and not query.startswith("https://") and detected_platform != "soundcloud":
+                log.info(f"[Music Extract] Attempting SoundCloud fallback for: {query}")
+                sc_query = f"scsearch{limit}:{query}"
+                def _sc_fallback():
+                    sc_opts = dict(self.ydl_opts)
+                    sc_opts.pop('extractor_args', None)
+                    with yt_dlp.YoutubeDL(sc_opts) as ydl:
+                        return ydl.extract_info(sc_query, download=False)
+                try:
+                    info = await loop.run_in_executor(None, _sc_fallback)
+                    detected_platform = "soundcloud"
+                except Exception as sc_err:
+                    log.error(f"[Music Extract] SoundCloud fallback also failed: {sc_err}")
+                    raise RuntimeError(f"Audio extraction failed: {primary_err}")
+            else:
+                raise RuntimeError(f"Audio extraction failed: {primary_err}")
+
         if not info:
             return []
 
