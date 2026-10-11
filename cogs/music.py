@@ -336,6 +336,23 @@ class Music(commands.Cog):
         self.bot = bot
         self.service = MusicService.get_instance()
 
+    def _music_allowed_guild_id(self) -> int:
+        """Keep music commands in the configured home guild; other guilds can host shared emojis."""
+        raw_guild_id = os.getenv("MUSIC_ALLOWED_GUILD_ID") or os.getenv("TARGET_GUILD_ID", "1520457643842342912")
+        try:
+            return int(raw_guild_id)
+        except (TypeError, ValueError):
+            return 1520457643842342912
+
+    async def cog_check(self, ctx: commands.Context) -> bool:
+        # Prefix music commands are intentionally inert in emoji-hosting guilds.
+        return bool(ctx.guild and ctx.guild.id == self._music_allowed_guild_id())
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        # Application music commands are global for discovery, but only operate in
+        # the configured music guild. No database state or other cogs are involved.
+        return bool(interaction.guild_id and interaction.guild_id == self._music_allowed_guild_id())
+
     async def _repair_davey(self) -> bool:
         """Loads DAVE compatibility shim or native davey library without requiring compiler."""
         try:
@@ -406,6 +423,8 @@ class Music(commands.Cog):
         return sent_msg
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+        if interaction.guild_id and interaction.guild_id != self._music_allowed_guild_id():
+            return
         orig = getattr(error, "original", error)
         log.error(f"[Music AppCommand Error] {type(orig).__name__}: {orig}")
         import traceback
@@ -585,12 +604,17 @@ class Music(commands.Cog):
                 await interaction.response.send_message(embed=embed)
 
     async def play_track(self, queue: GuildMusicQueue, track: Track):
+        queue.playback_token += 1
+        playback_token = queue.playback_token
         queue.current_track = track
         queue.start_time = time.time()
         queue.paused_at = None
         queue.total_paused_duration = 0.0
 
         try:
+            # yt-dlp media URLs are signed and short-lived. Resolve again when the
+            # track actually starts, especially for items that waited in the queue.
+            await self.service.refresh_stream_url(track)
             audio_source = self.service.create_audio_source(track, volume=queue.volume)
         except Exception as src_err:
             log.error(f"[Audio Source Error] {src_err}")
@@ -601,13 +625,16 @@ class Music(commands.Cog):
                     details="The audio stream could not be loaded or decoded.",
                     delay=30
                 )
-            await self.advance_queue(queue)
+            await self.advance_queue(queue, expected_token=playback_token)
             return
 
         def _after_playback(error):
             if error:
                 log.error(f"[Audio Playback Error] {error}")
-            asyncio.run_coroutine_threadsafe(self.advance_queue(queue), self.bot.loop)
+            if not self.bot.loop.is_closed():
+                asyncio.run_coroutine_threadsafe(
+                    self.advance_queue(queue, expected_token=playback_token), self.bot.loop
+                )
 
         if queue.voice_client:
             try:
@@ -624,7 +651,16 @@ class Music(commands.Cog):
                         delay=30
                     )
 
-    async def advance_queue(self, queue: GuildMusicQueue):
+    async def advance_queue(self, queue: GuildMusicQueue, expected_token: Optional[int] = None):
+        async with queue.advance_lock:
+            if expected_token is not None and expected_token != queue.playback_token:
+                return
+            # Invalidate this playback's callback before any awaits, so repeated
+            # after() notifications cannot start duplicate tracks.
+            queue.playback_token += 1
+        await self._advance_queue_locked(queue)
+
+    async def _advance_queue_locked(self, queue: GuildMusicQueue):
         if queue.repeat_mode == "track" and queue.current_track:
             next_track = queue.current_track
         elif queue.repeat_mode == "queue" and queue.current_track:
@@ -650,22 +686,35 @@ class Music(commands.Cog):
         # Queue is empty - Check 24/7 radio or Autoplay
         if queue.active_radio_station:
             station = RADIO_STATIONS.get(queue.active_radio_station)
-            if station:
-                query = random.choice(station["queries"])
-                tracks = await self.service.search_and_extract(query, queue.current_track.requested_by, platform="radio", limit=5)
-                chosen = tracks[0]
-                for t in tracks:
-                    if t.url not in queue.radio_recent_urls:
-                        chosen = t
+            requester = queue.current_track.requested_by if queue.current_track else None
+            if station and requester:
+                queries = list(station.get("queries", []))
+                random.shuffle(queries)
+                chosen = None
+                for query in queries[:3]:
+                    try:
+                        tracks = await self.service.search_and_extract(query, requester, platform="radio", limit=5)
+                    except Exception as radio_err:
+                        log.warning(f"[Radio] Could not resolve station track for '{query}': {radio_err}")
+                        continue
+                    chosen = next((track for track in tracks if track.url not in queue.radio_recent_urls), None)
+                    if chosen or tracks:
+                        chosen = chosen or tracks[0]
                         break
-                chosen.is_radio = True
-                chosen.radio_station_id = queue.active_radio_station
-                queue.radio_recent_urls.append(chosen.url)
-                await self.play_track(queue, chosen)
-                if queue.text_channel:
-                    view = MusicPlayerView(self, queue)
-                    queue.now_playing_message = await queue.text_channel.send(embed=build_now_playing_embed(queue), view=view)
-                return
+
+                if chosen:
+                    chosen.is_radio = True
+                    chosen.radio_station_id = queue.active_radio_station
+                    chosen.platform = "radio"
+                    queue.radio_recent_urls.append(chosen.url)
+                    queue.radio_recent_urls = queue.radio_recent_urls[-50:]
+                    await self.play_track(queue, chosen)
+                    if queue.text_channel:
+                        view = MusicPlayerView(self, queue)
+                        queue.now_playing_message = await queue.text_channel.send(embed=build_now_playing_embed(queue), view=view)
+                    return
+                log.warning(f"[Radio] No playable tracks resolved for station {queue.active_radio_station}; ending radio session.")
+                queue.active_radio_station = None
 
         if queue.autoplay and queue.history:
             last = queue.history[-1]

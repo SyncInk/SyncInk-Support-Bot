@@ -216,6 +216,10 @@ class GuildMusicQueue:
         self.inactivity_task: Optional[asyncio.Task] = None
         self.active_radio_station: Optional[str] = None
         self.radio_recent_urls: List[str] = []
+        # Audio callbacks run on discord.py's player thread; tokens and a lock prevent
+        # duplicate/stale callbacks from advancing the queue more than once.
+        self.playback_token: int = 0
+        self.advance_lock = asyncio.Lock()
 
     @property
     def size(self) -> int:
@@ -411,15 +415,42 @@ class MusicService:
 
         return tracks
 
+    async def refresh_stream_url(self, track: Track) -> str:
+        """Resolve a fresh media URL immediately before playback (extractor URLs expire)."""
+        if yt_dlp is None:
+            raise RuntimeError("yt-dlp is not installed; run ?fixmusic to repair music dependencies.")
+
+        loop = asyncio.get_running_loop()
+        opts = dict(self.ydl_opts)
+        opts["noplaylist"] = True
+
+        def _refresh():
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(track.url, download=False)
+            if info and info.get("entries"):
+                info = next((entry for entry in info["entries"] if entry), None)
+            if not info or not info.get("url"):
+                raise RuntimeError("The source did not return a playable audio stream.")
+            return info
+
+        info = await loop.run_in_executor(None, _refresh)
+        track.stream_url = info["url"]
+        track.is_live = bool(info.get("is_live", track.is_live))
+        return track.stream_url
+
     def create_audio_source(self, track: Track, volume: int = 100) -> discord.AudioSource:
         """Constructs an FFmpeg-backed PCMVolumeTransformer with resilient streaming options."""
         ffmpeg_bin = get_ffmpeg_path()
         before_options = (
             "-reconnect 1 "
             "-reconnect_streamed 1 "
+            "-reconnect_at_eof 1 "
+            "-reconnect_on_network_error 1 "
+            "-reconnect_on_http_error 5xx,408,429 "
             "-reconnect_delay_max 5 "
-            "-probesize 10000000 "
-            "-analyzeduration 15000000 "
+            "-rw_timeout 15000000 "
+            "-probesize 5000000 "
+            "-analyzeduration 5000000 "
             "-nostdin"
         )
         options = "-vn -ar 48000 -ac 2 -b:a 192k"
