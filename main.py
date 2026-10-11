@@ -1,3 +1,6 @@
+# Ensure Discord voice DAVE E2EE encryption shim is active before any discord imports
+import utils.davey_shim
+
 import discord
 from discord.ext import commands
 import asyncio
@@ -16,10 +19,6 @@ from database import db
 
 # Load environment variables
 load_dotenv()
-
-# Ensure Discord voice DAVE E2EE encryption shim is active for Termux & Android
-import utils.davey_shim
-utils.davey_shim.ensure_davey_loaded()
 
 class SyncInkBot(commands.Bot):
     def __init__(self, enable_presences: bool = True):

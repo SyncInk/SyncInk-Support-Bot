@@ -4,6 +4,9 @@ import random
 import sys
 import time
 from typing import Optional, Literal, Union
+
+import utils.davey_shim
+
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -49,7 +52,7 @@ def make_error_embed(
     )
     embed.set_author(name="SyncInk Platform", icon_url=BRAND_LOGO_URL)
     embed.set_footer(
-        text="⏱️ This message will automatically delete in 30 seconds • SyncInk Support",
+        text="SyncInk Platform • Pure Audio",
         icon_url=BRAND_LOGO_URL
     )
     return embed
@@ -132,16 +135,14 @@ class MusicPlayerView(discord.ui.View):
             await self.music_cog.send_error_embed(
                 interaction,
                 description="You must be in the voice channel to use music controls.",
-                is_warning=True,
-                delay=30
+                is_warning=True
             )
             return False
         if interaction.user.voice.channel.id != interaction.guild.voice_client.channel.id:
             await self.music_cog.send_error_embed(
                 interaction,
                 description="You must be in the same voice channel as the bot.",
-                is_warning=True,
-                delay=30
+                is_warning=True
             )
             return False
         return True
@@ -152,8 +153,7 @@ class MusicPlayerView(discord.ui.View):
             await self.music_cog.send_error_embed(
                 interaction,
                 description="No previous track in history.",
-                is_warning=True,
-                delay=30
+                is_warning=True
             )
             return
         prev_track = self.queue.history.pop()
@@ -171,8 +171,7 @@ class MusicPlayerView(discord.ui.View):
             await self.music_cog.send_error_embed(
                 interaction,
                 description="Not currently connected to voice.",
-                is_warning=True,
-                delay=30
+                is_warning=True
             )
             return
         if vc.is_paused():
@@ -197,8 +196,7 @@ class MusicPlayerView(discord.ui.View):
             await self.music_cog.send_error_embed(
                 interaction,
                 description="Nothing is currently playing.",
-                is_warning=True,
-                delay=30
+                is_warning=True
             )
             return
         skipped_name = self.queue.current_track.clean_title
@@ -246,8 +244,7 @@ class MusicPlayerView(discord.ui.View):
             await self.music_cog.send_error_embed(
                 interaction,
                 description="Need at least 2 tracks in the queue to shuffle.",
-                is_warning=True,
-                delay=30
+                is_warning=True
             )
             return
         random.shuffle(self.queue.tracks)
@@ -311,8 +308,7 @@ class SearchPickerView(discord.ui.View):
                 await self.music_cog.send_error_embed(
                     interaction,
                     description="Only the search requester can select tracks.",
-                    is_warning=True,
-                    delay=30
+                    is_warning=True
                 )
                 return
             selected = self.tracks[index]
@@ -326,8 +322,7 @@ class SearchPickerView(discord.ui.View):
             await self.music_cog.send_error_embed(
                 interaction,
                 description="Only the search requester can cancel this search.",
-                is_warning=True,
-                delay=30
+                is_warning=True
             )
             return
         self.stop()
@@ -367,10 +362,17 @@ class Music(commands.Cog):
         target: Union[discord.Interaction, commands.Context, discord.abc.Messageable],
         description: str,
         details: Optional[str] = None,
-        delay: int = 30,
+        delay: Optional[int] = None,
         is_warning: bool = False,
     ) -> Optional[discord.Message]:
-        """Sends a standardized error embed and schedules its automatic deletion after delay seconds."""
+        """
+        Sends a standardized error embed.
+        Core software/bot system errors (is_warning=False) auto-delete after 30 seconds.
+        Normal user warnings/notices (is_warning=True) are preserved in chat unless delay is explicitly set.
+        """
+        if delay is None and not is_warning:
+            delay = 30
+
         embed = make_error_embed(description, details=details, is_warning=is_warning)
         sent_msg = None
 
@@ -384,14 +386,20 @@ class Music(commands.Cog):
                         sent_msg = await target.original_response()
                     except Exception:
                         pass
-                if sent_msg:
+                if sent_msg and delay:
                     asyncio.create_task(_delayed_delete_msg(sent_msg, delay))
             elif isinstance(target, commands.Context):
-                sent_msg = await target.send(embed=embed, delete_after=delay)
-                if target.message:
-                    asyncio.create_task(_delayed_delete_msg(target.message, delay))
+                if delay:
+                    sent_msg = await target.send(embed=embed, delete_after=delay)
+                    if target.message:
+                        asyncio.create_task(_delayed_delete_msg(target.message, delay))
+                else:
+                    sent_msg = await target.send(embed=embed)
             elif hasattr(target, "send"):
-                sent_msg = await target.send(embed=embed, delete_after=delay)
+                if delay:
+                    sent_msg = await target.send(embed=embed, delete_after=delay)
+                else:
+                    sent_msg = await target.send(embed=embed)
         except Exception as e:
             log.error(f"[send_error_embed Error] {e}")
 
@@ -454,8 +462,7 @@ class Music(commands.Cog):
             await self.send_error_embed(
                 interaction,
                 description="You must be in a voice channel first! Please join a voice channel and try again.",
-                is_warning=True,
-                delay=30
+                is_warning=True
             )
             return None
 
@@ -465,7 +472,7 @@ class Music(commands.Cog):
             await self.send_error_embed(
                 interaction,
                 description=f"I do not have permission to connect or speak in {channel.mention}.",
-                delay=30
+                is_warning=True
             )
             return None
 
@@ -736,8 +743,7 @@ class Music(commands.Cog):
             await self.send_error_embed(
                 ctx,
                 description="Please join a voice channel first, then try again.",
-                is_warning=True,
-                delay=30
+                is_warning=True
             )
             return None
 
@@ -747,7 +753,7 @@ class Music(commands.Cog):
             await self.send_error_embed(
                 ctx,
                 description=f"I do not have permission to connect or speak in {channel.mention}.",
-                delay=30
+                is_warning=True
             )
             return None
 
@@ -876,7 +882,7 @@ class Music(commands.Cog):
             return
 
         if not tracks:
-            await self.send_error_embed(interaction, description=f"No tracks found for: **{query}**", delay=30)
+            await self.send_error_embed(interaction, description=f"No tracks found for: **{query}**", is_warning=True)
             return
 
         # 4. Play
@@ -919,7 +925,7 @@ class Music(commands.Cog):
             return
 
         if not tracks:
-            await self.send_error_embed(interaction, description=f"No results found for **{query}**.", delay=30)
+            await self.send_error_embed(interaction, description=f"No results found for **{query}**.", is_warning=True)
             return
 
         embed = discord.Embed(title="🔍 Search Results", color=BRAND_COLOR)
@@ -937,7 +943,7 @@ class Music(commands.Cog):
     async def slash_pause(self, interaction: discord.Interaction):
         queue = self.service.get_queue(interaction.guild_id)
         if not queue.voice_client or not queue.voice_client.is_playing():
-            await self.send_error_embed(interaction, description="Nothing is currently playing.", is_warning=True, delay=30)
+            await self.send_error_embed(interaction, description="Nothing is currently playing.", is_warning=True)
             return
         queue.voice_client.pause()
         queue.paused_at = time.time()
@@ -952,7 +958,7 @@ class Music(commands.Cog):
     async def slash_resume(self, interaction: discord.Interaction):
         queue = self.service.get_queue(interaction.guild_id)
         if not queue.voice_client or not queue.voice_client.is_paused():
-            await self.send_error_embed(interaction, description="Playback is not paused.", is_warning=True, delay=30)
+            await self.send_error_embed(interaction, description="Playback is not paused.", is_warning=True)
             return
         queue.voice_client.resume()
         if queue.paused_at is not None:
@@ -970,7 +976,7 @@ class Music(commands.Cog):
     async def slash_skip(self, interaction: discord.Interaction, count: int = 1):
         queue = self.service.get_queue(interaction.guild_id)
         if not queue.voice_client or not queue.current_track:
-            await self.send_error_embed(interaction, description="Nothing is currently playing to skip.", is_warning=True, delay=30)
+            await self.send_error_embed(interaction, description="Nothing is currently playing to skip.", is_warning=True)
             return
         to_drop = max(0, count - 1)
         for _ in range(min(to_drop, len(queue.tracks))):
@@ -983,7 +989,7 @@ class Music(commands.Cog):
     async def slash_previous(self, interaction: discord.Interaction):
         queue = self.service.get_queue(interaction.guild_id)
         if not queue.history:
-            await self.send_error_embed(interaction, description="No history available.", is_warning=True, delay=30)
+            await self.send_error_embed(interaction, description="No history available.", is_warning=True)
             return
         prev = queue.history.pop()
         if queue.current_track:
@@ -1013,7 +1019,7 @@ class Music(commands.Cog):
             embed = discord.Embed(description=f"{Emojis.DELETE} Left the voice channel and cleared active session.", color=BRAND_COLOR)
             await interaction.response.send_message(embed=embed)
         else:
-            await self.send_error_embed(interaction, description="Not currently connected to voice.", is_warning=True, delay=30)
+            await self.send_error_embed(interaction, description="Not currently connected to voice.", is_warning=True)
 
     @app_commands.command(name="queue", description="Manage or display the music queue.")
     @app_commands.describe(action="View or clear the upcoming queue")
@@ -1032,7 +1038,7 @@ class Music(commands.Cog):
     async def slash_np(self, interaction: discord.Interaction):
         queue = self.service.get_queue(interaction.guild_id)
         if not queue.current_track:
-            await self.send_error_embed(interaction, description="Nothing is currently playing.", is_warning=True, delay=30)
+            await self.send_error_embed(interaction, description="Nothing is currently playing.", is_warning=True)
             return
         embed = build_now_playing_embed(queue)
         view = MusicPlayerView(self, queue)
@@ -1042,7 +1048,7 @@ class Music(commands.Cog):
     async def slash_shuffle(self, interaction: discord.Interaction):
         queue = self.service.get_queue(interaction.guild_id)
         if len(queue.tracks) < 2:
-            await self.send_error_embed(interaction, description="Need at least 2 tracks in queue to shuffle.", is_warning=True, delay=30)
+            await self.send_error_embed(interaction, description="Need at least 2 tracks in queue to shuffle.", is_warning=True)
             return
         random.shuffle(queue.tracks)
         await interaction.response.send_message(f"{Emojis.SHUFFLE} Randomized **{len(queue.tracks)}** upcoming tracks!")
@@ -1086,7 +1092,7 @@ class Music(commands.Cog):
     async def slash_replay(self, interaction: discord.Interaction):
         queue = self.service.get_queue(interaction.guild_id)
         if not queue.current_track or not queue.voice_client:
-            await self.send_error_embed(interaction, description="Nothing is currently playing.", is_warning=True, delay=30)
+            await self.send_error_embed(interaction, description="Nothing is currently playing.", is_warning=True)
             return
         curr = queue.current_track
         queue.tracks.insert(0, curr)
@@ -1112,8 +1118,7 @@ class Music(commands.Cog):
                 ctx,
                 description="Usage: `?play <song title, artist, or music URL>`",
                 details="*Example:* `?play lofi hip hop` or `?play https://...`",
-                is_warning=True,
-                delay=30
+                is_warning=True
             )
             return
 
@@ -1141,7 +1146,7 @@ class Music(commands.Cog):
             pass
 
         if not tracks:
-            await self.send_error_embed(ctx, description=f"No tracks found for: **{query}**", delay=30)
+            await self.send_error_embed(ctx, description=f"No tracks found for: **{query}**", is_warning=True)
             return
 
         try:
@@ -1162,8 +1167,7 @@ class Music(commands.Cog):
                 ctx,
                 description=f"Unknown station `{station}`.",
                 details=f"Available stations: {stations_list}",
-                is_warning=True,
-                delay=30
+                is_warning=True
             )
             return
         await self.start_radio_for_ctx(ctx, st)
@@ -1199,7 +1203,7 @@ class Music(commands.Cog):
             pass
 
         if not tracks:
-            await self.send_error_embed(ctx, description=f"No results found for **{query}**.", delay=30)
+            await self.send_error_embed(ctx, description=f"No results found for **{query}**.", is_warning=True)
             return
 
         embed = discord.Embed(title="🔍 Search Results", color=BRAND_COLOR)
@@ -1217,7 +1221,7 @@ class Music(commands.Cog):
     async def cmd_pause(self, ctx: commands.Context):
         queue = self.service.get_queue(ctx.guild.id)
         if not queue.voice_client or not queue.voice_client.is_playing():
-            await self.send_error_embed(ctx, description="Nothing is currently playing.", is_warning=True, delay=30)
+            await self.send_error_embed(ctx, description="Nothing is currently playing.", is_warning=True)
             return
         queue.voice_client.pause()
         queue.paused_at = time.time()
@@ -1232,7 +1236,7 @@ class Music(commands.Cog):
     async def cmd_resume(self, ctx: commands.Context):
         queue = self.service.get_queue(ctx.guild.id)
         if not queue.voice_client or not queue.voice_client.is_paused():
-            await self.send_error_embed(ctx, description="Playback is not paused.", is_warning=True, delay=30)
+            await self.send_error_embed(ctx, description="Playback is not paused.", is_warning=True)
             return
         queue.voice_client.resume()
         if queue.paused_at is not None:
@@ -1249,7 +1253,7 @@ class Music(commands.Cog):
     async def cmd_skip(self, ctx: commands.Context, count: int = 1):
         queue = self.service.get_queue(ctx.guild.id)
         if not queue.voice_client or not queue.current_track:
-            await self.send_error_embed(ctx, description="Nothing is currently playing to skip.", is_warning=True, delay=30)
+            await self.send_error_embed(ctx, description="Nothing is currently playing to skip.", is_warning=True)
             return
         to_drop = max(0, count - 1)
         for _ in range(min(to_drop, len(queue.tracks))):
@@ -1262,7 +1266,7 @@ class Music(commands.Cog):
     async def cmd_previous(self, ctx: commands.Context):
         queue = self.service.get_queue(ctx.guild.id)
         if not queue.history:
-            await self.send_error_embed(ctx, description="No history available.", is_warning=True, delay=30)
+            await self.send_error_embed(ctx, description="No history available.", is_warning=True)
             return
         prev = queue.history.pop()
         if queue.current_track:
@@ -1292,7 +1296,7 @@ class Music(commands.Cog):
             embed = discord.Embed(description=f"{Emojis.DELETE} Left the voice channel and cleared active session.", color=BRAND_COLOR)
             await ctx.send(embed=embed)
         else:
-            await self.send_error_embed(ctx, description="Not currently connected to voice.", is_warning=True, delay=30)
+            await self.send_error_embed(ctx, description="Not currently connected to voice.", is_warning=True)
 
     @commands.command(name="queue", aliases=["q"], description="Manage or display the music queue.")
     async def cmd_queue(self, ctx: commands.Context, action: str = "list"):
@@ -1310,7 +1314,7 @@ class Music(commands.Cog):
     async def cmd_np(self, ctx: commands.Context):
         queue = self.service.get_queue(ctx.guild.id)
         if not queue.current_track:
-            await self.send_error_embed(ctx, description="Nothing is currently playing.", is_warning=True, delay=30)
+            await self.send_error_embed(ctx, description="Nothing is currently playing.", is_warning=True)
             return
         embed = build_now_playing_embed(queue)
         view = MusicPlayerView(self, queue)
@@ -1320,7 +1324,7 @@ class Music(commands.Cog):
     async def cmd_shuffle(self, ctx: commands.Context):
         queue = self.service.get_queue(ctx.guild.id)
         if len(queue.tracks) < 2:
-            await self.send_error_embed(ctx, description="Need at least 2 tracks in queue to shuffle.", is_warning=True, delay=30)
+            await self.send_error_embed(ctx, description="Need at least 2 tracks in queue to shuffle.", is_warning=True)
             return
         random.shuffle(queue.tracks)
         await ctx.send(f"{Emojis.SHUFFLE} Randomized **{len(queue.tracks)}** upcoming tracks!")
@@ -1380,7 +1384,7 @@ class Music(commands.Cog):
     async def cmd_replay(self, ctx: commands.Context):
         queue = self.service.get_queue(ctx.guild.id)
         if not queue.current_track or not queue.voice_client:
-            await self.send_error_embed(ctx, description="Nothing is currently playing.", is_warning=True, delay=30)
+            await self.send_error_embed(ctx, description="Nothing is currently playing.", is_warning=True)
             return
         curr = queue.current_track
         queue.tracks.insert(0, curr)

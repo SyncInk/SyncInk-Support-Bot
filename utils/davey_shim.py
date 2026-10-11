@@ -5,41 +5,13 @@ when native C/Rust 'davey' extensions cannot be compiled (notably on Termux / An
 """
 import sys
 import types
+import builtins
 from utils.logger import log
 
-def ensure_davey_loaded() -> bool:
-    """
-    Ensures Discord.py voice engine has DAVE support enabled without crashing.
-    If native davey is present, it uses native davey.
-    If native davey is missing (e.g. Termux / Android), it dynamically provides
-    a pure-Python compatibility module in sys.modules so VoiceClient can connect smoothly.
-    """
-    # 1. Check if real davey is already installed
-    try:
-        import davey
-        import discord.voice_state
-        import discord.voice_client
-        discord.voice_state.has_dave = True
-        discord.voice_client.has_dave = True
-        return True
-    except ImportError:
-        pass
-
-    # 2. If already shimmed in sys.modules, ensure flags are set
-    if "davey" in sys.modules:
-        try:
-            import discord.voice_state
-            import discord.voice_client
-            discord.voice_state.has_dave = True
-            discord.voice_client.has_dave = True
-        except Exception:
-            pass
-        return True
-
-    # 3. Construct drop-in pure-Python shim module
+def _build_davey_shim() -> types.ModuleType:
     shim = types.ModuleType("davey")
     shim.__version__ = "0.1.6-syncink-shim"
-    shim.DAVE_PROTOCOL_VERSION = 0  # Signal protocol version 0 (standard voice encryption)
+    shim.DAVE_PROTOCOL_VERSION = 0  # Request standard voice protocol 0
     shim.DEBUG_BUILD = False
 
     class ProposalsOperationType:
@@ -91,20 +63,51 @@ def ensure_davey_loaded() -> bool:
     shim.ProposalsOperationType = ProposalsOperationType
     shim.CommitWelcome = CommitWelcome
     shim.DaveSession = DaveSession
+    return shim
 
-    # Inject into sys.modules so `import davey` works anywhere in discord.py
-    sys.modules["davey"] = shim
+def ensure_davey_loaded() -> bool:
+    """
+    Ensures Discord.py voice engine has DAVE support enabled without crashing.
+    Injects shim module into sys.modules, builtins, and discord internals.
+    """
+    # 1. Check if real davey is already installed and usable
+    has_native = False
+    try:
+        import davey
+        if hasattr(davey, "DaveSession") and hasattr(davey, "DAVE_PROTOCOL_VERSION"):
+            has_native = True
+    except Exception:
+        has_native = False
 
+    if not has_native:
+        shim = _build_davey_shim()
+        sys.modules["davey"] = shim
+        builtins.davey = shim
+
+    # 2. Patch discord internals
     try:
         import discord.voice_state
         import discord.voice_client
+        import discord.gateway
+
+        davey_mod = sys.modules.get("davey")
+        if davey_mod:
+            discord.voice_state.davey = davey_mod
+            discord.voice_client.davey = davey_mod
+            discord.gateway.davey = davey_mod
+
         discord.voice_state.has_dave = True
         discord.voice_client.has_dave = True
+
+        if not has_native:
+            # Force max_dave_protocol_version to return 0 so Discord gateway uses standard RTP voice
+            discord.voice_state.VoiceConnectionState.max_dave_protocol_version = property(lambda self: 0)
+
+        log.info(f"[Voice Engine] Voice DAVE initialized (native={has_native}, protocol_ver={0 if not has_native else 'native'}).")
+        return True
     except Exception as e:
-        log.debug(f"[Voice Engine] Shim patch note: {e}")
+        log.warning(f"[Voice Engine] Discord voice patch notice: {e}")
+        return False
 
-    log.info("[Voice Engine] Discord voice DAVE compatibility shim loaded (Protocol 0).")
-    return True
-
-# Auto-execute on import
+# Automatically activate shim as soon as this module is loaded
 ensure_davey_loaded()
