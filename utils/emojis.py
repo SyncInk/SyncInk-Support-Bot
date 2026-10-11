@@ -33,6 +33,15 @@ class Emojis:
     HEART_POP = "<a:heartpop:1558594180937424896>"
     SCRIBBLE_HEART = "<a:scribbleheart:1558596661087969300>"
 
+    # Interactive Server Emojis
+    ARROW = "<a:arrow:1558799019927543878>"
+    PURPLE_HEART_EXCLAIM = "<a:purpleheartexclaim:1558799132871757844>"
+    S_ARROW = "<:s_arrow:1558799699102793801>"
+    TIME = "<:time:1558804154963468288>"
+    PENGUBONK = "<a:pengubonk:1558803021507600506>"
+    EARTH_BLURPLE = "<a:7049earthblurple:1558803274813935666>"
+    SYNCINK_RADIO = "<:syncinkradio:1558804305044045844>"
+
     # Official Ticket Category Emojis (<:name:id>)
     TICKET_PRODUCT = "<:SyncProductSupport:1553532855278116956>"
     TICKET_ACCOUNT = "<:accsvr:1553532858058936424>"
@@ -88,6 +97,15 @@ class EmojiPartials:
     NEON_HEART = discord.PartialEmoji(name="neonheart", id=1558594319227813949, animated=False)
     HEART_POP = discord.PartialEmoji(name="heartpop", id=1558594180937424896, animated=True)
     SCRIBBLE_HEART = discord.PartialEmoji(name="scribbleheart", id=1558596661087969300, animated=True)
+
+    # Interactive partials
+    ARROW = discord.PartialEmoji(name="arrow", id=1558799019927543878, animated=True)
+    PURPLE_HEART_EXCLAIM = discord.PartialEmoji(name="purpleheartexclaim", id=1558799132871757844, animated=True)
+    S_ARROW = discord.PartialEmoji(name="s_arrow", id=1558799699102793801, animated=False)
+    TIME = discord.PartialEmoji(name="time", id=1558804154963468288, animated=False)
+    PENGUBONK = discord.PartialEmoji(name="pengubonk", id=1558803021507600506, animated=True)
+    EARTH_BLURPLE = discord.PartialEmoji(name="7049earthblurple", id=1558803274813935666, animated=True)
+    SYNCINK_RADIO = discord.PartialEmoji(name="syncinkradio", id=1558804305044045844, animated=False)
 
     # Ticket category partials
     TICKET_PRODUCT = discord.PartialEmoji(name="SyncProductSupport", id=1553532855278116956, animated=False)
@@ -189,6 +207,19 @@ EMOJI_NAME_MAP = {
     "heart_pop": "<a:heartpop:1558594180937424896>",
     "scribbleheart": "<a:scribbleheart:1558596661087969300>",
     "scribble_heart": "<a:scribbleheart:1558596661087969300>",
+
+    # Interactive Server Emojis
+    "arrow": "<a:arrow:1558799019927543878>",
+    "purpleheartexclaim": "<a:purpleheartexclaim:1558799132871757844>",
+    "purple_heart_exclaim": "<a:purpleheartexclaim:1558799132871757844>",
+    "s_arrow": "<:s_arrow:1558799699102793801>",
+    "sarrow": "<:s_arrow:1558799699102793801>",
+    "time": "<:time:1558804154963468288>",
+    "pengubonk": "<a:pengubonk:1558803021507600506>",
+    "7049earthblurple": "<a:7049earthblurple:1558803274813935666>",
+    "earthblurple": "<a:7049earthblurple:1558803274813935666>",
+    "syncinkradio": "<:syncinkradio:1558804305044045844>",
+    "syncink_radio": "<:syncinkradio:1558804305044045844>",
 }
 
 def format_discord_emojis(text: str) -> str:

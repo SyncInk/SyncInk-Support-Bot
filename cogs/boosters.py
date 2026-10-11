@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import aiohttp
+import asyncio
 import time
 from typing import Optional
 from utils.logger import log
@@ -15,11 +16,15 @@ BOOSTER_ROLE_ID = 1558584451724738640
 WEBHOOK_NAME = "Boosters"
 WEBHOOK_AVATAR_URL = "https://cdn3.emoji.gg/emojis/853887-serverboost.png"
 
-# Official Emojis
+# Official & Interactive Emojis
 EMOJI_BOOSTER = "<:booster:1558595630660714616>"
 EMOJI_NEON_HEART = "<:neonheart:1558594319227813949>"
 EMOJI_HEART_POP = "<a:heartpop:1558594180937424896>"
 EMOJI_SCRIBBLE_HEART = "<a:scribbleheart:1558596661087969300>"
+EMOJI_ARROW = "<a:arrow:1558799019927543878>"
+EMOJI_PURPLE_HEART_EXCLAIM = "<a:purpleheartexclaim:1558799132871757844>"
+EMOJI_S_ARROW = "<:s_arrow:1558799699102793801>"
+EMOJI_TIME = "<:time:1558804154963468288>"
 
 class Boosters(commands.Cog):
     """Automated Server Booster Celebration, Webhook Dispatcher & Role Handler."""
@@ -89,13 +94,14 @@ class Boosters(commands.Cog):
 
         embed = discord.Embed(
             description=(
-                f"{EMOJI_NEON_HEART} **Huge thank you to {member.mention} for boosting SyncInk Support!**\n"
-                f"You're absolute royalty in our server! Your support helps keep our infrastructure powered and our community thriving! {EMOJI_HEART_POP}\n\n"
-                f"- **VIP Support Chat:** Head over to <#{VIP_CHAT_CHANNEL_ID}> for exclusive VIP chat & direct developer assistance.\n"
-                f"- **Media & Upload Privileges:** Enjoy unrestricted permission to upload media, images, video clips, and attachments.\n"
-                f"- **Priority Ticket Support:** Inquired faster & kept in main priority.\n"
-                f"- **Booster Badge:** Equipped with the {EMOJI_BOOSTER} <@&{BOOSTER_ROLE_ID}> role!\n\n"
-                f"*all tickets created will be resolved if no rush but for boosters it will be on main priority*"
+                f"{EMOJI_PURPLE_HEART_EXCLAIM} **Huge thank you to {member.mention} for boosting SyncInk Support!**\n"
+                f"You're absolute royalty in our server! Your support helps keep our infrastructure powered and our community thriving! {EMOJI_NEON_HEART}\n\n"
+                f"**Exclusive Booster Perks:**\n"
+                f"{EMOJI_ARROW} **VIP Support Chat:** Head over to <#{VIP_CHAT_CHANNEL_ID}> for exclusive VIP chat & direct developer assistance.\n"
+                f"{EMOJI_ARROW} **Media & Upload Privileges:** Enjoy unrestricted permission to upload media, images, video clips, and attachments.\n"
+                f"{EMOJI_ARROW} **Priority Ticket Support:** Inquired faster & kept on main priority.\n"
+                f"{EMOJI_ARROW} **Booster Badge & Role:** Equipped with the {EMOJI_BOOSTER} <@&{BOOSTER_ROLE_ID}> role!\n\n"
+                f"-# all tickets created will be resolved if no rush but for boosters it will be on main priority"
             ),
             color=0xF47FFF,  # Discord Nitro Pink
             timestamp=discord.utils.utcnow()
@@ -140,26 +146,40 @@ class Boosters(commands.Cog):
 
         if webhook:
             try:
-                await webhook.send(
+                sent_msg = await webhook.send(
                     content=content,
                     embed=embed,
                     username=WEBHOOK_NAME,
-                    avatar_url=WEBHOOK_AVATAR_URL
+                    avatar_url=WEBHOOK_AVATAR_URL,
+                    wait=True
                 )
                 log.info(f"Dispatched booster webhook announcement for {member.name} in #{channel.name}")
+                if sent_msg:
+                    try:
+                        await sent_msg.add_reaction(EMOJI_SCRIBBLE_HEART)
+                    except Exception as react_e:
+                        log.warning(f"Could not react to booster webhook message: {react_e}")
                 return True, f"Successfully posted via Boosters webhook in {channel.mention}."
             except Exception as e:
                 log.error(f"Failed to dispatch booster webhook: {e}")
                 # Fallback to normal bot message if webhook fails
                 try:
-                    await channel.send(content=content, embed=embed)
+                    sent_msg = await channel.send(content=content, embed=embed)
+                    try:
+                        await sent_msg.add_reaction(EMOJI_SCRIBBLE_HEART)
+                    except Exception:
+                        pass
                     return True, f"Webhook failed; posted as bot fallback in {channel.mention}."
                 except Exception as inner_e:
                     return False, f"Failed to post announcement: {inner_e}"
         else:
             # Fallback to channel send
             try:
-                await channel.send(content=content, embed=embed)
+                sent_msg = await channel.send(content=content, embed=embed)
+                try:
+                    await sent_msg.add_reaction(EMOJI_SCRIBBLE_HEART)
+                except Exception:
+                    pass
                 return True, f"Posted announcement directly in {channel.mention}."
             except Exception as e:
                 return False, f"Failed to post announcement: {e}"
@@ -213,34 +233,44 @@ class Boosters(commands.Cog):
     async def testboost_cmd(self, ctx: commands.Context, member: Optional[discord.Member] = None):
         """Prefix command to test booster webhook announcement and role assignment."""
         target = member or ctx.author
+
+        # Cleanly delete trigger command message
+        try:
+            await ctx.message.delete()
+        except Exception:
+            pass
+
         if ctx.guild.id != TARGET_GUILD_ID:
-            await ctx.send(embed=ErrorEmbed(
-                description=f"This booster system is configured for Guild ID `{TARGET_GUILD_ID}`.",
-                resolution="Please run this command inside the official SyncInk Support server."
-            ))
+            await ctx.send(
+                embed=ErrorEmbed(
+                    description=f"This booster system is configured for Guild ID `{TARGET_GUILD_ID}`.",
+                    resolution="Please run this command inside the official SyncInk Support server."
+                ),
+                delete_after=6
+            )
             return
 
-        msg = await ctx.send(f"Simulating server boost for {target.mention}...")
         success, details = await self.announce_boost(target, is_test=True)
 
         if success:
-            await msg.edit(
-                content=None,
+            await ctx.send(
                 embed=SuccessEmbed(
                     f"**Booster Simulation Complete!** {EMOJI_HEART_POP}\n\n"
-                    f"• **Target Member:** {target.mention} (`{target.id}`)\n"
-                    f"• **Assigned Role:** <@&{BOOSTER_ROLE_ID}> (`{BOOSTER_ROLE_ID}`)\n"
-                    f"• **Announcement Channel:** <#{BOOSTER_CHANNEL_ID}>\n"
-                    f"• **Status:** {details}"
-                )
+                    f"{EMOJI_S_ARROW} **Target Member:** {target.mention} (`{target.id}`)\n"
+                    f"{EMOJI_S_ARROW} **Assigned Role:** <@&{BOOSTER_ROLE_ID}> (`{BOOSTER_ROLE_ID}`)\n"
+                    f"{EMOJI_S_ARROW} **Announcement Channel:** <#{BOOSTER_CHANNEL_ID}>\n"
+                    f"{EMOJI_S_ARROW} **Status:** {details}\n\n"
+                    f"-# This confirmation message will self-delete in 6 seconds."
+                ),
+                delete_after=6
             )
         else:
-            await msg.edit(
-                content=None,
+            await ctx.send(
                 embed=ErrorEmbed(
                     description=f"Failed to simulate boost for {target.mention}.",
                     resolution=details
-                )
+                ),
+                delete_after=8
             )
 
     @app_commands.command(
@@ -273,13 +303,19 @@ class Boosters(commands.Cog):
             await interaction.followup.send(
                 embed=SuccessEmbed(
                     f"**Booster Simulation Complete!** {EMOJI_HEART_POP}\n\n"
-                    f"• **Target Member:** {target.mention} (`{target.id}`)\n"
-                    f"• **Assigned Role:** <@&{BOOSTER_ROLE_ID}> (`{BOOSTER_ROLE_ID}`)\n"
-                    f"• **Announcement Channel:** <#{BOOSTER_CHANNEL_ID}>\n"
-                    f"• **Status:** {details}"
+                    f"{EMOJI_S_ARROW} **Target Member:** {target.mention} (`{target.id}`)\n"
+                    f"{EMOJI_S_ARROW} **Assigned Role:** <@&{BOOSTER_ROLE_ID}> (`{BOOSTER_ROLE_ID}`)\n"
+                    f"{EMOJI_S_ARROW} **Announcement Channel:** <#{BOOSTER_CHANNEL_ID}>\n"
+                    f"{EMOJI_S_ARROW} **Status:** {details}\n\n"
+                    f"-# This confirmation message will self-delete in 6 seconds."
                 ),
                 ephemeral=True
             )
+            try:
+                await asyncio.sleep(6)
+                await interaction.delete_original_response()
+            except Exception:
+                pass
         else:
             await interaction.followup.send(
                 embed=ErrorEmbed(

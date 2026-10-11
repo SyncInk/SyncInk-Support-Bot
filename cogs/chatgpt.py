@@ -47,7 +47,7 @@ def is_creator_query(prompt: str) -> bool:
     return any(p in clean for p in patterns)
 
 def sanitize_ai_identity(text: str) -> str:
-    """Ensures AI never leaks third-party vendor names, confuses support chat with general chat, and properly formats custom Discord emojis."""
+    """Ensures AI never leaks third-party vendor names, confuses support chat with general chat, removes unprofessional divider lines, and properly formats custom Discord emojis."""
     replacements = [
         ("I was trained by Google", "I was developed by the SyncInk Development Team"),
         ("I am a large language model trained by Google", "I am SyncInk Assistant, developed by the SyncInk Development Team"),
@@ -89,9 +89,19 @@ def sanitize_ai_identity(text: str) -> str:
         flags=re.IGNORECASE
     )
 
+    # Strip decorative horizontal divider lines (---, ___, ***)
+    res = re.sub(r'^\s*[-_*]{3,}\s*$', '', res, flags=re.MULTILINE)
+
+    # Replace unicode box-drawing tree characters (╰, └, ├) with server custom emoji <:s_arrow:1558799699102793801>
+    res = re.sub(r'[╰└├]\s*', '<:s_arrow:1558799699102793801> ', res)
+
     # Automatically transform any raw :name: emojis into valid <:name:id> custom Discord emojis
     res = format_discord_emojis(res)
-    return res
+
+    # Clean up excessive blank lines
+    res = re.sub(r'\n{3,}', '\n\n', res)
+
+    return res.strip()
 
 def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = None) -> str:
     """Builds the comprehensive official server channel, bot ecosystem, and guide knowledge base."""
@@ -212,9 +222,10 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "• Exclusive Perks for Boosters:",
         "  1. VIP Support Chat (<#1558589470469525504>): Private VIP chat channel for priority communication, direct developer assistance, and lounge discussions.",
         "  2. Media & Upload Privileges: Permission to send images, video clips, and file attachments.",
-        "  3. Priority Support: Tickets opened by boosters in <#1520460764937322566> are inquired faster and kept on main priority (*all tickets created will be resolved if no rush but for boosters it will be on main priority*).",
+        "  3. Priority Support: Tickets opened by boosters in <#1520460764937322566> are inquired faster and kept on main priority (-# all tickets created will be resolved if no rush but for boosters it will be on main priority).",
         "  4. Booster Role & Badge: Distinguished <:booster:1558595630660714616> role on server member list.",
-        "• Booster Emojis: <:booster:1558595630660714616>, <:neonheart:1558594319227813949>, <a:heartpop:1558594180937424896>, <a:scribbleheart:1558596661087969300>"
+        "• Booster Emojis: <:booster:1558595630660714616>, <:neonheart:1558594319227813949>, <a:heartpop:1558594180937424896>, <a:scribbleheart:1558596661087969300>",
+        "• Interactive Server Emojis: <a:arrow:1558799019927543878>, <a:purpleheartexclaim:1558799132871757844>, <:s_arrow:1558799699102793801>, <:time:1558804154963468288>, <a:pengubonk:1558803021507600506>, <a:7049earthblurple:1558803274813935666>, <:syncinkradio:1558804305044045844>"
     ]
     return "\n".join(lines)
 
@@ -1016,8 +1027,10 @@ class ChatGPT(commands.Cog):
             "   - Whether the query is about programming, algorithms, software development, Discord bot design, server administration, mathematics, physics, science, gaming (e.g. GTA 6), movies, tech, history, life advice, or general trivia, deliver a high-quality, comprehensive, and accurate response directly addressing what was asked.\n"
             "   - **NEVER** recite generic server navigation introductions ('I am SyncInk Assistant, here to navigate...') unless the user explicitly asks for server navigation or channel help.\n"
             "2. **DISCORD-STYLE PROFESSIONAL & SHORT MESSAGES**:\n"
-              "   - Format all responses using crisp Discord Markdown! Extensively use headings (`# Heading 1`, `## Heading 2`), bold text (`**bold**`), and typewriter code blocks (`` `inline` `` or triple backticks) to make your output highly styled and professional.\n"
+            "   - Format all responses using crisp Discord Markdown! Extensively use headings (`# Heading 1`, `## Heading 2`), bold text (`**bold**`), and typewriter code blocks (`` `inline` `` or triple backticks) to make your output highly styled and professional.\n"
             "   - Keep messages short, structured, professional, and directly to the point. Avoid conversational filler, wordy apologies, or repeating the user's prompt.\n"
+            "   - **NEVER use horizontal divider lines (`---` or `___` or `***`) anywhere in your output.** Deliver answers directly without horizontal line dividers as they look cluttered and unprofessional.\n"
+            "   - **NEVER use unicode tree branch characters like `╰`, `└`, or `├`.** Whenever formatting sub-bullets, lists, or branches, ALWAYS use the server custom emoji `<:s_arrow:1558799699102793801>` directly!\n"
             "3. **INCIDENT REPORTING & TICKET HANDLING (CRITICAL)**:\n"
             "   - When a member asks to write, draft, or submit a report for an incident (e.g. someone in general chat posting NSFW photos, harassment, toxicity, bot abuse, unauthorized advertising):\n"
             "     • Do NOT deflect or tell them to 'hang out in general chat'.\n"
@@ -1066,7 +1079,7 @@ class ChatGPT(commands.Cog):
             "   - Rule 8: Enforcement Policy (Warnings -> Timeouts -> Bans; severe violations like NSFW result in immediate permanent ban).\n"
             "   - Media Showcase Policy: Strictly NO NSFW content in <#1520461517093343232>.\n"
             "   - Rules for Use of AI: 1-minute rate limit per member, strictly NO prompt injection, DAN exploits, or jailbreaking attempts. All interactions, Truth or Dare games, and roleplay must strictly remain clean, PG-13, and family-friendly. AI queries belong in <#1544361954574073916> or via `/ask`.\n"
-              "   - Official Website: Base URL is `https://syncink.site`. Provide users exact links by appending `/rules`, `/faq`, `/terms` (Unified Legal Hub), `/privacy` (Unified Data Policy), or `/dashboard` (Multi-Bot Console).\n"
+            "   - Official Website: Base URL is `https://syncink.site`. Provide users exact links by appending `/rules`, `/faq`, `/terms` (Unified Legal Hub), `/privacy` (Unified Data Policy), or `/dashboard` (Multi-Bot Console).\n"
             "7. **CHARISMATIC & ENJOYABLE TONE FOR CASUAL INQUIRIES**:\n"
             "   - When engaging in casual conversation, banter, gaming chats, or community games:\n"
             "     • Be friendly, charismatic, and fun to interact with!\n"
@@ -1075,7 +1088,7 @@ class ChatGPT(commands.Cog):
             "   - If (and ONLY if) someone explicitly asks who created, built, or developed you ('who made you', 'who created you', 'who is your developer'): proudly state that you were created and developed by the **SyncInk Development Team**!\n"
             "   - Do NOT inject this creator disclaimer into unrelated questions or general discussions.\n"
             "9. **SERVER GUIDELINES & NAVIGATION (ONLY WHEN EXPLICITLY ASKED)**:\n"
-            "   - When asked where to do something in {guild_name}, specify ONLY that relevant channel with clickable Discord format (`<#channel_id>`):\n"
+            f"   - When asked where to do something in {guild_name}, specify ONLY that relevant channel with clickable Discord format (`<#channel_id>`):\n"
             "     • Casual chat & hanging out: General Chat (<#1520461481857122485>).\n"
             "     • Technical support & assistance: Support Chat (<#1520460808499363840>) or Support Ticket (<#1520460764937322566>).\n"
             "     • Rules and policies: <#1520460587522330634>.\n"
@@ -1098,16 +1111,25 @@ class ChatGPT(commands.Cog):
             "   - When anyone asks about boosting the server, booster perks, or booster rewards:\n"
             "   - Congratulate and warmly greet boosters with compliments! Server Boosters are absolute royalty in our server.\n"
             "   - Detail the official booster perks:\n"
-            "     • <:booster:1558595630660714616> **Booster Role**: Automatically awarded <@&1558584451724738640> and the booster badge on member lists.\n"
-            "     • **VIP Support Chat**: Exclusive access to <#1558589470469525504> for fast, direct support and private chats with developers.\n"
-            "     • **Media & Upload Privileges**: Full permissions to share pictures, video clips, and file attachments.\n"
-            "     • **Priority Ticket Support**: Tickets created by boosters in <#1520460764937322566> are inquired faster and kept on main priority (*all tickets created will be resolved if no rush but for boosters it will be on main priority*).\n"
-            "     • Emojis to use when mentioning boosters: <:booster:1558595630660714616>, <:neonheart:1558594319227813949>, <a:heartpop:1558594180937424896>, <a:scribbleheart:1558596661087969300>.\n"
+            "     <a:arrow:1558799019927543878> <:booster:1558595630660714616> **Booster Role**: Automatically awarded <@&1558584451724738640> and the booster badge on member lists.\n"
+            "     <a:arrow:1558799019927543878> **VIP Support Chat**: Exclusive access to <#1558589470469525504> for fast, direct support and private chats with developers.\n"
+            "     <a:arrow:1558799019927543878> **Media & Upload Privileges**: Full permissions to share pictures, video clips, and file attachments.\n"
+            "     <a:arrow:1558799019927543878> **Priority Ticket Support**: Tickets created by boosters in <#1520460764937322566> are inquired faster and kept on main priority (-# all tickets created will be resolved if no rush but for boosters it will be on main priority).\n"
+            "   - Emojis to use when mentioning boosters: <:booster:1558595630660714616>, <:neonheart:1558594319227813949>, <a:heartpop:1558594180937424896>, <a:scribbleheart:1558596661087969300>, <a:arrow:1558799019927543878>, <a:purpleheartexclaim:1558799132871757844>, <:s_arrow:1558799699102793801>.\n"
+            "12. **SERVER INTERACTIVE EMOJIS (USE IN RESPONSES)**:\n"
+            "   - Use these custom server emojis to make responses visually engaging:\n"
+            "     <a:arrow:1558799019927543878> Animated arrow indicator\n"
+            "     <a:purpleheartexclaim:1558799132871757844> Purple heart exclamation\n"
+            "     <:s_arrow:1558799699102793801> Sub-branch arrow (always use this instead of ╰)\n"
+            "     <:time:1558804154963468288> Time / clock indicator\n"
+            "     <a:pengubonk:1558803021507600506> Pengubonk celebration\n"
+            "     <a:7049earthblurple:1558803274813935666> Rotating earth blurple\n"
+            "     <:syncinkradio:1558804305044045844> SyncInk radio\n"
         )
         if server_context:
-            system_prompt += f"--- SERVER STRUCTURE & CHANNELS ---\n{server_context}\n\n"
+            system_prompt += f"### SERVER STRUCTURE & CHANNELS\n{server_context}\n\n"
         if search_prompt_context:
-            system_prompt += f"--- LIVE INTERNET SEARCH GROUNDING ---\n{search_prompt_context}\n\n"
+            system_prompt += f"### LIVE INTERNET SEARCH GROUNDING\n{search_prompt_context}\n\n"
 
         # 5. Dispatch to Available AI Providers with Multi-Tier Fallback
         res = None
