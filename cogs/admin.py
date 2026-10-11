@@ -309,11 +309,39 @@ class Admin(commands.Cog):
     async def install_music_cmd(self, ctx: commands.Context):
         msg = await ctx.send("⏳ **Installing the native Discord voice/DAVE and music dependencies...**")
         try:
+            install_env = os.environ.copy()
+            termux_pkg = "/data/data/com.termux/files/usr/bin/pkg"
+            if os.path.exists(termux_pkg):
+                pkg_proc = await asyncio.create_subprocess_exec(
+                    termux_pkg, "install", "-y", "rust", "clang", "cmake", "pkg-config",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                _, pkg_stderr = await pkg_proc.communicate()
+                if pkg_proc.returncode:
+                    reason = pkg_stderr.decode(errors="replace").strip()[-1000:] or "Termux could not install its Rust toolchain."
+                    await msg.edit(content=f"❌ **Could not prepare the Termux build tools:**\n```text\n{reason}\n```")
+                    return
+
+                rust_proc = await asyncio.create_subprocess_exec(
+                    "rustc", "-Vv", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                )
+                rust_stdout, rust_stderr = await rust_proc.communicate()
+                if rust_proc.returncode:
+                    reason = rust_stderr.decode(errors="replace").strip()[-1000:] or "Termux rustc is not available on PATH."
+                    await msg.edit(content=f"❌ **Could not locate Termux Rust:**\n```text\n{reason}\n```")
+                    return
+                for line in rust_stdout.decode(errors="replace").splitlines():
+                    if line.startswith("host: "):
+                        install_env["CARGO_BUILD_TARGET"] = line.removeprefix("host: ").strip()
+                        break
+
             proc = await asyncio.create_subprocess_exec(
                 sys.executable, "-m", "pip", "install", "--upgrade",
                 "discord.py[voice]>=2.7.1,<3", "yt-dlp", "--quiet",
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
+                env=install_env,
             )
             _, stderr = await proc.communicate()
             if proc.returncode:

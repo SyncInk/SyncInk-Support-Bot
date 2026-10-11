@@ -21,7 +21,7 @@ while true; do
     if ! python -c "import PIL, yt_dlp, nacl, davey, discord; assert discord.version_info >= (2, 7, 1)" >/dev/null 2>&1; then
         echo "[SyncInk] Installing missing music, native Discord voice/DAVE & graphics dependencies..."
         if command -v pkg >/dev/null 2>&1; then
-            pkg install -y python-pillow ffmpeg libopus libsodium python-pynacl clang make python-dev libffi >/dev/null 2>&1 || true
+            pkg install -y python-pillow ffmpeg libopus libsodium python-pynacl clang make python-dev libffi rust cmake pkg-config >/dev/null 2>&1 || true
         fi
         python -m pip install -r requirements.txt --quiet >/dev/null 2>&1 || true
     fi
