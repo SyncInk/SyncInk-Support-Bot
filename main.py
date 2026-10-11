@@ -64,11 +64,16 @@ class SyncInkBot(commands.Bot):
                     log.error(f"Failed to load extension {cog_name}: {e}")
                     traceback.print_exc()
                     
-        # Sync application slash commands with Discord
+        # Sync application slash commands with Discord (Instant Guild Sync + Global)
         try:
             log.info("Syncing application slash commands with Discord...")
-            await self.tree.sync()
-            log.info("Application slash commands successfully synced.")
+            target_guild_id = int(os.getenv("TARGET_GUILD_ID", "1520457643842342912"))
+            target_guild = discord.Object(id=target_guild_id)
+            self.tree.copy_global_to(guild=target_guild)
+            synced_guild = await self.tree.sync(guild=target_guild)
+            log.info(f"Instantly synced {len(synced_guild)} slash commands to target guild ({target_guild_id}).")
+            synced_global = await self.tree.sync()
+            log.info(f"Globally synced {len(synced_global)} slash commands.")
         except Exception as e:
             log.warning(f"Failed to sync application slash commands: {e}")
 

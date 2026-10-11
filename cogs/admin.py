@@ -2,6 +2,7 @@ import os
 import sys
 import asyncio
 import subprocess
+from typing import Optional, Literal
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
@@ -267,6 +268,60 @@ class Admin(commands.Cog):
         
         await ctx.channel.send(embed=embed, view=view)
         await ctx.send(embed=SuccessEmbed("Interactive role panel successfully created."))
+
+    @commands.command(name="sync", description="Force sync application slash commands to this server or globally.")
+    @commands.has_permissions(administrator=True)
+    async def sync_cmd(self, ctx: commands.Context, scope: str = "guild"):
+        """Sync slash commands immediately with Discord."""
+        msg = await ctx.send(f"🔄 **Syncing slash commands ({scope})...**")
+        try:
+            if scope.lower() == "global":
+                synced = await self.bot.tree.sync()
+                await msg.edit(content=f"✅ **Synced {len(synced)} command(s) globally!** (Discord global cache propagation may take up to 1 hour).")
+            else:
+                self.bot.tree.copy_global_to(guild=ctx.guild)
+                synced = await self.bot.tree.sync(guild=ctx.guild)
+                await msg.edit(content=f"✅ **Instantly synced {len(synced)} slash command(s) to this server ({ctx.guild.name})!** Refresh your Discord client (restart app or Ctrl+R) to view them immediately.")
+        except Exception as e:
+            await msg.edit(content=f"❌ **Sync failed:** `{e}`")
+
+    @app_commands.command(name="sync", description="Force sync application slash commands to this server or globally.")
+    @app_commands.default_permissions(administrator=True)
+    async def slash_sync(self, interaction: discord.Interaction, scope: Literal["guild", "global"] = "guild"):
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message("❌ Administrator permission required.", ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            if scope == "global":
+                synced = await self.bot.tree.sync()
+                await interaction.followup.send(f"✅ **Synced {len(synced)} command(s) globally!**")
+            else:
+                self.bot.tree.copy_global_to(guild=interaction.guild)
+                synced = await self.bot.tree.sync(guild=interaction.guild)
+                await interaction.followup.send(f"✅ **Instantly synced {len(synced)} slash command(s) to this server!**")
+        except Exception as e:
+            await interaction.followup.send(f"❌ **Sync failed:** `{e}`")
+
+    @commands.command(name="installmusic", aliases=["fixmusic"], description="Check and auto-install audio dependencies (yt-dlp, PyNaCl).")
+    @commands.has_permissions(administrator=True)
+    async def install_music_cmd(self, ctx: commands.Context):
+        msg = await ctx.send("⏳ **Checking and installing music dependencies (`yt-dlp`, `PyNaCl`)...**")
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                sys.executable, "-m", "pip", "install", "yt-dlp", "PyNaCl", "--quiet",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await proc.communicate()
+            if "cogs.music" in self.bot.extensions:
+                await self.bot.reload_extension("cogs.music")
+            else:
+                await self.bot.load_extension("cogs.music")
+            await msg.edit(content="✅ **Music engine and audio dependencies are active and operational!**")
+        except Exception as e:
+            await msg.edit(content=f"⚠️ **Command finished with notice:** `{e}`")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Admin(bot))

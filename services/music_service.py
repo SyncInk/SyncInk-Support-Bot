@@ -7,7 +7,11 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 import aiohttp
 import discord
-import yt_dlp
+try:
+    import yt_dlp
+except ImportError:
+    yt_dlp = None
+    log.warning("[Music Service] yt-dlp is not installed. Run ?fixmusic to auto-install dependencies.")
 import discord.opus
 from utils.emojis import Emojis, EmojiPartials
 from utils.logger import log
@@ -329,6 +333,8 @@ class MusicService:
         opts = dict(self.ydl_opts)
 
         def _extract():
+            if yt_dlp is None:
+                raise RuntimeError("yt-dlp is not installed. An administrator can run `?fixmusic` or `pip install yt-dlp` to enable audio playback.")
             with yt_dlp.YoutubeDL(opts) as ydl:
                 return ydl.extract_info(search_query, download=False)
 

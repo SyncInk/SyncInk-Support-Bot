@@ -507,6 +507,79 @@ class Music(commands.Cog):
             msg = await interaction.response.send_message(embed=embed, view=view)
         queue.now_playing_message = msg
 
+    async def ensure_voice_ctx(self, ctx: commands.Context) -> Optional[discord.VoiceClient]:
+        if not ctx.author.voice or not ctx.author.voice.channel:
+            await ctx.send(f"{Emojis.WARNING} Please join a voice channel first, then try again.")
+            return None
+
+        channel = ctx.author.voice.channel
+        permissions = channel.permissions_for(ctx.guild.me)
+        if not permissions.connect or not permissions.speak:
+            await ctx.send(f"{Emojis.REFUSED} I do not have permission to connect or speak in {channel.mention}.")
+            return None
+
+        vc = ctx.guild.voice_client
+        if not vc:
+            vc = await channel.connect(self_deaf=True)
+        elif vc.channel.id != channel.id:
+            await vc.move_to(channel)
+        return vc
+
+    async def enqueue_and_play_ctx(self, ctx: commands.Context, tracks: list[Track]):
+        queue = self.service.get_queue(ctx.guild.id)
+        queue.text_channel = ctx.channel
+        queue.cancel_inactivity()
+
+        is_first = queue.current_track is None and not (queue.voice_client and queue.voice_client.is_playing())
+
+        if is_first:
+            first_track = tracks.pop(0)
+            queue.tracks.extend(tracks)
+            await self.play_track(queue, first_track)
+
+            view = MusicPlayerView(self, queue)
+            embed = build_now_playing_embed(queue)
+            msg = await ctx.send(embed=embed, view=view)
+            queue.now_playing_message = msg
+        else:
+            queue.tracks.extend(tracks)
+            added_track = tracks[0]
+            embed = discord.Embed(title="➕ Track Added to Queue", color=BRAND_COLOR)
+            embed.set_author(name="SyncInk Radio", icon_url=BRAND_LOGO_URL)
+            embed.description = (
+                f"{Emojis.QUEUE_ADD} **[{added_track.clean_title}]({added_track.url})**\n\n"
+                f"• **Position in Queue:** `#{queue.size}`\n"
+                f"• **Artist:** {added_track.author}\n"
+                f"• **Duration:** `{added_track.formatted_duration}`\n"
+                f"• **Requested by:** <@{ctx.author.id}> • {added_track.platform.capitalize()}\n\n"
+                f"▶ **Currently Playing:** **{queue.current_track.clean_title if queue.current_track else 'None'}**"
+            )
+            if added_track.thumbnail:
+                embed.set_thumbnail(url=added_track.thumbnail)
+            embed.set_footer(text=f"SyncInk Platform • {queue.size} track(s) waiting")
+            await ctx.send(embed=embed)
+
+    async def start_radio_for_ctx(self, ctx: commands.Context, station_id: str):
+        vc = await self.ensure_voice_ctx(ctx)
+        if not vc:
+            return
+        queue = self.service.get_queue(ctx.guild.id)
+        queue.voice_client = vc
+        queue.text_channel = ctx.channel
+        queue.cancel_inactivity()
+
+        try:
+            track = await self.service.start_radio_station(vc.channel, ctx.channel, ctx.author, station_id)
+        except Exception as e:
+            await ctx.send(f"{Emojis.REFUSED} Failed to start radio station: `{e}`")
+            return
+
+        await self.play_track(queue, track)
+        view = MusicPlayerView(self, queue)
+        embed = build_now_playing_embed(queue)
+        msg = await ctx.send(embed=embed, view=view)
+        queue.now_playing_message = msg
+
     # ==========================================
     # SLASH & HYBRID COMMANDS
     # ==========================================
@@ -728,6 +801,269 @@ class Music(commands.Cog):
         queue.tracks.insert(0, curr)
         queue.voice_client.stop()
         await interaction.response.send_message(f"{Emojis.PREVIOUS} Replaying: **{curr.clean_title}**")
+
+    # ==========================================
+    # PREFIX COMMANDS (?)
+    # ==========================================
+
+    @commands.command(name="play", aliases=["p"], description="Search & stream high-fidelity audio from YouTube, Spotify, etc.")
+    async def cmd_play(self, ctx: commands.Context, *, query: Optional[str] = None):
+        queue = self.service.get_queue(ctx.guild.id)
+        if not query:
+            if queue.voice_client and queue.voice_client.is_paused():
+                queue.voice_client.resume()
+                if queue.paused_at is not None:
+                    queue.total_paused_duration += (time.time() - queue.paused_at)
+                    queue.paused_at = None
+                await ctx.send(f"{Emojis.PLAY_BUTTON} Playback resumed.")
+                return
+            await ctx.send(f"ℹ️ **Usage:** `?play <song title, artist, or music URL>`\n*Example:* `?play lofi hip hop` or `?play https://...`")
+            return
+
+        vc = await self.ensure_voice_ctx(ctx)
+        if not vc:
+            return
+
+        queue.voice_client = vc
+        queue.text_channel = ctx.channel
+
+        msg = await ctx.send(f"🔍 Searching for **{query}**...")
+        tracks = await self.service.search_and_extract(query, ctx.author, platform="auto", limit=1)
+        try:
+            await msg.delete()
+        except Exception:
+            pass
+
+        if not tracks:
+            embed = discord.Embed(description=f"{Emojis.REFUSED} No tracks found for: **{query}**", color=0xED4245)
+            await ctx.send(embed=embed)
+            return
+
+        await self.enqueue_and_play_ctx(ctx, tracks)
+
+    @commands.command(name="radio", description="Tune into endless 24/7 curated audio stations.")
+    async def cmd_radio(self, ctx: commands.Context, station: Optional[str] = None):
+        if not station:
+            view = RadioSelectView(self, ctx.author)
+            await ctx.send("📻 **Select a 24/7 Radio Station:**", view=view)
+            return
+        st = station.lower().strip()
+        if st not in RADIO_STATIONS:
+            stations_list = ", ".join(f"`{k}`" for k in RADIO_STATIONS.keys())
+            await ctx.send(f"{Emojis.WARNING} Unknown station `{station}`. Available stations: {stations_list}")
+            return
+        await self.start_radio_for_ctx(ctx, st)
+
+    @commands.command(name="lofi", description="Stream 24/7 relaxing lofi study and chill beats.")
+    async def cmd_lofi(self, ctx: commands.Context):
+        await self.start_radio_for_ctx(ctx, "lofi")
+
+    @commands.command(name="search", description="Interactive 5-result music picker.")
+    async def cmd_search(self, ctx: commands.Context, *, query: str):
+        vc = await self.ensure_voice_ctx(ctx)
+        if not vc:
+            return
+
+        queue = self.service.get_queue(ctx.guild.id)
+        queue.voice_client = vc
+        queue.text_channel = ctx.channel
+
+        msg = await ctx.send(f"🔍 Searching results for **{query}**...")
+        tracks = await self.service.search_and_extract(query, ctx.author, platform="auto", limit=5)
+        try:
+            await msg.delete()
+        except Exception:
+            pass
+
+        if not tracks:
+            embed = discord.Embed(description=f"{Emojis.REFUSED} No results found for **{query}**.", color=0xED4245)
+            await ctx.send(embed=embed)
+            return
+
+        embed = discord.Embed(title="🔍 Search Results", color=BRAND_COLOR)
+        embed.set_author(name="SyncInk Radio", icon_url=BRAND_LOGO_URL)
+        lines = []
+        for i, t in enumerate(tracks):
+            lines.append(f"**{i + 1}.** [{t.clean_title}]({t.url})\n{Emojis.TIME} `{t.formatted_duration}`  •  *{t.author}*")
+        embed.description = f"Query: **{query}**\n\n" + "\n\n".join(lines)
+        embed.set_footer(text="Click a numbered button below to queue your track, or Cancel.")
+
+        view = SearchPickerView(self, ctx.author, tracks)
+        await ctx.send(embed=embed, view=view)
+
+    @commands.command(name="pause", description="Pause active music playback.")
+    async def cmd_pause(self, ctx: commands.Context):
+        queue = self.service.get_queue(ctx.guild.id)
+        if not queue.voice_client or not queue.voice_client.is_playing():
+            await ctx.send(f"{Emojis.WARNING} Nothing is currently playing.")
+            return
+        queue.voice_client.pause()
+        queue.paused_at = time.time()
+        await ctx.send(f"{Emojis.PAUSE_BUTTON} Playback paused. Resume anytime with `?resume`.")
+        if queue.now_playing_message:
+            try:
+                await queue.now_playing_message.edit(embed=build_now_playing_embed(queue), view=MusicPlayerView(self, queue))
+            except Exception:
+                pass
+
+    @commands.command(name="resume", description="Resume paused music playback.")
+    async def cmd_resume(self, ctx: commands.Context):
+        queue = self.service.get_queue(ctx.guild.id)
+        if not queue.voice_client or not queue.voice_client.is_paused():
+            await ctx.send(f"{Emojis.WARNING} Playback is not paused.")
+            return
+        queue.voice_client.resume()
+        if queue.paused_at is not None:
+            queue.total_paused_duration += (time.time() - queue.paused_at)
+            queue.paused_at = None
+        await ctx.send(f"{Emojis.PLAY_BUTTON} Playback resumed.")
+        if queue.now_playing_message:
+            try:
+                await queue.now_playing_message.edit(embed=build_now_playing_embed(queue), view=MusicPlayerView(self, queue))
+            except Exception:
+                pass
+
+    @commands.command(name="skip", aliases=["s", "next"], description="Skip current track forward.")
+    async def cmd_skip(self, ctx: commands.Context, count: int = 1):
+        queue = self.service.get_queue(ctx.guild.id)
+        if not queue.voice_client or not queue.current_track:
+            await ctx.send(f"{Emojis.WARNING} Nothing is currently playing to skip.")
+            return
+        to_drop = max(0, count - 1)
+        for _ in range(min(to_drop, len(queue.tracks))):
+            queue.tracks.pop(0)
+        skipped = queue.current_track.clean_title
+        queue.voice_client.stop()
+        await ctx.send(f"{Emojis.NEXT} Skipped: **{skipped}**")
+
+    @commands.command(name="previous", aliases=["prev"], description="Replay previous track in history.")
+    async def cmd_previous(self, ctx: commands.Context):
+        queue = self.service.get_queue(ctx.guild.id)
+        if not queue.history:
+            await ctx.send(f"{Emojis.WARNING} No history available.")
+            return
+        prev = queue.history.pop()
+        if queue.current_track:
+            queue.tracks.insert(0, queue.current_track)
+        queue.tracks.insert(0, prev)
+        if queue.voice_client:
+            queue.voice_client.stop()
+        await ctx.send(f"{Emojis.PREVIOUS} Replaying previous track: **{prev.clean_title}**")
+
+    @commands.command(name="stop", description="Stop music and clear the queue.")
+    async def cmd_stop(self, ctx: commands.Context):
+        queue = self.service.get_queue(ctx.guild.id)
+        queue.tracks.clear()
+        queue.active_radio_station = None
+        queue.autoplay = False
+        if queue.voice_client:
+            queue.voice_client.stop()
+        embed = discord.Embed(description=f"{Emojis.DELETE} Stopped playback and cleared the session.", color=BRAND_COLOR)
+        await ctx.send(embed=embed)
+
+    @commands.command(name="leave", aliases=["dc", "disconnect"], description="Disconnect from voice channel.")
+    async def cmd_leave(self, ctx: commands.Context):
+        queue = self.service.get_queue(ctx.guild.id)
+        if queue.voice_client and queue.voice_client.is_connected():
+            await queue.voice_client.disconnect(force=True)
+            self.service.remove_queue(ctx.guild.id)
+            embed = discord.Embed(description=f"{Emojis.DELETE} Left the voice channel and cleared active session.", color=BRAND_COLOR)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f"{Emojis.WARNING} Not currently connected to voice.")
+
+    @commands.command(name="queue", aliases=["q"], description="Manage or display the music queue.")
+    async def cmd_queue(self, ctx: commands.Context, action: str = "list"):
+        queue = self.service.get_queue(ctx.guild.id)
+        if action.lower() == "clear":
+            count = len(queue.tracks)
+            queue.tracks.clear()
+            embed = discord.Embed(description=f"{Emojis.APPROVED} Cleared **{count}** track(s) from the upcoming queue.", color=BRAND_COLOR)
+            await ctx.send(embed=embed)
+        else:
+            embed = self.build_queue_embed(queue)
+            await ctx.send(embed=embed)
+
+    @commands.command(name="np", aliases=["nowplaying"], description="Display interactive now playing music card.")
+    async def cmd_np(self, ctx: commands.Context):
+        queue = self.service.get_queue(ctx.guild.id)
+        if not queue.current_track:
+            await ctx.send(f"{Emojis.WARNING} Nothing is currently playing.")
+            return
+        embed = build_now_playing_embed(queue)
+        view = MusicPlayerView(self, queue)
+        await ctx.send(embed=embed, view=view)
+
+    @commands.command(name="shuffle", description="Randomize upcoming tracks in queue.")
+    async def cmd_shuffle(self, ctx: commands.Context):
+        queue = self.service.get_queue(ctx.guild.id)
+        if len(queue.tracks) < 2:
+            await ctx.send(f"{Emojis.WARNING} Need at least 2 tracks in queue to shuffle.")
+            return
+        random.shuffle(queue.tracks)
+        await ctx.send(f"{Emojis.SHUFFLE} Randomized **{len(queue.tracks)}** upcoming tracks!")
+
+    @commands.command(name="loop", aliases=["repeat"], description="Toggle loop mode (off/track/queue).")
+    async def cmd_loop(self, ctx: commands.Context, mode: Optional[str] = None):
+        queue = self.service.get_queue(ctx.guild.id)
+        if not mode:
+            if queue.repeat_mode == "off":
+                queue.repeat_mode = "track"
+            elif queue.repeat_mode == "track":
+                queue.repeat_mode = "queue"
+            else:
+                queue.repeat_mode = "off"
+        else:
+            m = mode.lower().strip()
+            queue.repeat_mode = m if m in ("off", "track", "queue") else "track"
+        await ctx.send(f"{Emojis.REPEAT} Repeat mode set to: **{queue.repeat_mode.upper()}**")
+
+    @commands.command(name="volume", aliases=["vol"], description="Set audio gain volume (1% to 200%).")
+    async def cmd_volume(self, ctx: commands.Context, percent: Optional[int] = None):
+        queue = self.service.get_queue(ctx.guild.id)
+        if percent is None:
+            await ctx.send(f"🔊 Current volume: **{queue.volume}%**")
+            return
+        val = max(1, min(200, percent))
+        queue.volume = val
+        if queue.voice_client and queue.voice_client.source and hasattr(queue.voice_client.source, "volume"):
+            queue.voice_client.source.volume = val / 100.0
+        await ctx.send(f"{Emojis.SYNCBOT} Volume adjusted to **{val}%**.")
+
+    @commands.command(name="autoplay", description="Endless related song recommendation.")
+    async def cmd_autoplay(self, ctx: commands.Context, mode: Optional[str] = None):
+        queue = self.service.get_queue(ctx.guild.id)
+        if mode:
+            m = mode.lower().strip()
+            queue.autoplay = (m in ("on", "true", "enable", "1"))
+        else:
+            queue.autoplay = not queue.autoplay
+        status = "ENABLED" if queue.autoplay else "DISABLED"
+        await ctx.send(f"{Emojis.RADIO} Autoplay is now **{status}**.")
+
+    @commands.command(name="247", aliases=["alwayson"], description="Keep bot in voice channel 24/7.")
+    async def cmd_247(self, ctx: commands.Context, mode: Optional[str] = None):
+        queue = self.service.get_queue(ctx.guild.id)
+        if mode:
+            m = mode.lower().strip()
+            queue.is_247 = (m in ("on", "true", "enable", "1"))
+        else:
+            queue.is_247 = not queue.is_247
+        if queue.is_247:
+            queue.cancel_inactivity()
+        status = "ENABLED" if queue.is_247 else "DISABLED"
+        await ctx.send(f"{Emojis.SYNCINK_MUSIC} 24/7 Voice Channel Mode is now **{status}**.")
+
+    @commands.command(name="replay", description="Replay current track from the beginning.")
+    async def cmd_replay(self, ctx: commands.Context):
+        queue = self.service.get_queue(ctx.guild.id)
+        if not queue.current_track or not queue.voice_client:
+            await ctx.send(f"{Emojis.WARNING} Nothing is currently playing.")
+            return
+        curr = queue.current_track
+        queue.tracks.insert(0, curr)
+        queue.voice_client.stop()
+        await ctx.send(f"{Emojis.PREVIOUS} Replaying: **{curr.clean_title}**")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Music(bot))

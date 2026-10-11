@@ -18,10 +18,10 @@ while true; do
     echo "[SyncInk] Checking GitHub for updates..."
     git pull origin main
     echo "[SyncInk] Checking dependencies..."
-    if ! python -c "import PIL" >/dev/null 2>&1; then
-        echo "[SyncInk] Installing Pillow library..."
+    if ! python -c "import PIL, yt_dlp, nacl" >/dev/null 2>&1; then
+        echo "[SyncInk] Installing missing audio & graphics dependencies (yt-dlp, PyNaCl, Pillow, ffmpeg)..."
         if command -v pkg >/dev/null 2>&1; then
-            pkg install -y python-pillow >/dev/null 2>&1 || true
+            pkg install -y python-pillow ffmpeg libopus libsodium >/dev/null 2>&1 || true
         fi
         python -m pip install -r requirements.txt --quiet >/dev/null 2>&1 || true
     fi
