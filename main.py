@@ -1,6 +1,3 @@
-# Ensure Discord voice DAVE E2EE encryption shim is active before any discord imports
-import utils.davey_shim
-
 import discord
 from discord.ext import commands
 import asyncio

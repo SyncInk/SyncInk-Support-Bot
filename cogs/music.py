@@ -5,8 +5,6 @@ import sys
 import time
 from typing import Optional, Literal, Union
 
-import utils.davey_shim
-
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -353,26 +351,42 @@ class Music(commands.Cog):
         # the configured music guild. No database state or other cogs are involved.
         return bool(interaction.guild_id and interaction.guild_id == self._music_allowed_guild_id())
 
-    async def _repair_davey(self) -> bool:
-        """Loads DAVE compatibility shim or native davey library without requiring compiler."""
-        try:
-            import utils.davey_shim
-            utils.davey_shim.ensure_davey_loaded()
-            return True
-        except Exception as repair_err:
-            log.warning(f"[Voice Engine] davey shim load note: {repair_err}")
-            return False
-
     async def _ensure_voice_dependencies(self):
-        """Ensures davey / DAVE voice libraries are active before attempting connection."""
+        """Require the real DAVE implementation; a no-op compatibility shim cannot join voice."""
         try:
             import discord.voice_client
-            if getattr(discord.voice_client, "has_dave", False):
-                return
-            import utils.davey_shim
-            utils.davey_shim.ensure_davey_loaded()
-        except Exception:
-            await self._repair_davey()
+            import davey
+            if discord.version_info < (2, 7, 0):
+                raise RuntimeError("discord.py 2.7 or newer is required for Discord DAVE voice support.")
+            if not getattr(discord.voice_client, "has_dave", False):
+                raise RuntimeError("discord.py loaded without native DAVE support; restart after installing voice dependencies.")
+            if not hasattr(davey, "DaveSession"):
+                raise RuntimeError("The installed davey package is incomplete.")
+        except ImportError as exc:
+            raise RuntimeError(
+                "Native Discord DAVE voice support is missing. Install requirements.txt and restart the bot."
+            ) from exc
+
+    @staticmethod
+    def _voice_error_details(error: Exception) -> tuple[str, str]:
+        """Return a useful diagnosis even for exceptions whose str() is empty."""
+        message = str(error).strip()
+        error_name = type(error).__name__
+        display = f"{error_name}: {message}" if message else error_name
+        if isinstance(error, (asyncio.TimeoutError, TimeoutError)):
+            details = (
+                "Discord did not finish the voice handshake in time. Confirm the bot has View Channel, "
+                "Connect, and Speak permissions, then check that the host allows outbound UDP and restart the bot."
+            )
+        elif "dave" in message.lower():
+            details = "Install the updated voice dependencies with `pip install -r requirements.txt`, then restart the bot."
+        elif isinstance(error, discord.Forbidden):
+            details = "The bot lacks permission to view or connect to that voice channel."
+        elif isinstance(error, OSError):
+            details = "The host could not reach Discord voice. Check outbound UDP/firewall rules and the voice region."
+        else:
+            details = "Check the bot log for the full voice handshake traceback."
+        return display, details
 
     async def send_error_embed(
         self,
@@ -487,50 +501,34 @@ class Music(commands.Cog):
 
         channel = member.voice.channel
         permissions = channel.permissions_for(interaction.guild.me)
-        if not permissions.connect or not permissions.speak:
+        if not permissions.view_channel or not permissions.connect or not permissions.speak:
             await self.send_error_embed(
                 interaction,
-                description=f"I do not have permission to connect or speak in {channel.mention}.",
+                description=f"I need View Channel, Connect, and Speak permissions in {channel.mention}.",
                 is_warning=True
             )
             return None
 
-        await self._ensure_voice_dependencies()
-
         vc = interaction.guild.voice_client
         try:
+            await self._ensure_voice_dependencies()
             if not vc or not vc.is_connected():
                 if vc:
                     try:
                         await vc.disconnect(force=True)
                     except Exception:
                         pass
-                vc = await channel.connect(self_deaf=True, timeout=15.0, reconnect=True)
+                vc = await channel.connect(self_deaf=True, timeout=30.0, reconnect=True)
             elif vc.channel.id != channel.id:
                 await vc.move_to(channel)
         except Exception as e:
-            log.error(f"[Voice Connect Error] {e}")
-            err_str = str(e)
-            if "davey" in err_str:
-                repaired = await self._repair_davey()
-                if repaired:
-                    try:
-                        return await channel.connect(self_deaf=True, timeout=15.0, reconnect=True)
-                    except Exception as retry_err:
-                        log.error(f"[Voice Retry Connect Error] {retry_err}")
-                        err_str = str(retry_err)
-
-            if "PyNaCl" in err_str:
-                res = "PyNaCl audio encryption library is missing.\nPlease type `?fixmusic` in chat or run `pkg install python-pynacl` in Termux."
-            elif "davey" in err_str:
-                res = "Voice DAVE compatibility shim loaded. Please retry running the command now."
-            else:
-                res = "Please check voice permissions, region connection, or try again in a few moments."
+            log.exception("[Voice Connect Error] %s: %r", type(e).__name__, str(e))
+            display_error, details = self._voice_error_details(e)
 
             await self.send_error_embed(
                 interaction,
-                description=f"Voice connection failed: `{e}`",
-                details=res,
+                description=f"Voice connection failed: `{display_error}`",
+                details=details,
                 delay=30
             )
             return None
@@ -798,50 +796,34 @@ class Music(commands.Cog):
 
         channel = ctx.author.voice.channel
         permissions = channel.permissions_for(ctx.guild.me)
-        if not permissions.connect or not permissions.speak:
+        if not permissions.view_channel or not permissions.connect or not permissions.speak:
             await self.send_error_embed(
                 ctx,
-                description=f"I do not have permission to connect or speak in {channel.mention}.",
+                description=f"I need View Channel, Connect, and Speak permissions in {channel.mention}.",
                 is_warning=True
             )
             return None
 
-        await self._ensure_voice_dependencies()
-
         vc = ctx.guild.voice_client
         try:
+            await self._ensure_voice_dependencies()
             if not vc or not vc.is_connected():
                 if vc:
                     try:
                         await vc.disconnect(force=True)
                     except Exception:
                         pass
-                vc = await channel.connect(self_deaf=True, timeout=15.0, reconnect=True)
+                vc = await channel.connect(self_deaf=True, timeout=30.0, reconnect=True)
             elif vc.channel.id != channel.id:
                 await vc.move_to(channel)
         except Exception as e:
-            log.error(f"[Voice Connect Error] {e}")
-            err_str = str(e)
-            if "davey" in err_str:
-                repaired = await self._repair_davey()
-                if repaired:
-                    try:
-                        return await channel.connect(self_deaf=True, timeout=15.0, reconnect=True)
-                    except Exception as retry_err:
-                        log.error(f"[Voice Retry Connect Error] {retry_err}")
-                        err_str = str(retry_err)
-
-            if "PyNaCl" in err_str:
-                res = "PyNaCl audio encryption library is missing.\nPlease type `?fixmusic` in chat or run `pkg install python-pynacl` in Termux."
-            elif "davey" in err_str:
-                res = "Voice DAVE compatibility shim loaded. Please retry running the command now."
-            else:
-                res = "Please check voice permissions, region connection, or try again in a few moments."
+            log.exception("[Voice Connect Error] %s: %r", type(e).__name__, str(e))
+            display_error, details = self._voice_error_details(e)
 
             await self.send_error_embed(
                 ctx,
-                description=f"Voice connection failed: `{e}`",
-                details=res,
+                description=f"Voice connection failed: `{display_error}`",
+                details=details,
                 delay=30
             )
             return None

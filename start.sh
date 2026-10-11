@@ -18,8 +18,8 @@ while true; do
     echo "[SyncInk] Checking GitHub for updates..."
     git pull origin main
     echo "[SyncInk] Checking dependencies..."
-    if ! python -c "import PIL, yt_dlp, nacl" >/dev/null 2>&1; then
-        echo "[SyncInk] Installing missing audio, voice & graphics dependencies (yt-dlp, PyNaCl, Pillow, ffmpeg)..."
+    if ! python -c "import PIL, yt_dlp, nacl, davey, discord; assert discord.version_info >= (2, 7, 1)" >/dev/null 2>&1; then
+        echo "[SyncInk] Installing missing music, native Discord voice/DAVE & graphics dependencies..."
         if command -v pkg >/dev/null 2>&1; then
             pkg install -y python-pillow ffmpeg libopus libsodium python-pynacl clang make python-dev libffi >/dev/null 2>&1 || true
         fi
