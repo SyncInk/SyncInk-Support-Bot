@@ -23,6 +23,9 @@ while true; do
         if command -v pkg >/dev/null 2>&1; then
             pkg install -y python-pillow ffmpeg libopus libsodium python-pynacl clang make python-dev libffi rust cmake pkg-config >/dev/null 2>&1 || true
         fi
+        if command -v rustc >/dev/null 2>&1; then
+            export CARGO_BUILD_TARGET="$(rustc -Vv | sed -n 's/^host: //p')"
+        fi
         python -m pip install -r requirements.txt --quiet >/dev/null 2>&1 || true
     fi
     echo "[SyncInk] Launching bot..."
