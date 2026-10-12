@@ -29,6 +29,9 @@ ERROR_MESSAGE = (
 BRAND_COLOR = 0x7b2cbf  # SyncInk Cyber Violet
 BRAND_LOGO_URL = "https://files.catbox.moe/74l9su.png"
 
+MUSIC_BOOSTER_ROLE_ID = int(os.getenv("MUSIC_BOOSTER_ROLE_ID", "1558584451724738640"))
+MUSIC_COMMAND_CHANNEL_ID = int(os.getenv("MUSIC_COMMAND_CHANNEL_ID", "1520749466330857492"))
+
 def make_error_embed(
     description: str = ERROR_MESSAGE,
     details: Optional[str] = None,
@@ -48,9 +51,8 @@ def make_error_embed(
         description=formatted_desc,
         color=color
     )
-    embed.set_author(name="SyncInk Platform", icon_url=BRAND_LOGO_URL)
     embed.set_footer(
-        text="SyncInk Platform • Pure Audio",
+        text="SyncInk Platform",
         icon_url=BRAND_LOGO_URL
     )
     return embed
@@ -65,17 +67,23 @@ async def _delayed_delete_msg(msg: discord.Message, delay: int = 30):
 
 def build_now_playing_embed(queue: GuildMusicQueue) -> discord.Embed:
     current = queue.current_track
+    separator = "───────────────────────────────"
+
     if not current:
         embed = discord.Embed(
-            description=f"{Emojis.SYNCINK_MUSIC} **Nothing is currently playing.**\nUse `/play` or `/radio` to begin playback.",
+            description=(
+                f"{Emojis.SYNCINK_MUSIC} **Nothing is currently playing.**\n\n"
+                f"{separator}\n\n"
+                f"Use `/play` or `/radio` in <#{MUSIC_COMMAND_CHANNEL_ID}> to begin playback."
+            ),
             color=BRAND_COLOR,
         )
-        embed.set_author(name="SyncInk Radio • Pure Audio", icon_url=BRAND_LOGO_URL)
+        embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
         return embed
 
     next_track = queue.tracks[0] if queue.tracks else None
     if next_track:
-        up_next = f"**[{next_track.clean_title}]({next_track.url})** by **{next_track.author}** [{next_track.formatted_duration}]"
+        up_next = f"**[{next_track.clean_title}]({next_track.url})**  •  *{next_track.author}* [{next_track.formatted_duration}]"
     elif queue.autoplay:
         up_next = f"{Emojis.RADIO} **Smart Autoplay Recommendation**"
     elif queue.active_radio_station:
@@ -83,20 +91,21 @@ def build_now_playing_embed(queue: GuildMusicQueue) -> discord.Embed:
     else:
         up_next = "End of queue (Add tracks with `/play`)"
 
+    station_tag = f"  •  📻 `{RADIO_STATIONS[queue.active_radio_station]['genre']}`" if queue.active_radio_station and queue.active_radio_station in RADIO_STATIONS else ""
+    loop_tag = f"  •  🔁 `{queue.repeat_mode.upper()}`" if queue.repeat_mode != "off" else ""
+
     embed = discord.Embed(
         title=f"{current.clean_title[:80]}",
         url=current.url,
         color=BRAND_COLOR,
     )
-    embed.set_author(name="SyncInk Radio • Now Playing", icon_url=BRAND_LOGO_URL)
-
-    station_tag = f" • 📻 `{RADIO_STATIONS[queue.active_radio_station]['genre']}`" if queue.active_radio_station and queue.active_radio_station in RADIO_STATIONS else ""
-    loop_tag = f" • 🔁 `{queue.repeat_mode.upper()}`" if queue.repeat_mode != "off" else ""
 
     embed.description = (
-        f"{current.platform_emoji} **Artist:** {current.author} [{current.formatted_duration}]\n\n"
+        f"{current.platform_emoji} **Artist:** {current.author}  •  `{current.formatted_duration}`\n\n"
+        f"{separator}\n\n"
         f"{Emojis.TIME} `{queue.get_progress_bar()}`\n\n"
-        f"👤 **Requested by:** <@{current.requested_by.id}> • {current.platform.capitalize()}{station_tag}{loop_tag}\n\n"
+        f"{separator}\n\n"
+        f"👤 **Requested by:** <@{current.requested_by.id}>{station_tag}{loop_tag}\n\n"
         f"⏭️ **Up Next:** {up_next}"
     )
 
@@ -104,7 +113,7 @@ def build_now_playing_embed(queue: GuildMusicQueue) -> discord.Embed:
         embed.set_thumbnail(url=current.thumbnail)
 
     embed.set_footer(
-        text=f"SyncInk Platform • Pure Audio Experience • {queue.size} in queue • Volume: {queue.volume}%",
+        text="SyncInk Platform",
         icon_url=BRAND_LOGO_URL,
     )
     return embed
@@ -129,6 +138,17 @@ class MusicPlayerView(discord.ui.View):
             self.btn_repeat.style = discord.ButtonStyle.secondary
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        # 1. Booster role restriction
+        if not self.music_cog._is_booster_or_admin(interaction.user, interaction.guild):
+            await self.music_cog.send_error_embed(
+                interaction,
+                description=f"{Emojis.ROLE_BOOSTER} Music player controls are reserved for **Server Boosters** (<@&{MUSIC_BOOSTER_ROLE_ID}>).",
+                details="Boost the server to unlock high-fidelity music streaming, 24/7 radio stations, and player controls.",
+                is_warning=True
+            )
+            return False
+
+        # 2. Voice channel checks
         if not interaction.user.voice or not interaction.guild.voice_client:
             await self.music_cog.send_error_embed(
                 interaction,
@@ -228,7 +248,7 @@ class MusicPlayerView(discord.ui.View):
             description=f"{Emojis.DELETE} Playback stopped and queue cleared.",
             color=BRAND_COLOR
         )
-        embed.set_author(name="SyncInk Radio", icon_url=BRAND_LOGO_URL)
+        embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
         await interaction.response.send_message(embed=embed)
 
     @discord.ui.button(custom_id="music_queue", emoji=EmojiPartials.QUEUE, style=discord.ButtonStyle.secondary, row=1)
@@ -342,14 +362,69 @@ class Music(commands.Cog):
         except (TypeError, ValueError):
             return 1520457643842342912
 
+    def _is_booster_or_admin(self, user: Union[discord.Member, discord.User], guild: Optional[discord.Guild]) -> bool:
+        if not guild or not hasattr(user, "roles"):
+            return False
+        has_booster = any(r.id == MUSIC_BOOSTER_ROLE_ID for r in user.roles)
+        is_admin_or_owner = user.id == guild.owner_id or getattr(user.guild_permissions, "administrator", False)
+        return has_booster or is_admin_or_owner
+
+    def _is_allowed_channel(self, channel_id: int) -> bool:
+        return channel_id == MUSIC_COMMAND_CHANNEL_ID
+
     async def cog_check(self, ctx: commands.Context) -> bool:
-        # Prefix music commands are intentionally inert in emoji-hosting guilds.
-        return bool(ctx.guild and ctx.guild.id == self._music_allowed_guild_id())
+        # 1. Guild check (silent reject if in non-support emoji guild)
+        if not ctx.guild or ctx.guild.id != self._music_allowed_guild_id():
+            return False
+
+        # 2. Channel check (Must be channel 1520749466330857492)
+        if not self._is_allowed_channel(ctx.channel.id):
+            await self.send_error_embed(
+                ctx,
+                description=f"Music commands can only be used in <#{MUSIC_COMMAND_CHANNEL_ID}>.",
+                details=f"Please hop over to <#{MUSIC_COMMAND_CHANNEL_ID}> to stream audio and use music commands.",
+                is_warning=True
+            )
+            return False
+
+        # 3. Booster role restriction (Must have role 1558584451724738640)
+        if not self._is_booster_or_admin(ctx.author, ctx.guild):
+            await self.send_error_embed(
+                ctx,
+                description=f"{Emojis.ROLE_BOOSTER} Music & Radio commands are exclusive to **Server Boosters** (<@&{MUSIC_BOOSTER_ROLE_ID}>)!",
+                details="Boost the server to unlock high-fidelity music streaming, 24/7 radio stations, and player controls.",
+                is_warning=True
+            )
+            return False
+
+        return True
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        # Application music commands are global for discovery, but only operate in
-        # the configured music guild. No database state or other cogs are involved.
-        return bool(interaction.guild_id and interaction.guild_id == self._music_allowed_guild_id())
+        # 1. Guild check (silent reject if in non-support emoji guild)
+        if not interaction.guild_id or interaction.guild_id != self._music_allowed_guild_id():
+            return False
+
+        # 2. Channel check (Must be channel 1520749466330857492)
+        if not self._is_allowed_channel(interaction.channel_id):
+            await self.send_error_embed(
+                interaction,
+                description=f"Music commands can only be used in <#{MUSIC_COMMAND_CHANNEL_ID}>.",
+                details=f"Please hop over to <#{MUSIC_COMMAND_CHANNEL_ID}> to stream audio and use music commands.",
+                is_warning=True
+            )
+            return False
+
+        # 3. Booster role restriction (Must have role 1558584451724738640)
+        if not self._is_booster_or_admin(interaction.user, interaction.guild):
+            await self.send_error_embed(
+                interaction,
+                description=f"{Emojis.ROLE_BOOSTER} Music & Radio commands are exclusive to **Server Boosters** (<@&{MUSIC_BOOSTER_ROLE_ID}>)!",
+                details="Boost the server to unlock high-fidelity music streaming, 24/7 radio stations, and player controls.",
+                is_warning=True
+            )
+            return False
+
+        return True
 
     async def _ensure_voice_dependencies(self):
         """Require the real DAVE implementation; a no-op compatibility shim cannot join voice."""
@@ -440,6 +515,9 @@ class Music(commands.Cog):
         if interaction.guild_id and interaction.guild_id != self._music_allowed_guild_id():
             return
         orig = getattr(error, "original", error)
+        if isinstance(error, app_commands.CheckFailure) or isinstance(orig, app_commands.CheckFailure):
+            return
+
         log.error(f"[Music AppCommand Error] {type(orig).__name__}: {orig}")
         import traceback
         traceback.print_exception(type(orig), orig, orig.__traceback__)
@@ -469,6 +547,9 @@ class Music(commands.Cog):
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
         orig = getattr(error, "original", error)
+        if isinstance(error, commands.CheckFailure) or isinstance(orig, commands.CheckFailure):
+            return
+
         log.error(f"[Music Command Error] {type(orig).__name__}: {orig}")
         detail_msg = str(orig) or type(orig).__name__
         resolution = None
@@ -537,14 +618,14 @@ class Music(commands.Cog):
 
     def build_queue_embed(self, queue: GuildMusicQueue) -> discord.Embed:
         embed = discord.Embed(title="📜 Music Queue", color=BRAND_COLOR)
-        embed.set_author(name="SyncInk Radio • Queue", icon_url=BRAND_LOGO_URL)
+        separator = "───────────────────────────────"
 
         current = queue.current_track
         desc = ""
         if current:
-            desc += f"▶ **Now Playing:**\n[{current.clean_title}]({current.url})  •  `{current.formatted_duration}`  •  *{current.author}*\n\n"
+            desc += f"▶ **Now Playing:**\n[{current.clean_title}]({current.url})  •  `{current.formatted_duration}`  •  *{current.author}*\n\n{separator}\n\n"
         else:
-            desc += f"{Emojis.WARNING} Queue is currently empty.\n\n"
+            desc += f"{Emojis.WARNING} Queue is currently empty.\n\n{separator}\n\n"
 
         if queue.tracks:
             lines = []
@@ -552,12 +633,12 @@ class Music(commands.Cog):
                 lines.append(f"**{i + 1}.** [{t.clean_title}]({t.url})  •  `{t.formatted_duration}`  •  *{t.author}*")
             desc += f"**Up Next ({queue.size} total):**\n" + "\n".join(lines)
             if queue.size > 10:
-                desc += f"\n*...and {queue.size - 10} more track(s)*"
+                desc += f"\n\n*...and {queue.size - 10} more track(s)*"
         else:
             desc += "No upcoming tracks in queue."
 
         embed.description = desc
-        embed.set_footer(text=f"SyncInk Platform • Volume: {queue.volume}% • 24/7: {'On' if queue.is_247 else 'Off'}")
+        embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
         return embed
 
     async def enqueue_and_play(self, interaction: discord.Interaction, tracks: list[Track]):
@@ -582,19 +663,21 @@ class Music(commands.Cog):
         else:
             queue.tracks.extend(tracks)
             added_track = tracks[0]
+            separator = "───────────────────────────────"
             embed = discord.Embed(title="➕ Track Added to Queue", color=BRAND_COLOR)
-            embed.set_author(name="SyncInk Radio", icon_url=BRAND_LOGO_URL)
             embed.description = (
                 f"{Emojis.QUEUE_ADD} **[{added_track.clean_title}]({added_track.url})**\n\n"
-                f"• **Position in Queue:** `#{queue.size}`\n"
+                f"{separator}\n\n"
+                f"• **Position:** `#{queue.size}`\n"
                 f"• **Artist:** {added_track.author}\n"
                 f"• **Duration:** `{added_track.formatted_duration}`\n"
-                f"• **Requested by:** <@{interaction.user.id}> • {added_track.platform.capitalize()}\n\n"
+                f"• **Requested by:** <@{interaction.user.id}>\n\n"
+                f"{separator}\n\n"
                 f"▶ **Currently Playing:** **{queue.current_track.clean_title if queue.current_track else 'None'}**"
             )
             if added_track.thumbnail:
                 embed.set_thumbnail(url=added_track.thumbnail)
-            embed.set_footer(text=f"SyncInk Platform • {queue.size} track(s) waiting")
+            embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
 
             if interaction.response.is_done():
                 await interaction.followup.send(embed=embed)
@@ -732,7 +815,7 @@ class Music(commands.Cog):
                 description="### Reached the end of the queue. Please queue some track(s) again!",
                 color=BRAND_COLOR
             )
-            embed_finished.set_author(name="SyncInk Radio • Queue Complete", icon_url=BRAND_LOGO_URL)
+            embed_finished.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
             await queue.text_channel.send(embed=embed_finished)
 
         # Inactivity countdown (leave VC after 60s if not in 24/7 mode)
@@ -752,7 +835,7 @@ class Music(commands.Cog):
                         description="### Left the voice channel due to empty queue",
                         color=0xED4245
                     )
-                    embed_leave.set_author(name="SyncInk Radio", icon_url=BRAND_LOGO_URL)
+                    embed_leave.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
                     await queue.text_channel.send(embed=embed_leave)
             self.service.remove_queue(guild_id)
 
@@ -849,19 +932,21 @@ class Music(commands.Cog):
         else:
             queue.tracks.extend(tracks)
             added_track = tracks[0]
+            separator = "───────────────────────────────"
             embed = discord.Embed(title="➕ Track Added to Queue", color=BRAND_COLOR)
-            embed.set_author(name="SyncInk Radio", icon_url=BRAND_LOGO_URL)
             embed.description = (
                 f"{Emojis.QUEUE_ADD} **[{added_track.clean_title}]({added_track.url})**\n\n"
-                f"• **Position in Queue:** `#{queue.size}`\n"
+                f"{separator}\n\n"
+                f"• **Position:** `#{queue.size}`\n"
                 f"• **Artist:** {added_track.author}\n"
                 f"• **Duration:** `{added_track.formatted_duration}`\n"
-                f"• **Requested by:** <@{ctx.author.id}> • {added_track.platform.capitalize()}\n\n"
+                f"• **Requested by:** <@{ctx.author.id}>\n\n"
+                f"{separator}\n\n"
                 f"▶ **Currently Playing:** **{queue.current_track.clean_title if queue.current_track else 'None'}**"
             )
             if added_track.thumbnail:
                 embed.set_thumbnail(url=added_track.thumbnail)
-            embed.set_footer(text=f"SyncInk Platform • {queue.size} track(s) waiting")
+            embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
             await ctx.send(embed=embed)
 
     async def start_radio_for_ctx(self, ctx: commands.Context, station_id: str):
@@ -960,12 +1045,11 @@ class Music(commands.Cog):
             return
 
         embed = discord.Embed(title="🔍 Search Results", color=BRAND_COLOR)
-        embed.set_author(name="SyncInk Radio", icon_url=BRAND_LOGO_URL)
         lines = []
         for i, t in enumerate(tracks):
             lines.append(f"**{i + 1}.** [{t.clean_title}]({t.url})\n{Emojis.TIME} `{t.formatted_duration}`  •  *{t.author}*")
-        embed.description = f"Query: **{query}**\n\n" + "\n\n".join(lines)
-        embed.set_footer(text="Click a numbered button below to queue your track, or Cancel.")
+        embed.description = f"Query: **{query}**\n\n───────────────────────────────\n\n" + "\n\n".join(lines)
+        embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
 
         view = SearchPickerView(self, interaction.user, tracks)
         await interaction.followup.send(embed=embed, view=view)
@@ -1039,6 +1123,7 @@ class Music(commands.Cog):
         if queue.voice_client:
             queue.voice_client.stop()
         embed = discord.Embed(description=f"{Emojis.DELETE} Stopped playback and cleared the session.", color=BRAND_COLOR)
+        embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="leave", description="Disconnect from voice channel.")
@@ -1048,6 +1133,7 @@ class Music(commands.Cog):
             await queue.voice_client.disconnect(force=True)
             self.service.remove_queue(interaction.guild_id)
             embed = discord.Embed(description=f"{Emojis.DELETE} Left the voice channel and cleared active session.", color=BRAND_COLOR)
+            embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
             await interaction.response.send_message(embed=embed)
         else:
             await self.send_error_embed(interaction, description="Not currently connected to voice.", is_warning=True)
@@ -1238,12 +1324,11 @@ class Music(commands.Cog):
             return
 
         embed = discord.Embed(title="🔍 Search Results", color=BRAND_COLOR)
-        embed.set_author(name="SyncInk Radio", icon_url=BRAND_LOGO_URL)
         lines = []
         for i, t in enumerate(tracks):
             lines.append(f"**{i + 1}.** [{t.clean_title}]({t.url})\n{Emojis.TIME} `{t.formatted_duration}`  •  *{t.author}*")
-        embed.description = f"Query: **{query}**\n\n" + "\n\n".join(lines)
-        embed.set_footer(text="Click a numbered button below to queue your track, or Cancel.")
+        embed.description = f"Query: **{query}**\n\n───────────────────────────────\n\n" + "\n\n".join(lines)
+        embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
 
         view = SearchPickerView(self, ctx.author, tracks)
         await ctx.send(embed=embed, view=view)
@@ -1316,6 +1401,7 @@ class Music(commands.Cog):
         if queue.voice_client:
             queue.voice_client.stop()
         embed = discord.Embed(description=f"{Emojis.DELETE} Stopped playback and cleared the session.", color=BRAND_COLOR)
+        embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
         await ctx.send(embed=embed)
 
     @commands.command(name="leave", aliases=["dc", "disconnect"], description="Disconnect from voice channel.")
@@ -1325,6 +1411,7 @@ class Music(commands.Cog):
             await queue.voice_client.disconnect(force=True)
             self.service.remove_queue(ctx.guild.id)
             embed = discord.Embed(description=f"{Emojis.DELETE} Left the voice channel and cleared active session.", color=BRAND_COLOR)
+            embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
             await ctx.send(embed=embed)
         else:
             await self.send_error_embed(ctx, description="Not currently connected to voice.", is_warning=True)
