@@ -460,6 +460,10 @@ class MusicService:
             webpage_url = entry.get("webpage_url") or entry.get("url") or query
             stream_url = entry.get("url") or webpage_url
             thumb = forced_thumbnail or entry.get("thumbnail")
+            if not thumb and entry.get("thumbnails"):
+                thumb = entry["thumbnails"][-1].get("url")
+            if not thumb and entry.get("id"):
+                thumb = f"https://i.ytimg.com/vi/{entry['id']}/hqdefault.jpg"
             is_live = bool(entry.get("is_live", False))
 
             if not webpage_url:
@@ -506,6 +510,10 @@ class MusicService:
         info = await loop.run_in_executor(None, _refresh)
         track.stream_url = info["url"]
         track.is_live = bool(info.get("is_live", track.is_live))
+        if info.get("thumbnail"):
+            track.thumbnail = info["thumbnail"]
+        elif not track.thumbnail and info.get("thumbnails"):
+            track.thumbnail = info["thumbnails"][-1].get("url")
         return track.stream_url
 
     def create_audio_source(self, track: Track, volume: int = 100) -> discord.AudioSource:
@@ -514,7 +522,7 @@ class MusicService:
         before_options = (
             "-reconnect 1 "
             "-reconnect_streamed 1 "
-            "-reconnect_at_eof 0 "
+            "-reconnect_at_eof 1 "
             "-reconnect_on_network_error 1 "
             "-reconnect_on_http_error 5xx,408,429 "
             "-reconnect_delay_max 2 "

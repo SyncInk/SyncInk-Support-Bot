@@ -215,7 +215,7 @@ class RadioService:
                     "name": name,
                     "url": url,
                     "homepage": s.get("homepage", ""),
-                    "favicon": favicon if favicon.startswith("https://") else "",
+                    "favicon": favicon if (favicon.startswith("http://") or favicon.startswith("https://")) else "",
                     "country": matched_country_name,
                     "countrycode": s.get("countrycode", ""),
                     "codec": s.get("codec", "MP3"),

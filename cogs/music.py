@@ -45,7 +45,7 @@ def make_radio_track(station: dict, country_name: str, requester: discord.Member
     stream_url = station.get("url") or station.get("url_resolved")
     homepage = station.get("homepage") or stream_url
     favicon = station.get("favicon", "").strip() if station.get("favicon") else ""
-    if not favicon.startswith("https://"):
+    if not favicon or not (favicon.startswith("http://") or favicon.startswith("https://")):
         favicon = BRAND_LOGO_URL
     return Track(
         title=name,
@@ -1033,6 +1033,10 @@ class Music(commands.Cog):
             try:
                 if queue.voice_client.is_playing() or queue.voice_client.is_paused():
                     queue.voice_client.stop()
+                    for _ in range(25):
+                        if not queue.voice_client.is_playing():
+                            break
+                        await asyncio.sleep(0.01)
                 queue.voice_client.play(audio_source, after=_after_playback)
             except Exception as play_err:
                 log.error(f"[Playback Play Error] {play_err}")
