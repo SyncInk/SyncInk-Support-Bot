@@ -12,6 +12,20 @@ TARGET_GUILD_ID = 1520457643842342912
 BOOSTER_CHANNEL_ID = 1558585414829211668
 VIP_CHAT_CHANNEL_ID = 1558589470469525504
 BOOSTER_ROLE_ID = 1558584451724738640
+MUSIC_COMMAND_CHANNEL_ID = 1520749466330857492
+OWNER_ROLE_ID = 1520856232460550194
+MANAGER_ROLE_ID = 1520854378192572546
+
+def is_owner_or_higher_admin(member: discord.Member) -> bool:
+    """Verifies that the member is the server owner, an administrator, or holds higher leadership roles."""
+    if not member or not hasattr(member, "guild") or not member.guild:
+        return False
+    if member.id == member.guild.owner_id:
+        return True
+    if getattr(member.guild_permissions, "administrator", False):
+        return True
+    higher_roles = {OWNER_ROLE_ID, MANAGER_ROLE_ID}
+    return any(r.id in higher_roles for r in member.roles)
 
 WEBHOOK_NAME = "Boosters"
 WEBHOOK_AVATAR_URL = "https://cdn3.emoji.gg/emojis/853887-serverboost.png"
@@ -98,6 +112,7 @@ class Boosters(commands.Cog):
                 f"You're absolute royalty in our server! Your support helps keep our infrastructure powered and our community thriving! {EMOJI_NEON_HEART}\n\n"
                 f"**Exclusive Booster Perks:**\n"
                 f"{EMOJI_ARROW} **VIP Support Chat:** Head over to <#{VIP_CHAT_CHANNEL_ID}> for exclusive VIP chat & direct developer assistance.\n"
+                f"{EMOJI_ARROW} **Exclusive Music & Radio:** Stream high-fidelity music & 240+ countries live radio via `/play` and `/radio` in <#{MUSIC_COMMAND_CHANNEL_ID}>!\n"
                 f"{EMOJI_ARROW} **Media & Upload Privileges:** Enjoy unrestricted permission to upload media, images, video clips, and attachments.\n"
                 f"{EMOJI_ARROW} **Priority Ticket Support:** Inquired faster & kept on main priority.\n"
                 f"{EMOJI_ARROW} **Booster Badge & Role:** Equipped with the {EMOJI_BOOSTER} <@&{BOOSTER_ROLE_ID}> role!\n\n"
@@ -226,19 +241,26 @@ class Boosters(commands.Cog):
 
     @commands.command(
         name="testboost",
-        aliases=["simulateboost", "boosttest"],
-        description="[Admin Only] Simulate a server boost announcement and assign booster perks without boosting."
+        aliases=["simulateboost", "boosttest", "testwebhook", "test_webhook"],
+        description="[Owner & Higher Admin Only] Simulate a server boost announcement and webhook dispatch."
     )
-    @commands.has_permissions(administrator=True)
     async def testboost_cmd(self, ctx: commands.Context, member: Optional[discord.Member] = None):
         """Prefix command to test booster webhook announcement and role assignment."""
-        target = member or ctx.author
-
         # Cleanly delete trigger command message
         try:
             await ctx.message.delete()
         except Exception:
             pass
+
+        # Check Owner & Higher Administrator permissions
+        is_bot_owner = await ctx.bot.is_owner(ctx.author)
+        if not is_bot_owner and not is_owner_or_higher_admin(ctx.author):
+            embed = ErrorEmbed(
+                description="### <a:syncwarning:1547034231438319616> Access Denied",
+                resolution="This command is strictly restricted to Server Owners and Higher Administrators."
+            )
+            await ctx.send(embed=embed, delete_after=6)
+            return
 
         if ctx.guild.id != TARGET_GUILD_ID:
             await ctx.send(
@@ -250,12 +272,13 @@ class Boosters(commands.Cog):
             )
             return
 
+        target = member or ctx.author
         success, details = await self.announce_boost(target, is_test=True)
 
         if success:
             await ctx.send(
                 embed=SuccessEmbed(
-                    f"**Booster Simulation Complete!** {EMOJI_HEART_POP}\n\n"
+                    f"**Booster Webhook Test Complete!** {EMOJI_HEART_POP}\n\n"
                     f"{EMOJI_S_ARROW} **Target Member:** {target.mention} (`{target.id}`)\n"
                     f"{EMOJI_S_ARROW} **Assigned Role:** <@&{BOOSTER_ROLE_ID}> (`{BOOSTER_ROLE_ID}`)\n"
                     f"{EMOJI_S_ARROW} **Announcement Channel:** <#{BOOSTER_CHANNEL_ID}>\n"
@@ -267,62 +290,10 @@ class Boosters(commands.Cog):
         else:
             await ctx.send(
                 embed=ErrorEmbed(
-                    description=f"Failed to simulate boost for {target.mention}.",
+                    description=f"Failed to test booster webhook for {target.mention}.",
                     resolution=details
                 ),
                 delete_after=8
-            )
-
-    @app_commands.command(
-        name="testboost",
-        description="[Admin Only] Simulate a server boost announcement and assign booster perks."
-    )
-    @app_commands.describe(member="Member to simulate boosting for (defaults to yourself)")
-    @app_commands.default_permissions(administrator=True)
-    async def testboost_slash(self, interaction: discord.Interaction, member: Optional[discord.Member] = None):
-        """Slash command to test booster webhook announcement and role assignment."""
-        target = member or interaction.user
-        if not isinstance(target, discord.Member):
-            if interaction.guild:
-                target = interaction.guild.get_member(target.id) or target
-
-        if interaction.guild_id != TARGET_GUILD_ID:
-            await interaction.response.send_message(
-                embed=ErrorEmbed(
-                    description=f"This booster system is configured for Guild ID `{TARGET_GUILD_ID}`.",
-                    resolution="Please run this command inside the official SyncInk Support server."
-                ),
-                ephemeral=True
-            )
-            return
-
-        await interaction.response.defer(ephemeral=True)
-        success, details = await self.announce_boost(target, is_test=True)
-
-        if success:
-            await interaction.followup.send(
-                embed=SuccessEmbed(
-                    f"**Booster Simulation Complete!** {EMOJI_HEART_POP}\n\n"
-                    f"{EMOJI_S_ARROW} **Target Member:** {target.mention} (`{target.id}`)\n"
-                    f"{EMOJI_S_ARROW} **Assigned Role:** <@&{BOOSTER_ROLE_ID}> (`{BOOSTER_ROLE_ID}`)\n"
-                    f"{EMOJI_S_ARROW} **Announcement Channel:** <#{BOOSTER_CHANNEL_ID}>\n"
-                    f"{EMOJI_S_ARROW} **Status:** {details}\n\n"
-                    f"-# This confirmation message will self-delete in 6 seconds."
-                ),
-                ephemeral=True
-            )
-            try:
-                await asyncio.sleep(6)
-                await interaction.delete_original_response()
-            except Exception:
-                pass
-        else:
-            await interaction.followup.send(
-                embed=ErrorEmbed(
-                    description=f"Failed to simulate boost for {target.mention}.",
-                    resolution=details
-                ),
-                ephemeral=True
             )
 
 async def setup(bot: commands.Bot):

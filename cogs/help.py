@@ -258,9 +258,9 @@ class Help(commands.Cog):
                 emoji=EmojiPartials.AI
             ),
             discord.SelectOption(
-                label="Music & 24/7 Radio",
+                label="Music & 24/7 Radio (Booster Exclusive)",
                 value="4",
-                description="High-fidelity music playback and 24/7 radio",
+                description="Exclusive for Boosters in #music-commands",
                 emoji=EmojiPartials.RADIO
             )
         ]
@@ -293,12 +293,12 @@ class Help(commands.Cog):
                 ]
             ),
             (
-                f"{Emojis.RADIO} **Music & 24/7 Radio**",
+                f"{Emojis.RADIO} **Music & 24/7 Radio (Exclusive for <@&1558584451724738640> in <#1520749466330857492>)**",
                 [
                     ("?play <query> • /play <query>", "Search & stream audio from YouTube, Spotify, SoundCloud, etc. (Alias: `?p`)."),
-                    ("?radio [station] • /radio [station]", "Tune into 24/7 curated audio stations (lofi, synthwave, coffee, sleep, gaming)."),
+                    ("?radio [country] • /radio [country]", "Worldwide live country radio from 240+ countries with country autocomplete."),
                     ("?lofi • /lofi", "Start continuous 24/7 relaxing study and focus lofi beats."),
-                    ("?search <query> • /search <query>", "Interactive 5-result picker to select and play songs."),
+                    ("?search <query> • /search <query>", "Interactive 10-result picker to select and queue songs next."),
                     ("?np • /np", "Display the interactive Now Playing player card with control buttons."),
                     ("?pause • ?resume", "Pause or resume active music playback."),
                     ("?skip [count] • ?previous", "Skip forward or replay previous track in history (Alias: `?s`)."),
