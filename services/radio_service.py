@@ -23,6 +23,60 @@ COUNTRY_FLAGS: Dict[str, str] = {
     "IE": "🇮🇪", "ZA": "🇿🇦", "EG": "🇪🇬", "PK": "🇵🇰", "BD": "🇧🇩",
 }
 
+POPULAR_RADIO_COUNTRIES = [
+    ("India", "IN", "🇮🇳"),
+    ("United States", "US", "🇺🇸"),
+    ("United Kingdom", "GB", "🇬🇧"),
+    ("Canada", "CA", "🇨🇦"),
+    ("Australia", "AU", "🇦🇺"),
+    ("Japan", "JP", "🇯🇵"),
+    ("Germany", "DE", "🇩🇪"),
+    ("France", "FR", "🇫🇷"),
+    ("Brazil", "BR", "🇧🇷"),
+    ("Spain", "ES", "🇪🇸"),
+    ("Italy", "IT", "🇮🇹"),
+    ("Mexico", "MX", "🇲🇽"),
+    ("South Korea", "KR", "🇰🇷"),
+    ("Netherlands", "NL", "🇳🇱"),
+    ("Russia", "RU", "🇷🇺"),
+    ("Indonesia", "ID", "🇮🇩"),
+    ("Turkey", "TR", "🇹🇷"),
+    ("Sweden", "SE", "🇸🇪"),
+    ("Norway", "NO", "🇳🇴"),
+    ("New Zealand", "NZ", "🇳🇿"),
+    ("Pakistan", "PK", "🇵🇰"),
+    ("Bangladesh", "BD", "🇧🇩"),
+    ("Ireland", "IE", "🇮🇪"),
+    ("South Africa", "ZA", "🇿🇦"),
+    ("Switzerland", "CH", "🇨🇭"),
+]
+
+def country_code_to_flag(code: str) -> str:
+    """Converts a 2-letter ISO 3166-1 alpha-2 country code to its Unicode flag emoji."""
+    if not code or len(code) != 2 or not code.isalpha():
+        return "🌍"
+    code = code.upper()
+    return "".join(chr(127462 + ord(c) - ord('A')) for c in code)
+
+def get_country_flag(country_name_or_code: str) -> str:
+    """Resolves a Unicode national flag emoji from country name or ISO code."""
+    if not country_name_or_code:
+        return "🌍"
+    q = country_name_or_code.strip()
+    if len(q) == 2 and q.isalpha():
+        return country_code_to_flag(q)
+
+    q_lower = q.lower()
+    for name, code, flag in POPULAR_RADIO_COUNTRIES:
+        if name.lower() == q_lower or code.lower() == q_lower:
+            return flag
+
+    code = RadioService.get_instance().get_country_code(q)
+    if code:
+        return country_code_to_flag(code)
+
+    return "🌍"
+
 class RadioService:
     _instance: Optional['RadioService'] = None
 
@@ -92,6 +146,27 @@ class RadioService:
         matches = exact_code + starts + contains
         return matches[:limit]
 
+    def get_country_code(self, country_name: str) -> Optional[str]:
+        """Resolves ISO 3166-1 alpha-2 code for a country name."""
+        if not country_name:
+            return None
+        q = country_name.strip().lower()
+        for name, code, _ in POPULAR_RADIO_COUNTRIES:
+            if name.lower() == q or code.lower() == q:
+                return code
+
+        countries = self.get_countries()
+        for c in countries:
+            if c.get("name", "").lower() == q:
+                return c.get("iso_3166_1", "").upper()
+            if c.get("iso_3166_1", "").lower() == q:
+                return c.get("iso_3166_1", "").upper()
+
+        for c in countries:
+            if q in c.get("name", "").lower():
+                return c.get("iso_3166_1", "").upper()
+        return None
+
     def get_country_stations(self, country_query: str, limit: int = 15) -> List[Dict[str, Any]]:
         """Fetch the top working stations for a country."""
         country_query = country_query.strip()
@@ -134,12 +209,13 @@ class RadioService:
             url = s.get("url_resolved") or s.get("url")
             name = s.get("name", "").strip()
             if url and name and (url.startswith("http://") or url.startswith("https://")):
+                favicon = s.get("favicon", "").strip() if s.get("favicon") else ""
                 clean_stations.append({
                     "stationuuid": s.get("stationuuid", ""),
                     "name": name,
                     "url": url,
                     "homepage": s.get("homepage", ""),
-                    "favicon": s.get("favicon", ""),
+                    "favicon": favicon if favicon.startswith("https://") else "",
                     "country": matched_country_name,
                     "countrycode": s.get("countrycode", ""),
                     "codec": s.get("codec", "MP3"),

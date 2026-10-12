@@ -17,7 +17,12 @@ from services.music_service import (
     clean_title,
     format_duration,
 )
-from services.radio_service import RadioService, COUNTRY_FLAGS
+from services.radio_service import (
+    RadioService,
+    COUNTRY_FLAGS,
+    POPULAR_RADIO_COUNTRIES,
+    get_country_flag,
+)
 from utils.emojis import Emojis, EmojiPartials
 from utils.logger import log
 
@@ -33,45 +38,19 @@ BRAND_LOGO_URL = "https://files.catbox.moe/74l9su.png"
 MUSIC_BOOSTER_ROLE_ID = int(os.getenv("MUSIC_BOOSTER_ROLE_ID", "1558584451724738640"))
 MUSIC_COMMAND_CHANNEL_ID = int(os.getenv("MUSIC_COMMAND_CHANNEL_ID", "1520749466330857492"))
 
-POPULAR_RADIO_COUNTRIES = [
-    ("India", "IN", "🇮🇳"),
-    ("United States", "US", "🇺🇸"),
-    ("United Kingdom", "GB", "🇬🇧"),
-    ("Canada", "CA", "🇨🇦"),
-    ("Australia", "AU", "🇦🇺"),
-    ("Japan", "JP", "🇯🇵"),
-    ("Germany", "DE", "🇩🇪"),
-    ("France", "FR", "🇫🇷"),
-    ("Brazil", "BR", "🇧🇷"),
-    ("Spain", "ES", "🇪🇸"),
-    ("Italy", "IT", "🇮🇹"),
-    ("Mexico", "MX", "🇲🇽"),
-    ("South Korea", "KR", "🇰🇷"),
-    ("Netherlands", "NL", "🇳🇱"),
-    ("Russia", "RU", "🇷🇺"),
-    ("Indonesia", "ID", "🇮🇩"),
-    ("Turkey", "TR", "🇹🇷"),
-    ("Sweden", "SE", "🇸🇪"),
-    ("Norway", "NO", "🇳🇴"),
-    ("New Zealand", "NZ", "🇳🇿"),
-    ("Pakistan", "PK", "🇵🇰"),
-    ("Bangladesh", "BD", "🇧🇩"),
-    ("Ireland", "IE", "🇮🇪"),
-    ("South Africa", "ZA", "🇿🇦"),
-    ("Switzerland", "CH", "🇨🇭"),
-]
-
-def make_radio_track(station: dict, country_name: str, requester: discord.Member) -> Track:
+def make_radio_track(station: dict, country_name: str, requester: discord.Member, flag: Optional[str] = None) -> Track:
+    if not flag:
+        flag = get_country_flag(country_name)
     name = station.get("name", "Live Radio").strip()
     stream_url = station.get("url") or station.get("url_resolved")
     homepage = station.get("homepage") or stream_url
-    favicon = station.get("favicon")
-    if not favicon or not str(favicon).startswith("http"):
+    favicon = station.get("favicon", "").strip() if station.get("favicon") else ""
+    if not favicon.startswith("https://"):
         favicon = BRAND_LOGO_URL
     return Track(
         title=name,
         clean_title=name,
-        author=f"{country_name} Live Radio",
+        author=f"{flag} {country_name} Live Radio",
         duration=0,
         url=homepage,
         stream_url=stream_url,
@@ -142,7 +121,7 @@ def build_now_playing_embed(queue: GuildMusicQueue) -> discord.Embed:
     else:
         up_next = "End of queue (Add tracks with `/play`)"
 
-    station_tag = f"  •  📻 `{RADIO_STATIONS[queue.active_radio_station]['genre']}`" if queue.active_radio_station and queue.active_radio_station in RADIO_STATIONS else ""
+    station_tag = f"  •  {Emojis.RADIO} `{RADIO_STATIONS[queue.active_radio_station]['genre']}`" if queue.active_radio_station and queue.active_radio_station in RADIO_STATIONS else ""
     loop_tag = f"  •  🔁 `{queue.repeat_mode.upper()}`" if queue.repeat_mode != "off" else ""
 
     embed = discord.Embed(
@@ -499,7 +478,7 @@ class QueueLayoutView(discord.ui.View):
 class CountryRadioSelectView(discord.ui.View):
     """Dropdown selector for popular countries to tune into live radio."""
     def __init__(self, music_cog: 'Music', user: Union[discord.Member, discord.User]):
-        super().__init__(timeout=60.0)
+        super().__init__(timeout=120.0)
         self.music_cog = music_cog
         self.user = user
 
@@ -507,10 +486,10 @@ class CountryRadioSelectView(discord.ui.View):
         for name, code, flag in POPULAR_RADIO_COUNTRIES[:25]:
             options.append(
                 discord.SelectOption(
-                    label=name,
+                    label=f"{flag} {name}",
                     value=name,
                     description=f"Live radio stations from {name}",
-                    emoji=flag
+                    emoji=EmojiPartials.RADIO
                 )
             )
 
@@ -533,17 +512,18 @@ class CountryRadioSelectView(discord.ui.View):
 
         country_name = interaction.data["values"][0]
         await interaction.response.defer()
-        await self.music_cog.start_country_radio_flow(interaction, country_name)
+        await self.music_cog.start_country_radio_flow(interaction, country_name, is_select_callback=True)
 
 
 class RadioStationSelectView(discord.ui.View):
     """Dropdown selector to pick from top live stations in a country."""
     def __init__(self, music_cog: 'Music', user: Union[discord.Member, discord.User], country_name: str, stations: list[dict]):
-        super().__init__(timeout=60.0)
+        super().__init__(timeout=120.0)
         self.music_cog = music_cog
         self.user = user
         self.country_name = country_name
         self.stations = stations
+        self.flag = get_country_flag(country_name)
 
         options = []
         for i, s in enumerate(stations[:25]):
@@ -554,12 +534,12 @@ class RadioStationSelectView(discord.ui.View):
                     label=label,
                     value=str(i),
                     description=desc,
-                    emoji="📻"
+                    emoji=EmojiPartials.RADIO
                 )
             )
 
         select = discord.ui.Select(
-            placeholder=f"📻 Switch {country_name} radio station...",
+            placeholder=f"{self.flag} Switch {country_name} radio station...",
             options=options,
             custom_id="radio_station_switch"
         )
@@ -578,7 +558,9 @@ class RadioStationSelectView(discord.ui.View):
         idx = int(interaction.data["values"][0])
         chosen = self.stations[idx]
         await interaction.response.defer()
-        await self.music_cog.tune_into_station(interaction, chosen, self.country_name, stations=self.stations)
+        await self.music_cog.tune_into_station(
+            interaction, chosen, self.country_name, stations=self.stations, is_switch_callback=True
+        )
 
 
 RadioSelectView = CountryRadioSelectView
@@ -1016,6 +998,19 @@ class Music(commands.Cog):
             audio_source = self.service.create_audio_source(track, volume=queue.volume)
         except Exception as src_err:
             log.error(f"[Audio Source Error] {src_err}")
+            if track.is_radio:
+                queue.active_radio_station = None
+                queue.active_radio_station_info = None
+                queue.current_track = None
+                if queue.text_channel:
+                    await self.send_error_embed(
+                        queue.text_channel,
+                        description=f"Radio stream for **{track.clean_title}** is currently unreachable.",
+                        details="Please select another station using the station dropdown.",
+                        is_warning=True,
+                        delay=15
+                    )
+                return
             if queue.text_channel:
                 await self.send_error_embed(
                     queue.text_channel,
@@ -1124,24 +1119,10 @@ class Music(commands.Cog):
                     return
                 log.warning(f"[Radio] No playable tracks resolved for station {queue.active_radio_station}; ending radio session.")
                 queue.active_radio_station = None
-            elif getattr(queue, "active_radio_station_info", None) and requester:
-                try:
-                    re_track = make_radio_track(queue.active_radio_station_info, queue.active_radio_station, requester)
-                    await self.play_track(queue, re_track)
-                    if queue.text_channel:
-                        if queue.now_playing_message:
-                            try:
-                                await queue.now_playing_message.delete()
-                            except Exception:
-                                pass
-                            queue.now_playing_message = None
-                        view = MusicPlayerLayoutView(self, queue)
-                        queue.now_playing_message = await queue.text_channel.send(view=view)
-                    return
-                except Exception as stream_err:
-                    log.warning(f"[Radio] Reconnect to {queue.active_radio_station} failed: {stream_err}")
-                    queue.active_radio_station = None
-                    queue.active_radio_station_info = None
+            elif getattr(queue, "active_radio_station_info", None):
+                log.info(f"[Radio] Live radio stream ended for {queue.active_radio_station}")
+                queue.active_radio_station = None
+                queue.active_radio_station_info = None
 
         if queue.autoplay and queue.history:
             last = queue.history[-1]
@@ -1234,7 +1215,8 @@ class Music(commands.Cog):
     async def start_country_radio_flow(
         self,
         target: Union[discord.Interaction, commands.Context],
-        country_name: str
+        country_name: str,
+        is_select_callback: bool = False
     ):
         is_interaction = isinstance(target, discord.Interaction)
         user = target.user if is_interaction else target.author
@@ -1264,14 +1246,17 @@ class Music(commands.Cog):
             return
 
         chosen = stations[0]
-        await self.tune_into_station(target, chosen, country_name, stations=stations)
+        await self.tune_into_station(
+            target, chosen, country_name, stations=stations, is_switch_callback=is_select_callback
+        )
 
     async def tune_into_station(
         self,
         target: Union[discord.Interaction, commands.Context],
         station: dict,
         country_name: str,
-        stations: Optional[list] = None
+        stations: Optional[list] = None,
+        is_switch_callback: bool = False
     ):
         is_interaction = isinstance(target, discord.Interaction)
         user = target.user if is_interaction else target.author
@@ -1290,23 +1275,41 @@ class Music(commands.Cog):
         queue.text_channel = target.channel
         queue.cancel_inactivity()
 
-        track = make_radio_track(station, country_name, user)
+        flag = get_country_flag(country_name)
+        track = make_radio_track(station, country_name, user, flag=flag)
         queue.active_radio_station = country_name
         queue.active_radio_station_info = station
         queue.tracks.clear()
 
-        await self.play_track(queue, track)
+        try:
+            await self.play_track(queue, track)
+        except Exception as play_err:
+            log.error(f"[Radio Play Error] {play_err}")
+            queue.active_radio_station = None
+            queue.active_radio_station_info = None
+            if is_switch_callback and is_interaction:
+                err_embed = make_error_embed(
+                    description=f"Radio station **{station.get('name', 'Live Radio')}** is currently unreachable.",
+                    details="Please choose another station from the dropdown below.",
+                    is_warning=True
+                )
+                try:
+                    await target.edit_original_response(embed=err_embed, view=RadioStationSelectView(self, user, country_name, stations or []))
+                    return
+                except Exception:
+                    pass
 
-        if queue.now_playing_message:
-            try:
-                await queue.now_playing_message.delete()
-            except Exception:
-                pass
-            queue.now_playing_message = None
-
-        view = MusicPlayerLayoutView(self, queue)
-        if queue.text_channel:
-            queue.now_playing_message = await queue.text_channel.send(view=view)
+        # Update or send player card in place without chat spam
+        if queue.current_track:
+            view = MusicPlayerLayoutView(self, queue)
+            if queue.now_playing_message:
+                try:
+                    await queue.now_playing_message.edit(view=view)
+                except Exception:
+                    if queue.text_channel:
+                        queue.now_playing_message = await queue.text_channel.send(view=view)
+            elif queue.text_channel:
+                queue.now_playing_message = await queue.text_channel.send(view=view)
 
         if stations is None:
             stations = RadioService.get_instance().get_country_stations(country_name, limit=25)
@@ -1314,14 +1317,28 @@ class Music(commands.Cog):
         if stations:
             switch_view = RadioStationSelectView(self, user, country_name, stations)
             info_embed = discord.Embed(
-                description=f"📻 **Tuned into {station['name']} ({country_name})**\n*Use dropdown below to switch station anytime:*",
+                description=f"{Emojis.RADIO} **Tuned into {station['name']} ({flag} {country_name})**\n{Emojis.S_ARROW} *Use dropdown below to switch station anytime:*",
                 color=BRAND_COLOR
             )
-            if is_interaction:
+            if is_switch_callback and is_interaction:
                 try:
-                    await target.followup.send(embed=info_embed, view=switch_view, ephemeral=True)
+                    await target.edit_original_response(embed=info_embed, view=switch_view)
                 except Exception:
-                    pass
+                    try:
+                        await target.followup.send(embed=info_embed, view=switch_view, ephemeral=True)
+                    except Exception:
+                        pass
+            elif is_interaction:
+                try:
+                    if target.response.is_done():
+                        await target.edit_original_response(embed=info_embed, view=switch_view)
+                    else:
+                        await target.response.send_message(embed=info_embed, view=switch_view, ephemeral=True)
+                except Exception:
+                    try:
+                        await target.followup.send(embed=info_embed, view=switch_view, ephemeral=True)
+                    except Exception:
+                        pass
             else:
                 await target.send(embed=info_embed, view=switch_view, delete_after=60)
 
@@ -1469,7 +1486,7 @@ class Music(commands.Cog):
         if not country:
             view = CountryRadioSelectView(self, interaction.user)
             embed = discord.Embed(
-                description="### 📻 Worldwide Country Radio\nSelect a country below or use `/radio country: <name>` to stream live radio stations worldwide:",
+                description=f"### {Emojis.RADIO} Worldwide Country Radio\nSelect a country below or use `/radio country: <name>` to stream live radio stations worldwide:",
                 color=BRAND_COLOR
             )
             await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
@@ -1486,7 +1503,7 @@ class Music(commands.Cog):
         for c in countries:
             name = c.get("name", "")
             code = c.get("iso_3166_1", "")
-            flag = COUNTRY_FLAGS.get(code.upper(), "🌍")
+            flag = get_country_flag(code or name)
             count = c.get("stationcount", 0)
             label = f"{flag} {name} ({count} stations)"[:100]
             choices.append(app_commands.Choice(name=label, value=name[:100]))
@@ -1759,7 +1776,7 @@ class Music(commands.Cog):
         if not country:
             view = CountryRadioSelectView(self, ctx.author)
             embed = discord.Embed(
-                description="### 📻 Worldwide Country Radio\nSelect a country below or use `?radio <country>` to stream live radio stations worldwide:",
+                description=f"### {Emojis.RADIO} Worldwide Country Radio\nSelect a country below or use `?radio <country>` to stream live radio stations worldwide:",
                 color=BRAND_COLOR
             )
             await ctx.send(embed=embed, view=view, delete_after=60)

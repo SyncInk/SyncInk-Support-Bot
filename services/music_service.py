@@ -275,23 +275,27 @@ class BufferedAudioSource(discord.AudioSource):
         self._thread.start()
 
     def _fill_buffer(self):
-        while not self._stopped.is_set():
-            try:
-                data = self.original.read()
-                if not data:
-                    self._finished = True
-                    break
-                while not self._stopped.is_set():
-                    try:
-                        self._buffer.put(data, timeout=0.1)
+        try:
+            while not self._stopped.is_set():
+                try:
+                    data = self.original.read()
+                    if not data:
                         break
-                    except queue.Full:
-                        continue
-            except Exception as e:
-                log.debug(f"[BufferedAudioSource] Reader exit: {e}")
-                break
+                    while not self._stopped.is_set():
+                        try:
+                            self._buffer.put(data, timeout=0.1)
+                            break
+                        except queue.Full:
+                            continue
+                except Exception as e:
+                    log.debug(f"[BufferedAudioSource] Reader exit: {e}")
+                    break
+        finally:
+            self._finished = True
 
     def read(self) -> bytes:
+        if self._stopped.is_set():
+            return b""
         try:
             return self._buffer.get_nowait()
         except queue.Empty:
@@ -302,6 +306,7 @@ class BufferedAudioSource(discord.AudioSource):
 
     def cleanup(self):
         self._stopped.set()
+        self._finished = True
         try:
             self.original.cleanup()
         except Exception:
@@ -509,7 +514,7 @@ class MusicService:
         before_options = (
             "-reconnect 1 "
             "-reconnect_streamed 1 "
-            "-reconnect_at_eof 1 "
+            "-reconnect_at_eof 0 "
             "-reconnect_on_network_error 1 "
             "-reconnect_on_http_error 5xx,408,429 "
             "-reconnect_delay_max 2 "
