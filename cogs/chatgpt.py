@@ -1279,6 +1279,10 @@ class ChatGPT(commands.Cog):
         if message.author.bot or not message.guild:
             return
 
+        primary_id = int(os.getenv("TARGET_GUILD_ID", os.getenv("SUPPORT_GUILD_ID", "1520457643842342912")))
+        if message.guild.id != primary_id:
+            return
+
         # Restrict to designated AI channel if set
         if self.ai_channel_id and message.channel.id != self.ai_channel_id:
             return

@@ -77,10 +77,23 @@ class SyncInkBot(commands.Bot):
         except Exception as e:
             log.warning(f"Failed to sync application slash commands: {e}")
 
+        # Restrict application slash commands and component interactions strictly to target support guild
+        @self.tree.interaction_check
+        async def global_interaction_check(interaction: discord.Interaction) -> bool:
+            primary_id = int(os.getenv("TARGET_GUILD_ID", os.getenv("SUPPORT_GUILD_ID", "1520457643842342912")))
+            if interaction.guild_id and interaction.guild_id != primary_id:
+                return False
+            return True
+
     async def on_message(self, message: discord.Message):
-        """Global message processor; strictly ignores all DMs so the bot never replies in DMs."""
+        """Global message processor; strictly ignores DMs and secondary emoji servers."""
         if message.guild is None or message.author.bot:
             return
+
+        primary_id = int(os.getenv("TARGET_GUILD_ID", os.getenv("SUPPORT_GUILD_ID", "1520457643842342912")))
+        if message.guild.id != primary_id:
+            return
+
         await self.process_commands(message)
 
     async def on_ready(self):

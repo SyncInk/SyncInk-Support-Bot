@@ -357,6 +357,10 @@ class Automod(commands.Cog):
         if message.author.bot or not message.guild:
             return
 
+        primary_id = int(os.getenv("TARGET_GUILD_ID", os.getenv("SUPPORT_GUILD_ID", "1520457643842342912")))
+        if message.guild.id != primary_id:
+            return
+
         self.user_history[message.author.id].append(
             f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] #{message.channel.name}: {message.content}"
         )
@@ -764,6 +768,11 @@ class Automod(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
+        if not before.guild or before.author.bot:
+            return
+        primary_id = int(os.getenv("TARGET_GUILD_ID", os.getenv("SUPPORT_GUILD_ID", "1520457643842342912")))
+        if before.guild.id != primary_id:
+            return
         if before.content != after.content:
             await self.check_message(after)
 
@@ -800,6 +809,10 @@ class Automod(commands.Cog):
         if not message.guild or message.author.bot:
             return
 
+        primary_id = int(os.getenv("TARGET_GUILD_ID", os.getenv("SUPPORT_GUILD_ID", "1520457643842342912")))
+        if message.guild.id != primary_id:
+            return
+
         entry = self.recent_mentions.pop(message.id, None)
         if not entry:
             return
@@ -832,6 +845,10 @@ class Automod(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        primary_id = int(os.getenv("TARGET_GUILD_ID", os.getenv("SUPPORT_GUILD_ID", "1520457643842342912")))
+        if member.guild.id != primary_id:
+            return
+
         settings = await SettingsService.get_guild_settings(member.guild.id)
         if not settings.get('automod_enabled', True):
             return

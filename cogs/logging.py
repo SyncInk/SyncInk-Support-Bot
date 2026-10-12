@@ -1,5 +1,6 @@
 import discord
 import asyncio
+import os
 from discord.ext import commands
 from services.settings_service import SettingsService
 from utils.ui import SyncInkEmbed, BRAND_ACCENT, SUCCESS_COLOR, ERROR_COLOR, WARNING_COLOR
@@ -12,6 +13,10 @@ class AdvancedLogging(commands.Cog):
         self._role_update_buffers = {}
 
     async def _send_log(self, guild_id: int, key: str, embed: discord.Embed):
+        primary_id = int(os.getenv("TARGET_GUILD_ID", os.getenv("SUPPORT_GUILD_ID", "1520457643842342912")))
+        if guild_id != primary_id:
+            return
+
         settings = await SettingsService.get_guild_settings(guild_id)
         channel_id = settings.get(key)
         if not channel_id:

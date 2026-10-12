@@ -10,6 +10,7 @@ from utils.logger import log
 from database import db
 import asyncio
 import re
+import os
 
 class VerificationView(discord.ui.View):
     def __init__(self):
@@ -199,6 +200,10 @@ class Security(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        primary_id = int(os.getenv("TARGET_GUILD_ID", os.getenv("SUPPORT_GUILD_ID", "1520457643842342912")))
+        if member.guild.id != primary_id:
+            return
+
         settings = await SettingsService.get_guild_settings(member.guild.id)
 
         # -------------------------------------------------------------
@@ -341,6 +346,10 @@ class Security(commands.Cog):
     async def on_audit_log_entry_create(self, entry: discord.AuditLogEntry):
         """Streams Discord audit log events in real-time to intercept rogue moderators."""
         if not entry.guild or not entry.user or entry.user.bot:
+            return
+
+        primary_id = int(os.getenv("TARGET_GUILD_ID", os.getenv("SUPPORT_GUILD_ID", "1520457643842342912")))
+        if entry.guild.id != primary_id:
             return
 
         action = entry.action
