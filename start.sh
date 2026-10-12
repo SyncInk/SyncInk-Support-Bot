@@ -26,6 +26,16 @@ while true; do
         if command -v rustc >/dev/null 2>&1; then
             export CARGO_BUILD_TARGET="$(rustc -Vv | sed -n 's/^host: //p')"
         fi
+        # maturin needs Android's API level when compiling davey on Termux.
+        # Termux exposes the SDK level through Android's getprop utility.
+        if command -v getprop >/dev/null 2>&1; then
+            export ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-$(getprop ro.build.version.sdk 2>/dev/null)}"
+        fi
+        if [ -n "$ANDROID_API_LEVEL" ]; then
+            echo "[SyncInk] Building Android voice support for API level $ANDROID_API_LEVEL."
+        else
+            echo "[SyncInk] Android API level unavailable; DAVE native build may fail."
+        fi
         python -m pip install -r requirements.txt --quiet >/dev/null 2>&1 || true
     fi
     echo "[SyncInk] Launching bot..."

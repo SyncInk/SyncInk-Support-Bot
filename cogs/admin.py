@@ -336,6 +336,30 @@ class Admin(commands.Cog):
                         install_env["CARGO_BUILD_TARGET"] = line.removeprefix("host: ").strip()
                         break
 
+                # maturin cannot build davey for Android without its API level.
+                # Termux provides it through Android's getprop command.
+                if not install_env.get("ANDROID_API_LEVEL"):
+                    try:
+                        api_proc = await asyncio.create_subprocess_exec(
+                            "getprop", "ro.build.version.sdk",
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE,
+                        )
+                        api_stdout, _ = await api_proc.communicate()
+                        api_level = api_stdout.decode(errors="replace").strip()
+                        if api_proc.returncode == 0 and api_level.isdigit():
+                            install_env["ANDROID_API_LEVEL"] = api_level
+                    except FileNotFoundError:
+                        pass
+
+                if not install_env.get("ANDROID_API_LEVEL", "").isdigit():
+                    await msg.edit(content=(
+                        "❌ **Could not detect Android's API level.** Run "
+                        "`getprop ro.build.version.sdk` in Termux and set "
+                        "`export ANDROID_API_LEVEL=<number>` before retrying `?fixmusic`."
+                    ))
+                    return
+
             proc = await asyncio.create_subprocess_exec(
                 sys.executable, "-m", "pip", "install", "--upgrade",
                 "discord.py[voice]>=2.7.1,<3", "yt-dlp", "--quiet",
