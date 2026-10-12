@@ -5,6 +5,8 @@ import shutil
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
+import queue
+import threading
 import aiohttp
 import discord
 from utils.logger import log
@@ -215,6 +217,7 @@ class GuildMusicQueue:
         self.total_paused_duration: float = 0.0
         self.inactivity_task: Optional[asyncio.Task] = None
         self.active_radio_station: Optional[str] = None
+        self.active_radio_station_info: Optional[Dict[str, Any]] = None
         self.radio_recent_urls: List[str] = []
         # Audio callbacks run on discord.py's player thread; tokens and a lock prevent
         # duplicate/stale callbacks from advancing the queue more than once.
@@ -253,6 +256,62 @@ class GuildMusicQueue:
         if self.inactivity_task and not self.inactivity_task.done():
             self.inactivity_task.cancel()
         self.inactivity_task = None
+
+
+class BufferedAudioSource(discord.AudioSource):
+    """
+    Buffers audio frames in a dedicated background worker thread.
+    Absorbs CPU spikes (such as yt-dlp querying metadata for next songs)
+    and network jitter, permanently eliminating audio stutter and distortion.
+    """
+    def __init__(self, source: discord.AudioSource, buffer_size: int = 150):
+        # 150 frames * 20ms = 3.0 seconds of audio pre-buffering
+        self.original = source
+        self._buffer: queue.Queue = queue.Queue(maxsize=buffer_size)
+        self._stopped = threading.Event()
+        self._finished = False
+
+        self._thread = threading.Thread(target=self._fill_buffer, daemon=True)
+        self._thread.start()
+
+    def _fill_buffer(self):
+        while not self._stopped.is_set():
+            try:
+                data = self.original.read()
+                if not data:
+                    self._finished = True
+                    break
+                while not self._stopped.is_set():
+                    try:
+                        self._buffer.put(data, timeout=0.1)
+                        break
+                    except queue.Full:
+                        continue
+            except Exception as e:
+                log.debug(f"[BufferedAudioSource] Reader exit: {e}")
+                break
+
+    def read(self) -> bytes:
+        try:
+            return self._buffer.get_nowait()
+        except queue.Empty:
+            if self._finished:
+                return b""
+            # Buffer underrun safeguard: output 20ms of silence (3840 bytes)
+            return b"\x00" * 3840
+
+    def cleanup(self):
+        self._stopped.set()
+        try:
+            self.original.cleanup()
+        except Exception:
+            pass
+        while not self._buffer.empty():
+            try:
+                self._buffer.get_nowait()
+            except queue.Empty:
+                break
+
 
 class MusicService:
     _instance: Optional['MusicService'] = None
@@ -348,6 +407,7 @@ class MusicService:
 
         loop = asyncio.get_event_loop()
         opts = dict(self.ydl_opts)
+        opts['extract_flat'] = 'in_playlist'
 
         def _extract():
             if yt_dlp is None:
@@ -367,6 +427,7 @@ class MusicService:
                 def _sc_fallback():
                     sc_opts = dict(self.ydl_opts)
                     sc_opts.pop('extractor_args', None)
+                    sc_opts['extract_flat'] = 'in_playlist'
                     with yt_dlp.YoutubeDL(sc_opts) as ydl:
                         return ydl.extract_info(sc_query, download=False)
                 try:
@@ -392,11 +453,11 @@ class MusicService:
             artist = entry.get("uploader") or entry.get("artist") or entry.get("channel") or "Unknown Artist"
             duration = entry.get("duration")
             webpage_url = entry.get("webpage_url") or entry.get("url") or query
-            stream_url = entry.get("url")
+            stream_url = entry.get("url") or webpage_url
             thumb = forced_thumbnail or entry.get("thumbnail")
             is_live = bool(entry.get("is_live", False))
 
-            if not stream_url:
+            if not webpage_url:
                 continue
 
             track = Track(
@@ -417,12 +478,16 @@ class MusicService:
 
     async def refresh_stream_url(self, track: Track) -> str:
         """Resolve a fresh media URL immediately before playback (extractor URLs expire)."""
+        if track.platform == "radio" or track.is_radio:
+            return track.stream_url
+
         if yt_dlp is None:
             raise RuntimeError("yt-dlp is not installed; run ?fixmusic to repair music dependencies.")
 
         loop = asyncio.get_running_loop()
         opts = dict(self.ydl_opts)
         opts["noplaylist"] = True
+        opts["extract_flat"] = False
 
         def _refresh():
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -439,7 +504,7 @@ class MusicService:
         return track.stream_url
 
     def create_audio_source(self, track: Track, volume: int = 100) -> discord.AudioSource:
-        """Constructs an FFmpeg-backed PCMVolumeTransformer with resilient streaming options."""
+        """Constructs an FFmpeg-backed PCMVolumeTransformer with resilient streaming options and memory buffer."""
         ffmpeg_bin = get_ffmpeg_path()
         before_options = (
             "-reconnect 1 "
@@ -447,13 +512,14 @@ class MusicService:
             "-reconnect_at_eof 1 "
             "-reconnect_on_network_error 1 "
             "-reconnect_on_http_error 5xx,408,429 "
-            "-reconnect_delay_max 5 "
+            "-reconnect_delay_max 2 "
             "-rw_timeout 15000000 "
-            "-probesize 5000000 "
-            "-analyzeduration 5000000 "
+            "-thread_queue_size 4096 "
+            "-probesize 1000000 "
+            "-analyzeduration 1000000 "
             "-nostdin"
         )
-        options = "-vn -ar 48000 -ac 2 -b:a 192k"
+        options = "-vn -ar 48000 -ac 2 -nostats -loglevel error"
 
         pcm = discord.FFmpegPCMAudio(
             track.stream_url,
@@ -462,7 +528,8 @@ class MusicService:
             options=options
         )
         vol_normalized = max(0.01, min(2.0, volume / 100.0))
-        return discord.PCMVolumeTransformer(pcm, volume=vol_normalized)
+        vol_transformed = discord.PCMVolumeTransformer(pcm, volume=vol_normalized)
+        return BufferedAudioSource(vol_transformed, buffer_size=150)
 
     async def start_radio_station(
         self,
