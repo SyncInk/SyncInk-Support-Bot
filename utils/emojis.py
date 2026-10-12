@@ -61,6 +61,7 @@ class Emojis:
     # Feature request custom emojis
     LOADING = "<a:Loading:1547095365679849492>"
     MEMBERS = "<:members:1547109992212205608>"
+    MEMBER = "<:member:1559185207033077901>"
     CANCELLED = "<:cancelled:1547111776267804692>"
 
     # Official Music Player Emojis (<:name:id>)
@@ -143,6 +144,7 @@ class EmojiPartials:
     SUGGESTION = discord.PartialEmoji(name="syncinksuggestion", id=1547033969646903437, animated=False)
     QUESTION = discord.PartialEmoji(name="syncinkquestion", id=1547033451029594222, animated=False)
     MEMBERS = discord.PartialEmoji(name="members", id=1547109992212205608, animated=False)
+    MEMBER = discord.PartialEmoji(name="member", id=1559185207033077901, animated=False)
     CANCELLED = discord.PartialEmoji(name="cancelled", id=1547111776267804692, animated=False)
 
     # Official Music Player Partials
@@ -237,6 +239,7 @@ EMOJI_NAME_MAP = {
     "loading": "<a:Loading:1547095365679849492>",
     "pending": "<a:pending:1547110867466985532>",
     "members": "<:members:1547109992212205608>",
+    "member": "<:member:1559185207033077901>",
     "cancelled": "<:cancelled:1547111776267804692>",
 
     # Booster Emojis

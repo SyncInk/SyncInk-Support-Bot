@@ -37,7 +37,7 @@ def make_error_embed(
     details: Optional[str] = None,
     is_warning: bool = False
 ) -> discord.Embed:
-    icon = Emojis.WARNING if is_warning else Emojis.REFUSED
+    icon = Emojis.WARNING
     color = 0xFEE75C if is_warning else 0xED4245
 
     is_raw_header = description.strip().startswith("###")
@@ -45,6 +45,8 @@ def make_error_embed(
     formatted_desc = description
     if not (description.startswith("<") or description.startswith(":") or description.startswith("⚠️") or description.startswith("❌") or is_raw_header):
         formatted_desc = f"{icon} **{description}**"
+    elif is_raw_header and not ("<a:syncwarning" in description or "<:syncwarning" in description):
+        formatted_desc = description.replace("### ", f"### {icon} ", 1)
 
     if details:
         formatted_desc += f"\n\n> {details}"
@@ -53,11 +55,6 @@ def make_error_embed(
         description=formatted_desc,
         color=color
     )
-    if not is_raw_header:
-        embed.set_footer(
-            text="SyncInk Platform",
-            icon_url=BRAND_LOGO_URL
-        )
     return embed
 
 async def _delayed_delete_msg(msg: discord.Message, delay: int = 30):
@@ -108,7 +105,7 @@ def build_now_playing_embed(queue: GuildMusicQueue) -> discord.Embed:
         f"{separator}\n\n"
         f"{Emojis.TIME} `{queue.get_progress_bar()}`\n\n"
         f"{separator}\n\n"
-        f"👤 **Requested by:** <@{current.requested_by.id if current.requested_by else 1520522990280769727}>{station_tag}{loop_tag}\n\n"
+        f"{Emojis.MEMBER} **Requested by:** <@{current.requested_by.id if current.requested_by else 1520522990280769727}>{station_tag}{loop_tag}\n\n"
         f"⏭️ **Up Next:** {up_next}"
     )
 
@@ -159,21 +156,21 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
         is_paused = bool(self.queue.voice_client and self.queue.voice_client.is_paused())
         self.btn_pause_resume = discord.ui.Button(
             emoji=EmojiPartials.PLAY_BUTTON if is_paused else EmojiPartials.PAUSE_BUTTON,
-            style=discord.ButtonStyle.primary if is_paused else discord.ButtonStyle.success,
+            style=discord.ButtonStyle.secondary,
             custom_id="m_pause_resume"
         )
         self.btn_pause_resume.callback = self.on_pause_resume
 
         self.btn_prev = discord.ui.Button(
             emoji=EmojiPartials.PREVIOUS,
-            style=discord.ButtonStyle.primary,
+            style=discord.ButtonStyle.secondary,
             custom_id="m_prev"
         )
         self.btn_prev.callback = self.on_prev
 
         self.btn_skip = discord.ui.Button(
             emoji=EmojiPartials.NEXT,
-            style=discord.ButtonStyle.primary,
+            style=discord.ButtonStyle.secondary,
             custom_id="m_skip"
         )
         self.btn_skip.callback = self.on_skip
@@ -199,7 +196,7 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
 
         # 4. Requester footer
         req_id = current.requested_by.id if (current.requested_by and hasattr(current.requested_by, "id")) else 1520522990280769727
-        footer = discord.ui.TextDisplay(f"-# Track requested by <@{req_id}>")
+        footer = discord.ui.TextDisplay(f"-# {Emojis.MEMBER} Track requested by <@{req_id}>")
 
         cnt = discord.ui.Container(sec, row, sep, footer, accent_color=BRAND_COLOR)
         self.add_item(cnt)
@@ -208,7 +205,7 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
         # 1. Booster role restriction
         if not self.music_cog._is_booster_or_admin(interaction.user, interaction.guild):
             embed = discord.Embed(
-                description=f"### Music & Radio commands are exclusive for <@&{MUSIC_BOOSTER_ROLE_ID}>!",
+                description=f"### {Emojis.WARNING} Music & Radio commands are exclusive for <@&{MUSIC_BOOSTER_ROLE_ID}>!",
                 color=0xED4245
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -217,7 +214,7 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
         # 2. Channel restriction
         if not self.music_cog._is_allowed_channel(interaction.channel_id):
             embed = discord.Embed(
-                description=f"### Music commands can only be used in <#{MUSIC_COMMAND_CHANNEL_ID}>!",
+                description=f"### {Emojis.WARNING} Music commands can only be used in <#{MUSIC_COMMAND_CHANNEL_ID}>!",
                 color=0xED4245
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -226,7 +223,7 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
         # 3. Voice channel checks
         if not interaction.user.voice or not interaction.guild.voice_client:
             embed = discord.Embed(
-                description="### You must be in the voice channel to use music controls.",
+                description=f"### {Emojis.WARNING} You must be in the voice channel to use music controls.",
                 color=0xFEE75C
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -234,7 +231,7 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
 
         if interaction.user.voice.channel.id != interaction.guild.voice_client.channel.id:
             embed = discord.Embed(
-                description="### You must be in the same voice channel as the bot.",
+                description=f"### {Emojis.WARNING} You must be in the same voice channel as the bot.",
                 color=0xFEE75C
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -245,7 +242,7 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
     async def on_pause_resume(self, interaction: discord.Interaction):
         vc = self.queue.voice_client
         if not vc:
-            embed = discord.Embed(description="### Not currently connected to voice.", color=0xFEE75C)
+            embed = discord.Embed(description=f"### {Emojis.WARNING} Not currently connected to voice.", color=0xFEE75C)
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
@@ -266,7 +263,7 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
 
     async def on_prev(self, interaction: discord.Interaction):
         if not self.queue.history:
-            embed = discord.Embed(description="### No previous track in history.", color=0xFEE75C)
+            embed = discord.Embed(description=f"### {Emojis.WARNING} No previous track in history.", color=0xFEE75C)
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
         prev_track = self.queue.history.pop()
@@ -283,7 +280,7 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
     async def on_skip(self, interaction: discord.Interaction):
         vc = self.queue.voice_client
         if not vc or not self.queue.current_track:
-            embed = discord.Embed(description="### Nothing is currently playing.", color=0xFEE75C)
+            embed = discord.Embed(description=f"### {Emojis.WARNING} Nothing is currently playing.", color=0xFEE75C)
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
         skipped_name = self.queue.current_track.clean_title
@@ -318,6 +315,92 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
 MusicPlayerView = MusicPlayerLayoutView
 
 
+class TrackEnqueuedLayoutView(discord.ui.LayoutView):
+    """
+    Discord Components V2 Track Added notification matching Chip bot layout:
+    - Accent colored Container
+    - Top Section with position, title, author, duration and right Thumbnail
+    - Native Separator
+    - Helpful hint footer about /search
+    """
+    def __init__(self, track: Track, position: int):
+        super().__init__(timeout=None)
+        self.track = track
+        self.position = position
+        self.build_components()
+
+    def build_components(self):
+        self.clear_items()
+        thumb_url = self.track.thumbnail if (self.track.thumbnail and self.track.thumbnail.startswith("http")) else BRAND_LOGO_URL
+        header_text = (
+            f"### Queued at position #{self.position}\n"
+            f"[{self.track.clean_title}]({self.track.url}) by **{self.track.author}** `[{self.track.formatted_duration}]`"
+        )
+        sec = discord.ui.Section(
+            discord.ui.TextDisplay(header_text),
+            accessory=discord.ui.Thumbnail(thumb_url)
+        )
+        sep = discord.ui.Separator(visible=True, spacing=discord.enums.SeparatorSpacing.small)
+        hint = discord.ui.TextDisplay("Not the correct track? Try being more specific or use `/search`")
+        cnt = discord.ui.Container(sec, sep, hint, accent_color=BRAND_COLOR)
+        self.add_item(cnt)
+
+
+class NowPlayingLayoutView(discord.ui.LayoutView):
+    """
+    Discord Components V2 Now Playing Card matching Chip bot layout:
+    - Left accent border with SyncInk brand color (0x7b2cbf)
+    - Top Section with title, artist and album thumbnail
+    - Native Separator (visible=True)
+    - Playback progress bar with elapsed, total duration, volume and repeat state
+    - Native Separator (visible=True)
+    - Requester footer with custom member emoji (<:member:1559185207033077901>)
+    """
+    def __init__(self, queue: GuildMusicQueue):
+        super().__init__(timeout=None)
+        self.queue = queue
+        self.build_components()
+
+    def build_components(self):
+        self.clear_items()
+        current = self.queue.current_track
+        if not current:
+            txt = discord.ui.TextDisplay(f"### {Emojis.WARNING} Nothing is currently playing.")
+            self.add_item(discord.ui.Container(txt, accent_color=BRAND_COLOR))
+            return
+
+        thumb_url = current.thumbnail if (current.thumbnail and current.thumbnail.startswith("http")) else BRAND_LOGO_URL
+        sec = discord.ui.Section(
+            discord.ui.TextDisplay(f"### ▶ Now Playing\n[{current.clean_title}]({current.url}) by **{current.author}**"),
+            accessory=discord.ui.Thumbnail(thumb_url)
+        )
+        sep1 = discord.ui.Separator(visible=True, spacing=discord.enums.SeparatorSpacing.small)
+
+        playback_str = format_duration(self.queue.get_playback_time())
+        progress_bar = self.queue.get_progress_bar()
+        duration_str = current.formatted_duration
+        info_lines = [f"{playback_str}  {progress_bar}  {duration_str}"]
+
+        extra = [f"Volume: `{self.queue.volume}%`", f"Repeat: `{self.queue.repeat_mode.upper()}`"]
+        if self.queue.active_radio_station:
+            station_info = RADIO_STATIONS.get(self.queue.active_radio_station, {})
+            genre = station_info.get("genre", "Radio")
+            extra.append(f"Station: `{genre}`")
+        elif self.queue.autoplay:
+            extra.append("Autoplay: `ON`")
+
+        info_lines.append("• " + " • ".join(extra))
+        mid_display = discord.ui.TextDisplay("\n".join(info_lines))
+
+        sep2 = discord.ui.Separator(visible=True, spacing=discord.enums.SeparatorSpacing.small)
+
+        req_id = current.requested_by.id if (current.requested_by and hasattr(current.requested_by, "id")) else 1520522990280769727
+        footer = discord.ui.TextDisplay(f"{Emojis.MEMBER} Track requested by <@{req_id}>")
+
+        cnt = discord.ui.Container(sec, sep1, mid_display, sep2, footer, accent_color=BRAND_COLOR)
+        self.add_item(cnt)
+
+
 class RadioSelectView(discord.ui.View):
     def __init__(self, music_cog: 'Music', user: discord.Member):
         super().__init__(timeout=60.0)
@@ -340,34 +423,62 @@ class RadioSelectView(discord.ui.View):
         await interaction.response.defer(ephemeral=True)
         await self.music_cog.start_radio_for_interaction(interaction, station_id)
 
-class SearchPickerView(discord.ui.View):
-    def __init__(self, music_cog: 'Music', user: discord.Member, tracks: list[Track]):
-        super().__init__(timeout=45.0)
+
+class SearchPickerLayoutView(discord.ui.LayoutView):
+    """
+    Discord Components V2 Search Results Picker matching Chip bot layout:
+    - Container with brand accent color
+    - Top header: '### There are X results'
+    - Up to 10 Sections, each containing track title and duration/author, with right accessory button (✔)
+    - Bottom ActionRow with Cancel button (❌ Cancel)
+    """
+    def __init__(self, music_cog: 'Music', user: Union[discord.Member, discord.User], tracks: list[Track]):
+        super().__init__(timeout=60.0)
         self.music_cog = music_cog
         self.user = user
         self.tracks = tracks
+        self.build_components()
 
-        for i in range(min(5, len(tracks))):
+    def build_components(self):
+        self.clear_items()
+        items = []
+        count = len(self.tracks)
+        items.append(discord.ui.TextDisplay(f"### There are {count} results"))
+
+        for i, t in enumerate(self.tracks[:10]):
             btn = discord.ui.Button(
-                label=f"{i + 1}",
+                emoji="✔",
                 style=discord.ButtonStyle.primary,
-                custom_id=f"search_pick_{i}"
+                custom_id=f"spick_{i}"
             )
             btn.callback = self.make_callback(i)
-            self.add_item(btn)
+            sec = discord.ui.Section(
+                discord.ui.TextDisplay(f"**{t.clean_title}**\nDuration: {t.formatted_duration} • Author: {t.author}"),
+                accessory=btn
+            )
+            items.append(sec)
 
-        cancel_btn = discord.ui.Button(label="Cancel", style=discord.ButtonStyle.danger, custom_id="search_cancel", emoji=EmojiPartials.REFUSED)
+        cancel_btn = discord.ui.Button(
+            label="Cancel",
+            emoji="❌",
+            style=discord.ButtonStyle.danger,
+            custom_id="scancel"
+        )
         cancel_btn.callback = self.cancel_callback
-        self.add_item(cancel_btn)
+        row = discord.ui.ActionRow(cancel_btn)
+        items.append(row)
+
+        cnt = discord.ui.Container(*items, accent_color=BRAND_COLOR)
+        self.add_item(cnt)
 
     def make_callback(self, index: int):
         async def _callback(interaction: discord.Interaction):
             if interaction.user.id != self.user.id:
-                await self.music_cog.send_error_embed(
-                    interaction,
-                    description="Only the search requester can select tracks.",
-                    is_warning=True
+                embed = discord.Embed(
+                    description=f"### {Emojis.WARNING} Only the search requester can select tracks.",
+                    color=0xED4245
                 )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             selected = self.tracks[index]
             self.stop()
@@ -381,17 +492,20 @@ class SearchPickerView(discord.ui.View):
 
     async def cancel_callback(self, interaction: discord.Interaction):
         if interaction.user.id != self.user.id:
-            await self.music_cog.send_error_embed(
-                interaction,
-                description="Only the search requester can cancel this search.",
-                is_warning=True
+            embed = discord.Embed(
+                description=f"### {Emojis.WARNING} Only the search requester can cancel this search.",
+                color=0xED4245
             )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             return
         self.stop()
         try:
             await interaction.message.delete()
         except Exception:
             pass
+
+
+SearchPickerView = SearchPickerLayoutView
 
 class Music(commands.Cog):
     """High-fidelity Discord Radio & Music Playback System."""
@@ -426,7 +540,7 @@ class Music(commands.Cog):
         # 2. Channel check (Must be channel 1520749466330857492)
         if not self._is_allowed_channel(ctx.channel.id):
             embed = discord.Embed(
-                description=f"### Music commands can only be used in <#{MUSIC_COMMAND_CHANNEL_ID}>!",
+                description=f"### {Emojis.WARNING} Music commands can only be used in <#{MUSIC_COMMAND_CHANNEL_ID}>!",
                 color=0xED4245
             )
             await ctx.send(embed=embed, delete_after=10)
@@ -437,7 +551,7 @@ class Music(commands.Cog):
         # 3. Booster role restriction (Must have role 1558584451724738640)
         if not self._is_booster_or_admin(ctx.author, ctx.guild):
             embed = discord.Embed(
-                description=f"### Music & Radio commands are exclusive for <@&{MUSIC_BOOSTER_ROLE_ID}>!",
+                description=f"### {Emojis.WARNING} Music & Radio commands are exclusive for <@&{MUSIC_BOOSTER_ROLE_ID}>!",
                 color=0xED4245
             )
             await ctx.send(embed=embed, delete_after=10)
@@ -455,7 +569,7 @@ class Music(commands.Cog):
         # 2. Channel check (Must be channel 1520749466330857492)
         if not self._is_allowed_channel(interaction.channel_id):
             embed = discord.Embed(
-                description=f"### Music commands can only be used in <#{MUSIC_COMMAND_CHANNEL_ID}>!",
+                description=f"### {Emojis.WARNING} Music commands can only be used in <#{MUSIC_COMMAND_CHANNEL_ID}>!",
                 color=0xED4245
             )
             if not interaction.response.is_done():
@@ -467,7 +581,7 @@ class Music(commands.Cog):
         # 3. Booster role restriction (Must have role 1558584451724738640)
         if not self._is_booster_or_admin(interaction.user, interaction.guild):
             embed = discord.Embed(
-                description=f"### Music & Radio commands are exclusive for <@&{MUSIC_BOOSTER_ROLE_ID}>!",
+                description=f"### {Emojis.WARNING} Music & Radio commands are exclusive for <@&{MUSIC_BOOSTER_ROLE_ID}>!",
                 color=0xED4245
             )
             if not interaction.response.is_done():
@@ -722,26 +836,11 @@ class Music(commands.Cog):
         else:
             queue.tracks.extend(tracks)
             added_track = tracks[0]
-            embed = discord.Embed(color=BRAND_COLOR)
-            embed.description = (
-                f"### {Emojis.QUEUE_ADD} Track Added to Queue\n"
-                f"[{added_track.clean_title}]({added_track.url})\n\n"
-                f"• **Position:** `#{queue.size}`\n"
-                f"• **Artist:** {added_track.author}\n"
-                f"• {Emojis.TIME} **Duration:** `{added_track.formatted_duration}`\n"
-                f"• 👤 **Requested by:** <@{interaction.user.id}>\n\n"
-                f"▶ **Currently Playing:** **{queue.current_track.clean_title if queue.current_track else 'None'}**"
-            )
-            if added_track.thumbnail:
-                embed.set_thumbnail(url=added_track.thumbnail)
-            embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
-
+            view = TrackEnqueuedLayoutView(added_track, position=queue.size)
             if interaction.response.is_done():
-                msg = await interaction.followup.send(embed=embed)
-                if msg:
-                    asyncio.create_task(_delayed_delete_msg(msg, 10))
+                await interaction.followup.send(view=view)
             else:
-                await interaction.response.send_message(embed=embed, delete_after=10)
+                await interaction.response.send_message(view=view)
 
     async def play_track(self, queue: GuildMusicQueue, track: Track):
         queue.playback_token += 1
@@ -1025,22 +1124,8 @@ class Music(commands.Cog):
         else:
             queue.tracks.extend(tracks)
             added_track = tracks[0]
-            embed = discord.Embed(color=BRAND_COLOR)
-            embed.description = (
-                f"### {Emojis.QUEUE_ADD} Track Added to Queue\n"
-                f"[{added_track.clean_title}]({added_track.url})\n\n"
-                f"• **Position:** `#{queue.size}`\n"
-                f"• **Artist:** {added_track.author}\n"
-                f"• {Emojis.TIME} **Duration:** `{added_track.formatted_duration}`\n"
-                f"• 👤 **Requested by:** <@{ctx.author.id}>\n\n"
-                f"▶ **Currently Playing:** **{queue.current_track.clean_title if queue.current_track else 'None'}**"
-            )
-            if added_track.thumbnail:
-                embed.set_thumbnail(url=added_track.thumbnail)
-            embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
-            await ctx.send(embed=embed, delete_after=10)
-            if ctx.message:
-                asyncio.create_task(_delayed_delete_msg(ctx.message, 10))
+            view = TrackEnqueuedLayoutView(added_track, position=queue.size)
+            await ctx.send(view=view)
 
     async def start_radio_for_ctx(self, ctx: commands.Context, station_id: str):
         vc = await self.ensure_voice_ctx(ctx)
@@ -1133,7 +1218,7 @@ class Music(commands.Cog):
         queue.text_channel = interaction.channel
 
         try:
-            tracks = await self.service.search_and_extract(query, interaction.user, platform=platform, limit=5)
+            tracks = await self.service.search_and_extract(query, interaction.user, platform=platform, limit=10)
         except Exception as e:
             log.error(f"[Music Search Error] {e}")
             await self.send_error_embed(interaction, description=f"Search failed: `{e}`", delay=30)
@@ -1143,15 +1228,8 @@ class Music(commands.Cog):
             await self.send_error_embed(interaction, description=f"No results found for **{query}**.", is_warning=True)
             return
 
-        embed = discord.Embed(title="🔍 Search Results", color=BRAND_COLOR)
-        lines = []
-        for i, t in enumerate(tracks):
-            lines.append(f"**{i + 1}.** [{t.clean_title}]({t.url})\n{Emojis.TIME} `{t.formatted_duration}`  •  *{t.author}*")
-        embed.description = f"Query: **{query}**\n\n───────────────────────────────\n\n" + "\n\n".join(lines)
-        embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
-
-        view = SearchPickerView(self, interaction.user, tracks)
-        await interaction.followup.send(embed=embed, view=view)
+        view = SearchPickerLayoutView(self, interaction.user, tracks)
+        await interaction.followup.send(view=view)
 
     @app_commands.command(name="pause", description="Pause active music playback.")
     async def slash_pause(self, interaction: discord.Interaction):
@@ -1268,8 +1346,8 @@ class Music(commands.Cog):
         if not queue.current_track:
             await self.send_error_embed(interaction, description="Nothing is currently playing.", is_warning=True)
             return
-        embed = build_now_playing_embed(queue)
-        await interaction.response.send_message(embed=embed, delete_after=30)
+        view = NowPlayingLayoutView(queue)
+        await interaction.response.send_message(view=view, delete_after=30)
 
     @app_commands.command(name="shuffle", description="Randomize upcoming tracks in queue.")
     async def slash_shuffle(self, interaction: discord.Interaction):
@@ -1415,7 +1493,7 @@ class Music(commands.Cog):
 
         msg = await ctx.send(f"🔍 Searching results for **{query}**...")
         try:
-            tracks = await self.service.search_and_extract(query, ctx.author, platform="auto", limit=5)
+            tracks = await self.service.search_and_extract(query, ctx.author, platform="auto", limit=10)
         except Exception as e:
             try:
                 await msg.delete()
@@ -1433,15 +1511,8 @@ class Music(commands.Cog):
             await self.send_error_embed(ctx, description=f"No results found for **{query}**.", is_warning=True)
             return
 
-        embed = discord.Embed(title="🔍 Search Results", color=BRAND_COLOR)
-        lines = []
-        for i, t in enumerate(tracks):
-            lines.append(f"**{i + 1}.** [{t.clean_title}]({t.url})\n{Emojis.TIME} `{t.formatted_duration}`  •  *{t.author}*")
-        embed.description = f"Query: **{query}**\n\n───────────────────────────────\n\n" + "\n\n".join(lines)
-        embed.set_footer(text="SyncInk Platform", icon_url=BRAND_LOGO_URL)
-
-        view = SearchPickerView(self, ctx.author, tracks)
-        await ctx.send(embed=embed, view=view)
+        view = SearchPickerLayoutView(self, ctx.author, tracks)
+        await ctx.send(view=view)
 
     @commands.command(name="pause", description="Pause active music playback.")
     async def cmd_pause(self, ctx: commands.Context):
@@ -1572,8 +1643,8 @@ class Music(commands.Cog):
         if not queue.current_track:
             await self.send_error_embed(ctx, description="Nothing is currently playing.", is_warning=True)
             return
-        embed = build_now_playing_embed(queue)
-        await ctx.send(embed=embed, delete_after=30)
+        view = NowPlayingLayoutView(queue)
+        await ctx.send(view=view, delete_after=30)
         if ctx.message:
             asyncio.create_task(_delayed_delete_msg(ctx.message, 30))
 
