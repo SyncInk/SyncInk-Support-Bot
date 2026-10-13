@@ -222,10 +222,15 @@ class GuildMusicQueue:
         self.radio_menu_url: Optional[str] = None
         self.radio_menu_message: Optional[discord.Message] = None
         self.manual_skip: bool = False
-        # Audio callbacks run on discord.py's player thread; tokens and a lock prevent
-        # duplicate/stale callbacks from advancing the queue more than once.
         self.playback_token: int = 0
         self.advance_lock = asyncio.Lock()
+        # AI AutoPlay state
+        self.prefetched_autoplay_track: Optional[Track] = None
+        self.prefetched_autoplay_meta: Optional[Dict[str, Any]] = None
+        self.prefetch_task: Optional[asyncio.Task] = None
+        self.last_autoplay_meta: Optional[Dict[str, Any]] = None
+        self.session_played_history: List[str] = []
+        self.session_artists: List[str] = []
 
     @property
     def size(self) -> int:

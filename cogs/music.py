@@ -24,6 +24,7 @@ from services.radio_service import (
     POPULAR_RADIO_COUNTRIES,
     get_country_flag,
 )
+from services.autoplay_service import AutoPlayService, normalize_title
 from utils.emojis import Emojis, EmojiPartials
 from utils.logger import log
 
@@ -116,7 +117,13 @@ def build_now_playing_embed(queue: GuildMusicQueue) -> discord.Embed:
     if next_track:
         up_next = f"**[{next_track.clean_title}]({next_track.url})**  •  *{next_track.author}* [{next_track.formatted_duration}]"
     elif queue.autoplay:
-        up_next = f"{Emojis.RADIO} **Smart Autoplay Recommendation**"
+        if getattr(queue, "prefetched_autoplay_track", None):
+            pref = queue.prefetched_autoplay_track
+            up_next = f"{Emojis.AI} **AI AutoPlay Next:** [{pref.clean_title}]({pref.url}) • *{pref.author}*"
+        elif getattr(queue, "last_autoplay_meta", None):
+            up_next = f"{Emojis.AI} **AI AutoPlay Active** (`{queue.last_autoplay_meta.get('genre', 'Smart Selection')}`)"
+        else:
+            up_next = f"{Emojis.AI} **AI AutoPlay:** Intelligently matching upcoming tracks..."
     elif (current.is_radio or current.platform == "radio") and queue.active_radio_station:
         up_next = f"{Emojis.RADIO} **24/7 Continuous Radio Station**"
     else:
@@ -313,7 +320,8 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
         if not vc or not self.queue.current_track:
             embed = discord.Embed(description=f"### {Emojis.WARNING} Nothing is currently playing.", color=0xFEE75C)
             await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
+        played_sec = self.queue.get_playback_time()
+        AutoPlayService.get_instance().record_track_skip(interaction.user.id, self.queue.current_track, played_sec)
         skipped_name = self.queue.current_track.clean_title
         self.queue.manual_skip = True
         vc.stop()
@@ -1072,6 +1080,369 @@ class SearchPickerLayoutView(discord.ui.LayoutView):
 
 SearchPickerView = SearchPickerLayoutView
 
+
+class AutoPlayBlockArtistModal(discord.ui.Modal, title="Block or Unblock Artist"):
+    artist_input = discord.ui.TextInput(
+        label="Artist Name",
+        placeholder="e.g. Drake, Taylor Swift, Badshah...",
+        required=True,
+        min_length=2,
+        max_length=60
+    )
+
+    def __init__(self, music_cog: 'Music', user_id: int):
+        super().__init__()
+        self.music_cog = music_cog
+        self.user_id = user_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        artist_name = self.artist_input.value.strip()
+        prof = AutoPlayService.get_instance().get_user_profile(self.user_id)
+        a_low = artist_name.lower()
+        if a_low in prof.blocked_artists:
+            prof.blocked_artists.remove(a_low)
+            AutoPlayService.get_instance().save_profiles()
+            msg = f"{Emojis.CHECK_YES} Unblocked **{artist_name}**. AutoPlay may recommend them again."
+        else:
+            prof.blocked_artists.append(a_low)
+            prof.artist_affinity[artist_name] = -10.0
+            AutoPlayService.get_instance().save_profiles()
+            msg = f"{Emojis.REFUSED} Blocked **{artist_name}**. AutoPlay will never recommend songs by this artist."
+        await interaction.response.send_message(msg, ephemeral=True)
+
+
+class AutoPlayFeedbackView(discord.ui.View):
+    """
+    Real-time interactive feedback row attached to AutoPlay recommendations:
+    [👍 Like] [👎 Dislike] [🎶 More Like This] [✨ Discover] [⚙️ Tune DJ]
+    """
+    def __init__(self, music_cog: 'Music', queue: GuildMusicQueue, track: Track):
+        super().__init__(timeout=300.0)
+        self.music_cog = music_cog
+        self.queue = queue
+        self.track = track
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if not self.music_cog._is_booster_or_admin(interaction.user, interaction.guild):
+            await interaction.response.send_message(
+                f"{Emojis.WARNING} Music commands and controls are exclusive to Boosters and Admins!",
+                ephemeral=True
+            )
+            return False
+        return True
+
+    @discord.ui.button(label="Like", emoji="👍", style=discord.ButtonStyle.secondary, custom_id="ap_btn_like")
+    async def on_like(self, interaction: discord.Interaction, button: discord.ui.Button):
+        ok, msg = AutoPlayService.get_instance().record_explicit_feedback(
+            interaction.user.id, self.track, "like"
+        )
+        button.style = discord.ButtonStyle.success
+        button.disabled = True
+        try:
+            await interaction.response.edit_message(view=self)
+            await interaction.followup.send(f"{Emojis.APPROVED} {msg}", ephemeral=True)
+        except Exception:
+            await interaction.response.send_message(f"{Emojis.APPROVED} {msg}", ephemeral=True)
+
+    @discord.ui.button(label="Dislike", emoji="👎", style=discord.ButtonStyle.secondary, custom_id="ap_btn_dislike")
+    async def on_dislike(self, interaction: discord.Interaction, button: discord.ui.Button):
+        ok, msg = AutoPlayService.get_instance().record_explicit_feedback(
+            interaction.user.id, self.track, "dislike"
+        )
+        button.style = discord.ButtonStyle.danger
+        button.disabled = True
+        try:
+            await interaction.response.edit_message(view=self)
+            await interaction.followup.send(f"{Emojis.REFUSED} {msg} Skipping track...", ephemeral=True)
+        except Exception:
+            await interaction.response.send_message(f"{Emojis.REFUSED} {msg} Skipping track...", ephemeral=True)
+        # Skip immediately if it's the currently playing track
+        if self.queue.voice_client and self.queue.current_track == self.track:
+            self.queue.manual_skip = True
+            self.queue.voice_client.stop()
+
+    @discord.ui.button(label="More Like This", emoji="🎶", style=discord.ButtonStyle.secondary, custom_id="ap_btn_more")
+    async def on_more(self, interaction: discord.Interaction, button: discord.ui.Button):
+        ok, msg = AutoPlayService.get_instance().record_explicit_feedback(
+            interaction.user.id, self.track, "more_like_this"
+        )
+        button.style = discord.ButtonStyle.primary
+        button.disabled = True
+        # Invalidate current prefetch so next song honors the new focus immediately
+        self.queue.prefetched_autoplay_track = None
+        self.queue.prefetched_autoplay_meta = None
+        AutoPlayService.get_instance().trigger_prefetch(self.queue, self.music_cog.service)
+        try:
+            await interaction.response.edit_message(view=self)
+            await interaction.followup.send(f"{Emojis.AI} {msg}", ephemeral=True)
+        except Exception:
+            await interaction.response.send_message(f"{Emojis.AI} {msg}", ephemeral=True)
+
+    @discord.ui.button(label="Discover", emoji="✨", style=discord.ButtonStyle.secondary, custom_id="ap_btn_discover")
+    async def on_discover(self, interaction: discord.Interaction, button: discord.ui.Button):
+        prof = AutoPlayService.get_instance().get_user_profile(interaction.user.id)
+        if prof.discovery_mode == "balanced":
+            prof.discovery_mode = "explore"
+            mode_desc = "Fresh Discoveries & New Artists ✨"
+        elif prof.discovery_mode == "explore":
+            prof.discovery_mode = "familiar"
+            mode_desc = "Familiar Favorites & Beloved Artists 🎵"
+        else:
+            prof.discovery_mode = "balanced"
+            mode_desc = "Balanced (Favorites + Discoveries) ⚖️"
+        AutoPlayService.get_instance().save_profiles()
+        self.queue.prefetched_autoplay_track = None
+        self.queue.prefetched_autoplay_meta = None
+        AutoPlayService.get_instance().trigger_prefetch(self.queue, self.music_cog.service)
+        await interaction.response.send_message(
+            f"{Emojis.AI} AutoPlay Discovery mode switched to **{mode_desc}**.",
+            ephemeral=True
+        )
+
+    @discord.ui.button(label="Tune DJ", emoji="⚙️", style=discord.ButtonStyle.secondary, custom_id="ap_btn_tune")
+    async def on_tune(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = AutoPlayControlCenterView(self.music_cog, interaction.user, self.queue)
+        embed = view.build_embed()
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+
+class AutoPlayControlCenterView(discord.ui.View):
+    """
+    Interactive Control Center for AI AutoPlay:
+    Allows user to tune genre, mood, language, discovery style, block artists, and toggle.
+    """
+    def __init__(self, music_cog: 'Music', user: Union[discord.Member, discord.User], queue: GuildMusicQueue):
+        super().__init__(timeout=180.0)
+        self.music_cog = music_cog
+        self.user = user
+        self.queue = queue
+        self.build_components()
+
+    def build_embed(self) -> discord.Embed:
+        prof = AutoPlayService.get_instance().get_user_profile(self.user.id)
+        status_str = f"**ENABLED** {Emojis.CHECK_YES}" if self.queue.autoplay else f"**DISABLED** {Emojis.REFUSED}"
+
+        ctx = AutoPlayService.get_instance().build_recommendation_context(self.queue, fallback_user=self.user)
+        mode_str = ctx.get("mode", "Personal")
+
+        fav_artists = [f"`{a}`" for a, _ in sorted(prof.artist_affinity.items(), key=lambda x: x[1], reverse=True)[:3]]
+        fav_str = ", ".join(fav_artists) if fav_artists else "*None yet (plays will auto-learn)*"
+
+        disc_map = {
+            "balanced": "Balanced ⚖️ (Favorites + Fresh Finds)",
+            "familiar": "Familiar 🎵 (Beloved Favorites)",
+            "explore": "Explore ✨ (Fresh Discoveries & Hidden Gems)"
+        }
+        disc_str = disc_map.get(prof.discovery_mode, "Balanced")
+
+        mood_genre_str = f"Genre: `{prof.manual_genre or 'Auto-Detect'}` • Mood: `{prof.manual_mood or 'Dynamic'}`"
+        lang_str = f"`{prof.manual_language or 'All Languages / Dynamic'}`"
+
+        desc = (
+            f"### {Emojis.AI} SyncInk AI DJ • Auto Play Control Center\n"
+            f"Auto Play acts as your personal AI music companion that continuously learns your musical taste and keeps high-fidelity audio playing seamlessly when the queue finishes.\n\n"
+            f"• **Status:** {status_str}\n"
+            f"• **Listening Mode:** `{mode_str}`\n"
+            f"• **Discovery Style:** {disc_str}\n"
+            f"• **Style Focus:** {mood_genre_str}\n"
+            f"• **Language Focus:** {lang_str}\n"
+            f"• **Top Learned Artists:** {fav_str}\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"*Customize your listening experience using the menus and controls below:*"
+        )
+
+        embed = discord.Embed(description=desc, color=BRAND_COLOR)
+        embed.set_footer(text="SyncInk AI Music Engine", icon_url=BRAND_LOGO_URL)
+        return embed
+
+    def build_components(self):
+        self.clear_items()
+        prof = AutoPlayService.get_instance().get_user_profile(self.user.id)
+
+        # 1. Select Menu: Mood & Genre (Row 0)
+        mood_options = [
+            discord.SelectOption(label="Romantic & Soulful", value="Romantic|Bollywood Romantic", description="Acoustic melodies, heartfelt love songs", emoji="💖"),
+            discord.SelectOption(label="Lo-Fi & Chill", value="Relaxing|Lo-Fi Beats & Chillhop", description="Relaxing beats, study & chillhop vibes", emoji="☕"),
+            discord.SelectOption(label="Energetic & High BPM", value="Energetic|Pop & R&B Hits", description="Uplifting pop hits, dance grooves", emoji="⚡"),
+            discord.SelectOption(label="Punjabi Pop & Urban", value="Energetic|Punjabi Pop & Urban", description="Punjabi folk, urban pop & bass", emoji="🔥"),
+            discord.SelectOption(label="Hip-Hop & Rap", value="Energetic|Hip-Hop & Rap", description="Modern hip-hop, trap & rap rhythms", emoji="🎤"),
+            discord.SelectOption(label="Indie & Acoustic", value="Chill|Hindi Indie & Acoustic", description="Coffeehouse acoustic & indie vibes", emoji="🎸"),
+            discord.SelectOption(label="EDM & Dance", value="Energetic|EDM & Dance", description="Festival electronic, melodic EDM", emoji="🎧"),
+            discord.SelectOption(label="K-Pop & J-Pop", value="Energetic|K-Pop", description="Korean pop & Japanese anime hits", emoji="🌸"),
+            discord.SelectOption(label="↺ Reset Genre & Mood", value="reset", description="Clear focus; let AI dynamically adapt", emoji="🔄"),
+        ]
+        mood_select = discord.ui.Select(
+            placeholder="🎭 Select Preferred Mood & Genre...",
+            options=mood_options,
+            custom_id="ap_select_mood",
+            row=0
+        )
+        mood_select.callback = self.on_mood_select
+        self.add_item(mood_select)
+
+        # 2. Select Menu: Language (Row 1)
+        lang_options = [
+            discord.SelectOption(label="Hindi / Bollywood", value="Hindi", emoji="🇮🇳"),
+            discord.SelectOption(label="English / International", value="English", emoji="🌐"),
+            discord.SelectOption(label="Punjabi", value="Punjabi", emoji="🪕"),
+            discord.SelectOption(label="Korean / K-Pop", value="Korean", emoji="🇰🇷"),
+            discord.SelectOption(label="Japanese / Anime", value="Japanese", emoji="🇯🇵"),
+            discord.SelectOption(label="Spanish / Latin", value="Spanish", emoji="🇪🇸"),
+            discord.SelectOption(label="↺ Any Language (Auto)", value="reset", emoji="🔄"),
+        ]
+        lang_select = discord.ui.Select(
+            placeholder="🌐 Select Preferred Language...",
+            options=lang_options,
+            custom_id="ap_select_lang",
+            row=1
+        )
+        lang_select.callback = self.on_lang_select
+        self.add_item(lang_select)
+
+        # 3. Select Menu: Discovery Mode (Row 2)
+        disc_options = [
+            discord.SelectOption(label="Balanced (Recommended)", value="balanced", description="Harmonious blend of favorites & new discoveries", emoji="⚖️", default=(prof.discovery_mode == "balanced")),
+            discord.SelectOption(label="Familiar Favorites", value="familiar", description="Stick primarily to songs & artists you love", emoji="🎵", default=(prof.discovery_mode == "familiar")),
+            discord.SelectOption(label="Fresh Discoveries", value="explore", description="Surfaces exciting new tracks & emerging artists", emoji="✨", default=(prof.discovery_mode == "explore")),
+        ]
+        disc_select = discord.ui.Select(
+            placeholder="✨ Choose Discovery Style...",
+            options=disc_options,
+            custom_id="ap_select_disc",
+            row=2
+        )
+        disc_select.callback = self.on_disc_select
+        self.add_item(disc_select)
+
+        # 4. Action Row (Row 3): Toggle ON/OFF, Block Artist, View Taste Profile
+        toggle_label = "Turn OFF AutoPlay" if self.queue.autoplay else "Turn ON AutoPlay"
+        toggle_style = discord.ButtonStyle.danger if self.queue.autoplay else discord.ButtonStyle.success
+        btn_toggle = discord.ui.Button(
+            label=toggle_label,
+            style=toggle_style,
+            custom_id="ap_btn_toggle",
+            row=3
+        )
+        btn_toggle.callback = self.on_toggle
+        self.add_item(btn_toggle)
+
+        btn_block = discord.ui.Button(
+            label="Block Artist",
+            emoji="🚫",
+            style=discord.ButtonStyle.secondary,
+            custom_id="ap_btn_block",
+            row=3
+        )
+        btn_block.callback = self.on_block_artist
+        self.add_item(btn_block)
+
+        btn_profile = discord.ui.Button(
+            label="My Taste Profile",
+            emoji="📊",
+            style=discord.ButtonStyle.secondary,
+            custom_id="ap_btn_profile",
+            row=3
+        )
+        btn_profile.callback = self.on_view_profile
+        self.add_item(btn_profile)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user.id:
+            await interaction.response.send_message(
+                f"{Emojis.WARNING} Only the requester can configure this AutoPlay control panel.",
+                ephemeral=True
+            )
+            return False
+        return True
+
+    async def on_mood_select(self, interaction: discord.Interaction):
+        val = interaction.data["values"][0]
+        prof = AutoPlayService.get_instance().get_user_profile(self.user.id)
+        if val == "reset":
+            prof.manual_mood = None
+            prof.manual_genre = None
+            msg = "Reset Mood & Genre. AI DJ will dynamically adapt."
+        else:
+            mood, genre = val.split("|", 1)
+            prof.manual_mood = mood
+            prof.manual_genre = genre
+            msg = f"Set Mood to **{mood}** and Genre to **{genre}**."
+        AutoPlayService.get_instance().save_profiles()
+        self.queue.prefetched_autoplay_track = None
+        self.queue.prefetched_autoplay_meta = None
+        AutoPlayService.get_instance().trigger_prefetch(self.queue, self.music_cog.service)
+        self.build_components()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+        await interaction.followup.send(f"{Emojis.APPROVED} {msg}", ephemeral=True)
+
+    async def on_lang_select(self, interaction: discord.Interaction):
+        val = interaction.data["values"][0]
+        prof = AutoPlayService.get_instance().get_user_profile(self.user.id)
+        if val == "reset":
+            prof.manual_language = None
+            msg = "Language set to Auto-Detect across all languages."
+        else:
+            prof.manual_language = val
+            msg = f"Set preferred language focus to **{val}**."
+        AutoPlayService.get_instance().save_profiles()
+        self.queue.prefetched_autoplay_track = None
+        self.queue.prefetched_autoplay_meta = None
+        AutoPlayService.get_instance().trigger_prefetch(self.queue, self.music_cog.service)
+        self.build_components()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+        await interaction.followup.send(f"{Emojis.APPROVED} {msg}", ephemeral=True)
+
+    async def on_disc_select(self, interaction: discord.Interaction):
+        val = interaction.data["values"][0]
+        prof = AutoPlayService.get_instance().get_user_profile(self.user.id)
+        prof.discovery_mode = val
+        AutoPlayService.get_instance().save_profiles()
+        self.queue.prefetched_autoplay_track = None
+        self.queue.prefetched_autoplay_meta = None
+        AutoPlayService.get_instance().trigger_prefetch(self.queue, self.music_cog.service)
+        self.build_components()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+        await interaction.followup.send(f"{Emojis.APPROVED} Discovery mode updated to **{val.title()}**.", ephemeral=True)
+
+    async def on_toggle(self, interaction: discord.Interaction):
+        self.queue.autoplay = not self.queue.autoplay
+        status = "ENABLED" if self.queue.autoplay else "DISABLED"
+        if self.queue.autoplay:
+            AutoPlayService.get_instance().trigger_prefetch(self.queue, self.music_cog.service)
+        else:
+            self.queue.prefetched_autoplay_track = None
+            self.queue.prefetched_autoplay_meta = None
+        self.build_components()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+        await interaction.followup.send(f"{Emojis.AI} AutoPlay is now **{status}**.", ephemeral=True)
+
+    async def on_block_artist(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(AutoPlayBlockArtistModal(self.music_cog, self.user.id))
+
+    async def on_view_profile(self, interaction: discord.Interaction):
+        prof = AutoPlayService.get_instance().get_user_profile(self.user.id)
+        top_art = [f"• **{a}** (score: {s:.1f})" for a, s in sorted(prof.artist_affinity.items(), key=lambda x: x[1], reverse=True)[:5]]
+        top_gen = [f"• **{g}** (score: {s:.1f})" for g, s in sorted(prof.genre_affinity.items(), key=lambda x: x[1], reverse=True)[:5]]
+        blocked = [f"`{b}`" for b in prof.blocked_artists[:10]]
+
+        art_text = "\n".join(top_art) if top_art else "*No artist history yet.*"
+        gen_text = "\n".join(top_gen) if top_gen else "*No genre history yet.*"
+        block_text = ", ".join(blocked) if blocked else "*None.*"
+
+        p_embed = discord.Embed(
+            description=(
+                f"### 📊 Your Personal Music Taste Profile\n"
+                f"**Total Songs Listened:** `{prof.total_listened}`\n"
+                f"**Liked Tracks:** `{len(prof.liked_tracks)}`  •  **Disliked Tracks:** `{len(prof.disliked_tracks)}`\n\n"
+                f"**Top Learned Artists:**\n{art_text}\n\n"
+                f"**Top Learned Genres:**\n{gen_text}\n\n"
+                f"**Blocked Artists:**\n{block_text}\n\n"
+                f"_-# Your profile is 100% private and continuously improves with every listen._"
+            ),
+            color=BRAND_COLOR
+        )
+        await interaction.response.send_message(embed=p_embed, ephemeral=True)
+
 class Music(commands.Cog):
     """High-fidelity Discord Radio & Music Playback System."""
 
@@ -1505,6 +1876,16 @@ class Music(commands.Cog):
                         await asyncio.sleep(0.01)
                 queue.voice_client.play(audio_source, after=_after_playback)
                 queue.cancel_inactivity()
+                if not track.is_radio:
+                    norm_key = normalize_title(track.clean_title)
+                    queue.session_played_history.append(norm_key)
+                    queue.session_played_history = queue.session_played_history[-50:]
+                    queue.session_artists.append(track.author)
+                    queue.session_artists = queue.session_artists[-20:]
+                    if track.requested_by and hasattr(track.requested_by, "id"):
+                        AutoPlayService.get_instance().record_track_play(track.requested_by.id, track, manual=True)
+                    if queue.autoplay:
+                        AutoPlayService.get_instance().trigger_prefetch(queue, self.service)
                 return True
             except Exception as play_err:
                 log.error(f"[Playback Play Error] {play_err}")
@@ -1663,23 +2044,63 @@ class Music(commands.Cog):
             self.start_inactivity_countdown(queue, delay=60, reason="empty_queue")
             return
 
-        # Normal music playback - Check Autoplay
-        if queue.autoplay and queue.history:
-            last = queue.history[-1]
-            rec_query = f"{last.author} {last.clean_title} related song"
-            rec_tracks = await self.service.search_and_extract(rec_query, last.requested_by, limit=3)
-            if rec_tracks:
-                await self.play_track(queue, rec_tracks[0])
-                if queue.text_channel:
-                    if queue.now_playing_message:
-                        try:
-                            await queue.now_playing_message.delete()
-                        except Exception:
-                            pass
-                            queue.now_playing_message = None
-                    view = MusicPlayerLayoutView(self, queue)
-                    queue.now_playing_message = await queue.text_channel.send(view=view)
-                return
+        # Normal music playback - Check AI-Powered AutoPlay
+        if queue.autoplay:
+            requester = None
+            if last_track and getattr(last_track, "requested_by", None):
+                requester = last_track.requested_by
+            elif queue.history and getattr(queue.history[-1], "requested_by", None):
+                requester = queue.history[-1].requested_by
+            if not requester:
+                listeners = AutoPlayService.get_instance().get_vc_listeners(queue)
+                requester = listeners[0] if listeners else None
+
+            if requester:
+                rec_track, rec_meta = await AutoPlayService.get_instance().resolve_next_track(
+                    queue, requester, self.service
+                )
+                if rec_track:
+                    queue.last_autoplay_meta = rec_meta
+                    played = await self.play_track(queue, rec_track)
+                    if played:
+                        if queue.text_channel:
+                            if queue.now_playing_message:
+                                try:
+                                    await queue.now_playing_message.delete()
+                                except Exception:
+                                    pass
+                                queue.now_playing_message = None
+                            view = MusicPlayerLayoutView(self, queue)
+                            try:
+                                queue.now_playing_message = await queue.text_channel.send(view=view)
+                            except Exception as e:
+                                log.warning(f"Failed to send Now Playing view: {e}")
+
+                            # Dedicated AutoPlay DJ recommendation embed with feedback controls
+                            reason_text = (rec_meta or {}).get("reason", "Curated based on your listening preferences.")
+                            mode_badge = (rec_meta or {}).get("mode", "Personal")
+                            genre_badge = (rec_meta or {}).get("genre", "Mixed")
+                            dj_embed = discord.Embed(
+                                description=(
+                                    f"### {Emojis.AI} SyncInk AI DJ • Auto Play Recommendation\n"
+                                    f"Now playing **[{rec_track.clean_title}]({rec_track.url})** by **{rec_track.author}**\n\n"
+                                    f"✨ **Why this was chosen:**\n> {reason_text}\n\n"
+                                    f"🎧 **Listening Mode:** `{mode_badge}`  •  **Genre:** `{genre_badge}`"
+                                ),
+                                color=BRAND_COLOR
+                            )
+                            if rec_track.thumbnail and rec_track.thumbnail.startswith("http"):
+                                dj_embed.set_thumbnail(url=rec_track.thumbnail)
+                            dj_embed.set_footer(text="Rate this track below to guide future AutoPlay selections", icon_url=BRAND_LOGO_URL)
+                            feedback_view = AutoPlayFeedbackView(self, queue, rec_track)
+                            try:
+                                await queue.text_channel.send(embed=dj_embed, view=feedback_view)
+                            except Exception:
+                                pass
+
+                        # Gapless prefetch: queue the next song in background so transitions are 0s delay
+                        AutoPlayService.get_instance().trigger_prefetch(queue, self.service)
+                        return
 
         # End of queue reached for normal music
         queue.current_track = None
@@ -2256,6 +2677,8 @@ class Music(commands.Cog):
         to_drop = max(0, count - 1)
         for _ in range(min(to_drop, len(queue.tracks))):
             queue.tracks.pop(0)
+        played_sec = queue.get_playback_time()
+        AutoPlayService.get_instance().record_track_skip(interaction.user.id, queue.current_track, played_sec)
         skipped = queue.current_track.clean_title
         queue.manual_skip = True
         queue.voice_client.stop()
@@ -2360,13 +2783,31 @@ class Music(commands.Cog):
             queue.voice_client.source.volume = val / 100.0
         await interaction.response.send_message(f"{Emojis.SYNCBOT} Volume adjusted to **{val}%**.", ephemeral=True)
 
-    @app_commands.command(name="autoplay", description="Endless related song recommendation.")
-    @app_commands.describe(mode="Enable or disable smart autoplay")
-    async def slash_autoplay(self, interaction: discord.Interaction, mode: Literal["on", "off"]):
+    @app_commands.command(name="autoplay", description="AI-powered personal DJ & continuous song recommendation.")
+    @app_commands.describe(mode="Directly toggle ON or OFF (or omit to open interactive AI DJ settings)")
+    async def slash_autoplay(self, interaction: discord.Interaction, mode: Optional[Literal["on", "off"]] = None):
         queue = self.service.get_queue(interaction.guild_id)
-        queue.autoplay = (mode == "on")
-        status = "ENABLED" if queue.autoplay else "DISABLED"
-        await interaction.response.send_message(f"{Emojis.RADIO} Autoplay is now **{status}**.", ephemeral=True)
+        if mode == "on":
+            queue.autoplay = True
+            AutoPlayService.get_instance().trigger_prefetch(queue, self.service)
+            embed = discord.Embed(
+                description=f"### {Emojis.AI} AI AutoPlay is now **ENABLED**.\nSyncInk AI DJ will seamlessly recommend matching tracks as your queue finishes.",
+                color=BRAND_COLOR
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        elif mode == "off":
+            queue.autoplay = False
+            queue.prefetched_autoplay_track = None
+            queue.prefetched_autoplay_meta = None
+            embed = discord.Embed(
+                description=f"### {Emojis.REFUSED} AI AutoPlay is now **DISABLED**.",
+                color=0xED4245
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        else:
+            view = AutoPlayControlCenterView(self, interaction.user, queue)
+            embed = view.build_embed()
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     @app_commands.command(name="247", description="Keep bot in voice channel 24/7.")
     @app_commands.describe(mode="Enable or disable 24/7 mode")
@@ -2545,6 +2986,8 @@ class Music(commands.Cog):
         to_drop = max(0, count - 1)
         for _ in range(min(to_drop, len(queue.tracks))):
             queue.tracks.pop(0)
+        played_sec = queue.get_playback_time()
+        AutoPlayService.get_instance().record_track_skip(ctx.author.id, queue.current_track, played_sec)
         skipped = queue.current_track.clean_title
         queue.manual_skip = True
         queue.voice_client.stop()
@@ -2682,18 +3125,35 @@ class Music(commands.Cog):
         if ctx.message:
             asyncio.create_task(_delayed_delete_msg(ctx.message, 5))
 
-    @commands.command(name="autoplay", description="Endless related song recommendation.")
+    @commands.command(name="autoplay", description="AI-powered personal DJ & continuous song recommendation.")
     async def cmd_autoplay(self, ctx: commands.Context, mode: Optional[str] = None):
         queue = self.service.get_queue(ctx.guild.id)
         if mode:
             m = mode.lower().strip()
-            queue.autoplay = (m in ("on", "true", "enable", "1"))
+            if m in ("on", "true", "enable", "1"):
+                queue.autoplay = True
+                AutoPlayService.get_instance().trigger_prefetch(queue, self.service)
+                await ctx.send(f"{Emojis.AI} AI AutoPlay is now **ENABLED**.", delete_after=5)
+            elif m in ("off", "false", "disable", "0"):
+                queue.autoplay = False
+                queue.prefetched_autoplay_track = None
+                queue.prefetched_autoplay_meta = None
+                await ctx.send(f"{Emojis.REFUSED} AI AutoPlay is now **DISABLED**.", delete_after=5)
+            else:
+                queue.autoplay = not queue.autoplay
+                if queue.autoplay:
+                    AutoPlayService.get_instance().trigger_prefetch(queue, self.service)
+                else:
+                    queue.prefetched_autoplay_track = None
+                    queue.prefetched_autoplay_meta = None
+                status = "ENABLED" if queue.autoplay else "DISABLED"
+                await ctx.send(f"{Emojis.AI} AI AutoPlay is now **{status}**.", delete_after=5)
+            if ctx.message:
+                asyncio.create_task(_delayed_delete_msg(ctx.message, 5))
         else:
-            queue.autoplay = not queue.autoplay
-        status = "ENABLED" if queue.autoplay else "DISABLED"
-        await ctx.send(f"{Emojis.RADIO} Autoplay is now **{status}**.", delete_after=5)
-        if ctx.message:
-            asyncio.create_task(_delayed_delete_msg(ctx.message, 5))
+            view = AutoPlayControlCenterView(self, ctx.author, queue)
+            embed = view.build_embed()
+            await ctx.send(embed=embed, view=view)
 
     @commands.command(name="247", aliases=["alwayson"], description="Keep bot in voice channel 24/7.")
     async def cmd_247(self, ctx: commands.Context, mode: Optional[str] = None):
