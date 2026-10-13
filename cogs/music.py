@@ -480,39 +480,193 @@ class QueueLayoutView(discord.ui.View):
         await interaction.followup.send(f"{Emojis.SHUFFLE} Upcoming tracks shuffled!", ephemeral=True)
 
 
+class CountrySearchModal(discord.ui.Modal, title="Search Radio Countries"):
+    query_input = discord.ui.TextInput(
+        label="Country Name or ISO Code",
+        placeholder="e.g. India, Japan, US, Germany, Brazil...",
+        required=True,
+        min_length=1,
+        max_length=60
+    )
+
+    def __init__(self, parent_view: 'CountryRadioSelectView'):
+        super().__init__()
+        self.parent_view = parent_view
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        search_query = self.query_input.value.strip()
+        matched = RadioService.get_instance().search_countries(search_query, limit=50)
+        if not matched:
+            embed = discord.Embed(
+                description=f"### {Emojis.WARNING} No countries found matching **{search_query}**.\n{Emojis.S_ARROW} *Please try another country name or ISO 2-letter code.*",
+                color=0xFEE75C
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        self.parent_view.countries = matched
+        self.parent_view.current_page = 0
+        self.parent_view.is_filtered = True
+        self.parent_view.filter_label = search_query
+        self.parent_view.build_components()
+
+        embed = discord.Embed(
+            description=f"### {Emojis.RADIO} Worldwide Country Radio\nFound **{len(matched)}** countries matching **{search_query}**.\nSelect a country below (Pg 1/{self.parent_view.total_pages}) or click 🔍 to search again:",
+            color=BRAND_COLOR
+        )
+        try:
+            await interaction.edit_original_response(embed=embed, view=self.parent_view)
+            orig = await interaction.original_response()
+            if orig:
+                q = self.parent_view.music_cog.service.get_queue(interaction.guild_id)
+                q.radio_menu_url = orig.jump_url
+                q.radio_menu_message = orig
+        except Exception:
+            try:
+                msg = await interaction.followup.send(embed=embed, view=self.parent_view)
+                if msg:
+                    q = self.parent_view.music_cog.service.get_queue(interaction.guild_id)
+                    q.radio_menu_url = msg.jump_url
+                    q.radio_menu_message = msg
+            except Exception:
+                pass
+
+
 class CountryRadioSelectView(discord.ui.View):
-    """Dropdown selector for popular countries to tune into live radio."""
-    def __init__(self, music_cog: 'Music', user: Union[discord.Member, discord.User]):
-        super().__init__(timeout=120.0)
+    """
+    Paginated dropdown selector for ALL countries worldwide.
+    Supports Next / Prev navigation, search modal, and reset button.
+    """
+    def __init__(
+        self,
+        music_cog: 'Music',
+        user: Union[discord.Member, discord.User],
+        countries: Optional[list] = None,
+        page: int = 0,
+        is_filtered: bool = False,
+        filter_label: Optional[str] = None
+    ):
+        super().__init__(timeout=180.0)
         self.music_cog = music_cog
         self.user = user
+        self.current_page = page
+        self.is_filtered = is_filtered
+        self.filter_label = filter_label
+
+        if countries is not None:
+            self.countries = countries
+        else:
+            self.countries = RadioService.get_instance().get_countries()
+
+        self.build_components()
+
+    @property
+    def total_pages(self) -> int:
+        return max(1, math.ceil(len(self.countries) / 25))
+
+    def build_components(self):
+        self.clear_items()
+        total_p = self.total_pages
+        if self.current_page >= total_p:
+            self.current_page = total_p - 1
+        if self.current_page < 0:
+            self.current_page = 0
+
+        start_idx = self.current_page * 25
+        end_idx = start_idx + 25
+        page_countries = self.countries[start_idx:end_idx]
 
         options = []
-        for name, code, flag in POPULAR_RADIO_COUNTRIES[:25]:
+        for c in page_countries:
+            name = c.get("name", "Unknown")
+            code = c.get("iso_3166_1", "")
+            flag = get_country_flag(code or name)
+            count = c.get("stationcount", 0)
+            desc = f"{count} live radio stations" if count else f"Live radio from {name}"
             options.append(
                 discord.SelectOption(
-                    label=f"{flag} {name}",
-                    value=name,
-                    description=f"Live radio stations from {name}",
+                    label=f"{flag} {name}"[:100],
+                    value=name[:100],
+                    description=desc[:100],
                     emoji=EmojiPartials.RADIO
                 )
             )
 
+        if not options:
+            options.append(
+                discord.SelectOption(
+                    label="No countries available",
+                    value="none",
+                    emoji=EmojiPartials.RADIO
+                )
+            )
+
+        filter_text = f" [{self.filter_label}]" if self.is_filtered and self.filter_label else ""
+        placeholder_text = f"🌍 Select a country{filter_text} (Pg {self.current_page + 1}/{total_p})..."[:100]
+
         select = discord.ui.Select(
-            placeholder="🌍 Select a country to stream live radio...",
+            placeholder=placeholder_text,
             options=options,
-            custom_id="country_radio_select"
+            custom_id="country_radio_select",
+            row=0
         )
         select.callback = self.select_callback
         self.add_item(select)
 
-    async def select_callback(self, interaction: discord.Interaction):
+        # Row 1 controls: Prev, Next, Search, Reset
+        btn_prev = discord.ui.Button(
+            label="◀ Prev",
+            style=discord.ButtonStyle.secondary,
+            disabled=(self.current_page == 0),
+            custom_id="country_page_prev",
+            row=1
+        )
+        btn_prev.callback = self.prev_callback
+        self.add_item(btn_prev)
+
+        btn_next = discord.ui.Button(
+            label="Next ▶",
+            style=discord.ButtonStyle.secondary,
+            disabled=(self.current_page >= total_p - 1),
+            custom_id="country_page_next",
+            row=1
+        )
+        btn_next.callback = self.next_callback
+        self.add_item(btn_next)
+
+        btn_search = discord.ui.Button(
+            label="🔍 Search",
+            style=discord.ButtonStyle.primary,
+            custom_id="country_search_modal_btn",
+            row=1
+        )
+        btn_search.callback = self.search_callback
+        self.add_item(btn_search)
+
+        if self.is_filtered:
+            btn_reset = discord.ui.Button(
+                label="↺ All Countries",
+                style=discord.ButtonStyle.danger,
+                custom_id="country_reset_filter_btn",
+                row=1
+            )
+            btn_reset.callback = self.reset_callback
+            self.add_item(btn_reset)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.user.id:
             embed = discord.Embed(
-                description=f"### {Emojis.WARNING} Only the requester can choose a country.",
+                description=f"### {Emojis.WARNING} Only the requester can choose or search countries.",
                 color=0xED4245
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
+            return False
+        return True
+
+    async def select_callback(self, interaction: discord.Interaction):
+        val = interaction.data["values"][0]
+        if val == "none":
             return
 
         if interaction.message:
@@ -520,9 +674,65 @@ class CountryRadioSelectView(discord.ui.View):
             q.radio_menu_url = interaction.message.jump_url
             q.radio_menu_message = interaction.message
 
-        country_name = interaction.data["values"][0]
         await interaction.response.defer()
-        await self.music_cog.start_country_radio_flow(interaction, country_name, is_select_callback=True)
+        await self.music_cog.start_country_radio_flow(interaction, val, is_select_callback=True)
+
+    async def prev_callback(self, interaction: discord.Interaction):
+        if interaction.message:
+            q = self.music_cog.service.get_queue(interaction.guild_id)
+            q.radio_menu_url = interaction.message.jump_url
+            q.radio_menu_message = interaction.message
+        if self.current_page > 0:
+            self.current_page -= 1
+            self.build_components()
+            filter_info = f" for **{self.filter_label}**" if self.is_filtered and self.filter_label else ""
+            embed = discord.Embed(
+                description=f"### {Emojis.RADIO} Worldwide Country Radio\nSelect a country below (Pg {self.current_page + 1}/{self.total_pages}){filter_info} or click 🔍 to search:",
+                color=BRAND_COLOR
+            )
+            await interaction.response.edit_message(embed=embed, view=self)
+        else:
+            await interaction.response.defer()
+
+    async def next_callback(self, interaction: discord.Interaction):
+        if interaction.message:
+            q = self.music_cog.service.get_queue(interaction.guild_id)
+            q.radio_menu_url = interaction.message.jump_url
+            q.radio_menu_message = interaction.message
+        if self.current_page < self.total_pages - 1:
+            self.current_page += 1
+            self.build_components()
+            filter_info = f" for **{self.filter_label}**" if self.is_filtered and self.filter_label else ""
+            embed = discord.Embed(
+                description=f"### {Emojis.RADIO} Worldwide Country Radio\nSelect a country below (Pg {self.current_page + 1}/{self.total_pages}){filter_info} or click 🔍 to search:",
+                color=BRAND_COLOR
+            )
+            await interaction.response.edit_message(embed=embed, view=self)
+        else:
+            await interaction.response.defer()
+
+    async def search_callback(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(CountrySearchModal(self))
+
+    async def reset_callback(self, interaction: discord.Interaction):
+        if interaction.message:
+            q = self.music_cog.service.get_queue(interaction.guild_id)
+            q.radio_menu_url = interaction.message.jump_url
+            q.radio_menu_message = interaction.message
+        await interaction.response.defer()
+        self.countries = RadioService.get_instance().get_countries()
+        self.current_page = 0
+        self.is_filtered = False
+        self.filter_label = None
+        self.build_components()
+        embed = discord.Embed(
+            description=f"### {Emojis.RADIO} Worldwide Country Radio\nSelect a country below (Pg 1/{self.total_pages}) or click 🔍 to search:",
+            color=BRAND_COLOR
+        )
+        try:
+            await interaction.edit_original_response(embed=embed, view=self)
+        except Exception:
+            pass
 
 
 class RadioStationSearchModal(discord.ui.Modal, title="Search Radio Stations"):
@@ -1938,7 +2148,7 @@ class Music(commands.Cog):
         if not country:
             view = CountryRadioSelectView(self, interaction.user)
             embed = discord.Embed(
-                description=f"### {Emojis.RADIO} Worldwide Country Radio\nSelect a country below or use `/radio country: <name>` to stream live radio stations worldwide:",
+                description=f"### {Emojis.RADIO} Worldwide Country Radio\nSelect a country below (Pg 1/{view.total_pages}) or click 🔍 to search worldwide:",
                 color=BRAND_COLOR
             )
             await interaction.response.send_message(embed=embed, view=view)
@@ -2239,7 +2449,7 @@ class Music(commands.Cog):
         if not country:
             view = CountryRadioSelectView(self, ctx.author)
             embed = discord.Embed(
-                description=f"### {Emojis.RADIO} Worldwide Country Radio\nSelect a country below or use `?radio <country>` to stream live radio stations worldwide:",
+                description=f"### {Emojis.RADIO} Worldwide Country Radio\nSelect a country below (Pg 1/{view.total_pages}) or click 🔍 to search worldwide:",
                 color=BRAND_COLOR
             )
             msg = await ctx.send(embed=embed, view=view)
