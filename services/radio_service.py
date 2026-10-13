@@ -167,8 +167,41 @@ class RadioService:
                 return c.get("iso_3166_1", "").upper()
         return None
 
-    def get_country_stations(self, country_query: str, limit: int = 15) -> List[Dict[str, Any]]:
-        """Fetch the top working stations for a country."""
+    def _parse_and_clean_stations(self, data: Any, country_name: str) -> List[Dict[str, Any]]:
+        """Parses API stations, filtering broken streams and prioritizing healthy verified ones."""
+        if not data or not isinstance(data, list):
+            return []
+
+        # Split into verified healthy (lastcheckok == 1, no ssl_error) and others
+        healthy = []
+        fallback = []
+        for s in data:
+            url = s.get("url_resolved") or s.get("url")
+            name = s.get("name", "").strip()
+            if not url or not name or not (url.startswith("http://") or url.startswith("https://")):
+                continue
+            favicon = s.get("favicon", "").strip() if s.get("favicon") else ""
+            station_dict = {
+                "stationuuid": s.get("stationuuid", ""),
+                "name": name,
+                "url": url,
+                "homepage": s.get("homepage", ""),
+                "favicon": favicon if (favicon.startswith("http://") or favicon.startswith("https://")) else "",
+                "country": country_name,
+                "countrycode": s.get("countrycode", ""),
+                "codec": s.get("codec", "MP3"),
+                "bitrate": s.get("bitrate", 128),
+                "lastcheckok": s.get("lastcheckok", 1),
+            }
+            if s.get("lastcheckok", 1) == 1 and not s.get("ssl_error", 0):
+                healthy.append(station_dict)
+            else:
+                fallback.append(station_dict)
+
+        return healthy + fallback
+
+    def get_country_stations(self, country_query: str, limit: int = 150) -> List[Dict[str, Any]]:
+        """Fetch the top working stations for a country (up to 150 for pagination)."""
         country_query = country_query.strip()
         matched_country_name = None
 
@@ -200,26 +233,43 @@ class RadioService:
                 code_endpoint = f"/json/stations/bycountrycodeexact/{country_query.upper()}?order=clickcount&reverse=true&limit={limit}&hidebroken=true"
                 data = self._request_api(code_endpoint)
 
-        if not data or not isinstance(data, list):
-            return []
+        return self._parse_and_clean_stations(data, matched_country_name)
 
-        # Filter stations with playable audio streams
-        clean_stations = []
-        for s in data:
-            url = s.get("url_resolved") or s.get("url")
-            name = s.get("name", "").strip()
-            if url and name and (url.startswith("http://") or url.startswith("https://")):
-                favicon = s.get("favicon", "").strip() if s.get("favicon") else ""
-                clean_stations.append({
-                    "stationuuid": s.get("stationuuid", ""),
-                    "name": name,
-                    "url": url,
-                    "homepage": s.get("homepage", ""),
-                    "favicon": favicon if (favicon.startswith("http://") or favicon.startswith("https://")) else "",
-                    "country": matched_country_name,
-                    "countrycode": s.get("countrycode", ""),
-                    "codec": s.get("codec", "MP3"),
-                    "bitrate": s.get("bitrate", 128),
-                })
+    def search_stations(self, country_query: str, query: str, limit: int = 100) -> List[Dict[str, Any]]:
+        """Search stations within a specific country by name or tag (up to 100 results)."""
+        country_query = country_query.strip()
+        matched_country_name = None
 
-        return clean_stations
+        countries = self.get_countries()
+        for c in countries:
+            if c.get("iso_3166_1", "").lower() == country_query.lower():
+                matched_country_name = c["name"]
+                break
+            if c.get("name", "").lower() == country_query.lower():
+                matched_country_name = c["name"]
+                break
+
+        if not matched_country_name:
+            search_matches = self.search_countries(country_query, limit=1)
+            if search_matches:
+                matched_country_name = search_matches[0]["name"]
+            else:
+                matched_country_name = country_query
+
+        encoded_country = urllib.parse.quote(matched_country_name)
+        encoded_query = urllib.parse.quote(query.strip())
+        endpoint = f"/json/stations/search?country={encoded_country}&name={encoded_query}&order=clickcount&reverse=true&limit={limit}&hidebroken=true"
+        data = self._request_api(endpoint)
+
+        if not data:
+            code = self.get_country_code(matched_country_name)
+            if code:
+                code_endpoint = f"/json/stations/search?countrycode={code}&name={encoded_query}&order=clickcount&reverse=true&limit={limit}&hidebroken=true"
+                data = self._request_api(code_endpoint)
+
+        if not data:
+            # Also try matching tags/genres
+            tag_endpoint = f"/json/stations/search?country={encoded_country}&tag={encoded_query}&order=clickcount&reverse=true&limit={limit}&hidebroken=true"
+            data = self._request_api(tag_endpoint)
+
+        return self._parse_and_clean_stations(data, matched_country_name)
