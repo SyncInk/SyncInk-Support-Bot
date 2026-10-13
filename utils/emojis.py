@@ -81,9 +81,12 @@ class Emojis:
     APPLEMUSIC = "<:applemusic:1558919113303265370>"
     DEEZER = "<:deezer:1558919156772896818>"
     DELETE = "<:delete:1558918533214380243>"
-    TIDAL = "<:tidal:1558919190461685840>"
     LOOKING = "<:looking:1558919508855357531>"
     SOUNDCLOUD = "<:soundcloud:1558919344199700620>"
+    TIDAL = "<:tidal:1558919190461685840>"
+    LIKE = "<:like:1559660676853797005>"
+    DISLIKE = "<:dislike:1559660727373930657>"
+    PLAYING = "<:playing:1559661648011075664>"
 
 class EmojiPartials:
     """discord.PartialEmoji instances for interactive UI components (Buttons, Menus)."""
@@ -167,6 +170,9 @@ class EmojiPartials:
     TIDAL = discord.PartialEmoji(name="tidal", id=1558919190461685840, animated=False)
     LOOKING = discord.PartialEmoji(name="looking", id=1558919508855357531, animated=False)
     SOUNDCLOUD = discord.PartialEmoji(name="soundcloud", id=1558919344199700620, animated=False)
+    LIKE = discord.PartialEmoji(name="like", id=1559660676853797005, animated=False)
+    DISLIKE = discord.PartialEmoji(name="dislike", id=1559660727373930657, animated=False)
+    PLAYING = discord.PartialEmoji(name="playing", id=1559661648011075664, animated=False)
 
 import re
 

@@ -137,12 +137,10 @@ def build_now_playing_embed(queue: GuildMusicQueue) -> discord.Embed:
     )
 
     embed.description = (
-        f"### {Emojis.SYNCINK_MUSIC} Now Playing\n"
+        f"### {Emojis.PLAYING} Now Playing\n"
         f"[{current.clean_title}]({current.url})\n\n"
-        f"{current.platform_emoji} **Artist:** {current.author}  •  `{current.formatted_duration}`\n\n"
-        f"{separator}\n\n"
+        f"{current.platform_emoji} **Artist:** {current.author}  •  `{current.formatted_duration}`\n"
         f"{Emojis.TIME} `{queue.get_progress_bar()}`\n\n"
-        f"{separator}\n\n"
         f"{Emojis.MEMBER} **Requested by:** <@{current.requested_by.id if current.requested_by else 1520522990280769727}>{station_tag}{loop_tag}\n\n"
         f"⏭️ **Up Next:** {up_next}"
     )
@@ -185,7 +183,7 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
             return
 
         # 1. Top Section: Track Title, Artist, and Duration with Thumbnail accessory
-        title_text = f"### ▶ Now Playing\n[{current.clean_title}]({current.url}) by **{current.author}** `[{current.formatted_duration}]`"
+        title_text = f"### {Emojis.PLAYING} Now Playing\n[{current.clean_title}]({current.url}) by **{current.author}** `[{current.formatted_duration}]`"
         text_disp = discord.ui.TextDisplay(title_text)
         thumb_url = current.thumbnail if (current.thumbnail and current.thumbnail.startswith("http")) else BRAND_LOGO_URL
         sec = discord.ui.Section(text_disp, accessory=discord.ui.Thumbnail(thumb_url))
@@ -229,14 +227,44 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
 
         row = discord.ui.ActionRow(self.btn_pause_resume, self.btn_prev, self.btn_skip, self.btn_stop, self.btn_queue)
 
-        # 3. Separator component
+        items = [sec, row]
+
+        # 3. Dedicated AutoPlay Rating Row (ONLY when AutoPlay is enabled)
+        if self.queue.autoplay:
+            btn_like = discord.ui.Button(
+                emoji=EmojiPartials.LIKE,
+                label="Like",
+                style=discord.ButtonStyle.secondary,
+                custom_id="m_ap_like"
+            )
+            btn_like.callback = self.on_ap_like
+
+            btn_dislike = discord.ui.Button(
+                emoji=EmojiPartials.DISLIKE,
+                label="Dislike",
+                style=discord.ButtonStyle.secondary,
+                custom_id="m_ap_dislike"
+            )
+            btn_dislike.callback = self.on_ap_dislike
+
+            ap_row = discord.ui.ActionRow(btn_like, btn_dislike)
+            items.append(ap_row)
+
+        # 4. Separator component
         sep = discord.ui.Separator(visible=True, spacing=discord.enums.SeparatorSpacing.small)
+        items.append(sep)
 
-        # 4. Requester footer
+        # 5. Requester / AutoPlay footer
         req_id = current.requested_by.id if (current.requested_by and hasattr(current.requested_by, "id")) else 1520522990280769727
-        footer = discord.ui.TextDisplay(f"-# {Emojis.MEMBER} Track requested by <@{req_id}>")
+        if self.queue.autoplay and getattr(self.queue, "last_autoplay_meta", None):
+            genre_tag = self.queue.last_autoplay_meta.get("genre", "Smart Selection")
+            footer_text = f"-# {Emojis.AI} AutoPlay Active (`{genre_tag}`) • Rate with {Emojis.LIKE} or {Emojis.DISLIKE}"
+        else:
+            footer_text = f"-# {Emojis.MEMBER} Track requested by <@{req_id}>"
+        footer = discord.ui.TextDisplay(footer_text)
+        items.append(footer)
 
-        cnt = discord.ui.Container(sec, row, sep, footer, accent_color=BRAND_COLOR)
+        cnt = discord.ui.Container(*items, accent_color=BRAND_COLOR)
         self.add_item(cnt)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -355,6 +383,55 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
         embed = self.music_cog.build_queue_embed(self.queue)
         view = QueueLayoutView(self.music_cog, self.queue, interaction.user.id)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+    async def on_ap_like(self, interaction: discord.Interaction):
+        current = self.queue.current_track
+        if not current:
+            embed = discord.Embed(description=f"### {Emojis.WARNING} Nothing is currently playing.", color=0xFEE75C)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        ok, msg = AutoPlayService.get_instance().record_explicit_feedback(
+            interaction.user.id, current, "like"
+        )
+        embed = discord.Embed(
+            description=(
+                f"### {Emojis.LIKE} Preference Recorded Successfully\n"
+                f"Thank you for rating! Your positive feedback for **{current.clean_title}** by **{current.author}** has been incorporated into your personal taste profile.\n\n"
+                f"{Emojis.S_ARROW} **Impact:** AutoPlay will prioritize similar melodies, artists, and acoustic vibes for your future recommendations."
+            ),
+            color=BRAND_COLOR
+        )
+        embed.set_footer(text="SyncInk AI AutoPlay DJ", icon_url=BRAND_LOGO_URL)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    async def on_ap_dislike(self, interaction: discord.Interaction):
+        current = self.queue.current_track
+        if not current:
+            embed = discord.Embed(description=f"### {Emojis.WARNING} Nothing is currently playing.", color=0xFEE75C)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        ok, msg = AutoPlayService.get_instance().record_explicit_feedback(
+            interaction.user.id, current, "dislike"
+        )
+
+        # Invalidate current prefetch so next song immediately avoids this style and provides a better recommendation
+        self.queue.prefetched_autoplay_track = None
+        self.queue.prefetched_autoplay_meta = None
+        AutoPlayService.get_instance().trigger_prefetch(self.queue, self.music_cog.service)
+
+        # Do NOT stop playback directly; let current song finish smoothly and refine next recommendation
+        embed = discord.Embed(
+            description=(
+                f"### {Emojis.DISLIKE} Preference Recorded Successfully\n"
+                f"Your feedback has been noted. We've marked **{current.clean_title}** by **{current.author}** as disliked in your profile.\n\n"
+                f"{Emojis.S_ARROW} **Impact:** Current playback will continue smoothly without interruption, and AutoPlay will refine upcoming selections to avoid this style and deliver better recommendations."
+            ),
+            color=BRAND_COLOR
+        )
+        embed.set_footer(text="SyncInk AI AutoPlay DJ", icon_url=BRAND_LOGO_URL)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 MusicPlayerView = MusicPlayerLayoutView
 
@@ -1151,15 +1228,15 @@ class AutoPlayFeedbackView(discord.ui.View):
         )
         button.style = discord.ButtonStyle.danger
         button.disabled = True
+        # Invalidate current prefetch so next song avoids this style and delivers better recommendations
+        self.queue.prefetched_autoplay_track = None
+        self.queue.prefetched_autoplay_meta = None
+        AutoPlayService.get_instance().trigger_prefetch(self.queue, self.music_cog.service)
         try:
             await interaction.response.edit_message(view=self)
-            await interaction.followup.send(f"{Emojis.REFUSED} {msg} Skipping track...", ephemeral=True)
+            await interaction.followup.send(f"{Emojis.REFUSED} {msg} Current playback will continue smoothly, and next selections will be refined.", ephemeral=True)
         except Exception:
-            await interaction.response.send_message(f"{Emojis.REFUSED} {msg} Skipping track...", ephemeral=True)
-        # Skip immediately if it's the currently playing track
-        if self.queue.voice_client and self.queue.current_track == self.track:
-            self.queue.manual_skip = True
-            self.queue.voice_client.stop()
+            await interaction.response.send_message(f"{Emojis.REFUSED} {msg} Current playback will continue smoothly, and next selections will be refined.", ephemeral=True)
 
     @discord.ui.button(label="More Like This", emoji="🎶", style=discord.ButtonStyle.secondary, custom_id="ap_btn_more")
     async def on_more(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -1240,15 +1317,14 @@ class AutoPlayControlCenterView(discord.ui.View):
 
         desc = (
             f"### {Emojis.AI} SyncInk AI DJ • Auto Play Control Center\n"
-            f"Auto Play acts as your personal AI music companion that continuously learns your musical taste and keeps high-fidelity audio playing seamlessly when the queue finishes.\n\n"
-            f"• **Status:** {status_str}\n"
-            f"• **Listening Mode:** `{mode_str}`\n"
-            f"• **Discovery Style:** {disc_str}\n"
-            f"• **Style Focus:** {mood_genre_str}\n"
-            f"• **Language Focus:** {lang_str}\n"
-            f"• **Top Learned Artists:** {fav_str}\n\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"*Customize your listening experience using the menus and controls below:*"
+            f"Your personal AI music companion continuously learns your musical preferences and keeps high-fidelity audio playing seamlessly when the queue ends.\n\n"
+            f"{Emojis.S_ARROW} **Status:** {status_str}\n"
+            f"{Emojis.S_ARROW} **Listening Mode:** `{mode_str}`\n"
+            f"{Emojis.S_ARROW} **Discovery Style:** {disc_str}\n"
+            f"{Emojis.S_ARROW} **Style Focus:** {mood_genre_str}\n"
+            f"{Emojis.S_ARROW} **Language Focus:** {lang_str}\n"
+            f"{Emojis.S_ARROW} **Top Learned Artists:** {fav_str}\n\n"
+            f"*Tune your personalized listening experience using the interactive controls below:*"
         )
 
         embed = discord.Embed(description=desc, color=BRAND_COLOR)
@@ -1282,13 +1358,14 @@ class AutoPlayControlCenterView(discord.ui.View):
 
         # 2. Select Menu: Language (Row 1)
         lang_options = [
-            discord.SelectOption(label="Hindi / Bollywood", value="Hindi", emoji="🇮🇳"),
-            discord.SelectOption(label="English / International", value="English", emoji="🌐"),
-            discord.SelectOption(label="Punjabi", value="Punjabi", emoji="🪕"),
-            discord.SelectOption(label="Korean / K-Pop", value="Korean", emoji="🇰🇷"),
-            discord.SelectOption(label="Japanese / Anime", value="Japanese", emoji="🇯🇵"),
-            discord.SelectOption(label="Spanish / Latin", value="Spanish", emoji="🇪🇸"),
-            discord.SelectOption(label="↺ Any Language (Auto)", value="reset", emoji="🔄"),
+            discord.SelectOption(label="Hindi + English (Bilingual)", value="Hindi + English", description="Seamless blend of Bollywood, Hindi Indie & English Pop", emoji="🇮🇳"),
+            discord.SelectOption(label="Hindi / Bollywood", value="Hindi", description="Bollywood hits, Hindi indie & romantic tracks", emoji="🇮🇳"),
+            discord.SelectOption(label="English / International", value="English", description="Global pop, billboard hits & English rock", emoji="🌐"),
+            discord.SelectOption(label="Punjabi", value="Punjabi", description="Punjabi pop, urban beats & bhangra", emoji="🪕"),
+            discord.SelectOption(label="Korean / K-Pop", value="Korean", description="K-Pop idols, OSTs & Korean R&B", emoji="🇰🇷"),
+            discord.SelectOption(label="Japanese / Anime", value="Japanese", description="J-Pop, J-Rock & anime OSTs", emoji="🇯🇵"),
+            discord.SelectOption(label="Spanish / Latin", value="Spanish", description="Reggaeton, latin pop & urban latino", emoji="🇪🇸"),
+            discord.SelectOption(label="↺ Any Language (Auto)", value="reset", description="Dynamic language adaptation based on session", emoji="🔄"),
         ]
         lang_select = discord.ui.Select(
             placeholder="🌐 Select Preferred Language...",
@@ -1381,6 +1458,9 @@ class AutoPlayControlCenterView(discord.ui.View):
         if val == "reset":
             prof.manual_language = None
             msg = "Language set to Auto-Detect across all languages."
+        elif val == "Hindi + English":
+            prof.manual_language = val
+            msg = "Set preferred language focus to **Hindi + English (Bilingual)**."
         else:
             prof.manual_language = val
             msg = f"Set preferred language focus to **{val}**."
@@ -2075,28 +2155,6 @@ class Music(commands.Cog):
                                 queue.now_playing_message = await queue.text_channel.send(view=view)
                             except Exception as e:
                                 log.warning(f"Failed to send Now Playing view: {e}")
-
-                            # Dedicated AutoPlay DJ recommendation embed with feedback controls
-                            reason_text = (rec_meta or {}).get("reason", "Curated based on your listening preferences.")
-                            mode_badge = (rec_meta or {}).get("mode", "Personal")
-                            genre_badge = (rec_meta or {}).get("genre", "Mixed")
-                            dj_embed = discord.Embed(
-                                description=(
-                                    f"### {Emojis.AI} SyncInk AI DJ • Auto Play Recommendation\n"
-                                    f"Now playing **[{rec_track.clean_title}]({rec_track.url})** by **{rec_track.author}**\n\n"
-                                    f"✨ **Why this was chosen:**\n> {reason_text}\n\n"
-                                    f"🎧 **Listening Mode:** `{mode_badge}`  •  **Genre:** `{genre_badge}`"
-                                ),
-                                color=BRAND_COLOR
-                            )
-                            if rec_track.thumbnail and rec_track.thumbnail.startswith("http"):
-                                dj_embed.set_thumbnail(url=rec_track.thumbnail)
-                            dj_embed.set_footer(text="Rate this track below to guide future AutoPlay selections", icon_url=BRAND_LOGO_URL)
-                            feedback_view = AutoPlayFeedbackView(self, queue, rec_track)
-                            try:
-                                await queue.text_channel.send(embed=dj_embed, view=feedback_view)
-                            except Exception:
-                                pass
 
                         # Gapless prefetch: queue the next song in background so transitions are 0s delay
                         AutoPlayService.get_instance().trigger_prefetch(queue, self.service)

@@ -508,7 +508,7 @@ class AutoPlayService:
             })
             p.artist_affinity[artist] = max(-5.0, p.artist_affinity.get(artist, 0.0) - 2.5)
             self.save_profiles()
-            return True, f"Disliked **{title}**. Auto Play will never recommend this song again."
+            return True, f"Disliked **{title}**. Auto Play will avoid this style in upcoming recommendations."
 
         elif feedback_type == "more_like_this":
             p.artist_affinity[artist] = p.artist_affinity.get(artist, 0.0) + 3.0
@@ -711,6 +711,14 @@ class AutoPlayService:
 
     async def _call_gemini_api(self, ctx_info: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
         """Calls Gemini API with structured prompt for music recommendations."""
+        bilingual_prompt_note = ""
+        if "Hindi + English" in str(ctx_info.get("seed_language", "")):
+            bilingual_prompt_note = (
+                "- BILINGUAL PREFERENCE: The listener wants a balanced blend of both Hindi songs "
+                "(Bollywood Romantic, Hindi Indie, Urban) and English songs (Pop, Lo-Fi, Acoustic). "
+                "Provide a diverse mix of both languages.\n"
+            )
+
         prompt = (
             f"Act as SyncInk's Elite AI Music Director and DJ.\n"
             f"You are selecting the NEXT song for Auto Play.\n\n"
@@ -724,7 +732,8 @@ class AutoPlayService:
             f"- Preferred Genres: {', '.join(ctx_info['top_genres'][:3]) if ctx_info['top_genres'] else 'Same as seed'}\n"
             f"- Discovery Style: {ctx_info['discovery_mode']} (balance familiar favorites and fresh discoveries)\n"
             f"- Recently Played (DO NOT REPEAT): {', '.join(ctx_info['recent_tracks'][:4]) if ctx_info['recent_tracks'] else 'None'}\n"
-            f"- Blocked Artists: {', '.join(ctx_info['blocked_artists'][:5]) if ctx_info['blocked_artists'] else 'None'}\n\n"
+            f"- Blocked Artists: {', '.join(ctx_info['blocked_artists'][:5]) if ctx_info['blocked_artists'] else 'None'}\n"
+            f"{bilingual_prompt_note}\n"
             f"TASK:\n"
             f"Generate 4 diverse, musically coherent song candidates that seamlessly follow this song.\n"
             f"Preserve the genre, language, and mood unless transitioning naturally.\n"
@@ -787,9 +796,13 @@ class AutoPlayService:
         """Calls OpenAI Chat Completions as secondary AI fallback."""
         if not self.openai_key:
             return None
+        bilingual_prompt_note = ""
+        if "Hindi + English" in str(ctx_info.get("seed_language", "")):
+            bilingual_prompt_note = "Blend both Hindi and English tracks. "
         prompt = (
             f"Seed: '{ctx_info['seed_title']}' by {ctx_info['seed_artist']} ({ctx_info['seed_genre']}, {ctx_info['seed_language']}).\n"
             f"Listeners: {ctx_info['mode']}. Mode: {ctx_info['discovery_mode']}.\n"
+            f"{bilingual_prompt_note}"
             f"Suggest 4 distinct songs matching this vibe in JSON array format: "
             f"[{{\"title\": \"...\", \"artist\": \"...\", \"genre\": \"...\", \"language\": \"...\", \"reason\": \"...\"}}]"
         )
@@ -850,7 +863,27 @@ class AutoPlayService:
         seed_cluster = self._detect_cluster(ctx_info["seed_title"], ctx_info["seed_artist"])
         candidates = []
 
-        # 1. From same cluster
+        # 1. If Hindi + English bilingual mode is active, sample from both Hindi and English clusters
+        if "Hindi + English" in str(ctx_info.get("seed_language", "")):
+            bilingual_samples = []
+            for cluster_key in ["bollywood_romantic", "hindi_indie_acoustic", "pop_rnb_hits", "lofi_chill", "punjabi_hits"]:
+                if cluster_key in MUSIC_CLUSTERS:
+                    cl = MUSIC_CLUSTERS[cluster_key]
+                    for s_title, s_artist in cl.get("sample_tracks", []):
+                        if s_artist.lower() == ctx_info["seed_artist"].lower():
+                            continue
+                        bilingual_samples.append({
+                            "title": s_title,
+                            "artist": s_artist,
+                            "genre": cl["genre"],
+                            "language": cl["language"],
+                            "mood": cl["mood"],
+                            "reason": f"Bilingual recommendation ({cl['genre']}) tailored to your Hindi & English mix."
+                        })
+            random.shuffle(bilingual_samples)
+            candidates.extend(bilingual_samples[:8])
+
+        # 2. From same cluster
         samples = list(seed_cluster.get("sample_tracks", []))
         random.shuffle(samples)
         for s_title, s_artist in samples:
@@ -865,7 +898,7 @@ class AutoPlayService:
                 "reason": f"Matches the {seed_cluster['mood'].lower()} {seed_cluster['genre']} vibe of {ctx_info['seed_artist']}."
             })
 
-        # 2. From user's favorite artists
+        # 3. From user's favorite artists
         top_artists = ctx_info.get("top_artists", [])
         for fav in top_artists:
             if fav.lower() != ctx_info["seed_artist"].lower():
