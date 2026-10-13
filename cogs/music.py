@@ -117,12 +117,12 @@ def build_now_playing_embed(queue: GuildMusicQueue) -> discord.Embed:
         up_next = f"**[{next_track.clean_title}]({next_track.url})**  •  *{next_track.author}* [{next_track.formatted_duration}]"
     elif queue.autoplay:
         up_next = f"{Emojis.RADIO} **Smart Autoplay Recommendation**"
-    elif queue.active_radio_station:
+    elif (current.is_radio or current.platform == "radio") and queue.active_radio_station:
         up_next = f"{Emojis.RADIO} **24/7 Continuous Radio Station**"
     else:
         up_next = "End of queue (Add tracks with `/play`)"
 
-    station_tag = f"  •  {Emojis.RADIO} `{RADIO_STATIONS[queue.active_radio_station]['genre']}`" if queue.active_radio_station and queue.active_radio_station in RADIO_STATIONS else ""
+    station_tag = f"  •  {Emojis.RADIO} `{RADIO_STATIONS[queue.active_radio_station]['genre']}`" if (current.is_radio or current.platform == "radio") and queue.active_radio_station and queue.active_radio_station in RADIO_STATIONS else ""
     loop_tag = f"  •  🔁 `{queue.repeat_mode.upper()}`" if queue.repeat_mode != "off" else ""
 
     embed = discord.Embed(
@@ -315,6 +315,7 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
         skipped_name = self.queue.current_track.clean_title
+        self.queue.manual_skip = True
         vc.stop()
         await interaction.response.send_message(
             f"{Emojis.NEXT} Skipped: **{skipped_name}**",
@@ -411,19 +412,19 @@ class NowPlayingLayoutView(discord.ui.LayoutView):
         )
         sep1 = discord.ui.Separator(visible=True, spacing=discord.enums.SeparatorSpacing.small)
 
-        playback_str = format_duration(self.queue.get_playback_time())
-        progress_bar = self.queue.get_progress_bar()
-        duration_str = current.formatted_duration
-        info_lines = [f"{playback_str}  {progress_bar}  {duration_str}"]
+        info_lines = [self.queue.get_progress_bar()]
 
         extra = [f"Volume: `{self.queue.volume}%`", f"Repeat: `{self.queue.repeat_mode.upper()}`"]
-        if self.queue.active_radio_station:
-            station_info = RADIO_STATIONS.get(self.queue.active_radio_station)
-            if station_info:
-                genre = station_info.get("genre", "Radio")
-                extra.append(f"Station: `{genre}`")
-            else:
-                extra.append(f"Radio: `{self.queue.active_radio_station}`")
+        if current.is_radio or current.platform == "radio":
+            if self.queue.active_radio_station:
+                station_info = RADIO_STATIONS.get(self.queue.active_radio_station)
+                if station_info:
+                    genre = station_info.get("genre", "Radio")
+                    extra.append(f"Station: `{genre}`")
+                else:
+                    extra.append(f"Radio: `{self.queue.active_radio_station}`")
+            elif current.clean_title:
+                extra.append(f"Radio: `{current.clean_title}`")
         elif self.queue.autoplay:
             extra.append("Autoplay: `ON`")
 
@@ -1249,6 +1250,10 @@ class Music(commands.Cog):
         queue.paused_at = None
         queue.total_paused_duration = 0.0
 
+        if not track.is_radio:
+            queue.active_radio_station = None
+            queue.active_radio_station_info = None
+
         try:
             # yt-dlp media URLs are signed and short-lived. Resolve again when the
             # track actually starts, especially for items that waited in the queue.
@@ -1319,19 +1324,19 @@ class Music(commands.Cog):
         await self._advance_queue_locked(queue)
 
     async def _advance_queue_locked(self, queue: GuildMusicQueue):
-        was_radio = (
-            (queue.current_track and queue.current_track.is_radio)
-            or bool(queue.active_radio_station)
-            or bool(queue.active_radio_station_info)
-        )
+        was_manual_skip = getattr(queue, "manual_skip", False)
+        queue.manual_skip = False
+
+        last_track = queue.current_track
+        was_radio = bool(last_track and (last_track.is_radio or getattr(last_track, "platform", "") == "radio"))
         last_radio_title = (
-            (queue.current_track.clean_title if queue.current_track else None)
+            (last_track.clean_title if last_track else None)
             or (queue.active_radio_station_info.get("name") if queue.active_radio_station_info else None)
             or (queue.active_radio_station if queue.active_radio_station else "Live Radio")
         )
         stream_duration = time.time() - queue.start_time if queue.start_time > 0 else 0.0
 
-        if queue.repeat_mode == "track" and queue.current_track and not was_radio:
+        if queue.repeat_mode == "track" and queue.current_track and not was_radio and not was_manual_skip:
             next_track = queue.current_track
         elif queue.repeat_mode == "queue" and queue.current_track and not was_radio:
             queue.history.append(queue.current_track)
@@ -1360,10 +1365,29 @@ class Music(commands.Cog):
 
         # Queue is empty - Handle Radio vs Normal Autoplay
         if was_radio:
+            if was_manual_skip:
+                queue.active_radio_station = None
+                queue.active_radio_station_info = None
+                queue.current_track = None
+                if queue.now_playing_message:
+                    try:
+                        await queue.now_playing_message.delete()
+                    except Exception:
+                        pass
+                    queue.now_playing_message = None
+                if queue.text_channel:
+                    embed_finished = discord.Embed(
+                        description="### Reached the end of the queue. Please queue some track(s) again!",
+                        color=BRAND_COLOR
+                    )
+                    await queue.text_channel.send(embed=embed_finished)
+                self.start_inactivity_countdown(queue, delay=60, reason="empty_queue")
+                return
+
             # Check 24/7 predefined radio presets (lofi, synthwave, etc.)
             if queue.active_radio_station and queue.active_radio_station in RADIO_STATIONS:
                 station = RADIO_STATIONS[queue.active_radio_station]
-                requester = queue.current_track.requested_by if queue.current_track else None
+                requester = last_track.requested_by if last_track else None
                 if requester:
                     queries = list(station.get("queries", []))
                     random.shuffle(queries)
@@ -1398,7 +1422,7 @@ class Music(commands.Cog):
                         return
                     log.warning(f"[Radio] No playable tracks resolved for preset station {queue.active_radio_station}; ending radio session.")
 
-            # Live Country Radio stream ended or failed
+            # Live Country Radio stream ended or failed unexpectedly
             queue.active_radio_station = None
             queue.active_radio_station_info = None
             queue.current_track = None
@@ -1413,21 +1437,20 @@ class Music(commands.Cog):
             if queue.text_channel:
                 menu_link = f"[radio menu]({queue.radio_menu_url})" if getattr(queue, "radio_menu_url", None) else "radio menu"
                 if stream_duration < 5.0:
-                    warn_embed = discord.Embed(
-                        description=f"### {Emojis.WARNING} Station **{last_radio_title}** is currently offline or unreachable.\nPlease choose another station from the {menu_link}.",
-                        color=0xED4245
-                    )
+                    warn_desc = f"### {Emojis.WARNING} Station **{last_radio_title}** is currently offline or unreachable.\nPlease choose another station from the {menu_link}."
                 else:
-                    warn_embed = discord.Embed(
-                        description=f"### {Emojis.WARNING} Live radio stream for **{last_radio_title}** ended.\nPlease choose another station from the {menu_link}.",
-                        color=0xFEE75C
-                    )
+                    warn_desc = f"### {Emojis.WARNING} Live radio stream for **{last_radio_title}** was disconnected or interrupted.\nPlease choose another station from the {menu_link}."
+
+                warn_embed = discord.Embed(
+                    description=warn_desc,
+                    color=0xED4245
+                )
                 try:
                     await queue.text_channel.send(embed=warn_embed)
                 except Exception:
                     pass
 
-            self.start_inactivity_countdown(queue, delay=60)
+            self.start_inactivity_countdown(queue, delay=60, reason="empty_queue")
             return
 
         # Normal music playback - Check Autoplay
@@ -2024,6 +2047,7 @@ class Music(commands.Cog):
         for _ in range(min(to_drop, len(queue.tracks))):
             queue.tracks.pop(0)
         skipped = queue.current_track.clean_title
+        queue.manual_skip = True
         queue.voice_client.stop()
         await interaction.response.send_message(f"{Emojis.NEXT} Skipped: **{skipped}**", ephemeral=True)
 
@@ -2046,6 +2070,8 @@ class Music(commands.Cog):
         queue = self.service.get_queue(interaction.guild_id)
         queue.tracks.clear()
         queue.active_radio_station = None
+        queue.active_radio_station_info = None
+        queue.manual_skip = True
         queue.autoplay = False
         if queue.voice_client:
             queue.voice_client.stop()
@@ -2310,6 +2336,7 @@ class Music(commands.Cog):
         for _ in range(min(to_drop, len(queue.tracks))):
             queue.tracks.pop(0)
         skipped = queue.current_track.clean_title
+        queue.manual_skip = True
         queue.voice_client.stop()
         await ctx.send(f"{Emojis.NEXT} Skipped: **{skipped}**", delete_after=5)
         if ctx.message:
@@ -2337,6 +2364,7 @@ class Music(commands.Cog):
         queue.tracks.clear()
         queue.active_radio_station = None
         queue.active_radio_station_info = None
+        queue.manual_skip = True
         queue.autoplay = False
         if queue.voice_client:
             queue.voice_client.stop()

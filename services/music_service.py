@@ -86,7 +86,7 @@ def clean_title(title: str) -> str:
     return cleaned or title
 
 def format_duration(seconds: Optional[int]) -> str:
-    if seconds is None or seconds <= 0:
+    if seconds is None or seconds < 0:
         return "LIVE"
     minutes, secs = divmod(seconds, 60)
     hours, minutes = divmod(minutes, 60)
@@ -221,6 +221,7 @@ class GuildMusicQueue:
         self.radio_recent_urls: List[str] = []
         self.radio_menu_url: Optional[str] = None
         self.radio_menu_message: Optional[discord.Message] = None
+        self.manual_skip: bool = False
         # Audio callbacks run on discord.py's player thread; tokens and a lock prevent
         # duplicate/stale callbacks from advancing the queue more than once.
         self.playback_token: int = 0
