@@ -219,6 +219,8 @@ class GuildMusicQueue:
         self.active_radio_station: Optional[str] = None
         self.active_radio_station_info: Optional[Dict[str, Any]] = None
         self.radio_recent_urls: List[str] = []
+        self.radio_menu_url: Optional[str] = None
+        self.radio_menu_message: Optional[discord.Message] = None
         # Audio callbacks run on discord.py's player thread; tokens and a lock prevent
         # duplicate/stale callbacks from advancing the queue more than once.
         self.playback_token: int = 0

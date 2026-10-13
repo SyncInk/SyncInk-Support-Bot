@@ -514,6 +514,11 @@ class CountryRadioSelectView(discord.ui.View):
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
+        if interaction.message:
+            q = self.music_cog.service.get_queue(interaction.guild_id)
+            q.radio_menu_url = interaction.message.jump_url
+            q.radio_menu_message = interaction.message
+
         country_name = interaction.data["values"][0]
         await interaction.response.defer()
         await self.music_cog.start_country_radio_flow(interaction, country_name, is_select_callback=True)
@@ -556,9 +561,18 @@ class RadioStationSearchModal(discord.ui.Modal, title="Search Radio Stations"):
         )
         try:
             await interaction.edit_original_response(embed=info_embed, view=self.parent_view)
+            orig = await interaction.original_response()
+            if orig:
+                q = self.parent_view.music_cog.service.get_queue(interaction.guild_id)
+                q.radio_menu_url = orig.jump_url
+                q.radio_menu_message = orig
         except Exception:
             try:
-                await interaction.followup.send(embed=info_embed, view=self.parent_view, ephemeral=True)
+                msg = await interaction.followup.send(embed=info_embed, view=self.parent_view, ephemeral=True)
+                if msg:
+                    q = self.parent_view.music_cog.service.get_queue(interaction.guild_id)
+                    q.radio_menu_url = msg.jump_url
+                    q.radio_menu_message = msg
             except Exception:
                 pass
 
@@ -697,12 +711,20 @@ class RadioStationSelectView(discord.ui.View):
         if idx >= len(self.stations):
             return
         chosen = self.stations[idx]
+        if interaction.message:
+            q = self.music_cog.service.get_queue(interaction.guild_id)
+            q.radio_menu_url = interaction.message.jump_url
+            q.radio_menu_message = interaction.message
         await interaction.response.defer()
         await self.music_cog.tune_into_station(
             interaction, chosen, self.country_name, stations=self.stations, is_switch_callback=True
         )
 
     async def prev_callback(self, interaction: discord.Interaction):
+        if interaction.message:
+            q = self.music_cog.service.get_queue(interaction.guild_id)
+            q.radio_menu_url = interaction.message.jump_url
+            q.radio_menu_message = interaction.message
         if self.current_page > 0:
             self.current_page -= 1
             self.build_components()
@@ -711,6 +733,10 @@ class RadioStationSelectView(discord.ui.View):
             await interaction.response.defer()
 
     async def next_callback(self, interaction: discord.Interaction):
+        if interaction.message:
+            q = self.music_cog.service.get_queue(interaction.guild_id)
+            q.radio_menu_url = interaction.message.jump_url
+            q.radio_menu_message = interaction.message
         if self.current_page < self.total_pages - 1:
             self.current_page += 1
             self.build_components()
@@ -722,6 +748,10 @@ class RadioStationSelectView(discord.ui.View):
         await interaction.response.send_modal(RadioStationSearchModal(self))
 
     async def reset_callback(self, interaction: discord.Interaction):
+        if interaction.message:
+            q = self.music_cog.service.get_queue(interaction.guild_id)
+            q.radio_menu_url = interaction.message.jump_url
+            q.radio_menu_message = interaction.message
         await interaction.response.defer()
         all_stations = RadioService.get_instance().get_country_stations(self.country_name, limit=150)
         self.stations = all_stations or self.stations
@@ -736,6 +766,11 @@ class RadioStationSelectView(discord.ui.View):
         )
         try:
             await interaction.edit_original_response(embed=embed, view=self)
+            orig = await interaction.original_response()
+            if orig:
+                q = self.music_cog.service.get_queue(interaction.guild_id)
+                q.radio_menu_url = orig.jump_url
+                q.radio_menu_message = orig
         except Exception:
             pass
 
@@ -1055,10 +1090,17 @@ class Music(commands.Cog):
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
         if member.bot:
-            if member.id == self.bot.user.id and before.channel and not after.channel:
-                queue = self.service.get_queue(member.guild.id)
-                queue.cancel_inactivity()
-                self.service.remove_queue(member.guild.id)
+            if member.id == self.bot.user.id:
+                if before.channel and not after.channel:
+                    queue = self.service.get_queue(member.guild.id)
+                    queue.cancel_inactivity()
+                    self.service.remove_queue(member.guild.id)
+                elif after.channel and before.channel != after.channel:
+                    human_members = [m for m in after.channel.members if not m.bot]
+                    if len(human_members) == 0:
+                        queue = self.service.get_queue(member.guild.id)
+                        if not queue.is_247:
+                            self.start_inactivity_countdown(queue, delay=30, reason="alone")
             return
 
         bot_vc = member.guild.voice_client
@@ -1071,13 +1113,15 @@ class Music(commands.Cog):
             if len(human_members) == 0:
                 queue = self.service.get_queue(member.guild.id)
                 if not queue.is_247:
-                    self.start_inactivity_countdown(queue, delay=30)
+                    self.start_inactivity_countdown(queue, delay=30, reason="alone")
 
         # Member joined or moved back into the bot's channel
         elif after.channel == bot_vc.channel and before.channel != bot_vc.channel:
             queue = self.service.get_queue(member.guild.id)
             if queue.current_track is not None or (bot_vc.is_playing() or bot_vc.is_paused()):
                 queue.cancel_inactivity()
+            else:
+                self.start_inactivity_countdown(queue, delay=60, reason="empty_queue")
 
     async def ensure_voice(self, interaction: discord.Interaction) -> Optional[discord.VoiceClient]:
         member = interaction.user
@@ -1130,8 +1174,11 @@ class Music(commands.Cog):
         queue.voice_client = vc
         if not queue.text_channel and interaction.channel:
             queue.text_channel = interaction.channel
-        if not queue.tracks and queue.current_track is None and not (vc.is_playing() or vc.is_paused()):
-            self.start_inactivity_countdown(queue, delay=60)
+        human_count = len([m for m in channel.members if not m.bot])
+        if human_count == 0:
+            self.start_inactivity_countdown(queue, delay=30, reason="alone")
+        elif not queue.tracks and queue.current_track is None and not (vc.is_playing() or vc.is_paused()):
+            self.start_inactivity_countdown(queue, delay=60, reason="empty_queue")
 
         return vc
 
@@ -1364,14 +1411,15 @@ class Music(commands.Cog):
                 queue.now_playing_message = None
 
             if queue.text_channel:
+                menu_link = f"[radio menu]({queue.radio_menu_url})" if getattr(queue, "radio_menu_url", None) else "radio menu"
                 if stream_duration < 5.0:
                     warn_embed = discord.Embed(
-                        description=f"### {Emojis.WARNING} Station **{last_radio_title}** is currently offline or unreachable.\nPlease choose another station from the radio menu.",
+                        description=f"### {Emojis.WARNING} Station **{last_radio_title}** is currently offline or unreachable.\nPlease choose another station from the {menu_link}.",
                         color=0xED4245
                     )
                 else:
                     warn_embed = discord.Embed(
-                        description=f"### {Emojis.WARNING} Live radio stream for **{last_radio_title}** ended.",
+                        description=f"### {Emojis.WARNING} Live radio stream for **{last_radio_title}** ended.\nPlease choose another station from the {menu_link}.",
                         color=0xFEE75C
                     )
                 try:
@@ -1418,13 +1466,13 @@ class Music(commands.Cog):
 
         self.start_inactivity_countdown(queue, delay=60)
 
-    def start_inactivity_countdown(self, queue: GuildMusicQueue, delay: int = 60):
+    def start_inactivity_countdown(self, queue: GuildMusicQueue, delay: int = 60, reason: str = "empty_queue"):
         if queue.is_247:
             return
         queue.cancel_inactivity()
-        queue.inactivity_task = asyncio.create_task(self._inactivity_countdown(queue.guild_id, delay=delay))
+        queue.inactivity_task = asyncio.create_task(self._inactivity_countdown(queue.guild_id, delay=delay, reason=reason))
 
-    async def _inactivity_countdown(self, guild_id: int, delay: int = 60):
+    async def _inactivity_countdown(self, guild_id: int, delay: int = 60, reason: str = "empty_queue"):
         try:
             await asyncio.sleep(delay)
             queue = self.service.get_queue(guild_id)
@@ -1451,13 +1499,25 @@ class Music(commands.Cog):
 
                 if text_chan:
                     try:
+                        if alone or reason == "alone":
+                            leave_desc = f"### {Emojis.WARNING} Left the voice channel as no one was in the voice channel."
+                        else:
+                            leave_desc = "### Left the voice channel due to empty queue"
+
                         embed_leave = discord.Embed(
-                            description="### Left the voice channel due to empty queue",
+                            description=leave_desc,
                             color=0xED4245
                         )
                         await text_chan.send(embed=embed_leave)
                     except Exception as e:
                         log.warning(f"Could not send leave embed: {e}")
+
+                if queue.now_playing_message:
+                    try:
+                        await queue.now_playing_message.delete()
+                    except Exception:
+                        pass
+                    queue.now_playing_message = None
 
                 try:
                     await vc.disconnect(force=True)
@@ -1569,6 +1629,10 @@ class Music(commands.Cog):
         queue.text_channel = target.channel
         queue.cancel_inactivity()
 
+        if is_interaction and hasattr(target, "message") and target.message:
+            queue.radio_menu_url = target.message.jump_url
+            queue.radio_menu_message = target.message
+
         flag = get_country_flag(country_name)
         track = make_radio_track(station, country_name, user, flag=flag)
         queue.active_radio_station = country_name
@@ -1595,16 +1659,21 @@ class Music(commands.Cog):
                 except Exception:
                     pass
                 queue.now_playing_message = None
-            self.start_inactivity_countdown(queue, delay=60)
+            self.start_inactivity_countdown(queue, delay=60, reason="empty_queue")
 
+            menu_link = f"[radio menu]({queue.radio_menu_url})" if getattr(queue, "radio_menu_url", None) else "the radio menu"
             switch_view = RadioStationSelectView(self, user, country_name, stations or [])
             warn_embed = discord.Embed(
-                description=f"### {Emojis.WARNING} Station **{station.get('name', 'Live Radio')}** is currently offline or unreachable.\n{Emojis.S_ARROW} *Please choose another station from the dropdown below or use 🔍 Search:*",
+                description=f"### {Emojis.WARNING} Station **{station.get('name', 'Live Radio')}** is currently offline or unreachable.\n{Emojis.S_ARROW} *Please choose another station from {menu_link} or use 🔍 Search:*",
                 color=0xED4245
             )
             if is_switch_callback and is_interaction:
                 try:
                     await target.edit_original_response(embed=warn_embed, view=switch_view)
+                    orig = await target.original_response()
+                    if orig:
+                        queue.radio_menu_url = orig.jump_url
+                        queue.radio_menu_message = orig
                     return
                 except Exception:
                     pass
@@ -1613,16 +1682,26 @@ class Music(commands.Cog):
                     if target.response.is_done():
                         await target.edit_original_response(embed=warn_embed, view=switch_view)
                     else:
-                        await target.response.send_message(embed=warn_embed, view=switch_view, ephemeral=True)
+                        await target.response.send_message(embed=warn_embed, view=switch_view)
+                    orig = await target.original_response()
+                    if orig:
+                        queue.radio_menu_url = orig.jump_url
+                        queue.radio_menu_message = orig
                     return
                 except Exception:
                     try:
-                        await target.followup.send(embed=warn_embed, view=switch_view, ephemeral=True)
+                        msg = await target.followup.send(embed=warn_embed, view=switch_view)
+                        if msg:
+                            queue.radio_menu_url = msg.jump_url
+                            queue.radio_menu_message = msg
                         return
                     except Exception:
                         pass
             else:
-                await target.send(embed=warn_embed, view=switch_view, delete_after=60)
+                msg = await target.send(embed=warn_embed, view=switch_view)
+                if msg:
+                    queue.radio_menu_url = msg.jump_url
+                    queue.radio_menu_message = msg
                 return
 
         # Update or send player card in place without chat spam
@@ -1646,9 +1725,16 @@ class Music(commands.Cog):
             if is_switch_callback and is_interaction:
                 try:
                     await target.edit_original_response(embed=info_embed, view=switch_view)
+                    orig = await target.original_response()
+                    if orig:
+                        queue.radio_menu_url = orig.jump_url
+                        queue.radio_menu_message = orig
                 except Exception:
                     try:
-                        await target.followup.send(embed=info_embed, view=switch_view, ephemeral=True)
+                        msg = await target.followup.send(embed=info_embed, view=switch_view)
+                        if msg:
+                            queue.radio_menu_url = msg.jump_url
+                            queue.radio_menu_message = msg
                     except Exception:
                         pass
             elif is_interaction:
@@ -1656,14 +1742,24 @@ class Music(commands.Cog):
                     if target.response.is_done():
                         await target.edit_original_response(embed=info_embed, view=switch_view)
                     else:
-                        await target.response.send_message(embed=info_embed, view=switch_view, ephemeral=True)
+                        await target.response.send_message(embed=info_embed, view=switch_view)
+                    orig = await target.original_response()
+                    if orig:
+                        queue.radio_menu_url = orig.jump_url
+                        queue.radio_menu_message = orig
                 except Exception:
                     try:
-                        await target.followup.send(embed=info_embed, view=switch_view, ephemeral=True)
+                        msg = await target.followup.send(embed=info_embed, view=switch_view)
+                        if msg:
+                            queue.radio_menu_url = msg.jump_url
+                            queue.radio_menu_message = msg
                     except Exception:
                         pass
             else:
-                await target.send(embed=info_embed, view=switch_view, delete_after=60)
+                msg = await target.send(embed=info_embed, view=switch_view)
+                if msg:
+                    queue.radio_menu_url = msg.jump_url
+                    queue.radio_menu_message = msg
 
     async def ensure_voice_ctx(self, ctx: commands.Context) -> Optional[discord.VoiceClient]:
         if not ctx.author.voice or not ctx.author.voice.channel:
@@ -1712,8 +1808,11 @@ class Music(commands.Cog):
         queue.voice_client = vc
         if not queue.text_channel and ctx.channel:
             queue.text_channel = ctx.channel
-        if not queue.tracks and queue.current_track is None and not (vc.is_playing() or vc.is_paused()):
-            self.start_inactivity_countdown(queue, delay=60)
+        human_count = len([m for m in channel.members if not m.bot])
+        if human_count == 0:
+            self.start_inactivity_countdown(queue, delay=30, reason="alone")
+        elif not queue.tracks and queue.current_track is None and not (vc.is_playing() or vc.is_paused()):
+            self.start_inactivity_countdown(queue, delay=60, reason="empty_queue")
 
         return vc
 
@@ -1819,7 +1918,15 @@ class Music(commands.Cog):
                 description=f"### {Emojis.RADIO} Worldwide Country Radio\nSelect a country below or use `/radio country: <name>` to stream live radio stations worldwide:",
                 color=BRAND_COLOR
             )
-            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            await interaction.response.send_message(embed=embed, view=view)
+            try:
+                orig = await interaction.original_response()
+                if orig:
+                    queue = self.service.get_queue(interaction.guild_id)
+                    queue.radio_menu_url = orig.jump_url
+                    queue.radio_menu_message = orig
+            except Exception:
+                pass
             return
 
         await interaction.response.defer()
@@ -2109,9 +2216,11 @@ class Music(commands.Cog):
                 description=f"### {Emojis.RADIO} Worldwide Country Radio\nSelect a country below or use `?radio <country>` to stream live radio stations worldwide:",
                 color=BRAND_COLOR
             )
-            await ctx.send(embed=embed, view=view, delete_after=60)
-            if ctx.message:
-                asyncio.create_task(_delayed_delete_msg(ctx.message, 60))
+            msg = await ctx.send(embed=embed, view=view)
+            if msg:
+                queue = self.service.get_queue(ctx.guild.id)
+                queue.radio_menu_url = msg.jump_url
+                queue.radio_menu_message = msg
             return
 
         await self.start_country_radio_flow(ctx, country)
