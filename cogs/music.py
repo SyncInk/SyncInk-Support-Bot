@@ -492,7 +492,7 @@ class NowPlayingLayoutView(discord.ui.LayoutView):
 
         thumb_url = current.thumbnail if (current.thumbnail and current.thumbnail.startswith("http")) else BRAND_LOGO_URL
         sec = discord.ui.Section(
-            discord.ui.TextDisplay(f"### ▶ Now Playing\n[{current.clean_title}]({current.url}) by **{current.author}**"),
+            discord.ui.TextDisplay(f"### {Emojis.PLAYING} Now Playing\n[{current.clean_title}]({current.url}) by **{current.author}**"),
             accessory=discord.ui.Thumbnail(thumb_url)
         )
         sep1 = discord.ui.Separator(visible=True, spacing=discord.enums.SeparatorSpacing.small)

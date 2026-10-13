@@ -86,7 +86,7 @@ class Emojis:
     TIDAL = "<:tidal:1558919190461685840>"
     LIKE = "<:like:1559660676853797005>"
     DISLIKE = "<:dislike:1559660727373930657>"
-    PLAYING = "<:playing:1559661648011075664>"
+    PLAYING = "<a:playing:1559661648011075664>"
 
 class EmojiPartials:
     """discord.PartialEmoji instances for interactive UI components (Buttons, Menus)."""
@@ -172,7 +172,7 @@ class EmojiPartials:
     SOUNDCLOUD = discord.PartialEmoji(name="soundcloud", id=1558919344199700620, animated=False)
     LIKE = discord.PartialEmoji(name="like", id=1559660676853797005, animated=False)
     DISLIKE = discord.PartialEmoji(name="dislike", id=1559660727373930657, animated=False)
-    PLAYING = discord.PartialEmoji(name="playing", id=1559661648011075664, animated=False)
+    PLAYING = discord.PartialEmoji(name="playing", id=1559661648011075664, animated=True)
 
 import re
 
