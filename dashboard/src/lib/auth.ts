@@ -27,6 +27,7 @@ export interface DiscordUser {
   isAdmin?: boolean;
   isStaff?: boolean;
   isBooster?: boolean;
+  isVerified?: boolean;
   roleType?: UserRoleType;
   roleIcon?: string;
   role?: string;
@@ -121,8 +122,9 @@ export async function getCurrentUser(): Promise<DiscordUser | null> {
       isOwner: true,
       isAdmin: true,
       isStaff: true,
+      isVerified: true,
       roleType: "owner",
-      roleIcon: "👑",
+      roleIcon: "https://cdn.discordapp.com/emojis/1517253606686986323.png",
       role: "Server Administrator",
       guildId: (process.env.DEFAULT_GUILD_ID || "1520457643842342912").trim(),
       guildName: "SyncInk Support",

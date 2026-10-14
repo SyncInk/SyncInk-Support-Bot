@@ -42,8 +42,12 @@ import {
   HelpCircle,
   Send,
   BookOpen,
-  Code
+  Code,
+  Flame,
+  UserCheck,
+  ShieldX
 } from "lucide-react";
+import { DISCORD_CUSTOM_EMOJIS } from "@/lib/custom-emojis";
 
 // --- Interfaces ---
 interface CurrentUser {
@@ -55,6 +59,7 @@ interface CurrentUser {
   isAdmin?: boolean;
   isStaff?: boolean;
   isBooster?: boolean;
+  isVerified?: boolean;
   roleType?: "owner" | "admin" | "staff" | "developer" | "booster" | "partner" | "verified" | "member";
   roleIcon?: string;
   role?: string;
@@ -63,8 +68,66 @@ interface CurrentUser {
   roles?: string[];
 }
 
+export interface MemberItem {
+  id: string;
+  username: string;
+  global_name: string | null;
+  avatar: string | null;
+  joined_at: string | null;
+  roles: string[];
+  isVerified: boolean;
+  isBooster: boolean;
+  isStaff: boolean;
+  isAdmin: boolean;
+  isDeveloper: boolean;
+  isOwner?: boolean;
+  isTimedOut: boolean;
+  timeoutUntil: string | null;
+  isJailed: boolean;
+  infractions: {
+    warnings: number;
+    timeouts: number;
+    jails: number;
+    total: number;
+  };
+}
+
+export interface MemberDetailData {
+  member: {
+    id: string;
+    username: string;
+    global_name: string | null;
+    avatar: string | null;
+    joined_at: string | null;
+    roles: string[];
+    isVerified: boolean;
+    isBooster: boolean;
+    isTimedOut: boolean;
+    timeoutUntil: string | null;
+    isJailed: boolean;
+    activeJail: any;
+  };
+  infractions: {
+    warnings: number;
+    timeouts: number;
+    jails: number;
+    bans: number;
+    kicks: number;
+    total: number;
+  };
+  cases: ModCase[];
+}
+
 interface SecurityState {
   guildId: string;
+  server?: {
+    name: string;
+    icon: string | null;
+    approximate_member_count: number;
+    approximate_presence_count: number;
+    premium_subscription_count: number;
+    premium_tier: number;
+  };
   settings: Record<string, any>;
   raidState: string;
   stats: {
@@ -147,6 +210,7 @@ type TabType =
   | "overview"
   | "shields"
   | "thresholds"
+  | "members"
   | "moderation"
   | "automod"
   | "quarantine"
@@ -278,6 +342,18 @@ export default function DashboardPage() {
   const [voiceUserLimit, setVoiceUserLimit] = useState("0");
   const [voiceAutoCleanup, setVoiceAutoCleanup] = useState(true);
 
+  // Members Intelligence State (Staff / Support Manager / Owner)
+  const [members, setMembers] = useState<MemberItem[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberRoleFilter, setMemberRoleFilter] = useState("ALL");
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [memberDetail, setMemberDetail] = useState<MemberDetailData | null>(null);
+  const [memberDetailLoading, setMemberDetailLoading] = useState(false);
+  const [memberActionType, setMemberActionType] = useState("WARN");
+  const [memberActionReason, setMemberActionReason] = useState("");
+  const [memberActionDuration, setMemberActionDuration] = useState("60");
+
   const isOwner = Boolean(currentUser?.isOwner || currentUser?.id === "admin");
   const isAdmin = Boolean(currentUser?.isAdmin || isOwner);
   const isStaff = Boolean(currentUser?.isStaff || isAdmin);
@@ -287,7 +363,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!loading && currentUser) {
       const adminTabs: TabType[] = ["shields", "thresholds", "automod", "whitelist", "channels"];
-      const staffTabs: TabType[] = ["moderation", "quarantine"];
+      const staffTabs: TabType[] = ["members", "moderation", "quarantine"];
       if (adminTabs.includes(activeTab) && !isAdmin) {
         setActiveTab("overview");
       } else if (staffTabs.includes(activeTab) && !isStaff) {
@@ -418,6 +494,48 @@ export default function DashboardPage() {
     }
   }, [suggestionFilter]);
 
+  const fetchMembers = useCallback(async () => {
+    setMembersLoading(true);
+    try {
+      const gid = currentUser?.guildId || data?.guildId;
+      const url = gid ? `/api/members?guildId=${encodeURIComponent(gid)}` : "/api/members";
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        setMembers(json.members || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch members:", err);
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [currentUser?.guildId, data?.guildId]);
+
+  const fetchMemberDetail = useCallback(async (userId: string) => {
+    setMemberDetailLoading(true);
+    try {
+      const gid = currentUser?.guildId || data?.guildId;
+      const url = `/api/members?userId=${encodeURIComponent(userId)}${gid ? `&guildId=${encodeURIComponent(gid)}` : ""}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        setMemberDetail(json);
+      }
+    } catch (err) {
+      console.error("Failed to fetch member detail:", err);
+    } finally {
+      setMemberDetailLoading(false);
+    }
+  }, [currentUser?.guildId, data?.guildId]);
+
+  useEffect(() => {
+    if (selectedMemberId) {
+      fetchMemberDetail(selectedMemberId);
+    } else {
+      setMemberDetail(null);
+    }
+  }, [selectedMemberId, fetchMemberDetail]);
+
   const fetchUser = useCallback(async () => {
     try {
       const res = await fetch("/api/auth/me");
@@ -443,6 +561,7 @@ export default function DashboardPage() {
 
   // Tab Dependent Fetching
   useEffect(() => {
+    if (activeTab === "members" && isStaff) fetchMembers();
     if (activeTab === "whitelist" && isAdmin) fetchWhitelist();
     if (activeTab === "quarantine" && isStaff) fetchQuarantine();
     if (activeTab === "moderation" && isStaff) fetchModeration();
@@ -453,6 +572,7 @@ export default function DashboardPage() {
     activeTab,
     isAdmin,
     isStaff,
+    fetchMembers,
     fetchWhitelist,
     fetchQuarantine,
     fetchModeration,
@@ -469,6 +589,9 @@ export default function DashboardPage() {
       if (activeTab === "moderation") {
         fetchModeration();
         fetchData(true);
+      } else if (activeTab === "members") {
+        fetchMembers();
+        fetchData(true);
       } else {
         fetchData(true);
         if (activeTab === "whitelist") fetchWhitelist();
@@ -482,6 +605,7 @@ export default function DashboardPage() {
     autoRefresh,
     fetchData,
     activeTab,
+    fetchMembers,
     fetchWhitelist,
     fetchQuarantine,
     fetchModeration,
@@ -515,8 +639,8 @@ export default function DashboardPage() {
   };
 
   const handleEmergencyLockdown = () => {
-    if (!canEdit) {
-      showToast("warning", "Access Restricted", "Server Owner or Admin permissions required.");
+    if (!isOwner) {
+      showToast("warning", "Restricted to Server Owner", "Emergency Panic Lockdown is strictly reserved for the Server Owner.");
       return;
     }
     const isLockdown = data?.raidState === "LOCKDOWN";
@@ -546,6 +670,59 @@ export default function DashboardPage() {
         }
       }
     );
+  };
+
+  const handleQuickMemberAction = async (targetUserId: string) => {
+    if (!canEdit) {
+      showToast("warning", "Access Restricted", "Admin privileges required to enforce sanctions.");
+      return;
+    }
+    if (!memberActionReason.trim()) {
+      showToast("error", "Reason Required", "Please provide a reason for this moderation sanction.");
+      return;
+    }
+
+    setActionLoading(`member_action_${targetUserId}`);
+    try {
+      if (memberActionType === "JAIL") {
+        const res = await fetch("/api/security/quarantine", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: targetUserId,
+            reason: memberActionReason.trim(),
+            durationMinutes: parseInt(memberActionDuration, 10) || 60,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error);
+        showToast("success", "Member Quarantined", result.message);
+      } else {
+        const res = await fetch("/api/moderation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: targetUserId,
+            action: memberActionType,
+            reason: memberActionReason.trim(),
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error);
+        showToast("success", "Action Executed", result.message);
+      }
+
+      setMemberActionReason("");
+      fetchMembers();
+      fetchMemberDetail(targetUserId);
+      fetchModeration();
+      fetchQuarantine();
+      fetchData(true);
+    } catch (err: any) {
+      showToast("error", "Action Failed", err.message);
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleSaveThresholds = async (e: React.FormEvent) => {
@@ -920,6 +1097,29 @@ export default function DashboardPage() {
     );
   }, [data?.incidents, incidentSearch]);
 
+  // Filtered Members (Staff Member Intelligence)
+  const filteredMembers = useMemo(() => {
+    return members.filter((m) => {
+      if (memberRoleFilter === "STAFF" && !m.isStaff && !m.isAdmin && !m.isOwner) return false;
+      if (memberRoleFilter === "ADMIN" && !m.isAdmin && !m.isOwner) return false;
+      if (memberRoleFilter === "DEV" && !m.isDeveloper) return false;
+      if (memberRoleFilter === "VERIFIED" && !m.isVerified) return false;
+      if (memberRoleFilter === "BOOSTER" && !m.isBooster) return false;
+      if (memberRoleFilter === "JAILED" && !m.isJailed) return false;
+      if (memberRoleFilter === "TIMEOUT" && !m.isTimedOut) return false;
+      if (memberRoleFilter === "INFRACTIONS" && (m.infractions?.total || 0) === 0) return false;
+
+      if (memberSearch.trim()) {
+        const q = memberSearch.toLowerCase();
+        const matchesUsername = m.username?.toLowerCase().includes(q);
+        const matchesGlobal = m.global_name?.toLowerCase().includes(q);
+        const matchesId = m.id?.includes(q);
+        return Boolean(matchesUsername || matchesGlobal || matchesId);
+      }
+      return true;
+    });
+  }, [members, memberRoleFilter, memberSearch]);
+
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background text-slate-400">
@@ -1082,9 +1282,19 @@ export default function DashboardPage() {
                   </div>
                 )}
                 <div className="flex flex-col text-left">
-                  <span className="text-xs font-bold text-white leading-tight">
-                    {currentUser.global_name || currentUser.username}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-bold text-white leading-tight">
+                      {currentUser.global_name || currentUser.username}
+                    </span>
+                    {currentUser.isVerified && (
+                      <img
+                        src={DISCORD_CUSTOM_EMOJIS.verified.url}
+                        alt="Verified"
+                        title="Verified Member"
+                        className="w-3.5 h-3.5 object-contain shrink-0"
+                      />
+                    )}
+                  </div>
                   <span
                     className={`text-[10px] font-bold leading-tight flex items-center gap-1.5 mt-0.5 ${
                       currentUser.roleType === "owner" || currentUser.isOwner
@@ -1105,29 +1315,22 @@ export default function DashboardPage() {
                     }`}
                   >
                     <span>
-                      {currentUser.roleIcon ||
-                        (currentUser.roleType === "owner" || currentUser.isOwner
-                          ? "👑"
-                          : currentUser.roleType === "admin" || currentUser.isAdmin
-                          ? "💼"
-                          : currentUser.roleType === "staff" || currentUser.isStaff
-                          ? "🛡️"
-                          : currentUser.roleType === "developer"
-                          ? "💻"
-                          : currentUser.roleType === "booster" || currentUser.isBooster
-                          ? "🚀"
-                          : currentUser.roleType === "partner"
-                          ? "🤝"
-                          : currentUser.roleType === "verified"
-                          ? "✅"
-                          : "👤")}
+                      {currentUser.roleIcon && currentUser.roleIcon.startsWith("http") ? (
+                        <img
+                          src={currentUser.roleIcon}
+                          alt="Role"
+                          className="w-3.5 h-3.5 object-contain inline-block shrink-0"
+                        />
+                      ) : (
+                        currentUser.roleIcon || "👤"
+                      )}
                     </span>
                     <span>
                       {currentUser.role ||
                         (currentUser.roleType === "owner" || currentUser.isOwner
                           ? "Server Owner"
                           : currentUser.roleType === "admin" || currentUser.isAdmin
-                          ? "Administrator"
+                          ? "Support Manager"
                           : currentUser.roleType === "staff" || currentUser.isStaff
                           ? "Staff"
                           : currentUser.roleType === "developer"
@@ -1223,13 +1426,23 @@ export default function DashboardPage() {
               )}
 
               {isStaff && (
-                <NavTab
-                  active={activeTab === "moderation"}
-                  onClick={() => setActiveTab("moderation")}
-                  icon={<FileText className="h-4 w-4" />}
-                  label="Moderation Cases"
-                  badge={data?.stats?.modCasesCount ? String(data.stats.modCasesCount) : undefined}
-                />
+                <>
+                  <NavTab
+                    active={activeTab === "members"}
+                    onClick={() => setActiveTab("members")}
+                    icon={<Users className="h-4 w-4" />}
+                    label="Members & Infractions"
+                    badge={members.length > 0 ? String(members.length) : undefined}
+                    badgeColor="emerald"
+                  />
+                  <NavTab
+                    active={activeTab === "moderation"}
+                    onClick={() => setActiveTab("moderation")}
+                    icon={<FileText className="h-4 w-4" />}
+                    label="Moderation Cases"
+                    badge={data?.stats?.modCasesCount ? String(data.stats.modCasesCount) : undefined}
+                  />
+                </>
               )}
 
               {isAdmin && (
@@ -1310,7 +1523,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="font-semibold text-white">SyncInk Staff Operational View</p>
                   <p className="text-slate-400 mt-0.5">
-                    Authenticated with Staff privileges. You have access to Moderation Cases and the Quarantine Roster.
+                    Authenticated with Staff privileges. You have access to Member Intelligence, Moderation Cases, and the Quarantine Roster.
                   </p>
                 </div>
               </div>
@@ -1321,6 +1534,87 @@ export default function DashboardPage() {
         {/* ========================================================= */}
         {activeTab === "overview" && (
           <div className="space-y-6 animate-in fade-in duration-200">
+            {/* --- SERVER COMMUNITY TELEMETRY & PROFILE BAR --- */}
+            <div className="glass-card rounded-2xl p-6 border border-border/80 bg-gradient-to-r from-surface-card via-[#0c101a] to-surface-card relative overflow-hidden shadow-2xl">
+              <div className="absolute -right-16 -top-16 w-64 h-64 bg-brand-red/5 rounded-full blur-3xl pointer-events-none" />
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                <div className="flex items-center gap-4">
+                  {data?.server?.icon ? (
+                    <img
+                      src={`https://cdn.discordapp.com/icons/${data.guildId || "1520457643842342912"}/${data.server.icon}.png?size=128`}
+                      alt={data?.server?.name || "Server Icon"}
+                      className="h-16 w-16 rounded-2xl object-cover ring-2 ring-brand-red/30 shadow-lg shrink-0"
+                    />
+                  ) : (
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-red to-brand-crimson text-white font-extrabold text-xl shadow-glow">
+                      SI
+                    </div>
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h1 className="text-xl font-black text-white tracking-tight">
+                        {data?.server?.name || "SyncInk Support"}
+                      </h1>
+                      <img
+                        src={DISCORD_CUSTOM_EMOJIS.verified.url}
+                        alt="Verified Server"
+                        title="Official Verified Discord Guild"
+                        className="w-5 h-5 object-contain shrink-0"
+                      />
+                      <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        24/7 Shield Armed
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
+                      <span>Official SyncInk Support & Community Headquarters</span>
+                      <span className="text-slate-600">•</span>
+                      <span className="font-mono text-[11px] text-slate-400">
+                        Guild ID: {data?.guildId || currentUser?.guildId || "1520457643842342912"}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Live Server Stats Pills */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2.5 rounded-xl border border-border/80 bg-surface/80 px-4 py-2.5 shadow-sm">
+                    <Users className="h-4 w-4 text-cyan-400 shrink-0" />
+                    <div>
+                      <div className="text-[10px] uppercase font-bold text-slate-400 leading-tight">Total Members</div>
+                      <div className="text-sm font-extrabold text-white font-mono leading-tight">
+                        {(data?.server?.approximate_member_count || members.length || 0).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 rounded-xl border border-border/80 bg-surface/80 px-4 py-2.5 shadow-sm">
+                    <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-glow-green animate-pulse shrink-0" />
+                    <div>
+                      <div className="text-[10px] uppercase font-bold text-slate-400 leading-tight">Online Presences</div>
+                      <div className="text-sm font-extrabold text-emerald-300 font-mono leading-tight">
+                        {(data?.server?.approximate_presence_count || 0).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 rounded-xl border border-pink-500/30 bg-pink-950/20 px-4 py-2.5 shadow-sm">
+                    <img
+                      src={DISCORD_CUSTOM_EMOJIS.booster.url}
+                      alt="Booster"
+                      className="h-4 w-4 object-contain shrink-0"
+                    />
+                    <div>
+                      <div className="text-[10px] uppercase font-bold text-pink-300 leading-tight">Boost Status</div>
+                      <div className="text-sm font-extrabold text-pink-200 font-mono leading-tight">
+                        Tier {data?.server?.premium_tier || 0} ({data?.server?.premium_subscription_count || 0} Boosts)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Emergency Panic Lockdown Banner - Restricted strictly to Administrators */}
             {isAdmin ? (
               <div
@@ -1374,27 +1668,37 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={handleEmergencyLockdown}
-                    disabled={actionLoading === "lockdown" || !canEdit}
-                    className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all shadow-lg active:scale-98 disabled:opacity-50 ${
-                      isLockdown
-                        ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/50"
-                        : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-glow"
-                    }`}
-                  >
-                    {isLockdown ? (
-                      <>
-                        <Unlock className="h-4 w-4" />
-                        <span>Lift Panic Lockdown</span>
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="h-4 w-4" />
-                        <span>Trigger Panic Lockdown</span>
-                      </>
-                    )}
-                  </button>
+                  {isOwner ? (
+                    <button
+                      onClick={handleEmergencyLockdown}
+                      disabled={actionLoading === "lockdown"}
+                      className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all shadow-lg active:scale-98 disabled:opacity-50 ${
+                        isLockdown
+                          ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/50"
+                          : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-glow"
+                      }`}
+                    >
+                      {isLockdown ? (
+                        <>
+                          <Unlock className="h-4 w-4" />
+                          <span>Lift Panic Lockdown</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="h-4 w-4" />
+                          <span>Trigger Panic Lockdown</span>
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <div
+                      title="Emergency Panic Lockdown can only be initiated or lifted by the Server Owner."
+                      className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-950/30 px-4 py-3 text-xs font-bold text-amber-300 select-none cursor-not-allowed shadow-inner"
+                    >
+                      <Lock className="h-4 w-4 text-amber-400 shrink-0" />
+                      <span>Restricted to Server Owner 👑</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -1476,32 +1780,62 @@ export default function DashboardPage() {
             </div>
 
             {/* Secondary Telemetry Quick-Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="glass-card rounded-xl p-3.5 border border-border/80 flex items-center justify-between">
-                <span className="text-xs text-slate-400">AutoMod Rules:</span>
-                <span className="font-mono text-sm font-bold text-white">
-                  {data?.stats?.blacklistCount || 0}
-                </span>
+            {isAdmin ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="glass-card rounded-xl p-3.5 border border-border/80 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">AutoMod Rules:</span>
+                  <span className="font-mono text-sm font-bold text-white">
+                    {data?.stats?.blacklistCount || 0}
+                  </span>
+                </div>
+                <div className="glass-card rounded-xl p-3.5 border border-border/80 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">24h Strike Violations:</span>
+                  <span className="font-mono text-sm font-bold text-amber-400">
+                    {data?.stats?.violationsCount || 0}
+                  </span>
+                </div>
+                <div className="glass-card rounded-xl p-3.5 border border-border/80 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">Whitelist Exemptions:</span>
+                  <span className="font-mono text-sm font-bold text-emerald-400">
+                    {data?.stats?.whitelistCount || 0}
+                  </span>
+                </div>
+                <div className="glass-card rounded-xl p-3.5 border border-border/80 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">Community Suggestions:</span>
+                  <span className="font-mono text-sm font-bold text-cyan-400">
+                    {data?.stats?.suggestionsCount || 0}
+                  </span>
+                </div>
               </div>
-              <div className="glass-card rounded-xl p-3.5 border border-border/80 flex items-center justify-between">
-                <span className="text-xs text-slate-400">24h Strike Violations:</span>
-                <span className="font-mono text-sm font-bold text-amber-400">
-                  {data?.stats?.violationsCount || 0}
-                </span>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="glass-card rounded-xl p-3.5 border border-border/80 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">Server Members:</span>
+                  <span className="font-mono text-sm font-bold text-white">
+                    {(data?.server?.approximate_member_count || members.length || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="glass-card rounded-xl p-3.5 border border-border/80 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">Online Users:</span>
+                  <span className="font-mono text-sm font-bold text-emerald-400">
+                    {(data?.server?.approximate_presence_count || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="glass-card rounded-xl p-3.5 border border-border/80 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">Server Boosts:</span>
+                  <span className="font-mono text-sm font-bold text-pink-400 flex items-center gap-1">
+                    <img src={DISCORD_CUSTOM_EMOJIS.booster.url} alt="Boost" className="w-3.5 h-3.5 object-contain" />
+                    Tier {data?.server?.premium_tier || 0}
+                  </span>
+                </div>
+                <div className="glass-card rounded-xl p-3.5 border border-border/80 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">Community Suggestions:</span>
+                  <span className="font-mono text-sm font-bold text-cyan-400">
+                    {data?.stats?.suggestionsCount || 0}
+                  </span>
+                </div>
               </div>
-              <div className="glass-card rounded-xl p-3.5 border border-border/80 flex items-center justify-between">
-                <span className="text-xs text-slate-400">Whitelist Exemptions:</span>
-                <span className="font-mono text-sm font-bold text-emerald-400">
-                  {data?.stats?.whitelistCount || 0}
-                </span>
-              </div>
-              <div className="glass-card rounded-xl p-3.5 border border-border/80 flex items-center justify-between">
-                <span className="text-xs text-slate-400">Community Suggestions:</span>
-                <span className="font-mono text-sm font-bold text-cyan-400">
-                  {data?.stats?.suggestionsCount || 0}
-                </span>
-              </div>
-            </div>
+            )}
 
             {/* Forensic Incident Audit Stream (Staff Only) */}
             {isStaff ? (
@@ -1927,6 +2261,310 @@ export default function DashboardPage() {
                   </div>
                 )}
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB: MEMBERS & INFRACTIONS (STAFF MEMBER INTELLIGENCE) */}
+        {/* ========================================================= */}
+        {activeTab === "members" && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Header / Summary Matrix */}
+            <div className="glass-card rounded-2xl p-6 border border-border">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Users className="h-5 w-5 text-brand-red" />
+                    Server Member Intelligence & Infraction Records
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Complete server member directory with real-time infraction analytics, active timeouts, quarantine isolations, and role hierarchy.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => fetchMembers()}
+                  disabled={membersLoading}
+                  className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-xs font-bold text-slate-300 hover:text-white hover:border-slate-500 transition-colors shrink-0 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 text-emerald-400 ${membersLoading ? "animate-spin" : ""}`} />
+                  <span>Refresh Intelligence</span>
+                </button>
+              </div>
+
+              {/* Status Chips Summary */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="glass-panel p-3 rounded-xl border border-border/80 flex flex-col justify-between">
+                  <span className="text-[11px] text-slate-400">Total Roster</span>
+                  <span className="text-base font-extrabold text-white font-mono mt-1">
+                    {members.length}
+                  </span>
+                </div>
+                <div className="glass-panel p-3 rounded-xl border border-border/80 flex flex-col justify-between">
+                  <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                    <img src={DISCORD_CUSTOM_EMOJIS.verified.url} alt="Verified" className="w-3.5 h-3.5 object-contain" />
+                    Verified
+                  </span>
+                  <span className="text-base font-extrabold text-emerald-400 font-mono mt-1">
+                    {members.filter((m) => m.isVerified).length}
+                  </span>
+                </div>
+                <div className="glass-panel p-3 rounded-xl border border-border/80 flex flex-col justify-between">
+                  <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                    <img src={DISCORD_CUSTOM_EMOJIS.booster.url} alt="Booster" className="w-3.5 h-3.5 object-contain" />
+                    Boosters
+                  </span>
+                  <span className="text-base font-extrabold text-pink-400 font-mono mt-1">
+                    {members.filter((m) => m.isBooster).length}
+                  </span>
+                </div>
+                <div className="glass-panel p-3 rounded-xl border border-red-500/30 bg-red-950/10 flex flex-col justify-between">
+                  <span className="text-[11px] text-red-300 flex items-center gap-1">
+                    <Lock className="w-3.5 h-3.5 text-red-400" />
+                    Active Jailed
+                  </span>
+                  <span className="text-base font-extrabold text-red-400 font-mono mt-1">
+                    {members.filter((m) => m.isJailed).length}
+                  </span>
+                </div>
+                <div className="glass-panel p-3 rounded-xl border border-amber-500/30 bg-amber-950/10 flex flex-col justify-between">
+                  <span className="text-[11px] text-amber-300 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    Active Timed Out
+                  </span>
+                  <span className="text-base font-extrabold text-amber-400 font-mono mt-1">
+                    {members.filter((m) => m.isTimedOut).length}
+                  </span>
+                </div>
+                <div className="glass-panel p-3 rounded-xl border border-cyan-500/30 bg-cyan-950/10 flex flex-col justify-between">
+                  <span className="text-[11px] text-cyan-300 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5 text-cyan-400" />
+                    With Infractions
+                  </span>
+                  <span className="text-base font-extrabold text-cyan-400 font-mono mt-1">
+                    {members.filter((m) => (m.infractions?.total || 0) > 0).length}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Roster Directory Table */}
+            <div className="glass-card rounded-2xl border border-border overflow-hidden">
+              {/* Search & Role Filter Tabs */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-border bg-surface/50 px-6 py-4">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by username, global name, or Discord user ID..."
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-surface pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-brand-red transition-colors"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { id: "ALL", label: "All Members" },
+                    { id: "STAFF", label: "Staff Team" },
+                    { id: "DEV", label: "Developers" },
+                    { id: "VERIFIED", label: "Verified" },
+                    { id: "BOOSTER", label: "Boosters" },
+                    { id: "JAILED", label: "Jailed" },
+                    { id: "TIMEOUT", label: "Timed Out" },
+                    { id: "INFRACTIONS", label: "Sanctioned" },
+                  ].map((filter) => (
+                    <button
+                      key={filter.id}
+                      onClick={() => setMemberRoleFilter(filter.id)}
+                      className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all ${
+                        memberRoleFilter === filter.id
+                          ? "bg-brand-red text-white shadow-sm"
+                          : "bg-surface text-slate-400 hover:text-white border border-border"
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {membersLoading && members.length === 0 ? (
+                <div className="text-center py-16 text-slate-400">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-red border-t-transparent mx-auto mb-3" />
+                  <p className="text-xs font-mono">LOADING MEMBER INTELLIGENCE DIRECTORY...</p>
+                </div>
+              ) : filteredMembers.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-surface text-slate-400 uppercase tracking-wider text-[10px] border-b border-border">
+                      <tr>
+                        <th className="py-3 px-4">Member Identity</th>
+                        <th className="py-3 px-4">Discord ID</th>
+                        <th className="py-3 px-4">Security Status</th>
+                        <th className="py-3 px-4 text-center">Warnings</th>
+                        <th className="py-3 px-4 text-center">Timeouts</th>
+                        <th className="py-3 px-4 text-center">Jails</th>
+                        <th className="py-3 px-4 text-center">Total Infractions</th>
+                        <th className="py-3 px-4 text-right">Intelligence Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {filteredMembers.map((m) => (
+                        <tr key={m.id} className="hover:bg-surface/40 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              {m.avatar ? (
+                                <img
+                                  src={`https://cdn.discordapp.com/avatars/${m.id}/${m.avatar}.png?size=64`}
+                                  alt={m.username}
+                                  className="h-8 w-8 rounded-full object-cover ring-1 ring-border shrink-0"
+                                />
+                              ) : (
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#5865F2] text-xs font-bold text-white">
+                                  {(m.global_name || m.username || "U").charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="flex flex-col min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-white text-xs truncate">
+                                    {m.global_name || m.username}
+                                  </span>
+                                  {m.isVerified && (
+                                    <img
+                                      src={DISCORD_CUSTOM_EMOJIS.verified.url}
+                                      alt="Verified"
+                                      title="Verified Member"
+                                      className="w-3.5 h-3.5 object-contain shrink-0"
+                                    />
+                                  )}
+                                  {/* Custom Role Badges */}
+                                  {m.isAdmin && (
+                                    <img
+                                      src={DISCORD_CUSTOM_EMOJIS.admin.url}
+                                      alt="Support Manager"
+                                      title="Support Manager / Admin"
+                                      className="w-3.5 h-3.5 object-contain shrink-0"
+                                    />
+                                  )}
+                                  {m.isStaff && !m.isAdmin && (
+                                    <img
+                                      src={DISCORD_CUSTOM_EMOJIS.staff.url}
+                                      alt="Staff"
+                                      title="Staff Claimer"
+                                      className="w-3.5 h-3.5 object-contain shrink-0"
+                                    />
+                                  )}
+                                  {m.isDeveloper && (
+                                    <img
+                                      src={DISCORD_CUSTOM_EMOJIS.developer.url}
+                                      alt="Developer"
+                                      title="SyncInk Developer"
+                                      className="w-3.5 h-3.5 object-contain shrink-0"
+                                    />
+                                  )}
+                                  {m.isBooster && (
+                                    <img
+                                      src={DISCORD_CUSTOM_EMOJIS.booster.url}
+                                      alt="Booster"
+                                      title="Server Booster"
+                                      className="w-3.5 h-3.5 object-contain shrink-0"
+                                    />
+                                  )}
+                                </div>
+                                <span className="font-mono text-[11px] text-slate-500">
+                                  @{m.username}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 font-mono text-[11px] text-slate-400">
+                            {m.id}
+                          </td>
+                          <td className="py-3 px-4">
+                            {m.isJailed ? (
+                              <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-extrabold uppercase bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse">
+                                <Lock className="h-3 w-3" />
+                                Jailed
+                              </span>
+                            ) : m.isTimedOut ? (
+                              <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-extrabold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                                <Clock className="h-3 w-3" />
+                                Timed Out
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                                <CheckCircle2 className="h-3 w-3" />
+                                Clean
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span
+                              className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${
+                                (m.infractions?.warnings || 0) > 0
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                  : "text-slate-500"
+                              }`}
+                            >
+                              {m.infractions?.warnings || 0}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span
+                              className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${
+                                (m.infractions?.timeouts || 0) > 0
+                                  ? "bg-orange-500/20 text-orange-300 border border-orange-500/30"
+                                  : "text-slate-500"
+                              }`}
+                            >
+                              {m.infractions?.timeouts || 0}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span
+                              className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${
+                                (m.infractions?.jails || 0) > 0
+                                  ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                                  : "text-slate-500"
+                              }`}
+                            >
+                              {m.infractions?.jails || 0}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span
+                              className={`font-mono text-xs font-extrabold px-2.5 py-0.5 rounded-full ${
+                                (m.infractions?.total || 0) > 0
+                                  ? "bg-brand-red/20 text-brand-red border border-brand-red/40"
+                                  : "text-slate-500 bg-surface border border-border"
+                              }`}
+                            >
+                              {m.infractions?.total || 0}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={() => setSelectedMemberId(m.id)}
+                              className="rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-bold text-slate-300 hover:text-white hover:border-brand-red/50 hover:bg-brand-red/10 transition-all inline-flex items-center gap-1.5"
+                            >
+                              <Eye className="h-3.5 w-3.5 text-brand-red" />
+                              <span>Inspect Intel</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-16 text-slate-500">
+                  <Users className="h-10 w-10 mx-auto mb-2 text-slate-600" />
+                  <p className="text-sm font-semibold text-slate-400">No server members match your search or filter.</p>
+                  <p className="text-xs text-slate-500 mt-1">Try modifying your search query or reset the filter.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -3396,6 +4034,278 @@ export default function DashboardPage() {
               <div className="text-slate-400 text-[11px] mt-1 font-sans">Update member limit dynamically</div>
             </div>
           </div>
+        </div>
+      </div>
+    )}
+
+    {/* --- MEMBER INTELLIGENCE DETAIL MODAL --- */}
+    {selectedMemberId && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="glass-card max-w-2xl w-full rounded-2xl border border-border p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-4 pb-4 border-b border-border">
+            <div className="flex items-center gap-3.5">
+              {memberDetail?.member.avatar ? (
+                <img
+                  src={`https://cdn.discordapp.com/avatars/${memberDetail.member.id}/${memberDetail.member.avatar}.png?size=128`}
+                  alt={memberDetail.member.username}
+                  className="h-14 w-14 rounded-2xl object-cover ring-2 ring-brand-red/40 shrink-0 shadow-lg"
+                />
+              ) : (
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#5865F2] text-xl font-black text-white shadow-lg">
+                  {(memberDetail?.member.global_name || memberDetail?.member.username || "U").charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-lg font-bold text-white tracking-tight">
+                    {memberDetail?.member.global_name || memberDetail?.member.username || selectedMemberId}
+                  </h3>
+                  {memberDetail?.member.isVerified && (
+                    <img
+                      src={DISCORD_CUSTOM_EMOJIS.verified.url}
+                      alt="Verified"
+                      title="Verified Member"
+                      className="w-4 h-4 object-contain shrink-0"
+                    />
+                  )}
+                  {memberDetail?.member.isBooster && (
+                    <img
+                      src={DISCORD_CUSTOM_EMOJIS.booster.url}
+                      alt="Booster"
+                      title="Server Booster"
+                      className="w-4 h-4 object-contain shrink-0"
+                    />
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-400 mt-1 font-mono">
+                  <span>@{memberDetail?.member.username || "unknown"}</span>
+                  <span>•</span>
+                  <span>ID: {selectedMemberId}</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setSelectedMemberId(null)}
+              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-surface transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {memberDetailLoading && !memberDetail ? (
+            <div className="text-center py-12 text-slate-400">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-red border-t-transparent mx-auto mb-3" />
+              <p className="text-xs font-mono">FETCHING FORENSIC DOSSIER & MOD HISTORY...</p>
+            </div>
+          ) : memberDetail ? (
+            <>
+              {/* Active Sanction Alerts */}
+              {memberDetail.member.isJailed && (
+                <div className="rounded-xl border border-red-500/40 bg-red-950/30 p-3.5 text-xs text-red-300 flex items-start gap-3">
+                  <Lock className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-white">Active Quarantine Jail Enforced</p>
+                    <p className="mt-0.5 text-red-200">
+                      Reason: {memberDetail.member.activeJail?.reason || "Quarantined by automated security / staff."}
+                    </p>
+                    {memberDetail.member.activeJail?.release_at && (
+                      <p className="mt-1 text-[11px] text-red-300 font-mono">
+                        Release Scheduled: {new Date(memberDetail.member.activeJail.release_at).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {memberDetail.member.isTimedOut && (
+                <div className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-3.5 text-xs text-amber-300 flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-white">Active Discord Communication Timeout</p>
+                    {memberDetail.member.timeoutUntil && (
+                      <p className="mt-0.5 text-amber-200 font-mono">
+                        Expires: {new Date(memberDetail.member.timeoutUntil).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 4 Infraction Statistics Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="glass-panel p-3.5 rounded-xl border border-border/80">
+                  <span className="text-[11px] text-slate-400">Warnings</span>
+                  <p className="text-xl font-black text-amber-400 font-mono mt-1">
+                    {memberDetail.infractions.warnings}
+                  </p>
+                </div>
+                <div className="glass-panel p-3.5 rounded-xl border border-border/80">
+                  <span className="text-[11px] text-slate-400">Timeouts</span>
+                  <p className="text-xl font-black text-orange-400 font-mono mt-1">
+                    {memberDetail.infractions.timeouts}
+                  </p>
+                </div>
+                <div className="glass-panel p-3.5 rounded-xl border border-border/80">
+                  <span className="text-[11px] text-slate-400">Jails</span>
+                  <p className="text-xl font-black text-red-400 font-mono mt-1">
+                    {memberDetail.infractions.jails}
+                  </p>
+                </div>
+                <div className="glass-panel p-3.5 rounded-xl border border-border/80">
+                  <span className="text-[11px] text-slate-400">Total Cases</span>
+                  <p className="text-xl font-black text-white font-mono mt-1">
+                    {memberDetail.infractions.total}
+                  </p>
+                </div>
+              </div>
+
+              {/* Moderation History Timeline */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-brand-red" />
+                  Moderation Case History ({memberDetail.cases.length})
+                </h4>
+                {memberDetail.cases.length > 0 ? (
+                  <div className="rounded-xl border border-border overflow-hidden max-h-56 overflow-y-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-surface text-slate-400 uppercase tracking-wider text-[10px] border-b border-border sticky top-0">
+                        <tr>
+                          <th className="py-2.5 px-3">Case</th>
+                          <th className="py-2.5 px-3">Action</th>
+                          <th className="py-2.5 px-3">Moderator</th>
+                          <th className="py-2.5 px-3">Reason</th>
+                          <th className="py-2.5 px-3">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/60">
+                        {memberDetail.cases.map((c) => (
+                          <tr key={c.case_id} className="hover:bg-surface/40 transition-colors">
+                            <td className="py-2.5 px-3 font-mono font-bold text-white">#{c.case_id}</td>
+                            <td className="py-2.5 px-3">
+                              <span
+                                className={`rounded px-1.5 py-0.5 font-bold uppercase text-[10px] ${
+                                  c.action.toUpperCase().includes("BAN")
+                                    ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                                    : c.action.toUpperCase().includes("KICK")
+                                    ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                                    : c.action.toUpperCase().includes("JAIL")
+                                    ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                                    : c.action.toUpperCase().includes("TIMEOUT")
+                                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                    : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                }`}
+                              >
+                                {c.action}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[11px] text-slate-400">
+                              {c.mod_id === "0" ? "System" : c.mod_id}
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-300 max-w-xs truncate" title={c.reason}>
+                              {c.reason || "No reason"}
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-400 whitespace-nowrap text-[11px]">
+                              {new Date(c.created_at).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border/80 p-6 text-center text-slate-500 text-xs">
+                    No disciplinary infractions recorded for this user. Record is clean.
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Moderation Dispatch Form */}
+              {canEdit && (
+                <div className="pt-2 border-t border-border">
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                    <UserPlus className="h-3.5 w-3.5 text-brand-red" />
+                    Dispatch Direct Moderation Sanction
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+                          Action Type
+                        </label>
+                        <select
+                          value={memberActionType}
+                          onChange={(e) => setMemberActionType(e.target.value)}
+                          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-white outline-none focus:border-brand-red"
+                        >
+                          <option value="WARN">Warning</option>
+                          <option value="TIMEOUT">Timeout</option>
+                          <option value="JAIL">Quarantine Jail</option>
+                          <option value="KICK">Kick from Server</option>
+                          <option value="BAN">Ban from Server</option>
+                        </select>
+                      </div>
+                      {memberActionType === "JAIL" && (
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+                            Duration (Minutes)
+                          </label>
+                          <input
+                            type="number"
+                            min="5"
+                            max="10080"
+                            value={memberActionDuration}
+                            onChange={(e) => setMemberActionDuration(e.target.value)}
+                            className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-white outline-none focus:border-brand-red"
+                          />
+                        </div>
+                      )}
+                      <div className={memberActionType === "JAIL" ? "" : "sm:col-span-2"}>
+                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+                          Enforcement Reason
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Inappropriate language in general chat"
+                          value={memberActionReason}
+                          onChange={(e) => setMemberActionReason(e.target.value)}
+                          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-white outline-none focus:border-brand-red"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedMemberId(null)}
+                        className="rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+                      >
+                        Close
+                      </button>
+                      <button
+                        type="button"
+                        disabled={actionLoading === `member_action_${selectedMemberId}` || !memberActionReason.trim()}
+                        onClick={() => handleQuickMemberAction(selectedMemberId)}
+                        className="flex items-center gap-1.5 rounded-xl bg-brand-red hover:bg-brand-crimson px-5 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-glow transition-all active:scale-98 disabled:opacity-50"
+                      >
+                        <Check className="h-4 w-4" />
+                        <span>
+                          {actionLoading === `member_action_${selectedMemberId}`
+                            ? "Executing..."
+                            : `Enforce ${memberActionType}`}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-8 text-slate-500 text-xs">
+              Failed to load member intelligence profile.
+            </div>
+          )}
         </div>
       </div>
     )}

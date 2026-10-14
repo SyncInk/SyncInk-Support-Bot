@@ -157,7 +157,8 @@ export async function GET(request: Request) {
     let roleLabel = "Server Member";
     let roleIcon = "👤";
 
-    // Booster role check
+    // Booster & Verified role checks
+    const isVerified = memberRoles.includes("1520871574088056952");
     if (memberRoles.includes("1558584451724738640") || Boolean(premiumSince)) {
       isBooster = true;
     }
@@ -174,9 +175,9 @@ export async function GET(request: Request) {
       isStaff = true;
       roleType = "owner";
       roleLabel = "Server Owner";
-      roleIcon = "👑";
+      roleIcon = "https://cdn.discordapp.com/emojis/1517253606686986323.png";
     }
-    // 2. Administrator (💼)
+    // 2. Support Manager / Administrator (💼)
     else if (
       memberRoles.includes("1520854378192572546") ||
       hasAdminPerm ||
@@ -185,8 +186,8 @@ export async function GET(request: Request) {
       isAdmin = true;
       isStaff = true;
       roleType = "admin";
-      roleLabel = "Administrator";
-      roleIcon = "💼";
+      roleLabel = "Support Manager";
+      roleIcon = "https://cdn.discordapp.com/emojis/1513805305492799508.png";
     }
     // 3. Staff (🛡️)
     else if (
@@ -196,19 +197,20 @@ export async function GET(request: Request) {
       isStaff = true;
       roleType = "staff";
       roleLabel = "Staff";
-      roleIcon = "🛡️";
+      roleIcon = "https://cdn.discordapp.com/emojis/1513345698689581087.png";
     }
-    // 4. Developer (💻)
+    // 4. Developer (💻) - Treated like normal members as requested
     else if (memberRoles.includes("1531882215795855511")) {
       roleType = "developer";
       roleLabel = "Developer";
-      roleIcon = "💻";
+      roleIcon = "https://cdn.discordapp.com/emojis/1526607083070554192.png";
+      // isStaff and isAdmin remain false
     }
     // 5. Server Booster (🚀)
     else if (isBooster) {
       roleType = "booster";
       roleLabel = "Server Booster";
-      roleIcon = "🚀";
+      roleIcon = "https://cdn.discordapp.com/emojis/1560008772469002291.png";
     }
     // 6. Partner (🤝)
     else if (memberRoles.includes("1551337053185114242")) {
@@ -217,10 +219,10 @@ export async function GET(request: Request) {
       roleIcon = "🤝";
     }
     // 7. Verified Member (✅)
-    else if (memberRoles.includes("1520871574088056952")) {
+    else if (isVerified) {
       roleType = "verified";
       roleLabel = "Verified Member";
-      roleIcon = "✅";
+      roleIcon = "https://cdn.discordapp.com/emojis/1560001214316544092.png";
     }
     // 8. Server Member / Guest (👤)
     else {
@@ -242,6 +244,7 @@ export async function GET(request: Request) {
       isAdmin,
       isStaff,
       isBooster,
+      isVerified,
       roleType,
       roleIcon,
       role: roleLabel,

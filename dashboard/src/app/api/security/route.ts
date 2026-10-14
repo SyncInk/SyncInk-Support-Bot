@@ -110,8 +110,49 @@ export async function GET(request: Request) {
       };
     }
 
+    // 4. Live Server Profile & Community Statistics
+    let guildStats: {
+      name: string;
+      icon: string | null;
+      approximate_member_count: number;
+      approximate_presence_count: number;
+      premium_subscription_count: number;
+      premium_tier: number;
+    } = {
+      name: "SyncInk Support",
+      icon: null,
+      approximate_member_count: 0,
+      approximate_presence_count: 0,
+      premium_subscription_count: 0,
+      premium_tier: 0,
+    };
+
+    const botToken = (process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN || "").trim();
+    if (botToken) {
+      try {
+        const gRes = await fetch(
+          `https://discord.com/api/v10/guilds/${guildId}?with_counts=true`,
+          { headers: { Authorization: `Bot ${botToken}` } }
+        );
+        if (gRes.ok) {
+          const gData = await gRes.json();
+          guildStats = {
+            name: gData.name || "SyncInk Support",
+            icon: gData.icon || null,
+            approximate_member_count: gData.approximate_member_count || 0,
+            approximate_presence_count: gData.approximate_presence_count || 0,
+            premium_subscription_count: gData.premium_subscription_count || 0,
+            premium_tier: gData.premium_tier || 0,
+          };
+        }
+      } catch {
+        // Keep defaults
+      }
+    }
+
     return NextResponse.json({
       guildId,
+      server: guildStats,
       settings: safeSettings,
       raidState: settings?.anti_raid_state || "NORMAL",
       stats: {
