@@ -72,19 +72,47 @@ export async function GET(request: Request) {
     const blacklistCount = parseInt(blacklistRes?.count || "0", 10);
     const violationsCount = parseInt(violationsRes?.count || "0", 10);
 
-    // 3. Fetch recent 30 security incidents
-    const incidents = await query(
-      `SELECT id, user_id, module, action_taken, severity, risk_score, details, created_at 
-       FROM security_incidents 
-       WHERE guild_id = $1 
-       ORDER BY created_at DESC 
-       LIMIT 30`,
-      [guildId]
-    ).catch(() => []);
+    const isStaffOrAdmin = Boolean(
+      user?.isStaff ||
+      user?.isAdmin ||
+      user?.isOwner ||
+      user?.id === "admin" ||
+      user?.id === "930306512864280607"
+    );
+
+    // 3. Fetch recent 30 security incidents (only visible to Staff and Admins)
+    let incidents: any[] = [];
+    if (isStaffOrAdmin) {
+      incidents = await query(
+        `SELECT id, user_id, module, action_taken, severity, risk_score, details, created_at 
+         FROM security_incidents 
+         WHERE guild_id = $1 
+         ORDER BY created_at DESC 
+         LIMIT 30`,
+        [guildId]
+      ).catch(() => []);
+    }
+
+    // Sanitize settings for normal members to prevent exposure of internal limits
+    let safeSettings = settings || {};
+    if (!isStaffOrAdmin) {
+      safeSettings = {
+        anti_raid_state: settings?.anti_raid_state || "NORMAL",
+        anti_nuke_enabled: Boolean(settings?.anti_nuke_enabled),
+        anti_raid_enabled: Boolean(settings?.anti_raid_enabled),
+        automod_enabled: Boolean(settings?.automod_enabled),
+        anti_phishing_enabled: Boolean(settings?.anti_phishing_enabled),
+        mention_guard_enabled: Boolean(settings?.mention_guard_enabled),
+        content_filter_enabled: Boolean(settings?.content_filter_enabled),
+        mass_bot_protection_enabled: Boolean(settings?.mass_bot_protection_enabled),
+        ghost_ping_detection_enabled: Boolean(settings?.ghost_ping_detection_enabled),
+        verification_enabled: Boolean(settings?.verification_enabled),
+      };
+    }
 
     return NextResponse.json({
       guildId,
-      settings: settings || {},
+      settings: safeSettings,
       raidState: settings?.anti_raid_state || "NORMAL",
       stats: {
         jailedCount,
@@ -95,7 +123,7 @@ export async function GET(request: Request) {
         blacklistCount,
         violationsCount,
       },
-      incidents: incidents || [],
+      incidents,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {

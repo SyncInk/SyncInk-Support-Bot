@@ -178,7 +178,7 @@ export default function UnifiedPrivacyPage() {
                     Scope of Security & Operational Telemetry
                   </h3>
                   <p className="text-sm text-slate-300 leading-relaxed">
-                    The SyncInk Support Bot operates exclusively within the official SyncInk Support Server (Server ID: <code className="text-blue-300 bg-white/5 px-1.5 py-0.5 rounded font-mono text-xs">1520461877073674392</code>). Its sole purpose is server security, velocity join dampening, spam interception, and automod defense.
+                    The SyncInk Support Bot operates exclusively within the official SyncInk Support Server (Server ID: <code className="text-blue-300 bg-white/5 px-1.5 py-0.5 rounded font-mono text-xs">1520457643842342912</code>). Its sole purpose is server security, velocity join dampening, spam interception, and automod defense.
                   </p>
                 </section>
 

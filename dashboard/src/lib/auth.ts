@@ -8,6 +8,16 @@ import {
 const AUTH_COOKIE_NAME = "syncink_admin_session";
 const DISCORD_COOKIE_NAME = "syncink_discord_session";
 
+export type UserRoleType =
+  | "owner"
+  | "admin"
+  | "staff"
+  | "developer"
+  | "booster"
+  | "partner"
+  | "verified"
+  | "member";
+
 export interface DiscordUser {
   id: string;
   username: string;
@@ -15,9 +25,14 @@ export interface DiscordUser {
   avatar?: string | null;
   isOwner?: boolean;
   isAdmin?: boolean;
+  isStaff?: boolean;
+  isBooster?: boolean;
+  roleType?: UserRoleType;
+  roleIcon?: string;
   role?: string;
   guildId?: string;
   guildName?: string;
+  roles?: string[];
 }
 
 // Generate an ephemeral fallback for local dev if ADMIN_ACCESS_KEY is missing
@@ -105,6 +120,12 @@ export async function getCurrentUser(): Promise<DiscordUser | null> {
       global_name: "Admin Passkey",
       isOwner: true,
       isAdmin: true,
+      isStaff: true,
+      roleType: "owner",
+      roleIcon: "👑",
+      role: "Server Administrator",
+      guildId: (process.env.DEFAULT_GUILD_ID || "1520457643842342912").trim(),
+      guildName: "SyncInk Support",
     };
   }
 
@@ -112,7 +133,7 @@ export async function getCurrentUser(): Promise<DiscordUser | null> {
 }
 
 /**
- * Verifies if user has permission to manage the specified target guild (Item 5 & Item 13)
+ * Verifies if user has permission to view the specified target guild (Item 5 & Item 13)
  */
 export function verifyUserGuildAccess(user: DiscordUser | null, targetGuildId: string): boolean {
   if (!user || !targetGuildId) return false;
@@ -126,12 +147,10 @@ export function verifyUserGuildAccess(user: DiscordUser | null, targetGuildId: s
     : [];
 
   if (authorizedIds.includes(user.id)) return true;
+  if (user.id === "930306512864280607") return true;
 
-  const lowerName = (user.username || "").toLowerCase();
-  if (lowerName === "syncink" || lowerName.includes("syncink")) return true;
-
-  // For tenant isolation: must be admin/owner of THIS specific guild
-  if ((user.isOwner || user.isAdmin) && user.guildId === targetGuildId) {
+  // Guild membership verification
+  if (user.guildId === targetGuildId) {
     return true;
   }
 
@@ -139,7 +158,19 @@ export function verifyUserGuildAccess(user: DiscordUser | null, targetGuildId: s
 }
 
 /**
- * Verify request authentication (Discord session, signed admin token, or bearer header)
+ * Helper to extract user from Request headers or cookies
+ */
+export function getRequestUser(request: Request): DiscordUser | null {
+  const cookieHeader = request.headers.get("cookie") || "";
+  const discordMatch = cookieHeader.match(new RegExp(`${DISCORD_COOKIE_NAME}=([^;]+)`));
+  if (discordMatch) {
+    return parseDiscordSession(discordMatch[1]);
+  }
+  return null;
+}
+
+/**
+ * Verify basic request authentication (Discord session, signed admin token, or bearer header)
  */
 export function checkRequestAuth(request: Request): boolean {
   // 1. Check Authorization header
@@ -173,7 +204,53 @@ export function checkRequestAuth(request: Request): boolean {
 }
 
 /**
- * Verify administrator-level authentication
+ * Verify staff-level authentication (Staff, Admin, Owner, or passkey)
+ */
+export function checkRequestStaffAuth(request: Request): boolean {
+  // 1. Check Authorization header
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader) {
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (isValidKey(token)) {
+      return true;
+    }
+  }
+
+  // 2. Check cookies
+  const cookieHeader = request.headers.get("cookie") || "";
+
+  // Check Discord OAuth cookie
+  const discordMatch = cookieHeader.match(new RegExp(`${DISCORD_COOKIE_NAME}=([^;]+)`));
+  if (discordMatch) {
+    const user = parseDiscordSession(discordMatch[1]);
+    if (user) {
+      const authorizedIds = process.env.AUTHORIZED_DISCORD_IDS
+        ? process.env.AUTHORIZED_DISCORD_IDS.split(",").map((s) => s.trim())
+        : [];
+      if (
+        user.isOwner ||
+        user.isAdmin ||
+        user.isStaff ||
+        user.id === "admin" ||
+        user.id === "930306512864280607" ||
+        authorizedIds.includes(user.id)
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // Check Admin passkey cookie
+  const adminMatch = cookieHeader.match(new RegExp(`${AUTH_COOKIE_NAME}=([^;]+)`));
+  if (adminMatch && isValidAdminSessionToken(adminMatch[1])) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Verify administrator-level authentication (Admin, Owner, or passkey)
  */
 export function checkRequestAdminAuth(request: Request): boolean {
   // 1. Check Authorization header
@@ -192,8 +269,63 @@ export function checkRequestAdminAuth(request: Request): boolean {
   const discordMatch = cookieHeader.match(new RegExp(`${DISCORD_COOKIE_NAME}=([^;]+)`));
   if (discordMatch) {
     const user = parseDiscordSession(discordMatch[1]);
-    if (user && (user.isOwner || user.isAdmin)) {
+    if (user) {
+      const authorizedIds = process.env.AUTHORIZED_DISCORD_IDS
+        ? process.env.AUTHORIZED_DISCORD_IDS.split(",").map((s) => s.trim())
+        : [];
+      if (
+        user.isOwner ||
+        user.isAdmin ||
+        user.id === "admin" ||
+        user.id === "930306512864280607" ||
+        authorizedIds.includes(user.id)
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // Check Admin passkey cookie
+  const adminMatch = cookieHeader.match(new RegExp(`${AUTH_COOKIE_NAME}=([^;]+)`));
+  if (adminMatch && isValidAdminSessionToken(adminMatch[1])) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Verify server owner-level authentication (Owner or passkey)
+ */
+export function checkRequestOwnerAuth(request: Request): boolean {
+  // 1. Check Authorization header
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader) {
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (isValidKey(token)) {
       return true;
+    }
+  }
+
+  // 2. Check cookies
+  const cookieHeader = request.headers.get("cookie") || "";
+
+  // Check Discord OAuth cookie
+  const discordMatch = cookieHeader.match(new RegExp(`${DISCORD_COOKIE_NAME}=([^;]+)`));
+  if (discordMatch) {
+    const user = parseDiscordSession(discordMatch[1]);
+    if (user) {
+      const authorizedIds = process.env.AUTHORIZED_DISCORD_IDS
+        ? process.env.AUTHORIZED_DISCORD_IDS.split(",").map((s) => s.trim())
+        : [];
+      if (
+        user.isOwner ||
+        user.id === "admin" ||
+        user.id === "930306512864280607" ||
+        authorizedIds.includes(user.id)
+      ) {
+        return true;
+      }
     }
   }
 

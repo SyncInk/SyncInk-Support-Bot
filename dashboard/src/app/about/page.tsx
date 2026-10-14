@@ -383,7 +383,7 @@ export default function AboutPage() {
 
                 <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                   <span className="px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-indigo-300">
-                    Server ID: 1520461877073674392
+                    Server ID: 1520457643842342912
                   </span>
                   <Link
                     href="/dashboard/security"

@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       client_id: clientId,
       response_type: "code",
       redirect_uri: redirectUri,
-      scope: "identify guilds",
+      scope: "identify guilds guilds.members.read",
       prompt: "consent",
       state: stateToken,
     }).toString();

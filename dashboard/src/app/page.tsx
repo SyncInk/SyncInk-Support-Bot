@@ -603,7 +603,7 @@ export default function HomePage() {
 
               <div className="flex flex-wrap items-center gap-3 shrink-0 w-full sm:w-auto">
                 <span className="px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-blue-300 font-bold">
-                  Server ID: 1520461877073674392
+                  Server ID: 1520457643842342912
                 </span>
                 <Link
                   href="/dashboard/security"

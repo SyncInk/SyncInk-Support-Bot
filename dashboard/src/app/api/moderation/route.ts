@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkRequestAuth, checkRequestAdminAuth, getCurrentUser, verifyUserGuildAccess } from "@/lib/auth";
+import { checkRequestAuth, checkRequestAdminAuth, checkRequestStaffAuth, getCurrentUser, verifyUserGuildAccess } from "@/lib/auth";
 import { query, queryOne, resolveGuildId } from "@/lib/db";
 import { validateCsrfOrigin, redactSensitive } from "@/lib/security";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
@@ -7,8 +7,8 @@ import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  if (!checkRequestAuth(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!checkRequestStaffAuth(request)) {
+    return NextResponse.json({ error: "Access Denied: Staff permissions required to view moderation cases." }, { status: 403 });
   }
 
   const clientIp = getClientIp(request);
@@ -106,10 +106,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many moderation requests. Please slow down." }, { status: 429 });
   }
 
-  // 3. Admin Authorization (Item 13)
-  if (!checkRequestAdminAuth(request)) {
+  // 3. Staff / Admin Authorization (Item 13)
+  if (!checkRequestStaffAuth(request)) {
     return NextResponse.json(
-      { error: "Access Denied: Only Server Owner & Administrators can issue moderation actions." },
+      { error: "Access Denied: Staff or Administrator permissions required to issue moderation actions." },
       { status: 403 }
     );
   }

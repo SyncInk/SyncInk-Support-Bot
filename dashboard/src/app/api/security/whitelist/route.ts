@@ -5,8 +5,8 @@ import { validateCsrfOrigin, redactSensitive } from "@/lib/security";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 
 export async function GET(request: Request) {
-  if (!checkRequestAuth(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!checkRequestAdminAuth(request)) {
+    return NextResponse.json({ error: "Access Denied: Admin privileges required." }, { status: 403 });
   }
 
   const clientIp = getClientIp(request);

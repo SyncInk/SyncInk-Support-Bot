@@ -174,7 +174,7 @@ export default function UnifiedTermsPage() {
                     Acceptance of Security Operations & Eligibility
                   </h3>
                   <p className="text-sm text-slate-300 leading-relaxed">
-                    By interacting within the official SyncInk Support Server (Server ID: <code className="text-blue-300 bg-white/5 px-1.5 py-0.5 rounded font-mono text-xs">1520461877073674392</code>), you enter into a binding agreement to adhere to these Terms of Service, server channel guidelines, and Discord's Terms of Service and Community Guidelines.
+                    By interacting within the official SyncInk Support Server (Server ID: <code className="text-blue-300 bg-white/5 px-1.5 py-0.5 rounded font-mono text-xs">1520457643842342912</code>), you enter into a binding agreement to adhere to these Terms of Service, server channel guidelines, and Discord's Terms of Service and Community Guidelines.
                   </p>
                 </section>
 

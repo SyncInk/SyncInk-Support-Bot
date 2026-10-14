@@ -53,9 +53,14 @@ interface CurrentUser {
   avatar?: string | null;
   isOwner?: boolean;
   isAdmin?: boolean;
+  isStaff?: boolean;
+  isBooster?: boolean;
+  roleType?: "owner" | "admin" | "staff" | "developer" | "booster" | "partner" | "verified" | "member";
+  roleIcon?: string;
   role?: string;
   guildId?: string;
   guildName?: string;
+  roles?: string[];
 }
 
 interface SecurityState {
@@ -273,7 +278,23 @@ export default function DashboardPage() {
   const [voiceUserLimit, setVoiceUserLimit] = useState("0");
   const [voiceAutoCleanup, setVoiceAutoCleanup] = useState(true);
 
-  const canEdit = Boolean(currentUser?.isOwner || currentUser?.isAdmin);
+  const isOwner = Boolean(currentUser?.isOwner || currentUser?.id === "admin");
+  const isAdmin = Boolean(currentUser?.isAdmin || isOwner);
+  const isStaff = Boolean(currentUser?.isStaff || isAdmin);
+  const canEdit = isAdmin;
+
+  // Auto-redirect if non-admin / non-staff attempts to access hidden tab
+  useEffect(() => {
+    if (!loading && currentUser) {
+      const adminTabs: TabType[] = ["shields", "thresholds", "automod", "whitelist", "channels"];
+      const staffTabs: TabType[] = ["moderation", "quarantine"];
+      if (adminTabs.includes(activeTab) && !isAdmin) {
+        setActiveTab("overview");
+      } else if (staffTabs.includes(activeTab) && !isStaff) {
+        setActiveTab("overview");
+      }
+    }
+  }, [activeTab, isAdmin, isStaff, loading, currentUser]);
 
   // --- Fetch Handlers ---
   const fetchData = useCallback(
@@ -422,14 +443,16 @@ export default function DashboardPage() {
 
   // Tab Dependent Fetching
   useEffect(() => {
-    if (activeTab === "whitelist") fetchWhitelist();
-    if (activeTab === "quarantine") fetchQuarantine();
-    if (activeTab === "moderation") fetchModeration();
-    if (activeTab === "automod") fetchAutoMod();
-    if (activeTab === "channels") fetchChannels();
+    if (activeTab === "whitelist" && isAdmin) fetchWhitelist();
+    if (activeTab === "quarantine" && isStaff) fetchQuarantine();
+    if (activeTab === "moderation" && isStaff) fetchModeration();
+    if (activeTab === "automod" && isAdmin) fetchAutoMod();
+    if (activeTab === "channels" && isAdmin) fetchChannels();
     if (activeTab === "suggestions") fetchSuggestions();
   }, [
     activeTab,
+    isAdmin,
+    isStaff,
     fetchWhitelist,
     fetchQuarantine,
     fetchModeration,
@@ -1020,7 +1043,7 @@ export default function DashboardPage() {
                 </span>
                 <span className="text-slate-600">•</span>
                 <span className="font-mono text-[11px] text-slate-400">
-                  ID: {data?.guildId || currentUser?.guildId || "1520461877073674392"}
+                  ID: {data?.guildId || currentUser?.guildId || "1520457643842342912"}
                 </span>
               </div>
             </div>
@@ -1063,29 +1086,60 @@ export default function DashboardPage() {
                     {currentUser.global_name || currentUser.username}
                   </span>
                   <span
-                    className={`text-[10px] font-bold leading-tight flex items-center gap-1 ${
-                      currentUser.isOwner
+                    className={`text-[10px] font-bold leading-tight flex items-center gap-1.5 mt-0.5 ${
+                      currentUser.roleType === "owner" || currentUser.isOwner
                         ? "text-amber-400"
-                        : currentUser.isAdmin
+                        : currentUser.roleType === "admin" || currentUser.isAdmin
                         ? "text-emerald-400"
-                        : "text-blue-400"
+                        : currentUser.roleType === "staff" || currentUser.isStaff
+                        ? "text-violet-400"
+                        : currentUser.roleType === "developer"
+                        ? "text-cyan-400"
+                        : currentUser.roleType === "booster" || currentUser.isBooster
+                        ? "text-pink-400"
+                        : currentUser.roleType === "partner"
+                        ? "text-indigo-400"
+                        : currentUser.roleType === "verified"
+                        ? "text-emerald-300"
+                        : "text-slate-400"
                     }`}
                   >
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full inline-block ${
-                        currentUser.isOwner
-                          ? "bg-amber-400 animate-ping"
-                          : currentUser.isAdmin
-                          ? "bg-emerald-400"
-                          : "bg-blue-400"
-                      }`}
-                    />
-                    {currentUser.role ||
-                      (currentUser.isOwner
-                        ? "Server Owner"
-                        : currentUser.isAdmin
-                        ? "Server Admin"
-                        : "Server Member")}
+                    <span>
+                      {currentUser.roleIcon ||
+                        (currentUser.roleType === "owner" || currentUser.isOwner
+                          ? "👑"
+                          : currentUser.roleType === "admin" || currentUser.isAdmin
+                          ? "💼"
+                          : currentUser.roleType === "staff" || currentUser.isStaff
+                          ? "🛡️"
+                          : currentUser.roleType === "developer"
+                          ? "💻"
+                          : currentUser.roleType === "booster" || currentUser.isBooster
+                          ? "🚀"
+                          : currentUser.roleType === "partner"
+                          ? "🤝"
+                          : currentUser.roleType === "verified"
+                          ? "✅"
+                          : "👤")}
+                    </span>
+                    <span>
+                      {currentUser.role ||
+                        (currentUser.roleType === "owner" || currentUser.isOwner
+                          ? "Server Owner"
+                          : currentUser.roleType === "admin" || currentUser.isAdmin
+                          ? "Administrator"
+                          : currentUser.roleType === "staff" || currentUser.isStaff
+                          ? "Staff"
+                          : currentUser.roleType === "developer"
+                          ? "Developer"
+                          : currentUser.roleType === "booster" || currentUser.isBooster
+                          ? "Server Booster"
+                          : currentUser.roleType === "partner"
+                          ? "Partner"
+                          : currentUser.roleType === "verified"
+                          ? "Verified Member"
+                          : "Server Member")}
+                    </span>
                   </span>
                 </div>
               </div>
@@ -1143,68 +1197,88 @@ export default function DashboardPage() {
           <div className="border-t border-border/50 bg-surface/40 px-4 sm:px-6 lg:px-8">
             <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto py-2 scrollbar-none">
               <NavTab
-              active={activeTab === "overview"}
-              onClick={() => setActiveTab("overview")}
-              icon={<Shield className="h-4 w-4" />}
-              label="Overview"
-              badge={raidState !== "NORMAL" ? raidState : undefined}
-              badgeColor="red"
-            />
-            <NavTab
-              active={activeTab === "shields"}
-              onClick={() => setActiveTab("shields")}
-              icon={<Sliders className="h-4 w-4" />}
-              label="Shields & Defenses"
-            />
-            <NavTab
-              active={activeTab === "thresholds"}
-              onClick={() => setActiveTab("thresholds")}
-              icon={<Settings className="h-4 w-4" />}
-              label="Velocity Tuning"
-            />
-            <NavTab
-              active={activeTab === "moderation"}
-              onClick={() => setActiveTab("moderation")}
-              icon={<FileText className="h-4 w-4" />}
-              label="Moderation Cases"
-              badge={data?.stats?.modCasesCount ? String(data.stats.modCasesCount) : undefined}
-            />
-            <NavTab
-              active={activeTab === "automod"}
-              onClick={() => setActiveTab("automod")}
-              icon={<AlertOctagon className="h-4 w-4" />}
-              label="AutoMod & Filters"
-              badge={data?.stats?.violationsCount ? `${data.stats.violationsCount} strikes` : undefined}
-              badgeColor="amber"
-            />
-            <NavTab
-              active={activeTab === "quarantine"}
-              onClick={() => setActiveTab("quarantine")}
-              icon={<Users className="h-4 w-4" />}
-              label="Quarantine Roster"
-              badge={data?.stats?.jailedCount ? String(data.stats.jailedCount) : undefined}
-              badgeColor="red"
-            />
-            <NavTab
-              active={activeTab === "whitelist"}
-              onClick={() => setActiveTab("whitelist")}
-              icon={<CheckCircle2 className="h-4 w-4" />}
-              label="Security Whitelist"
-              badge={data?.stats?.whitelistCount ? String(data.stats.whitelistCount) : undefined}
-            />
-            <NavTab
-              active={activeTab === "channels"}
-              onClick={() => setActiveTab("channels")}
-              icon={<Hash className="h-4 w-4" />}
-              label="Log Routing"
-            />
-            <NavTab
-              active={activeTab === "suggestions"}
-              onClick={() => setActiveTab("suggestions")}
-              icon={<MessageSquare className="h-4 w-4" />}
-              label="Suggestions"
-              badge={data?.stats?.suggestionsCount ? String(data.stats.suggestionsCount) : undefined}
-            />
+                active={activeTab === "overview"}
+                onClick={() => setActiveTab("overview")}
+                icon={<Shield className="h-4 w-4" />}
+                label="Overview"
+                badge={raidState !== "NORMAL" ? raidState : undefined}
+                badgeColor="red"
+              />
+
+              {isAdmin && (
+                <>
+                  <NavTab
+                    active={activeTab === "shields"}
+                    onClick={() => setActiveTab("shields")}
+                    icon={<Sliders className="h-4 w-4" />}
+                    label="Shields & Defenses"
+                  />
+                  <NavTab
+                    active={activeTab === "thresholds"}
+                    onClick={() => setActiveTab("thresholds")}
+                    icon={<Settings className="h-4 w-4" />}
+                    label="Velocity Tuning"
+                  />
+                </>
+              )}
+
+              {isStaff && (
+                <NavTab
+                  active={activeTab === "moderation"}
+                  onClick={() => setActiveTab("moderation")}
+                  icon={<FileText className="h-4 w-4" />}
+                  label="Moderation Cases"
+                  badge={data?.stats?.modCasesCount ? String(data.stats.modCasesCount) : undefined}
+                />
+              )}
+
+              {isAdmin && (
+                <NavTab
+                  active={activeTab === "automod"}
+                  onClick={() => setActiveTab("automod")}
+                  icon={<AlertOctagon className="h-4 w-4" />}
+                  label="AutoMod & Filters"
+                  badge={data?.stats?.violationsCount ? `${data.stats.violationsCount} strikes` : undefined}
+                  badgeColor="amber"
+                />
+              )}
+
+              {isStaff && (
+                <NavTab
+                  active={activeTab === "quarantine"}
+                  onClick={() => setActiveTab("quarantine")}
+                  icon={<Users className="h-4 w-4" />}
+                  label="Quarantine Roster"
+                  badge={data?.stats?.jailedCount ? String(data.stats.jailedCount) : undefined}
+                  badgeColor="red"
+                />
+              )}
+
+              {isAdmin && (
+                <>
+                  <NavTab
+                    active={activeTab === "whitelist"}
+                    onClick={() => setActiveTab("whitelist")}
+                    icon={<CheckCircle2 className="h-4 w-4" />}
+                    label="Security Whitelist"
+                    badge={data?.stats?.whitelistCount ? String(data.stats.whitelistCount) : undefined}
+                  />
+                  <NavTab
+                    active={activeTab === "channels"}
+                    onClick={() => setActiveTab("channels")}
+                    icon={<Hash className="h-4 w-4" />}
+                    label="Log Routing"
+                  />
+                </>
+              )}
+
+              <NavTab
+                active={activeTab === "suggestions"}
+                onClick={() => setActiveTab("suggestions")}
+                icon={<MessageSquare className="h-4 w-4" />}
+                label="Suggestions"
+                badge={data?.stats?.suggestionsCount ? String(data.stats.suggestionsCount) : undefined}
+              />
             <div className="h-4 w-px bg-border/80 mx-1 self-center" />
             <a
               href="/rules"
@@ -1229,99 +1303,141 @@ export default function DashboardPage() {
       <main className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8 space-y-6">
         {botSystem === "security" && (
           <>
-            {/* Permission Read-Only Banner for regular members */}
-        {!canEdit && (
-          <div className="flex items-center gap-3 rounded-2xl border border-blue-500/30 bg-blue-950/30 px-4 py-3 text-xs text-blue-300 backdrop-blur-md">
-            <HelpCircle className="h-5 w-5 shrink-0 text-blue-400" />
-            <div>
-              <p className="font-semibold text-white">Read-Only Telemetry Inspection Mode</p>
-              <p className="text-slate-400 mt-0.5">
-                You are viewing real-time security data as a Server Member. Mutating shield toggles, threshold saves, and moderation actions require Server Owner or Administrator permissions.
-              </p>
-            </div>
-          </div>
-        )}
+            {/* Staff Operational Banner */}
+            {isStaff && !isAdmin && (
+              <div className="flex items-center gap-3 rounded-2xl border border-violet-500/30 bg-violet-950/20 px-4 py-3 text-xs text-violet-300 backdrop-blur-md">
+                <ShieldCheck className="h-5 w-5 shrink-0 text-violet-400" />
+                <div>
+                  <p className="font-semibold text-white">SyncInk Staff Operational View</p>
+                  <p className="text-slate-400 mt-0.5">
+                    Authenticated with Staff privileges. You have access to Moderation Cases and the Quarantine Roster.
+                  </p>
+                </div>
+              </div>
+            )}
 
         {/* ========================================================= */}
         {/* TAB 1: OVERVIEW & TELEMETRY */}
         {/* ========================================================= */}
         {activeTab === "overview" && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Emergency Panic Lockdown Banner */}
-            <div
-              className={`glass-card rounded-2xl p-5 border transition-all ${
-                isLockdown
-                  ? "border-red-500/80 bg-red-950/40 pulse-lockdown shadow-red-950/50"
-                  : "border-border/80 bg-surface-card/60"
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start sm:items-center gap-3.5">
-                  <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${
+            {/* Emergency Panic Lockdown Banner - Restricted strictly to Administrators */}
+            {isAdmin ? (
+              <div
+                className={`glass-card rounded-2xl p-5 border transition-all ${
+                  isLockdown
+                    ? "border-red-500/80 bg-red-950/40 pulse-lockdown shadow-red-950/50"
+                    : "border-border/80 bg-surface-card/60"
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start sm:items-center gap-3.5">
+                    <div
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${
+                        isLockdown
+                          ? "border-red-500 bg-red-500/20 text-red-400"
+                          : "border-border bg-surface text-slate-400"
+                      }`}
+                    >
+                      {isLockdown ? (
+                        <Lock className="h-6 w-6 animate-bounce" />
+                      ) : (
+                        <ShieldAlert className="h-6 w-6 text-brand-red" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-bold text-white tracking-tight">
+                          {isLockdown
+                            ? "🚨 EMERGENCY LOCKDOWN ACTIVATED"
+                            : "Server Threat Level & Panic Shield"}
+                        </h2>
+                        <span
+                          className={`rounded-md px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wider ${
+                            raidState === "LOCKDOWN"
+                              ? "bg-red-500/25 text-red-400 border border-red-500/50"
+                              : raidState === "ALERT"
+                              ? "bg-orange-500/25 text-orange-400 border border-orange-500/50"
+                              : raidState === "WATCH"
+                              ? "bg-amber-500/25 text-amber-400 border border-amber-500/50"
+                              : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                          }`}
+                        >
+                          STATUS: {raidState}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {isLockdown
+                          ? "Quarantine gate active. All incoming joins are quarantined or blocked. Security shields maxed."
+                          : "Instant master kill-switch to isolate the guild and halt ongoing raids or mass exploitation."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleEmergencyLockdown}
+                    disabled={actionLoading === "lockdown" || !canEdit}
+                    className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all shadow-lg active:scale-98 disabled:opacity-50 ${
                       isLockdown
-                        ? "border-red-500 bg-red-500/20 text-red-400"
-                        : "border-border bg-surface text-slate-400"
+                        ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/50"
+                        : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-glow"
                     }`}
                   >
                     {isLockdown ? (
-                      <Lock className="h-6 w-6 animate-bounce" />
+                      <>
+                        <Unlock className="h-4 w-4" />
+                        <span>Lift Panic Lockdown</span>
+                      </>
                     ) : (
-                      <ShieldAlert className="h-6 w-6 text-brand-red" />
+                      <>
+                        <Lock className="h-4 w-4" />
+                        <span>Trigger Panic Lockdown</span>
+                      </>
                     )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-bold text-white tracking-tight">
-                        {isLockdown
-                          ? "🚨 EMERGENCY LOCKDOWN ACTIVATED"
-                          : "Server Threat Level & Panic Shield"}
-                      </h2>
-                      <span
-                        className={`rounded-md px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wider ${
-                          raidState === "LOCKDOWN"
-                            ? "bg-red-500/25 text-red-400 border border-red-500/50"
-                            : raidState === "ALERT"
-                            ? "bg-orange-500/25 text-orange-400 border border-orange-500/50"
-                            : raidState === "WATCH"
-                            ? "bg-amber-500/25 text-amber-400 border border-amber-500/50"
-                            : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                        }`}
-                      >
-                        STATUS: {raidState}
-                      </span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Public / Member Community Shield Protection Banner (NO PANIC BUTTON) */
+              <div className="glass-card rounded-2xl p-5 border border-emerald-500/30 bg-surface-card/60 backdrop-blur-md">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start sm:items-center gap-3.5">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-400">
+                      <ShieldCheck className="h-6 w-6" />
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">
-                      {isLockdown
-                        ? "Quarantine gate active. All incoming joins are quarantined or blocked. Security shields maxed."
-                        : "Instant master kill-switch to isolate the guild and halt ongoing raids or mass exploitation."}
-                    </p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-bold text-white tracking-tight">
+                          SyncInk Shield Protection Status
+                        </h2>
+                        <span className="rounded-md px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                          STATUS: {raidState === "LOCKDOWN" ? "LOCKDOWN" : "SHIELDED"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Real-time proactive shield is safeguarding the official SyncInk Support Server against raids, malicious links, and unauthorized exploits.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href="/rules"
+                      className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 transition-all"
+                    >
+                      <BookOpen className="h-4 w-4 text-brand-crimson" />
+                      <span>Server Rules</span>
+                    </Link>
+                    <Link
+                      href="/faq"
+                      className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 transition-all"
+                    >
+                      <HelpCircle className="h-4 w-4 text-amber-400" />
+                      <span>FAQ & Help</span>
+                    </Link>
                   </div>
                 </div>
-
-                <button
-                  onClick={handleEmergencyLockdown}
-                  disabled={actionLoading === "lockdown" || !canEdit}
-                  className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all shadow-lg active:scale-98 disabled:opacity-50 ${
-                    isLockdown
-                      ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/50"
-                      : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-glow"
-                  }`}
-                >
-                  {isLockdown ? (
-                    <>
-                      <Unlock className="h-4 w-4" />
-                      <span>Lift Panic Lockdown</span>
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="h-4 w-4" />
-                      <span>Trigger Panic Lockdown</span>
-                    </>
-                  )}
-                </button>
               </div>
-            </div>
+            )}
 
             {/* 4 Telemetry Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1387,31 +1503,32 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Forensic Incident Audit Stream */}
-            <div className="glass-card rounded-2xl border border-border overflow-hidden">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border bg-surface/50 px-6 py-4">
-                <div>
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Radio className="h-4 w-4 text-brand-red animate-pulse" />
-                    Forensic Security Incident Stream
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Real-time timeline of intercepted attacks, anti-nuke triggers, and auto-moderation actions.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-2.5" />
-                    <input
-                      type="text"
-                      placeholder="Search incidents..."
-                      value={incidentSearch}
-                      onChange={(e) => setIncidentSearch(e.target.value)}
-                      className="rounded-xl border border-border bg-surface pl-8 pr-3 py-1.5 text-xs text-white outline-none focus:border-brand-red w-44"
-                    />
+            {/* Forensic Incident Audit Stream (Staff Only) */}
+            {isStaff ? (
+              <div className="glass-card rounded-2xl border border-border overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border bg-surface/50 px-6 py-4">
+                  <div>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <Radio className="h-4 w-4 text-brand-red animate-pulse" />
+                      Forensic Security Incident Stream
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Real-time timeline of intercepted attacks, anti-nuke triggers, and auto-moderation actions.
+                    </p>
                   </div>
-                  {canEdit && (
+
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        placeholder="Search incidents..."
+                        value={incidentSearch}
+                        onChange={(e) => setIncidentSearch(e.target.value)}
+                        className="rounded-xl border border-border bg-surface pl-8 pr-3 py-1.5 text-xs text-white outline-none focus:border-brand-red w-44"
+                      />
+                    </div>
+                    {isAdmin && (
                     <div className="flex items-center gap-1.5">
                       <a
                         href={`/api/security/export?format=csv&type=incidents`}
@@ -1498,6 +1615,54 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
+            ) : (
+              /* Community Safety & Protection Highlights Grid (Normal Members) */
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                      Active Community Safeguards & Protections
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      How SyncInk Support Bot keeps this server clean, safe, and protected around the clock.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="glass-card rounded-2xl p-5 border border-border/80 space-y-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                      <Shield className="w-5 h-5" />
+                    </div>
+                    <h4 className="text-sm font-bold text-white">Autonomous Raid Suppression</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Continuous join rate monitoring and rapid quarantine shield stop mass account raids and bot invasions before members are disturbed.
+                    </p>
+                  </div>
+
+                  <div className="glass-card rounded-2xl p-5 border border-border/80 space-y-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                      <AlertOctagon className="w-5 h-5" />
+                    </div>
+                    <h4 className="text-sm font-bold text-white">Zero-Trust Phishing & Scam Filter</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Real-time link scanning catches fake Discord Nitro gifts, credential harvesters, and malicious redirects instantly.
+                    </p>
+                  </div>
+
+                  <div className="glass-card rounded-2xl p-5 border border-border/80 space-y-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                      <MessageSquare className="w-5 h-5" />
+                    </div>
+                    <h4 className="text-sm font-bold text-white">Suggestions & Community Voice</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Share ideas for new features, bots, or server enhancements directly in the Suggestions tab, and upvote favorite community concepts.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1785,7 +1950,7 @@ export default function DashboardPage() {
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. 1520461877073674392"
+                      placeholder="e.g. 930306512864280607"
                       value={newModUserId}
                       onChange={(e) => setNewModUserId(e.target.value)}
                       className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-white outline-none focus:border-brand-red"
@@ -2180,7 +2345,7 @@ export default function DashboardPage() {
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. 1520461877073674392"
+                      placeholder="e.g. 930306512864280607"
                       value={manualJailUserId}
                       onChange={(e) => setManualJailUserId(e.target.value)}
                       className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-white outline-none focus:border-brand-red"
