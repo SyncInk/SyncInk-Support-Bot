@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, AsyncMock, patch
 import sys

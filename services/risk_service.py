@@ -1,4 +1,4 @@
-﻿import discord
+import discord
 from datetime import datetime, timedelta
 from typing import Tuple, List, Dict, Any
 from database import db

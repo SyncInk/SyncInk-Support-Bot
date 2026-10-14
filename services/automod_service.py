@@ -123,18 +123,21 @@ class AutomodService:
                         pass
 
             else:
-                # Progressive 24-Hour Strike Tier System:
-                # Strike 1: Normal warning in chat + delete message
-                # Strike 2: 2 mins mute
-                # Strike 3: 10 mins mute
-                # Strike 4: 30 mins mute
-                # Strike 5: 1h 30m (90 mins) mute
-                # Strike 6+: Jail
+                # Progressive 24-Hour Strike Tier System (Strict Enforcement):
+                # Strikes 1, 2, 3: Warned 3 times in chat + delete message
+                # Strike 4: Mute for 2 minutes
+                # Strike 5: Mute for 10 minutes (increases on repeat breaks)
+                # Strike 6: Mute for 30 minutes
+                # Strike 7: Mute for 1 hour (60 minutes)
+                # Strike 8+: Jail / Quarantine
                 if strike_count == 1:
-                    case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "WARN (Automod)", f"{reason} [Strike 1/5 (24h)]")
-                    action_taken = "Warned (Strike 1/5)"
+                    case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "WARN (Automod)", f"{reason} [Warning 1/3 (24h)]")
+                    action_taken = "Warned (Warning 1/3)"
                     warn_embed = SyncInkEmbed(
-                        description=f"{Emojis.WARNING} | {member.mention} **{reason}** — *(Strike 1/5)*",
+                        description=(
+                            f"{Emojis.WARNING} | {member.mention} **{reason}** — *(Warning 1/3)*\n"
+                            f"⚠️ Messages must not exceed 3 lines. You have **2 warnings remaining** before an automated timeout."
+                        ),
                         color=WARNING_COLOR
                     )
                     if message:
@@ -143,24 +146,56 @@ class AutomodService:
                         except (discord.Forbidden, discord.NotFound, discord.HTTPException):
                             pass
 
-                elif strike_count in (2, 3, 4, 5):
+                elif strike_count == 2:
+                    case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "WARN (Automod)", f"{reason} [Warning 2/3 (24h)]")
+                    action_taken = "Warned (Warning 2/3)"
+                    warn_embed = SyncInkEmbed(
+                        description=(
+                            f"{Emojis.WARNING} | {member.mention} **{reason}** — *(Warning 2/3)*\n"
+                            f"⚠️ **Second Warning**: Continued rule breaking will trigger a mute. You have **1 warning remaining**."
+                        ),
+                        color=WARNING_COLOR
+                    )
+                    if message:
+                        try:
+                            await message.channel.send(content=member.mention, embed=warn_embed, delete_after=10)
+                        except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                            pass
+
+                elif strike_count == 3:
+                    case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "WARN (Automod)", f"{reason} [Warning 3/3 - Final]")
+                    action_taken = "Warned (Final Warning 3/3)"
+                    warn_embed = SyncInkEmbed(
+                        description=(
+                            f"{Emojis.ALERT} | {member.mention} **{reason}** — *(Final Warning 3/3)*\n"
+                            f"🚨 **FINAL WARNING**: You have used all 3 warnings. Your next violation will result in a **2-minute MUTE**!"
+                        ),
+                        color=WARNING_COLOR
+                    )
+                    if message:
+                        try:
+                            await message.channel.send(content=member.mention, embed=warn_embed, delete_after=10)
+                        except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                            pass
+
+                elif strike_count in (4, 5, 6, 7):
                     timeout_map = {
-                        2: (2, "2 minutes", "TIMEOUT 2m (Automod)"),
-                        3: (10, "10 minutes", "TIMEOUT 10m (Automod)"),
-                        4: (30, "30 minutes", "TIMEOUT 30m (Automod)"),
-                        5: (90, "1 hour 30 minutes", "TIMEOUT 1h30m (Automod)")
+                        4: (2, "2 minutes", "TIMEOUT 2m (Automod)"),
+                        5: (10, "10 minutes", "TIMEOUT 10m (Automod)"),
+                        6: (30, "30 minutes", "TIMEOUT 30m (Automod)"),
+                        7: (60, "1 hour", "TIMEOUT 1h (Automod)")
                     }
                     duration_mins, duration_label, case_action = timeout_map[strike_count]
                     duration_td = timedelta(minutes=duration_mins)
-                    await member.timeout(duration_td, reason=f"Automod Strike {strike_count}/5 (24h): {reason}")
+                    await member.timeout(duration_td, reason=f"Automod Strike {strike_count}: {reason}")
                     from utils.ui import send_mute_dm
                     await send_mute_dm(member, reason, guild.name)
-                    case_id = await ModService.log_case(guild.id, member.id, bot.user.id, case_action, f"{reason} [Strike {strike_count}/5 (24h)]")
-                    action_taken = f"Timed Out ({duration_label} - Strike {strike_count}/5)"
+                    case_id = await ModService.log_case(guild.id, member.id, bot.user.id, case_action, f"{reason} [Strike {strike_count} (24h)]")
+                    action_taken = f"Timed Out ({duration_label} - Strike {strike_count})"
 
-                    final_notice = " • **Next strike will result in Jail!**" if strike_count == 5 else ""
+                    final_notice = " • **Next strike will result in Jail!**" if strike_count == 7 else " *(Mute duration increases with repeated violations)*"
                     mute_embed = SyncInkEmbed(
-                        description=f"{Emojis.WARNING} {member.mention} **Muted for {duration_label}** (Strike {strike_count}/5) — *{reason}*{final_notice}",
+                        description=f"{Emojis.WARNING} {member.mention} **Muted for {duration_label}** (Strike {strike_count}) — *{reason}*{final_notice}",
                         color=ERROR_COLOR
                     )
                     if message:
@@ -169,7 +204,7 @@ class AutomodService:
                         except discord.Forbidden:
                             pass
 
-                else: # strike_count >= 6
+                else: # strike_count >= 8
                     if await AutomodService.is_user_jailed(guild, member):
                         duration_td = timedelta(hours=2)
                         await member.timeout(duration_td, reason=f"Jailed repeat violation (Strike {strike_count} in 24h): {reason}")
@@ -190,7 +225,7 @@ class AutomodService:
                         case_id = await AutomodService.jail_user(guild, member, bot.user, f"Automod Strike {strike_count} in 24h: {reason}")
                         action_taken = f"Jailed (Strike {strike_count} in 24h)"
                         jail_embed = SyncInkEmbed(
-                            description=f"{Emojis.REFUSED} {member.mention} **has been jailed for repeated server violations** (Strike {strike_count}).",
+                            description=f"{Emojis.REFUSED} {member.mention} **has been quarantined in Jail for repeated server violations** (Strike {strike_count}).",
                             color=ERROR_COLOR
                         )
                         if message:

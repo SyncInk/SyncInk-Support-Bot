@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
+import os
 from services.automod_service import AutomodService
 from services.settings_service import SettingsService
 from services.security_service import SecurityService
@@ -553,7 +554,48 @@ class Automod(commands.Cog):
         now = datetime.utcnow()
 
         # -------------------------------------------------------------
-        # 4. MENTION HARASSMENT & GHOST-PING CACHE
+        # 4. STRICT VERTICAL / MULTI-LINE CHAT SPAM DETECTION (> 3 LINES)
+        # Any message containing more than 3 lines or repeated commands
+        # -------------------------------------------------------------
+        raw_lines = content.split('\n')
+        non_empty_lines = [l.strip() for l in raw_lines if l.strip()]
+
+        is_line_spam = False
+        spam_reason = None
+
+        # Rule A: Strictly prohibit more than 3 lines in a single message
+        if len(non_empty_lines) > 3 or content.count('\n') >= 3:
+            is_line_spam = True
+            spam_reason = "Vertical chat spam (Message contains more than 3 lines)"
+
+        # Rule B: Repeating commands or repeated lines in a multi-line message
+        elif len(non_empty_lines) >= 2:
+            line_counts = collections.Counter(non_empty_lines)
+            max_line_repeat = max(line_counts.values()) if line_counts else 0
+            if max_line_repeat >= 2 and any(l.startswith(('?', '!', '/', '.', '$')) for l in line_counts if line_counts[l] >= 2):
+                is_line_spam = True
+                spam_reason = "Multi-line command repetition spam in single message"
+            elif max_line_repeat >= 3:
+                is_line_spam = True
+                spam_reason = "Duplicate line repetition spam in single message"
+
+        if is_line_spam:
+            try:
+                await message.delete()
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                pass
+
+            await AutomodService.add_violation(
+                self.bot, message.guild, message.author,
+                spam_reason or "Vertical chat spam (More than 3 lines)",
+                "Line Spam",
+                message=message,
+                severity="MEDIUM"
+            )
+            return False
+
+        # -------------------------------------------------------------
+        # 5. MENTION HARASSMENT & GHOST-PING CACHE
         # -------------------------------------------------------------
         if settings.get('mention_guard_enabled', True):
             if message.mentions or message.mention_everyone:
@@ -610,42 +652,7 @@ class Automod(commands.Cog):
                     return False
 
         # -------------------------------------------------------------
-        # 4.5 IN-MESSAGE MULTI-LINE / REPETITION SPAM DETECTION
-        # Catches: ?testboost\n?testboost\n?testboost or repeating identical lines in 1 message
-        # -------------------------------------------------------------
-        lines = [line.strip() for line in content.split('\n') if line.strip()]
-        if len(lines) >= 2:
-            line_counts = collections.Counter(lines)
-            max_line_repeat = max(line_counts.values()) if line_counts else 0
-
-            is_line_spam = False
-            # Condition A: Repeating commands (starts with prefix ?, !, /, ., $) 2+ times in one message
-            if max_line_repeat >= 2 and any(l.startswith(('?', '!', '/', '.', '$')) for l in line_counts if line_counts[l] >= 2):
-                is_line_spam = True
-            # Condition B: Any line repeated 3+ times
-            elif max_line_repeat >= 3:
-                is_line_spam = True
-            # Condition C: Message has 4+ lines and >= 50% are duplicate lines
-            elif len(lines) >= 4 and max_line_repeat >= len(lines) * 0.5:
-                is_line_spam = True
-
-            if is_line_spam:
-                try:
-                    await message.delete()
-                except (discord.NotFound, discord.Forbidden, discord.HTTPException):
-                    pass
-
-                await AutomodService.add_violation(
-                    self.bot, message.guild, message.author,
-                    "Multi-line repetition / Command spam in single message",
-                    "Spam Filter",
-                    message=message,
-                    severity="MEDIUM"
-                )
-                return False
-
-        # -------------------------------------------------------------
-        # 5. ADVANCED SPAM DETECTION (Burst, Duplicates, Cross-Channel, Emojis)
+        # 6. ADVANCED SPAM DETECTION (Burst, Duplicates, Cross-Channel, Emojis)
         # -------------------------------------------------------------
         user_cache = self.message_cache[message.author.id]
         user_cache.append((content, now, message.channel.id))
@@ -737,7 +744,7 @@ class Automod(commands.Cog):
             return False
 
         # -------------------------------------------------------------
-        # 6. EMOJI SPAM DETECTION
+        # 7. EMOJI SPAM DETECTION
         # -------------------------------------------------------------
         if count_emojis(content) >= 8:
             try:
@@ -751,7 +758,7 @@ class Automod(commands.Cog):
             return False
 
         # -------------------------------------------------------------
-        # 7. CHARACTER SPAM / REPETITION
+        # 8. CHARACTER SPAM / REPETITION
         # -------------------------------------------------------------
         if re.search(r'(.)\1{12,}', content):
             try:
@@ -765,7 +772,7 @@ class Automod(commands.Cog):
             return False
 
         # -------------------------------------------------------------
-        # 8. CAPS SPAM
+        # 9. CAPS SPAM
         # -------------------------------------------------------------
         if len(content) > 15:
             upper_count = sum(1 for c in content if c.isupper())
@@ -777,7 +784,7 @@ class Automod(commands.Cog):
                 return False
 
         # -------------------------------------------------------------
-        # 9. EXCESSIVE NEWLINES / ONE-CHAR SPAM
+        # 10. EXCESSIVE NEWLINES / ONE-CHAR SPAM
         # -------------------------------------------------------------
         if content.count('\n') >= 5:
             try:
