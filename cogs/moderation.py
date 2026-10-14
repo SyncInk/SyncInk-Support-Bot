@@ -34,18 +34,11 @@ class Moderation(commands.Cog):
         )
         if not is_staff:
             try:
-                await ctx.message.delete()
-            except (discord.Forbidden, discord.NotFound, discord.HTTPException):
-                pass
-            embed = SyncInkEmbed(
-                title=f"{Emojis.REFUSED} **Access Denied**",
-                description="You do not have permission to execute moderation commands.",
-                color=ERROR_COLOR
-            )
-            try:
-                await ctx.send(embed=embed, delete_after=5)
-            except (discord.Forbidden, discord.HTTPException):
-                pass
+                from services.automod_service import AutomodService
+                cmd_name = ctx.command.name if ctx.command else "moderation"
+                await AutomodService.handle_unauthorized_command(ctx, cmd_name)
+            except Exception as e:
+                log.error(f"Error handling unauthorized mod command: {e}")
             return False
         return True
 

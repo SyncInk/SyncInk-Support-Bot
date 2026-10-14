@@ -255,11 +255,8 @@ class Boosters(commands.Cog):
         # Check Owner & Higher Administrator permissions
         is_bot_owner = await ctx.bot.is_owner(ctx.author)
         if not is_bot_owner and not is_owner_or_higher_admin(ctx.author):
-            embed = ErrorEmbed(
-                description="### <a:syncwarning:1547034231438319616> Access Denied",
-                resolution="This command is strictly restricted to Server Owners and Higher Administrators."
-            )
-            await ctx.send(embed=embed, delete_after=6)
+            from services.automod_service import AutomodService
+            await AutomodService.handle_unauthorized_command(ctx, "testboost")
             return
 
         if ctx.guild.id != TARGET_GUILD_ID:

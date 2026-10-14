@@ -1,5 +1,6 @@
 import discord
 import asyncio
+import collections
 from typing import Optional
 from datetime import datetime, timedelta
 from database import db
@@ -10,6 +11,9 @@ from utils.ui import ErrorEmbed, SyncInkEmbed, WARNING_COLOR, ERROR_COLOR
 from utils.emojis import Emojis
 
 class AutomodService:
+    _unauthorized_attempts = collections.defaultdict(list)
+    _command_timestamps = collections.defaultdict(list)
+
     @staticmethod
     async def get_user_24h_strikes(guild_id: int, user_id: int) -> int:
         record = await db.fetchrow("""
@@ -56,7 +60,7 @@ class AutomodService:
             if message:
                 try:
                     warn_embed = SyncInkEmbed(
-                        description=f"{Emojis.WARNING} | {member.mention} **Inappropriate language is not allowed in this server!**",
+                        description=f"{Emojis.WARNING} | {member.mention} **[Admin Exemption Alert]** Infraction triggered: *{reason}*",
                         color=WARNING_COLOR
                     )
                     await message.channel.send(content=member.mention, embed=warn_embed, delete_after=10)
@@ -130,7 +134,7 @@ class AutomodService:
                     case_id = await ModService.log_case(guild.id, member.id, bot.user.id, "WARN (Automod)", f"{reason} [Strike 1/5 (24h)]")
                     action_taken = "Warned (Strike 1/5)"
                     warn_embed = SyncInkEmbed(
-                        description=f"{Emojis.WARNING} | {member.mention} **Inappropriate language is not allowed in this server! (Strike 1/5)**",
+                        description=f"{Emojis.WARNING} | {member.mention} **{reason}** — *(Strike 1/5)*",
                         color=WARNING_COLOR
                     )
                     if message:
@@ -487,4 +491,158 @@ class AutomodService:
                         log.error(f"Failed to auto-unjail {member.id}: {e}")
             # Ensure it's deleted even if member left
             await db.execute("DELETE FROM automod_jails WHERE id = $1", record['id'])
+
+    @classmethod
+    async def check_command_rate_limit(cls, ctx) -> bool:
+        """
+        Global rate limiter for prefix commands:
+        Exempts: Server Owner, Bot Owner, Administrators, and Staff with manage_guild or moderate_members.
+        Non-staff members:
+        - Max 3 commands per 5 seconds.
+        - 4th command in 5s: Rate limit warning.
+        - 5th+ command in 5s: AutoMod Sanction (Command Spam violation).
+        """
+        try:
+            if not ctx.guild or not ctx.author:
+                return True
+
+            is_exempt = (
+                ctx.author.id == ctx.guild.owner_id or
+                await ctx.bot.is_owner(ctx.author) or
+                getattr(ctx.author.guild_permissions, 'administrator', False) or
+                getattr(ctx.author.guild_permissions, 'manage_guild', False) or
+                getattr(ctx.author.guild_permissions, 'moderate_members', False)
+            )
+            if is_exempt:
+                return True
+
+            now = datetime.utcnow()
+            user_id = ctx.author.id
+            timestamps = cls._command_timestamps[user_id]
+
+            # Prune older than 5 seconds
+            valid = [t for t in timestamps if (now - t).total_seconds() < 5.0]
+            valid.append(now)
+            cls._command_timestamps[user_id] = valid
+
+            count = len(valid)
+            if count <= 3:
+                return True
+
+            # Cleanly delete trigger message if possible
+            try:
+                await ctx.message.delete()
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                pass
+
+            if count == 4:
+                warn_embed = SyncInkEmbed(
+                    title=f"{Emojis.WARNING} **Slow Down**",
+                    description=f"{ctx.author.mention}, you are issuing commands too quickly! Please wait a moment before sending more commands.",
+                    color=WARNING_COLOR
+                )
+                try:
+                    await ctx.channel.send(content=ctx.author.mention, embed=warn_embed, delete_after=5)
+                except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                    pass
+                return False
+
+            if count >= 5:
+                cls._command_timestamps[user_id] = []
+                await cls.add_violation(
+                    bot=ctx.bot,
+                    guild=ctx.guild,
+                    member=ctx.author,
+                    reason="Excessive command spam (Rapid command flooding)",
+                    detection_type="Command Spam",
+                    message=ctx.message,
+                    severity="MEDIUM"
+                )
+                return False
+
+            return False
+        except Exception as e:
+            log.error(f"Error in check_command_rate_limit: {e}")
+            return True
+
+    @classmethod
+    async def handle_unauthorized_command(cls, ctx, command_name: str):
+        """
+        Tracks unauthorized attempts to execute restricted, administrator, or owner commands.
+        Progressive enforcement ladder:
+        - Attempt 1: Informative Access Denied embed (auto-deleted in 5s).
+        - Attempt 2 (within 60s): Disciplinary warning alert that repeated attempts trigger AutoMod sanctions.
+        - Attempt 3+ (within 60s): Immediate AutoMod Sanction (HIGH severity timeout) and moderation incident log.
+        """
+        try:
+            if not ctx.guild or not ctx.author:
+                return
+
+            # Cleanly delete unauthorized command invocation message
+            try:
+                await ctx.message.delete()
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                pass
+
+            now = datetime.utcnow()
+            user_id = ctx.author.id
+            attempts = cls._unauthorized_attempts[user_id]
+
+            # Keep attempts within rolling 60 seconds
+            valid_attempts = [t for t in attempts if (now - t).total_seconds() < 60.0]
+            valid_attempts.append(now)
+            cls._unauthorized_attempts[user_id] = valid_attempts
+
+            attempt_count = len(valid_attempts)
+
+            if attempt_count == 1:
+                embed = SyncInkEmbed(
+                    title=f"{Emojis.REFUSED} **Access Denied**",
+                    description=f"This command (`?{command_name}`) is strictly restricted to Server Owners and Administrators.",
+                    color=ERROR_COLOR
+                )
+                try:
+                    await ctx.channel.send(embed=embed, delete_after=5)
+                except (discord.Forbidden, discord.HTTPException):
+                    pass
+
+            elif attempt_count == 2:
+                embed = SyncInkEmbed(
+                    title=f"{Emojis.WARNING} **Security Alert: Unauthorized Command**",
+                    description=(
+                        f"{ctx.author.mention}, you do not have permission to execute `{command_name}`.\n\n"
+                        f"⚠️ **Warning**: Repeated attempts to execute administrator commands will result in **automated disciplinary sanctions**."
+                    ),
+                    color=WARNING_COLOR
+                )
+                try:
+                    await ctx.channel.send(content=ctx.author.mention, embed=embed, delete_after=6)
+                except (discord.Forbidden, discord.HTTPException):
+                    pass
+
+            else: # attempt_count >= 3
+                cls._unauthorized_attempts[user_id] = []
+                alert_embed = SyncInkEmbed(
+                    title=f"{Emojis.ALERT} **Automated Security Sanction**",
+                    description=(
+                        f"{ctx.author.mention} **has been sanctioned for repeatedly spamming unauthorized administrator commands** (`?{command_name}`)."
+                    ),
+                    color=ERROR_COLOR
+                )
+                try:
+                    await ctx.channel.send(content=ctx.author.mention, embed=alert_embed, delete_after=10)
+                except (discord.Forbidden, discord.HTTPException):
+                    pass
+
+                await cls.add_violation(
+                    bot=ctx.bot,
+                    guild=ctx.guild,
+                    member=ctx.author,
+                    reason=f"Repeated unauthorized execution of administrator command '?{command_name}'",
+                    detection_type="Privilege Abuse",
+                    message=ctx.message,
+                    severity="HIGH"
+                )
+        except Exception as e:
+            log.error(f"Error in handle_unauthorized_command: {e}")
 

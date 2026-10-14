@@ -353,13 +353,13 @@ class Automod(commands.Cog):
         for mid in stale_msg_ids:
             self.recent_mentions.pop(mid, None)
 
-    async def check_message(self, message: discord.Message):
+    async def check_message(self, message: discord.Message) -> bool:
         if message.author.bot or not message.guild:
-            return
+            return True
 
         primary_id = int(os.getenv("TARGET_GUILD_ID", os.getenv("SUPPORT_GUILD_ID", "1520457643842342912")))
         if message.guild.id != primary_id:
-            return
+            return True
 
         self.user_history[message.author.id].append(
             f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}] #{message.channel.name}: {message.content}"
@@ -376,12 +376,12 @@ class Automod(commands.Cog):
         # Whitelist exemptions for User, Channel, or Roles
         # -------------------------------------------------------------
         if await SecurityService.is_whitelisted(message.guild.id, "channel", str(message.channel.id)):
-            return
+            return True
         if await SecurityService.is_whitelisted(message.guild.id, "user", str(message.author.id)):
-            return
+            return True
         for r in message.author.roles:
             if await SecurityService.is_whitelisted(message.guild.id, "role", str(r.id)):
-                return
+                return True
 
         content = message.content
         content_lower = content.lower()
@@ -418,7 +418,7 @@ class Automod(commands.Cog):
                         await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
                     except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                         pass
-                    return
+                    return False
 
                 await AutomodService.add_violation(
                     self.bot, message.guild, message.author, 
@@ -427,7 +427,7 @@ class Automod(commands.Cog):
                     message=message,
                     severity="MEDIUM"
                 )
-                return
+                return False
 
             from database import db
             blacklisted = await db.fetch("SELECT pattern, match_type, severity FROM automod_blacklist WHERE guild_id = $1", message.guild.id)
@@ -466,7 +466,7 @@ class Automod(commands.Cog):
                             await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
                         except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                             pass
-                        return
+                        return False
 
                     await AutomodService.add_violation(
                         self.bot, message.guild, message.author, 
@@ -475,7 +475,7 @@ class Automod(commands.Cog):
                         message=message,
                         severity=severity
                     )
-                    return
+                    return False
 
             # ---------------------------------------------------------
             # 1.1 GEMINI AI SWEAR & PROFANITY FILTER
@@ -500,7 +500,7 @@ class Automod(commands.Cog):
                                 await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
                             except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                                 pass
-                            return
+                            return False
 
                         reason = f"Inappropriate language / Swear word detected by AI: {detected_word or 'Vulgar language'}"
                         await AutomodService.add_violation(
@@ -510,7 +510,7 @@ class Automod(commands.Cog):
                             message=message,
                             severity="MEDIUM"
                         )
-                        return
+                        return False
                 except Exception as e:
                     log.warning(f"AI moderation scan failed: {e}")
 
@@ -536,19 +536,19 @@ class Automod(commands.Cog):
                         await message.channel.send(content=message.author.mention, embed=warn_embed, delete_after=10)
                     except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                         pass
-                    return
+                    return False
 
                 await AutomodService.add_violation(
                     self.bot, message.guild, message.author,
                     details, threat_type, message=message, severity=link_sev
                 )
-                return
+                return False
 
         # -------------------------------------------------------------
         # 3. STAFF BYPASS: For general spam, mentions, and caps
         # -------------------------------------------------------------
         if is_admin_or_owner or message.author.guild_permissions.manage_messages:
-            return
+            return True
 
         now = datetime.utcnow()
 
@@ -607,7 +607,42 @@ class Automod(commands.Cog):
                         self.bot, message.guild, message.author, 
                         reason, "Mention Harassment", message=None, severity="MEDIUM"
                     )
-                    return
+                    return False
+
+        # -------------------------------------------------------------
+        # 4.5 IN-MESSAGE MULTI-LINE / REPETITION SPAM DETECTION
+        # Catches: ?testboost\n?testboost\n?testboost or repeating identical lines in 1 message
+        # -------------------------------------------------------------
+        lines = [line.strip() for line in content.split('\n') if line.strip()]
+        if len(lines) >= 2:
+            line_counts = collections.Counter(lines)
+            max_line_repeat = max(line_counts.values()) if line_counts else 0
+
+            is_line_spam = False
+            # Condition A: Repeating commands (starts with prefix ?, !, /, ., $) 2+ times in one message
+            if max_line_repeat >= 2 and any(l.startswith(('?', '!', '/', '.', '$')) for l in line_counts if line_counts[l] >= 2):
+                is_line_spam = True
+            # Condition B: Any line repeated 3+ times
+            elif max_line_repeat >= 3:
+                is_line_spam = True
+            # Condition C: Message has 4+ lines and >= 50% are duplicate lines
+            elif len(lines) >= 4 and max_line_repeat >= len(lines) * 0.5:
+                is_line_spam = True
+
+            if is_line_spam:
+                try:
+                    await message.delete()
+                except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                    pass
+
+                await AutomodService.add_violation(
+                    self.bot, message.guild, message.author,
+                    "Multi-line repetition / Command spam in single message",
+                    "Spam Filter",
+                    message=message,
+                    severity="MEDIUM"
+                )
+                return False
 
         # -------------------------------------------------------------
         # 5. ADVANCED SPAM DETECTION (Burst, Duplicates, Cross-Channel, Emojis)
@@ -626,9 +661,9 @@ class Automod(commands.Cog):
         fast_burst = len([m for m in recent_msgs if now - m[1] < timedelta(seconds=3)]) >= 4
         is_spam = len(recent_msgs) >= spam_threshold or fast_burst
 
-        # B. Identical duplicate spam (3+ identical messages in 10s)
+        # B. Identical duplicate spam (2+ identical commands in 10s or 3+ identical messages in 10s)
         duplicates = [m for m in recent_msgs if m[0] == content]
-        is_duplicate = len(duplicates) >= 3
+        is_duplicate = len(duplicates) >= 3 or (len(duplicates) >= 2 and content.strip().startswith(('?', '!', '/', '.', '$')))
 
         # C. Near-identical text spam (similarity ratio >= 82%)
         is_near_duplicate = False
@@ -686,7 +721,7 @@ class Automod(commands.Cog):
                     jump_url=message.jump_url,
                     severity="HIGH"
                 )
-                return
+                return False
 
             if is_cross_channel:
                 spam_reason = "Cross-channel message flooding"
@@ -699,7 +734,7 @@ class Automod(commands.Cog):
                 self.bot, message.guild, message.author, 
                 spam_reason, "Spam Filter", message=message, severity="MEDIUM"
             )
-            return
+            return False
 
         # -------------------------------------------------------------
         # 6. EMOJI SPAM DETECTION
@@ -713,7 +748,7 @@ class Automod(commands.Cog):
                 self.bot, message.guild, message.author,
                 "Excessive emoji spam (> 7 emojis)", "Emoji Spam Filter", message=message, severity="LOW"
             )
-            return
+            return False
 
         # -------------------------------------------------------------
         # 7. CHARACTER SPAM / REPETITION
@@ -727,7 +762,7 @@ class Automod(commands.Cog):
                 self.bot, message.guild, message.author,
                 "Excessive character repetition", "Character Spam Filter", message=message, severity="LOW"
             )
-            return
+            return False
 
         # -------------------------------------------------------------
         # 8. CAPS SPAM
@@ -739,32 +774,34 @@ class Automod(commands.Cog):
                     await message.delete()
                 except (discord.NotFound, discord.Forbidden):
                     pass
-                return
+                return False
 
         # -------------------------------------------------------------
         # 9. EXCESSIVE NEWLINES / ONE-CHAR SPAM
         # -------------------------------------------------------------
-        if content.count('\n') >= 7:
+        if content.count('\n') >= 5:
             try:
                 await message.delete()
             except (discord.NotFound, discord.Forbidden):
                 pass
-            return
+            await AutomodService.add_violation(
+                self.bot, message.guild, message.author,
+                "Excessive line breaks / vertical chat flooding", "Spam Filter", message=message, severity="LOW"
+            )
+            return False
 
-        if len(content.strip()) == 1:
+        if len(content.strip()) == 1 and not content.strip().isalnum():
             try:
                 await message.delete()
             except (discord.NotFound, discord.Forbidden):
                 pass
-            return
+            return False
+
+        return True
 
     # -------------------------------------------------------------
     # EVENT LISTENERS
     # -------------------------------------------------------------
-
-    @commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
-        await self.check_message(message)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):

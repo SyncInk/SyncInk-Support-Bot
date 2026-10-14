@@ -43,20 +43,12 @@ async def require_staff_channel(ctx) -> bool:
 
     if not is_staff:
         try:
-            await ctx.message.delete()
-        except (discord.Forbidden, discord.NotFound, discord.HTTPException):
-            pass
-        from utils.ui import SyncInkEmbed, ERROR_COLOR
-        from utils.emojis import Emojis
-        embed = SyncInkEmbed(
-            title=f"{Emojis.REFUSED} **Access Denied**",
-            description="You do not have access to this command.",
-            color=ERROR_COLOR
-        )
-        try:
-            await ctx.send(embed=embed, delete_after=6)
-        except (discord.Forbidden, discord.HTTPException):
-            pass
+            from services.automod_service import AutomodService
+            cmd_name = ctx.command.name if ctx.command else "moderation"
+            await AutomodService.handle_unauthorized_command(ctx, cmd_name)
+        except Exception as e:
+            from utils.logger import log
+            log.error(f"Error handling unauthorized staff command: {e}")
         return False
 
     # 2. Staff user - check channel restriction
@@ -84,20 +76,12 @@ async def require_server_owner(ctx) -> bool:
     is_owner = (ctx.guild and ctx.author.id == ctx.guild.owner_id) or await ctx.bot.is_owner(ctx.author)
     if not is_owner:
         try:
-            await ctx.message.delete()
-        except (discord.Forbidden, discord.NotFound, discord.HTTPException):
-            pass
-        from utils.ui import SyncInkEmbed, ERROR_COLOR
-        from utils.emojis import Emojis
-        embed = SyncInkEmbed(
-            title=f"{Emojis.REFUSED} **Access Denied**",
-            description="You do not have access to this command.",
-            color=ERROR_COLOR
-        )
-        try:
-            await ctx.send(embed=embed, delete_after=6)
-        except (discord.Forbidden, discord.HTTPException):
-            pass
+            from services.automod_service import AutomodService
+            cmd_name = ctx.command.name if ctx.command else "owner_command"
+            await AutomodService.handle_unauthorized_command(ctx, cmd_name)
+        except Exception as e:
+            from utils.logger import log
+            log.error(f"Error handling unauthorized owner command: {e}")
         return False
     return True
 

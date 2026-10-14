@@ -85,6 +85,16 @@ class SyncInkBot(commands.Bot):
                 return False
             return True
 
+        # Register global command rate limiter & flood check
+        @self.check
+        async def global_command_rate_limit_check(ctx: commands.Context) -> bool:
+            try:
+                from services.automod_service import AutomodService
+                return await AutomodService.check_command_rate_limit(ctx)
+            except Exception as e:
+                log.error(f"Error in global_command_rate_limit_check: {e}")
+                return True
+
     async def on_message(self, message: discord.Message):
         """Global message processor; strictly ignores DMs and secondary emoji servers."""
         if message.guild is None or message.author.bot:
@@ -94,6 +104,17 @@ class SyncInkBot(commands.Bot):
         if message.guild.id != primary_id:
             return
 
+        # 1. Run AutoMod inspection first to protect against spam, profanity, and malicious content
+        automod_cog = self.get_cog("Automod")
+        if automod_cog:
+            try:
+                allowed = await automod_cog.check_message(message)
+                if allowed is False:
+                    return
+            except Exception as e:
+                log.error(f"Error in AutoMod check_message: {e}")
+
+        # 2. Process prefix commands if message passed AutoMod cleanly
         await self.process_commands(message)
 
     async def on_ready(self):
@@ -122,20 +143,11 @@ class SyncInkBot(commands.Bot):
 
         if isinstance(error, (commands.MissingPermissions, commands.NotOwner)):
             try:
-                await ctx.message.delete()
-            except (discord.Forbidden, discord.NotFound, discord.HTTPException):
-                pass
-            from utils.emojis import Emojis
-            from utils.ui import SyncInkEmbed, ERROR_COLOR
-            embed = SyncInkEmbed(
-                title=f"{Emojis.REFUSED} **Access Denied**",
-                description="You do not have access to this command.",
-                color=ERROR_COLOR
-            )
-            try:
-                await ctx.send(embed=embed, delete_after=6)
-            except (discord.Forbidden, discord.HTTPException):
-                pass
+                from services.automod_service import AutomodService
+                cmd_name = ctx.command.name if ctx.command else "admin_command"
+                await AutomodService.handle_unauthorized_command(ctx, cmd_name)
+            except Exception as e:
+                log.error(f"Error handling unauthorized command in on_command_error: {e}")
             return
 
         if isinstance(error, commands.CheckFailure):
