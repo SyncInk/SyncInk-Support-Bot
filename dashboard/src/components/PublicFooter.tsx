@@ -13,6 +13,7 @@ import {
   Radio,
   Sparkles,
   Layers,
+  GitCommit,
 } from "lucide-react";
 
 export function PublicFooter() {
@@ -57,6 +58,15 @@ export function PublicFooter() {
                 >
                   <Layers className="h-3 w-3 text-blue-400" />
                   <span>About SyncInk Platform</span>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/updates"
+                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                >
+                  <GitCommit className="h-3 w-3 text-violet-400" />
+                  <span>Updates &amp; Changelog</span>
                 </Link>
               </li>
               <li>
@@ -182,6 +192,10 @@ export function PublicFooter() {
           <div className="flex items-center gap-4">
             <Link href="/about" className="hover:text-slate-300 transition-colors">
               About
+            </Link>
+            <span className="text-slate-600">•</span>
+            <Link href="/updates" className="hover:text-slate-300 transition-colors">
+              Updates
             </Link>
             <span className="text-slate-600">•</span>
             <Link href="/rules" className="hover:text-slate-300 transition-colors">
