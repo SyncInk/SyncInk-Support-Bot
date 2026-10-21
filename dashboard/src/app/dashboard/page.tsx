@@ -94,6 +94,33 @@ export default function MasterDashboardHub() {
           </div>
         </div>
 
+        {/* Applications Command Center Callout Banner */}
+        <div className="p-6 rounded-3xl bg-gradient-to-r from-[#120f26] via-[#10132b] to-[#0e1628] border border-violet-500/30 flex flex-col md:flex-row md:items-center justify-between gap-5 shadow-2xl relative overflow-hidden">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-violet-500/40 flex items-center justify-center text-violet-400 shrink-0 shadow-[0_0_20px_rgba(139,92,246,0.3)]">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-black text-white">Member Applications Panel</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                  Staff & Dev Roster
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
+                Review, evaluate, and manage candidate submissions for Staff and Developer positions with internal feedback notes.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/applications"
+            className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs sm:text-sm transition-all shadow-glow flex items-center justify-center gap-2 shrink-0 hover:scale-105"
+          >
+            <span>Open Applications Panel</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto w-full">
           {/* CARD 1: TICKET BOT DASHBOARD */}
           <div className="w-full p-6 sm:p-8 rounded-[2rem] bg-gradient-to-b from-[#0f111a] to-[#08090e] border border-[#5865F2]/30 shadow-[0_20px_60px_-15px_rgba(88,101,242,0.2)] relative overflow-hidden flex flex-col justify-between group hover:border-[#5865F2]/60 hover:shadow-[0_20px_60px_-15px_rgba(88,101,242,0.4)] transition-all duration-500 hover:-translate-y-1">

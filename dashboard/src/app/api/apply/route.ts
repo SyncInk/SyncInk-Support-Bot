@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
+import { query, resolveGuildId } from "@/lib/db";
 import {
   validateCsrfOrigin,
   MAX_FILE_SIZE_BYTES,
@@ -262,50 +263,129 @@ export async function POST(request: Request) {
       };
     }
 
-    // 6. Dispatch to Discord Webhook
-    if (!webhookUrl) {
-      return NextResponse.json(
-        { error: "Application submission is currently unavailable. The destination webhook is not configured in server environment settings." },
-        { status: 503 }
+    // 6. Save Application to Database for Admin Panel Inspection
+    const targetGuildId = await resolveGuildId(user.guildId);
+    let applicationId: number | null = null;
+    try {
+      const insertRes = await query<{ id: number }>(
+        `INSERT INTO member_applications (
+          guild_id, user_id, username, global_name, avatar, app_type, age, timezone, availability,
+          reason, experience, scenario_1, scenario_2, scenario_3, languages, portfolio,
+          bot_experience, complex_features, attachment_name, attachment_size, status
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, 'PENDING'
+        ) RETURNING id`,
+        [
+          targetGuildId,
+          user.id,
+          user.username,
+          user.global_name || null,
+          user.avatar || null,
+          appType,
+          age,
+          timezone,
+          availability || null,
+          reason || null,
+          exp || null,
+          scen1 || null,
+          scen2 || null,
+          scen3 || null,
+          langs || null,
+          portfolio || null,
+          bot_exp || null,
+          complex || null,
+          cleanFileName || null,
+          attachmentBuffer ? attachmentBuffer.length : null,
+        ]
       );
+      if (insertRes && insertRes[0]) {
+        applicationId = insertRes[0].id;
+      }
+    } catch (dbErr: any) {
+      console.warn("Could not insert member application into database:", redactSensitive(dbErr.message || ""));
+      await query(`
+        CREATE TABLE IF NOT EXISTS member_applications (
+          id SERIAL PRIMARY KEY,
+          guild_id BIGINT NOT NULL,
+          user_id BIGINT NOT NULL,
+          username VARCHAR(255) NOT NULL,
+          global_name VARCHAR(255),
+          avatar VARCHAR(255),
+          app_type VARCHAR(50) NOT NULL,
+          age INT NOT NULL,
+          timezone VARCHAR(100),
+          availability VARCHAR(100),
+          reason TEXT,
+          experience TEXT,
+          scenario_1 TEXT,
+          scenario_2 TEXT,
+          scenario_3 TEXT,
+          languages VARCHAR(255),
+          portfolio VARCHAR(500),
+          bot_experience TEXT,
+          complex_features TEXT,
+          attachment_name VARCHAR(255),
+          attachment_size INT,
+          status VARCHAR(50) DEFAULT 'PENDING',
+          reviewer_id BIGINT,
+          reviewer_name VARCHAR(255),
+          reviewer_notes TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          reviewed_at TIMESTAMP
+        );
+      `).catch(() => {});
     }
 
-    if (attachmentFile && attachmentBuffer) {
-      if (attachmentFile.type.startsWith("image/")) {
-        payload.embeds[0].image = { url: `attachment://${cleanFileName}` };
+    // 7. Dispatch to Discord Webhook (if configured)
+    if (webhookUrl) {
+      if (payload?.embeds?.[0]?.footer && applicationId) {
+        payload.embeds[0].footer.text = `SyncInk Enterprise Platform • Application #${applicationId} • Verified OAuth`;
       }
 
-      const outFormData = new FormData();
-      outFormData.append("payload_json", JSON.stringify(payload));
-      outFormData.append("file[0]", attachmentFile, cleanFileName);
+      if (attachmentFile && attachmentBuffer) {
+        if (attachmentFile.type.startsWith("image/")) {
+          payload.embeds[0].image = { url: `attachment://${cleanFileName}` };
+        }
 
-      const discordRes = await fetch(webhookUrl, {
-        method: "POST",
-        body: outFormData,
-      });
+        const outFormData = new FormData();
+        outFormData.append("payload_json", JSON.stringify(payload));
+        outFormData.append("file[0]", attachmentFile, cleanFileName);
 
-      if (!discordRes.ok) {
-        const errText = await discordRes.text();
-        console.error("Discord webhook dispatch error:", redactSensitive(errText));
-        return NextResponse.json({ error: "Failed to dispatch application to Discord. Please try again later." }, { status: 502 });
-      }
-    } else {
-      const discordRes = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+        try {
+          const discordRes = await fetch(webhookUrl, {
+            method: "POST",
+            body: outFormData,
+          });
 
-      if (!discordRes.ok) {
-        const errText = await discordRes.text();
-        console.error("Discord webhook dispatch error:", redactSensitive(errText));
-        return NextResponse.json({ error: "Failed to dispatch application to Discord. Please try again later." }, { status: 502 });
+          if (!discordRes.ok) {
+            const errText = await discordRes.text();
+            console.error("Discord webhook dispatch error:", redactSensitive(errText));
+          }
+        } catch (whErr: any) {
+          console.error("Webhook network error:", redactSensitive(whErr.message || ""));
+        }
+      } else {
+        try {
+          const discordRes = await fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          if (!discordRes.ok) {
+            const errText = await discordRes.text();
+            console.error("Discord webhook dispatch error:", redactSensitive(errText));
+          }
+        } catch (whErr: any) {
+          console.error("Webhook network error:", redactSensitive(whErr.message || ""));
+        }
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: "Application submitted successfully! Our management team will review your application soon.",
+      message: `Application #${applicationId || "submitted"} received successfully! Our management team will review your application soon in the administrator command panel.`,
+      applicationId,
     });
   } catch (error: any) {
     console.error("Application submission handler error:", redactSensitive(error.message || ""));
