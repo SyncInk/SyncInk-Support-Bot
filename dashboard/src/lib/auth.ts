@@ -117,7 +117,18 @@ export async function getCurrentUser(): Promise<DiscordUser | null> {
   const discordToken = cookieStore.get(DISCORD_COOKIE_NAME)?.value;
   if (discordToken) {
     const user = parseDiscordSession(discordToken);
-    if (user) return user;
+    if (user) {
+      // Primary Owner bootstrap rule: Discord user 930306512864280607 is immutable owner
+      if (user.id === "930306512864280607") {
+        user.isOwner = true;
+        user.isAdmin = true;
+        user.isStaff = true;
+        user.roleType = "owner";
+        user.role = "Server Owner";
+        user.roleIcon = "https://cdn.discordapp.com/emojis/1517253606686986323.png";
+      }
+      return user;
+    }
   }
 
   const adminToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;

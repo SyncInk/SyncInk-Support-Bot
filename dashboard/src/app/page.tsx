@@ -85,13 +85,13 @@ export default function HomePage() {
         {/* ========================================================= */}
         {/* HERO SECTION */}
         {/* ========================================================= */}
-        <section className="pt-20 sm:pt-28 pb-14 sm:pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
+        <section className="pt-16 sm:pt-24 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
 
           <motion.h1 
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="text-3xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1] max-w-5xl mx-auto mb-5 sm:mb-6"
+            className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.12] max-w-4xl mx-auto mb-5"
           >
             Discord Infrastructure{" "}
             <span className="bg-gradient-to-r from-blue-400 via-violet-400 to-indigo-300 bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(157,124,255,0.4)]">
@@ -103,9 +103,9 @@ export default function HomePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.15 }}
-            className="text-sm sm:text-lg md:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10 px-2"
+            className="text-sm sm:text-base md:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10 px-2"
           >
-            Next-generation bots engineered for high-velocity communities. Explore our private-thread ticket system, dynamic temporary voice generators, and our dedicated Support Server security shield.
+            Next-generation bots engineered for high-velocity communities. Explore our private-thread ticket system, dynamic temporary voice generators, and dedicated Support Server security shield.
           </motion.p>
 
           <motion.div 
@@ -116,7 +116,7 @@ export default function HomePage() {
           >
             <a
               href="#bots"
-              className="px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm sm:text-base transition-all shadow-[0_0_25px_rgba(147,51,234,0.4)] hover:shadow-[0_0_35px_rgba(147,51,234,0.6)] hover:-translate-y-0.5 flex items-center gap-2 duration-200"
+              className="h-11 sm:h-12 px-6 sm:px-7 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm transition-all shadow-[0_0_20px_rgba(88,101,242,0.35)] hover:-translate-y-0.5 flex items-center gap-2 duration-200"
             >
               <span>Explore All Bots</span>
               <ChevronRight className="w-4 h-4" />
@@ -124,15 +124,15 @@ export default function HomePage() {
 
             <Link
               href="/dashboard"
-              className="px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-[#121626] hover:bg-[#1a2034] text-white font-bold text-sm sm:text-base transition-all border border-blue-500/25 hover:border-blue-500/50 flex items-center gap-2 shadow-lg hover:-translate-y-0.5 duration-200"
+              className="h-11 sm:h-12 px-6 sm:px-7 rounded-xl bg-[#121626] hover:bg-[#1a2034] text-white font-bold text-xs sm:text-sm transition-all border border-blue-500/25 hover:border-blue-500/50 flex items-center gap-2 shadow-sm hover:-translate-y-0.5 duration-200"
             >
               <Layers className="w-4 h-4 text-blue-400" />
-              <span>Dedicated Dashboards</span>
+              <span>Multi-Bot Console</span>
             </Link>
 
             <Link
               href="/apply"
-              className="px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 font-bold text-sm sm:text-base transition-all border border-white/10 flex items-center gap-2 hover:-translate-y-0.5 duration-200"
+              className="h-11 sm:h-12 px-6 sm:px-7 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 font-bold text-xs sm:text-sm transition-all border border-white/10 flex items-center gap-2 hover:-translate-y-0.5 duration-200"
             >
               <Sparkles className="w-4 h-4 text-blue-400" />
               <span>Apply for Team</span>
