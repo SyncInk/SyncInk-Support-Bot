@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Shield,
   MessageSquare,
@@ -22,6 +23,7 @@ import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
 
 export default function MasterDashboardHub() {
+  const router = useRouter();
   const [securityStats, setSecurityStats] = useState({
     jailedCount: 0,
     whitelistCount: 0,
@@ -36,6 +38,10 @@ export default function MasterDashboardHub() {
     async function loadStats() {
       try {
         const res = await fetch("/api/security");
+        if (res.status === 401) {
+          router.push("/login?redirect=/dashboard");
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
           if (data.stats) {

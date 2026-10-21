@@ -3,6 +3,7 @@ import {
   timingSafeCompare,
   createSignedToken,
   verifySignedToken,
+  verifyPassword,
 } from "./security";
 
 const AUTH_COOKIE_NAME = "syncink_admin_session";
@@ -58,12 +59,18 @@ export function getAdminKey(): string {
 }
 
 /**
- * Constant-time password / key verification (Item 9 & Item 18)
+ * Constant-time password / key verification (supports both hashed passwords & constant-time passkeys)
  */
 export function isValidKey(key: string): boolean {
   if (!key || typeof key !== "string") return false;
   const adminKey = getAdminKey();
   if (adminKey === "DISALLOW_INSECURE_DEFAULT_IN_PRODUCTION") return false;
+
+  // Support scrypt hashed password in ADMIN_ACCESS_KEY
+  if (adminKey.startsWith("$scrypt$")) {
+    return verifyPassword(key.trim(), adminKey.trim());
+  }
+
   return timingSafeCompare(key.trim(), adminKey.trim());
 }
 

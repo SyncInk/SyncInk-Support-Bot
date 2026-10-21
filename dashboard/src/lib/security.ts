@@ -326,3 +326,70 @@ export function verifyWebhookSignature(
   return timingSafeCompare(signature, expected);
 }
 
+// ==========================================
+// 9. CRYPTOGRAPHIC PASSWORD HASHING (scrypt)
+// ==========================================
+
+/**
+ * Securely hashes a password using Node.js scrypt with a cryptographic 16-byte salt.
+ * Format: $scrypt$ln=14,r=8,p=1$<salt_hex>$<derived_key_hex>
+ */
+export function hashPassword(password: string): string {
+  if (!password || typeof password !== "string") {
+    throw new Error("Password must be a non-empty string");
+  }
+  const salt = crypto.randomBytes(16).toString("hex");
+  const derivedKey = crypto.scryptSync(password, salt, 64, {
+    N: 16384,
+    r: 8,
+    p: 1,
+  });
+  return `$scrypt$ln=14,r=8,p=1$${salt}$${derivedKey.toString("hex")}`;
+}
+
+/**
+ * Verifies a password against an scrypt hash in constant time.
+ */
+export function verifyPassword(password: string, storedHash: string): boolean {
+  if (!password || !storedHash || typeof password !== "string" || typeof storedHash !== "string") {
+    return false;
+  }
+  const parts = storedHash.split("$");
+  if (parts.length !== 5 || parts[1] !== "scrypt") {
+    return false;
+  }
+  const salt = parts[3];
+  const expectedKeyHex = parts[4];
+  if (!salt || !expectedKeyHex) return false;
+
+  try {
+    const derivedKey = crypto.scryptSync(password, salt, 64, {
+      N: 16384,
+      r: 8,
+      p: 1,
+    });
+    return timingSafeCompare(derivedKey.toString("hex"), expectedKeyHex);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sanitizes generic user text against XSS, HTML injection, and Discord mass-mention exploits.
+ */
+export function sanitizeInputText(input: any, maxLen = 2000): string {
+  if (typeof input !== "string") return "";
+  let str = input.trim().slice(0, maxLen);
+  // Neutralize mass mention exploits
+  str = str.replace(/@(everyone|here)/gi, "@\u200B$1");
+  // Escape raw HTML characters to prevent XSS
+  str = str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+  return str;
+}
+
+

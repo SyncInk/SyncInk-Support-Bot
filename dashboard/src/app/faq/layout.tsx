@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { safeJsonLdString } from "@/lib/security";
 
 export const metadata: Metadata = {
   title: "Frequently Asked Questions",
@@ -69,7 +70,7 @@ export default function FAQLayout({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLdString(faqJsonLd) }}
       />
       {children}
     </>

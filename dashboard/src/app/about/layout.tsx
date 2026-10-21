@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { safeJsonLdString } from "@/lib/security";
 
 export const metadata: Metadata = {
   title: "About SyncInk • Discord Bot Ecosystem & Architecture",
@@ -80,7 +81,7 @@ export default function AboutLayout({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLdString(aboutJsonLd) }}
       />
       {children}
     </>

@@ -7,23 +7,19 @@ import {
   ALLOWED_MIME_TYPES,
   validateMagicBytes,
   sanitizeFileName,
+  sanitizeInputText,
   redactSensitive,
 } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
-// Webhook URLs (securely held server-side, never delivered to the client)
-const STAFF_WEBHOOK =
-  process.env.STAFF_APPLICATION_WEBHOOK ||
-  "https://discord.com/api/webhooks/1542537431318798346/602rGCCXSDuJ40HdguRv__vSyZv1ZxRiS4OqvbwOzamPxa-8Qinzn57SZcpSkGrHsLul";
-
-const DEV_WEBHOOK =
-  process.env.DEV_APPLICATION_WEBHOOK ||
-  "https://discord.com/api/webhooks/1542537924766335036/o3C7rHB-HEP7utGCbFfHPeoVGnzK_sGnvy3cKCCfdWy4GhtYAmERopWpHRHP1B-k5eMh";
+// Webhook URLs (securely held in environment variables, never hardcoded in source)
+const STAFF_WEBHOOK = (process.env.STAFF_APPLICATION_WEBHOOK || "").trim();
+const DEV_WEBHOOK = (process.env.DEV_APPLICATION_WEBHOOK || "").trim();
 
 function cleanString(str: any, maxLen = 2000): string {
   if (typeof str !== "string") return "";
-  return str.trim().slice(0, maxLen);
+  return sanitizeInputText(str, maxLen);
 }
 
 export async function POST(request: Request) {
@@ -267,6 +263,13 @@ export async function POST(request: Request) {
     }
 
     // 6. Dispatch to Discord Webhook
+    if (!webhookUrl) {
+      return NextResponse.json(
+        { error: "Application submission is currently unavailable. The destination webhook is not configured in server environment settings." },
+        { status: 503 }
+      );
+    }
+
     if (attachmentFile && attachmentBuffer) {
       if (attachmentFile.type.startsWith("image/")) {
         payload.embeds[0].image = { url: `attachment://${cleanFileName}` };

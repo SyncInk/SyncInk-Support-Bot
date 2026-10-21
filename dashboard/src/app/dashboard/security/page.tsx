@@ -1136,6 +1136,34 @@ export default function DashboardPage() {
     );
   }
 
+  if (!currentUser) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-brand-red/10 border border-brand-red/30 flex items-center justify-center mb-4 shadow-[0_0_25px_rgba(231,76,60,0.2)]">
+          <ShieldAlert className="w-8 h-8 text-brand-red" />
+        </div>
+        <h2 className="text-xl font-bold text-white mb-2">Authentication Required</h2>
+        <p className="text-sm text-slate-400 max-w-md mb-6 leading-relaxed">
+          You must be signed in with your Discord account or provide an administrator passkey to access the security command center.
+        </p>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="px-6 py-2.5 rounded-xl bg-brand-red hover:bg-brand-crimson text-white font-bold text-sm transition-all shadow-glow"
+          >
+            Sign In with Discord
+          </Link>
+          <Link
+            href="/"
+            className="px-6 py-2.5 rounded-xl bg-surface-card hover:bg-surface border border-border text-slate-300 font-bold text-sm transition-all"
+          >
+            Back to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const raidState = data?.raidState || "NORMAL";
   const isLockdown = raidState === "LOCKDOWN";
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 
 interface GitHubCommit {
   sha: string;
@@ -165,7 +166,14 @@ async function fetchAllChangelogs(): Promise<ChangelogEntry[]> {
   return allEntries;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Rate Limiting: 60 requests per minute per IP
+  const clientIp = getClientIp(request);
+  const rateLimit = rateLimiter.check(`updates_get_${clientIp}`, 60, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+  }
+
   try {
     const entries = await fetchAllChangelogs();
     return NextResponse.json(
