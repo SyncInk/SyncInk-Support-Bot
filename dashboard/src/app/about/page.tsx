@@ -682,7 +682,7 @@ export default function AboutPage() {
 
             <div className="pt-2 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
               <a
-                href="https://discord.gg/rB6gNZaK9u"
+                href="https://discord.gg/PmxfJwmQuB"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all shadow-lg flex items-center gap-2 hover:-translate-y-0.5 duration-200"

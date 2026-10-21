@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { TicketMarketingFrame } from "@/components/TicketMarketingFrame";
 
-const SUPPORT_URL = "https://discord.gg/rB6gNZaK9u";
+const SUPPORT_URL = "https://discord.gg/PmxfJwmQuB";
 
 interface PrivacySection {
   id: string;
@@ -182,7 +182,7 @@ const PRIVACY_SECTIONS: PrivacySection[] = [
       },
       {
         subtitle: "Lodge an Inquiry",
-        desc: "For data inquiries, compliance audits, or legal questions, join our official Discord Support Server at https://discord.gg/rB6gNZaK9u."
+        desc: "For data inquiries, compliance audits, or legal questions, join our official Discord Support Server at https://discord.gg/PmxfJwmQuB."
       }
     ]
   }

@@ -63,7 +63,7 @@ const aboutJsonLd = {
         url: "https://syncink.site/favicon.png",
       },
       sameAs: [
-        "https://discord.gg/rB6gNZaK9u",
+        "https://discord.gg/PmxfJwmQuB",
         "https://github.com/SyncInk",
       ],
       description:

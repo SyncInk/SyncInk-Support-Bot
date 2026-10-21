@@ -49,7 +49,7 @@ export default function NotFound() {
               <span>Return Home</span>
             </Link>
             <a
-              href="https://discord.gg/rB6gNZaK9u"
+              href="https://discord.gg/PmxfJwmQuB"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-slate-200 hover:text-white font-medium text-sm transition-all border border-white/10 flex items-center justify-center gap-2"

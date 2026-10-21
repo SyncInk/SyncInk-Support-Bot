@@ -684,7 +684,7 @@ export default function HomePage() {
                   <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
                 </Link>
                 <a
-                  href="https://discord.gg/rB6gNZaK9u"
+                  href="https://discord.gg/PmxfJwmQuB"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto justify-center px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-sm sm:text-base transition-all border border-white/10 flex items-center gap-2 hover:-translate-y-0.5"

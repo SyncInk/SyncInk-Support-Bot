@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { ChevronDown, Search, HelpCircle, MessageSquare, Shield, CheckCircle2 } from "lucide-react";
 import { TicketMarketingFrame } from "@/components/TicketMarketingFrame";
 
-const SUPPORT_URL = "https://discord.gg/rB6gNZaK9u";
+const SUPPORT_URL = "https://discord.gg/PmxfJwmQuB";
 
 const FAQS = [
   {

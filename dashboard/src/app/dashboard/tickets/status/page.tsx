@@ -91,7 +91,7 @@ export default function DedicatedStatusPage() {
       description="Live operational telemetry, global latency benchmarks, and verifiable 90-day historical uptime for all core infrastructure services."
       actions={[
         { label: "Open Dashboard", to: "/dashboard/tickets", tone: "primary" },
-        { label: "Join Discord Community", href: "https://discord.gg/rB6gNZaK9u", external: true, tone: "secondary" }
+        { label: "Join Discord Community", href: "https://discord.gg/PmxfJwmQuB", external: true, tone: "secondary" }
       ]}
     >
       <div className="space-y-6">

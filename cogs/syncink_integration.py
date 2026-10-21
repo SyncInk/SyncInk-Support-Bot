@@ -100,7 +100,7 @@ class SyncInkIntegration(commands.Cog):
         view.add_item(discord.ui.Button(label="Website", style=discord.ButtonStyle.link, url="https://sync-ink-support-bot.vercel.app"))
         view.add_item(discord.ui.Button(label="Rules", style=discord.ButtonStyle.link, url="https://sync-ink-support-bot.vercel.app/rules"))
         view.add_item(discord.ui.Button(label="FAQ", style=discord.ButtonStyle.link, url="https://sync-ink-support-bot.vercel.app/faq"))
-        view.add_item(discord.ui.Button(label="Community", style=discord.ButtonStyle.link, url="https://discord.gg/syncink"))
+        view.add_item(discord.ui.Button(label="Community", style=discord.ButtonStyle.link, url="https://discord.gg/PmxfJwmQuB"))
         
         await ctx.send(embed=embed, view=view)
 

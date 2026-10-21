@@ -4,7 +4,7 @@ import React from "react";
 import { BookOpenCheck, ShieldCheck, CheckCircle2, Lightbulb, Terminal, ArrowRight, ExternalLink } from "lucide-react";
 import { TicketMarketingFrame } from "@/components/TicketMarketingFrame";
 
-const SUPPORT_URL = "https://discord.gg/rB6gNZaK9u";
+const SUPPORT_URL = "https://discord.gg/PmxfJwmQuB";
 const INVITE_URL = "https://discord.com/oauth2/authorize?client_id=1513075101992747158&permissions=361046068240&integration_type=0&scope=bot+applications.commands";
 
 const guideSteps = [

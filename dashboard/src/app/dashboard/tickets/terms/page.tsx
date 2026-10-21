@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { TicketMarketingFrame } from "@/components/TicketMarketingFrame";
 
-const SUPPORT_URL = "https://discord.gg/rB6gNZaK9u";
+const SUPPORT_URL = "https://discord.gg/PmxfJwmQuB";
 
 interface TermsSection {
   id: string;
@@ -175,7 +175,7 @@ const TERMS_SECTIONS: TermsSection[] = [
       },
       {
         subtitle: "Dispute Escalation & Support",
-        desc: "For any policy clarifications, tier licensing inquiries, or operational disputes, reach out to our team in the official Discord Support Server at https://discord.gg/rB6gNZaK9u."
+        desc: "For any policy clarifications, tier licensing inquiries, or operational disputes, reach out to our team in the official Discord Support Server at https://discord.gg/PmxfJwmQuB."
       }
     ]
   }

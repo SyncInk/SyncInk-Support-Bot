@@ -4131,7 +4131,7 @@ export default function NativeTicketDashboardPage() {
                     <ExternalLink size={14} /> Full Rules Page
                   </Link>
                   <a
-                    href="https://discord.gg/rB6gNZaK9u"
+                    href="https://discord.gg/PmxfJwmQuB"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="action-button tone-secondary"
@@ -4231,7 +4231,7 @@ export default function NativeTicketDashboardPage() {
                   </p>
                   <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                     <a
-                      href="https://discord.gg/rB6gNZaK9u"
+                      href="https://discord.gg/PmxfJwmQuB"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="action-button tone-primary"
@@ -4268,7 +4268,7 @@ export default function NativeTicketDashboardPage() {
                 </div>
                 <div style={{ display: "flex", gap: "10px" }}>
                   <a
-                    href="https://discord.gg/rB6gNZaK9u"
+                    href="https://discord.gg/PmxfJwmQuB"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="action-button tone-secondary"
@@ -4368,7 +4368,7 @@ export default function NativeTicketDashboardPage() {
                     Need to remove all server transcripts, interaction metrics, and logs? Server owners can trigger an immediate full data purge by opening an official support ticket in our Discord community.
                   </p>
                   <a
-                    href="https://discord.gg/rB6gNZaK9u"
+                    href="https://discord.gg/PmxfJwmQuB"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="action-button tone-secondary"
@@ -4397,7 +4397,7 @@ export default function NativeTicketDashboardPage() {
                 </div>
                 <div style={{ display: "flex", gap: "10px" }}>
                   <a
-                    href="https://discord.gg/rB6gNZaK9u"
+                    href="https://discord.gg/PmxfJwmQuB"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="action-button tone-secondary"
@@ -4492,7 +4492,7 @@ export default function NativeTicketDashboardPage() {
                     Our team is available on Discord to address any policy, commercial use, or licensing inquiries for your server.
                   </p>
                   <a
-                    href="https://discord.gg/rB6gNZaK9u"
+                    href="https://discord.gg/PmxfJwmQuB"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="action-button tone-primary"
