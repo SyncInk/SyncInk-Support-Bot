@@ -8,13 +8,11 @@
   --surface-card: #131826;
   --surface-hover: #1c2336;
   --border: #232c40;
-  --brand-purple: #9d7cff;
-  --brand-violet: #8b5cf6;
-  --brand-indigo: #6366f1;
-  --brand-lilac: #c084fc;
+  --brand-blue: #5865F2;
+  --brand-purple: #8b5cf6;
+  --brand-violet: #7c3aed;
   --brand-cyan: #06b6d4;
-  --brand-red: #e74c3c;
-  --brand-crimson: #ff4757;
+  --brand-emerald: #10b981;
 }
 
 body {
@@ -30,21 +28,21 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #090c14;
+  background: #070913;
 }
 ::-webkit-scrollbar-thumb {
-  background: #232c40;
+  background: #1c2438;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #8b5cf6;
+  background: #5865F2;
 }
 
-/* Glassmorphism with Electric Violet Glow */
+/* Glassmorphism Classes */
 .glass-panel {
   background: rgba(14, 18, 29, 0.82);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(157, 124, 255, 0.15);
+  border: 1px solid rgba(88, 101, 242, 0.15);
 }
 
 .glass-card {
@@ -55,33 +53,84 @@ body {
 }
 
 .glass-card:hover {
-  border-color: rgba(157, 124, 255, 0.4);
-  box-shadow: 0 8px 30px -4px rgba(139, 92, 246, 0.22);
+  border-color: rgba(88, 101, 242, 0.4);
+  box-shadow: 0 8px 30px -4px rgba(88, 101, 242, 0.2);
 }
 
-/* Glowing Animations */
-@keyframes pulse-purple {
+/* ========================================================= */
+/* GPU-ACCELERATED AMBIENT MOTION KEYFRAMES */
+/* ========================================================= */
+
+@keyframes ambient-drift-1 {
   0%, 100% {
-    box-shadow: 0 0 15px rgba(157, 124, 255, 0.35);
+    transform: translate3d(0, 0, 0) scale(1);
   }
   50% {
-    box-shadow: 0 0 30px rgba(139, 92, 246, 0.7);
+    transform: translate3d(30px, 20px, 0) scale(1.06);
   }
 }
 
-.pulse-glow-purple {
-  animation: pulse-purple 2.5s infinite;
-}
-
-@keyframes pulse-red {
+@keyframes ambient-drift-2 {
   0%, 100% {
-    box-shadow: 0 0 15px rgba(231, 76, 60, 0.4);
+    transform: translate3d(0, 0, 0) scale(1);
   }
   50% {
-    box-shadow: 0 0 25px rgba(231, 76, 60, 0.8);
+    transform: translate3d(-25px, -30px, 0) scale(0.95);
   }
 }
 
-.pulse-lockdown {
-  animation: pulse-red 2s infinite;
+@keyframes ambient-drift-3 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(20px, -20px, 0);
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-ambient-drift-1 {
+  animation: ambient-drift-1 18s ease-in-out infinite;
+}
+
+.animate-ambient-drift-2 {
+  animation: ambient-drift-2 22s ease-in-out infinite;
+}
+
+.animate-ambient-drift-3 {
+  animation: ambient-drift-3 26s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 4s ease-in-out infinite;
+}
+
+/* ========================================================= */
+/* ACCESSIBILITY: PREFERS-REDUCED-MOTION */
+/* ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-ambient-drift-1,
+  .animate-ambient-drift-2,
+  .animate-ambient-drift-3,
+  .animate-float-slow {
+    animation: none !important;
+  }
 }
