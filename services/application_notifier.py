@@ -57,7 +57,7 @@ class ApplicationNotifier:
 
             if app_type == "developer":
                 embed = discord.Embed(
-                    title="<:sync_developer:1526607083070554192> New Developer Application",
+                    title="<:developer:1562591562754424872> New Developer Application",
                     color=color
                 )
                 # Row 1: Discord ID, Age, Region (inline)
@@ -72,7 +72,7 @@ class ApplicationNotifier:
                     inline=True
                 )
                 embed.add_field(
-                    name="<a:syncearthblurple:1519008181550842008> Region",
+                    name="<a:region:1562591209543966831> Region",
                     value=f"`{timezone}`",
                     inline=True
                 )
@@ -80,7 +80,7 @@ class ApplicationNotifier:
                 # Languages/Tech
                 langs = app.get("languages") or "Not provided"
                 embed.add_field(
-                    name="<:staff:1513328514529624185> Languages/Tech",
+                    name="<:staff:1562591917295009802> Languages/Tech",
                     value=f"```\n{langs}\n```" if "\n" in langs else f"`{langs}`",
                     inline=False
                 )
@@ -96,7 +96,7 @@ class ApplicationNotifier:
                 # Bot Experience
                 bot_exp = app.get("bot_experience") or "None"
                 embed.add_field(
-                    name="🤖 Bot Experience",
+                    name="<:experience:1562588852324143125> Bot Experience",
                     value=f">>> {bot_exp[:1000]}",
                     inline=False
                 )
@@ -112,7 +112,7 @@ class ApplicationNotifier:
             else:
                 # Staff application
                 embed = discord.Embed(
-                    title="<:staff:1513328514529624185> New Staff Application",
+                    title="<:staff:1562591917295009802> New Staff Application",
                     color=color
                 )
                 # Row 1: Discord ID, Age, Region (inline)
@@ -127,7 +127,7 @@ class ApplicationNotifier:
                     inline=True
                 )
                 embed.add_field(
-                    name="<a:syncearthblurple:1519008181550842008> Region",
+                    name="<a:region:1562591209543966831> Region",
                     value=f"`{timezone}`",
                     inline=True
                 )
@@ -151,7 +151,7 @@ class ApplicationNotifier:
                 # Experience
                 exp = app.get("experience") or "Not provided"
                 embed.add_field(
-                    name="📓 Experience",
+                    name="<:experience:1562588852324143125> Experience",
                     value=f">>> {exp[:1000]}",
                     inline=False
                 )
@@ -159,7 +159,7 @@ class ApplicationNotifier:
                 # Scenario 1: Spam Bypass
                 scen1 = app.get("scenario_1") or "N/A"
                 embed.add_field(
-                    name="❗ Scenario 1: Spam Bypass",
+                    name="<a:syncwarning:1520914584012328961> Scenario 1: Spam Bypass",
                     value=f">>> {scen1[:1000]}",
                     inline=False
                 )
@@ -167,7 +167,7 @@ class ApplicationNotifier:
                 # Scenario 2: Argument
                 scen2 = app.get("scenario_2") or "N/A"
                 embed.add_field(
-                    name="🔨 Scenario 2: Argument",
+                    name="<:argument:1562587869762158762> Scenario 2: Argument",
                     value=f">>> {scen2[:1000]}",
                     inline=False
                 )
@@ -175,7 +175,7 @@ class ApplicationNotifier:
                 # Scenario 3: Abuse Claim
                 scen3 = app.get("scenario_3") or "N/A"
                 embed.add_field(
-                    name="🛡️ Scenario 3: Abuse Claim",
+                    name="<:admin:1562590696337047744> Scenario 3: Abuse Claim",
                     value=f">>> {scen3[:1000]}",
                     inline=False
                 )

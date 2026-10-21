@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
-import { query, resolveGuildId } from "@/lib/db";
+import { query, queryOne, resolveGuildId } from "@/lib/db";
 import {
   validateCsrfOrigin,
   MAX_FILE_SIZE_BYTES,
@@ -19,6 +19,53 @@ export const dynamic = "force-dynamic";
 function cleanString(str: any, maxLen = 2000): string {
   if (typeof str !== "string") return "";
   return sanitizeInputText(str, maxLen);
+}
+
+export async function GET(request: Request) {
+  try {
+    const user = await getCurrentUser();
+    if (!user || !user.id || user.id === "admin") {
+      return NextResponse.json({ authenticated: false, hasApplication: false, application: null });
+    }
+
+    const clientIp = getClientIp(request);
+    const rateLimit = rateLimiter.check(`apply_get_${user.id}_${clientIp}`, 60, 60 * 1000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Rate limit exceeded. Please slow down." }, { status: 429 });
+    }
+
+    const application = await queryOne<any>(
+      `SELECT id, guild_id, user_id, username, global_name, avatar, app_type, age, timezone,
+              availability, reason, experience, scenario_1, scenario_2, scenario_3,
+              languages, portfolio, bot_experience, complex_features, attachment_name,
+              status, reviewer_id, reviewer_name, reviewer_notes, created_at, reviewed_at
+       FROM member_applications
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [user.id]
+    );
+
+    if (!application) {
+      return NextResponse.json({
+        authenticated: true,
+        hasApplication: false,
+        application: null,
+      });
+    }
+
+    const statusUpper = (application.status || "PENDING").toUpperCase();
+    return NextResponse.json({
+      authenticated: true,
+      hasApplication: true,
+      application,
+      status: statusUpper,
+      canReapply: false,
+    });
+  } catch (error: any) {
+    console.error("GET /api/apply error:", redactSensitive(error.message || ""));
+    return NextResponse.json({ authenticated: false, hasApplication: false, error: "Internal error" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
@@ -49,6 +96,44 @@ export async function POST(request: Request) {
         },
         { status: 429 }
       );
+    }
+
+    // 3b. Anti-Duplicate & Application Status Guard: Prevent repeated spam submissions
+    const existingApp = await queryOne<{ id: number; status: string; created_at: string }>(
+      `SELECT id, status, created_at FROM member_applications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [user.id]
+    );
+
+    if (existingApp) {
+      const existingStatus = (existingApp.status || "PENDING").toUpperCase();
+      if (existingStatus === "PENDING" || existingStatus === "UNDER_REVIEW") {
+        return NextResponse.json(
+          {
+            error: `You already have an active application (#${existingApp.id}) currently under review. Multiple submissions are not permitted.`,
+            applicationId: existingApp.id,
+            status: existingStatus,
+          },
+          { status: 409 }
+        );
+      } else if (existingStatus === "REJECTED") {
+        return NextResponse.json(
+          {
+            error: `Your previous application (#${existingApp.id}) was reviewed and rejected. Repeated submissions are not permitted. If you believe this was an error, please contact server leadership.`,
+            applicationId: existingApp.id,
+            status: "REJECTED",
+          },
+          { status: 403 }
+        );
+      } else if (existingStatus === "ACCEPTED") {
+        return NextResponse.json(
+          {
+            error: `You are already an accepted member of the SyncInk team! New applications are not permitted.`,
+            applicationId: existingApp.id,
+            status: "ACCEPTED",
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // 4. Parse Request Content (supports both multipart FormData and JSON)

@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
+import { DISCORD_CUSTOM_EMOJIS } from "@/lib/custom-emojis";
 
 interface ApplicationItem {
   id: number;
@@ -635,7 +636,10 @@ export default function ApplicationsAdminPage() {
                       <span>•</span>
                       <span>Age: {selectedApp.age}</span>
                       <span>•</span>
-                      <span>Region: {selectedApp.timezone}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <img src={DISCORD_CUSTOM_EMOJIS.region.url} alt="Region" className="w-3.5 h-3.5 inline-block object-contain" />
+                        Region: {selectedApp.timezone}
+                      </span>
                       <span>•</span>
                       <span>Submitted: {new Date(selectedApp.created_at).toLocaleString()}</span>
                     </div>
@@ -672,7 +676,8 @@ export default function ApplicationsAdminPage() {
                     </div>
 
                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-violet-400 mb-1">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-violet-400 mb-1 flex items-center gap-1.5">
+                        <img src={DISCORD_CUSTOM_EMOJIS.experience.url} alt="Experience" className="w-4 h-4 object-contain inline-block" />
                         Prior Moderation Experience & Bot Knowledge
                       </div>
                       <div className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
@@ -681,7 +686,8 @@ export default function ApplicationsAdminPage() {
                     </div>
 
                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1.5">
+                        <img src={DISCORD_CUSTOM_EMOJIS.scenario1.url} alt="Spam Warning" className="w-4 h-4 object-contain inline-block" />
                         Scenario 1: Mass Spam / Filter Bypass in Public Channel
                       </div>
                       <div className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
@@ -690,7 +696,8 @@ export default function ApplicationsAdminPage() {
                     </div>
 
                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1.5">
+                        <img src={DISCORD_CUSTOM_EMOJIS.scenario2.url} alt="Argument" className="w-4 h-4 object-contain inline-block" />
                         Scenario 2: Escalating Argument between Veteran Community Members
                       </div>
                       <div className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
@@ -699,7 +706,8 @@ export default function ApplicationsAdminPage() {
                     </div>
 
                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1.5">
+                        <img src={DISCORD_CUSTOM_EMOJIS.scenario3.url} alt="Admin" className="w-4 h-4 object-contain inline-block" />
                         Scenario 3: Member Publicly Accuses Staff of Bias or Power Abuse
                       </div>
                       <div className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
@@ -711,7 +719,8 @@ export default function ApplicationsAdminPage() {
                   /* DEVELOPER FORM RESPONSES */
                   <div className="space-y-4">
                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-1">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-1.5">
+                        <img src={DISCORD_CUSTOM_EMOJIS.developer.url} alt="Developer" className="w-4 h-4 object-contain inline-block" />
                         Primary Programming Languages & Frameworks
                       </div>
                       <div className="text-sm text-slate-200 font-mono">{selectedApp.languages || "None"}</div>
@@ -737,7 +746,8 @@ export default function ApplicationsAdminPage() {
                     </div>
 
                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-1">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-1.5">
+                        <img src={DISCORD_CUSTOM_EMOJIS.experience.url} alt="Experience" className="w-4 h-4 object-contain inline-block" />
                         Discord Bot Development Experience
                       </div>
                       <div className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">

@@ -197,13 +197,13 @@ export async function GET(request: Request) {
       isStaff = true;
       roleType = "staff";
       roleLabel = "Staff";
-      roleIcon = "https://cdn.discordapp.com/emojis/1513345698689581087.png";
+      roleIcon = "https://cdn.discordapp.com/emojis/1562591917295009802.png";
     }
     // 4. Developer (💻) - Treated like normal members as requested
     else if (memberRoles.includes("1531882215795855511")) {
       roleType = "developer";
       roleLabel = "Developer";
-      roleIcon = "https://cdn.discordapp.com/emojis/1526607083070554192.png";
+      roleIcon = "https://cdn.discordapp.com/emojis/1562591562754424872.png";
       // isStaff and isAdmin remain false
     }
     // 5. Server Booster (🚀)
