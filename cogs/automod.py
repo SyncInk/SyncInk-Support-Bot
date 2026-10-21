@@ -246,6 +246,21 @@ class Automod(commands.Cog):
                     else:
                         await db.execute("UPDATE pending_bot_actions SET status = 'FAILED', error_message = 'Member not found in guild', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
 
+                elif action == "NOTIFY_APPLICATION":
+                    try:
+                        app_id = int(reason) if reason and str(reason).isdigit() else int(duration_mins or 0)
+                    except Exception:
+                        app_id = 0
+                    if app_id:
+                        from services.application_notifier import ApplicationNotifier
+                        notified = await ApplicationNotifier.process_notification(self.bot, app_id)
+                        if notified:
+                            await db.execute("UPDATE pending_bot_actions SET status = 'COMPLETED', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
+                        else:
+                            await db.execute("UPDATE pending_bot_actions SET status = 'FAILED', error_message = 'Failed to dispatch embed via bot', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
+                    else:
+                        await db.execute("UPDATE pending_bot_actions SET status = 'FAILED', error_message = 'Invalid application ID in reason/duration', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
+
                 else:
                     await db.execute("UPDATE pending_bot_actions SET status = 'FAILED', error_message = 'Unknown action type', processed_at = CURRENT_TIMESTAMP WHERE id = $1", action_id)
 
@@ -337,6 +352,13 @@ class Automod(commands.Cog):
             await AutomodService.check_timed_jails(self.bot)
         except Exception as e:
             log.error(f"Timed jail check failed: {e}")
+
+        # --- Part 4: Reconcile Unnotified Web Applications ---
+        try:
+            from services.application_notifier import ApplicationNotifier
+            await ApplicationNotifier.reconcile_unnotified_applications(self.bot)
+        except Exception as e:
+            log.debug(f"Application reconciliation check: {e}")
 
     @sync_dispatcher_loop.before_loop
     async def before_sync_dispatcher(self):

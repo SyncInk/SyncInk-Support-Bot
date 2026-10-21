@@ -14,9 +14,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-// Webhook URLs (securely held in environment variables, never hardcoded in source)
-const STAFF_WEBHOOK = (process.env.STAFF_APPLICATION_WEBHOOK || "").trim();
-const DEV_WEBHOOK = (process.env.DEV_APPLICATION_WEBHOOK || "").trim();
+
 
 function cleanString(str: any, maxLen = 2000): string {
   if (typeof str !== "string") return "";
@@ -154,13 +152,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Please enter your country/region." }, { status: 400 });
     }
 
-    // Target webhook and payload construction
-    const userAvatarUrl = user.avatar
-      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
-      : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.id) % 5}.png`;
 
-    let webhookUrl = "";
-    let payload: any = {};
 
     if (appType === "staff") {
       if (!availability) {
@@ -175,43 +167,6 @@ export async function POST(request: Request) {
       if (scen1.length < 15 || scen2.length < 15 || scen3.length < 15) {
         return NextResponse.json({ error: "All scenario answers must be at least 15 characters." }, { status: 400 });
       }
-
-      webhookUrl = STAFF_WEBHOOK;
-      payload = {
-        content: "<@&1520854378192572546>",
-        username: "SyncInk Staff Applications",
-        avatar_url: "https://syncink.github.io/syncink-portfolio/SyncInk%20Server%20Logo.png",
-        embeds: [
-          {
-            title: "🛡️ New Staff Application Submitted",
-            color: 9133302, // Purple
-            author: {
-              name: `${user.global_name || user.username} (@${user.username})`,
-              icon_url: userAvatarUrl,
-            },
-            fields: [
-              {
-                name: "👤 Discord User",
-                value: `<@${user.id}>\n**ID:** \`${user.id}\`\n**User:** \`${user.username}\``,
-                inline: true,
-              },
-              { name: "🎂 Age", value: `\`${age}\``, inline: true },
-              { name: "🌍 Region / Country", value: `\`${timezone}\``, inline: true },
-              { name: "⏰ Availability", value: `\`${availability}\``, inline: true },
-              { name: "❓ Why Join?", value: `>>> ${reason}`, inline: false },
-              { name: "📜 Moderation Experience", value: `>>> ${exp}`, inline: false },
-              { name: "🚨 Scenario 1: Spam / Filter Bypass", value: `>>> ${scen1}`, inline: false },
-              { name: "🔥 Scenario 2: Escalating Argument", value: `>>> ${scen2}`, inline: false },
-              { name: "⚖️ Scenario 3: Abuse Accusation", value: `>>> ${scen3}`, inline: false },
-            ],
-            footer: {
-              text: "SyncInk Enterprise Platform (syncink.site) • Verified OAuth Application",
-              icon_url: "https://files.catbox.moe/74l9su.png",
-            },
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      };
     } else {
       // Developer validation
       if (langs.length < 2) {
@@ -226,41 +181,6 @@ export async function POST(request: Request) {
       if (complex.length < 15) {
         return NextResponse.json({ error: "Complex feature description must be at least 15 characters." }, { status: 400 });
       }
-
-      webhookUrl = DEV_WEBHOOK;
-      payload = {
-        content: "<@&1520854378192572546>",
-        username: "SyncInk Developer Applications",
-        avatar_url: "https://syncink.github.io/syncink-portfolio/SyncInk%20Server%20Logo.png",
-        embeds: [
-          {
-            title: "💻 New Developer Application Submitted",
-            color: 5793266, // Emerald
-            author: {
-              name: `${user.global_name || user.username} (@${user.username})`,
-              icon_url: userAvatarUrl,
-            },
-            fields: [
-              {
-                name: "👤 Discord User",
-                value: `<@${user.id}>\n**ID:** \`${user.id}\`\n**User:** \`${user.username}\``,
-                inline: true,
-              },
-              { name: "🎂 Age", value: `\`${age}\``, inline: true },
-              { name: "🌍 Region / Country", value: `\`${timezone}\``, inline: true },
-              { name: "🛠️ Languages & Frameworks", value: `>>> ${langs}`, inline: false },
-              { name: "🔗 Portfolio / GitHub", value: `>>> ${portfolio}`, inline: false },
-              { name: "🤖 Bot Experience", value: `>>> ${bot_exp}`, inline: false },
-              { name: "🧠 Complex Architecture Implemented", value: `>>> ${complex}`, inline: false },
-            ],
-            footer: {
-              text: "SyncInk Enterprise Platform (syncink.site) • Verified OAuth Application",
-              icon_url: "https://files.catbox.moe/74l9su.png",
-            },
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      };
     }
 
     // 6. Save Application to Database for Admin Panel Inspection
@@ -336,49 +256,16 @@ export async function POST(request: Request) {
       `).catch(() => {});
     }
 
-    // 7. Dispatch to Discord Webhook (if configured)
-    if (webhookUrl) {
-      if (payload?.embeds?.[0]?.footer && applicationId) {
-        payload.embeds[0].footer.text = `SyncInk Enterprise Platform • Application #${applicationId} • Verified OAuth`;
-      }
-
-      if (attachmentFile && attachmentBuffer) {
-        if (attachmentFile.type.startsWith("image/")) {
-          payload.embeds[0].image = { url: `attachment://${cleanFileName}` };
-        }
-
-        const outFormData = new FormData();
-        outFormData.append("payload_json", JSON.stringify(payload));
-        outFormData.append("file[0]", attachmentFile, cleanFileName);
-
-        try {
-          const discordRes = await fetch(webhookUrl, {
-            method: "POST",
-            body: outFormData,
-          });
-
-          if (!discordRes.ok) {
-            const errText = await discordRes.text();
-            console.error("Discord webhook dispatch error:", redactSensitive(errText));
-          }
-        } catch (whErr: any) {
-          console.error("Webhook network error:", redactSensitive(whErr.message || ""));
-        }
-      } else {
-        try {
-          const discordRes = await fetch(webhookUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-
-          if (!discordRes.ok) {
-            const errText = await discordRes.text();
-            console.error("Discord webhook dispatch error:", redactSensitive(errText));
-          }
-        } catch (whErr: any) {
-          console.error("Webhook network error:", redactSensitive(whErr.message || ""));
-        }
+    // 7. Enqueue Durable Notification Job for Discord Bot Delivery (No Incoming Webhooks)
+    if (applicationId) {
+      try {
+        await query(
+          `INSERT INTO pending_bot_actions (guild_id, user_id, action, reason, status)
+           VALUES ($1, $2, 'NOTIFY_APPLICATION', $3, 'PENDING')`,
+          [targetGuildId, user.id, String(applicationId)]
+        );
+      } catch (queueErr: any) {
+        console.warn("Could not enqueue pending_bot_action notification:", redactSensitive(queueErr.message || ""));
       }
     }
 
