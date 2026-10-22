@@ -175,7 +175,7 @@ export default function UpdatesPage() {
         <div className="relative border-b border-white/[0.08] pb-10 sm:pb-12 mb-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-semibold uppercase tracking-wider mb-4">
             <Activity className="w-3.5 h-3.5 text-blue-400" />
-            <span>Official Changelog & Platform Releases</span>
+            <span>Official Changelog & Platform Telemetry</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
