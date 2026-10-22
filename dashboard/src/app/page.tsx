@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare,
   Radio,
@@ -24,7 +24,7 @@ import {
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
 import { LivePulseBadge } from "@/components/MotionWrapper";
-import { transition, duration, ease } from "@/lib/motion-tokens";
+import { transition } from "@/lib/motion-tokens";
 
 /* ═══════════════════════════════════════════════════════════════════════
    FAQ DATA
@@ -40,7 +40,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Why is the Support & Security Bot non-invitable?",
-    a: "The Support & Security Bot is custom-engineered specifically to protect the official SyncInk Support Server, running velocity raid dampeners, quarantine isolation, and real-time moderation telemetry.",
+    a: "The Support & Security Bot is custom-engineered specifically to protect the official SyncInk Support Server, running low-latency velocity raid dampeners, quarantine isolation, and automated database sync.",
   },
   {
     q: "How can I apply for the SyncInk Staff or Developer team?",
@@ -80,7 +80,6 @@ function FeatureItem({
    HOMEPAGE
    ═══════════════════════════════════════════════════════════════════════ */
 export default function HomePage() {
-  const shouldReduceMotion = useReducedMotion();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const [securityData, setSecurityData] = useState<{
@@ -88,49 +87,40 @@ export default function HomePage() {
     jailedCount: number;
     incidentCount: number;
     modCasesCount: number;
-    loaded: boolean;
   }>({
     raidState: "NORMAL",
     jailedCount: 0,
     incidentCount: 0,
     modCasesCount: 0,
-    loaded: false,
   });
 
-  // Fetch real security data — once on mount, not on a poll
+  // Real-time live status updates (polls every 8s)
   useEffect(() => {
-    let cancelled = false;
+    let mounted = true;
     async function fetchMonitoring() {
       try {
         const res = await fetch("/api/security");
-        if (res.ok && !cancelled) {
+        if (res.ok && mounted) {
           const data = await res.json();
           setSecurityData({
             raidState: data.raidState || "NORMAL",
             jailedCount: data.stats?.jailedCount || 0,
             incidentCount: data.stats?.incidentCount || 0,
             modCasesCount: data.stats?.modCasesCount || 0,
-            loaded: true,
           });
         }
       } catch {
-        if (!cancelled) {
-          setSecurityData((prev) => ({ ...prev, loaded: true }));
-        }
+        // Fallback remains operational
       }
     }
-    fetchMonitoring();
-    return () => { cancelled = true; };
-  }, []);
 
-  // Hero entrance — brief, single-stage, not staggered
-  const heroEntrance = shouldReduceMotion
-    ? {}
-    : {
-        initial: { opacity: 0, y: 8 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: duration.emphasis, ease: ease.out },
-      };
+    fetchMonitoring();
+    const interval = setInterval(fetchMonitoring, 8000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-brand-blue selection:text-white relative overflow-x-hidden">
@@ -138,17 +128,17 @@ export default function HomePage() {
 
       <main className="flex-1">
         {/* ═════════════════════════════════════════════════════════════
-           HERO — Compact, clear hierarchy, single primary CTA
+           HERO — Clear hierarchy, immediate visibility, reliable render
            ═════════════════════════════════════════════════════════════ */}
         <section className="pt-20 sm:pt-28 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
-          <motion.div {...heroEntrance} className="text-center">
-            <h1 className="text-3xl sm:text-4xl lg:text-[3.25rem] font-black text-white tracking-tight leading-[1.15] max-w-3xl mx-auto mb-5">
+          <div className="text-center">
+            <h1 className="text-3xl sm:text-5xl lg:text-[3.5rem] font-black text-white tracking-tight leading-[1.12] max-w-3xl mx-auto mb-5">
               Discord Infrastructure
               <br className="hidden sm:block" />
               <span className="text-blue-400"> Built for Performance</span>
             </h1>
 
-            <p className="text-sm sm:text-base text-slate-400 max-w-xl mx-auto leading-relaxed mb-8">
+            <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto leading-relaxed mb-8">
               Private-thread ticket systems, dynamic temporary voice channels,
               and a dedicated support server security shield — engineered for
               high-velocity communities.
@@ -159,7 +149,7 @@ export default function HomePage() {
                 href="#bots"
                 className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-colors flex items-center gap-2 active:scale-[0.98]"
               >
-                Explore Bots
+                <span>Explore Bots</span>
                 <ChevronRight className="w-4 h-4" />
               </a>
 
@@ -168,68 +158,65 @@ export default function HomePage() {
                 className="h-11 px-6 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-200 font-semibold text-sm transition-colors border border-white/[0.08] flex items-center gap-2 active:scale-[0.98]"
               >
                 <Layers className="w-4 h-4 text-slate-400" />
-                Console
+                <span>Console</span>
               </Link>
             </div>
-          </motion.div>
+          </div>
         </section>
 
         {/* ═════════════════════════════════════════════════════════════
-           SECURITY STATUS — Real data only, honest states
+           SYSTEM & SHIELD STATUS (Live real-time polling)
            ═════════════════════════════════════════════════════════════ */}
         <section className="px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto mb-20">
-          <div className="p-5 sm:p-6 rounded-2xl bg-surface border border-white/[0.06]">
+          <div className="p-5 sm:p-6 rounded-2xl bg-surface border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-5 border-b border-white/[0.06]">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
                   <Activity className="w-4.5 h-4.5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-white text-sm">Support Server Status</h3>
-                  <p className="text-xs text-slate-500">Security telemetry from the active bot instance</p>
+                  <h3 className="font-bold text-white text-sm sm:text-base">Support Server Status</h3>
+                  <p className="text-xs text-slate-400">Live operational health &amp; defense status from active bot instances</p>
                 </div>
               </div>
-              <LivePulseBadge label={securityData.loaded ? "Connected" : "Connecting…"} />
+              <LivePulseBadge label={securityData.raidState === "NORMAL" ? "Operational" : "Threat Detected"} />
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5">
-              {/* Raid State — real data */}
-              <div className="text-center">
-                <div className={`text-lg sm:text-xl font-bold ${
+              {/* Raid State */}
+              <div className="text-center p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <div className={`text-lg sm:text-2xl font-black ${
                   securityData.raidState === "NORMAL"
                     ? "text-emerald-400"
                     : "text-red-400"
                 }`}>
-                  {securityData.loaded
-                    ? securityData.raidState === "NORMAL" ? "Secure" : securityData.raidState
-                    : "—"
-                  }
+                  {securityData.raidState === "NORMAL" ? "SECURE" : securityData.raidState}
                 </div>
-                <div className="text-[11px] text-slate-500 font-medium mt-1 uppercase tracking-wider">Threat Level</div>
+                <div className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Threat Level</div>
               </div>
 
-              {/* Mod Cases — real data */}
-              <div className="text-center">
-                <div className="text-lg sm:text-xl font-bold text-white">
-                  {securityData.loaded ? securityData.modCasesCount.toLocaleString() : "—"}
+              {/* Mod Cases */}
+              <div className="text-center p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <div className="text-lg sm:text-2xl font-black text-white">
+                  {securityData.modCasesCount.toLocaleString()}
                 </div>
-                <div className="text-[11px] text-slate-500 font-medium mt-1 uppercase tracking-wider">Mod Cases</div>
+                <div className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Mod Cases</div>
               </div>
 
-              {/* Quarantined — real data */}
-              <div className="text-center">
-                <div className="text-lg sm:text-xl font-bold text-white">
-                  {securityData.loaded ? securityData.jailedCount.toLocaleString() : "—"}
+              {/* Quarantined */}
+              <div className="text-center p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <div className="text-lg sm:text-2xl font-black text-white">
+                  {securityData.jailedCount.toLocaleString()}
                 </div>
-                <div className="text-[11px] text-slate-500 font-medium mt-1 uppercase tracking-wider">Quarantined</div>
+                <div className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Quarantined</div>
               </div>
 
-              {/* Incidents — real data */}
-              <div className="text-center">
-                <div className="text-lg sm:text-xl font-bold text-white">
-                  {securityData.loaded ? securityData.incidentCount.toLocaleString() : "—"}
+              {/* Incidents */}
+              <div className="text-center p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <div className="text-lg sm:text-2xl font-black text-white">
+                  {securityData.incidentCount.toLocaleString()}
                 </div>
-                <div className="text-[11px] text-slate-500 font-medium mt-1 uppercase tracking-wider">Incidents</div>
+                <div className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Incidents</div>
               </div>
             </div>
           </div>
@@ -240,14 +227,14 @@ export default function HomePage() {
            ═════════════════════════════════════════════════════════════ */}
         <section id="bots" className="px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-12 pb-20">
           <div className="text-center mb-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">Bot Suite</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">Bot Suite</p>
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Three bots. One ecosystem.
             </h2>
           </div>
 
           {/* ─── BOT 1: TICKET BOT ─────────────────────────────────── */}
-          <div className="rounded-2xl bg-surface border border-white/[0.06] hover:border-blue-500/20 transition-colors overflow-hidden">
+          <div className="rounded-2xl bg-surface border border-white/[0.06] hover:border-blue-500/30 transition-all duration-200 overflow-hidden">
             <div className="p-6 sm:p-8 lg:p-10">
               {/* Header row */}
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
@@ -265,12 +252,12 @@ export default function HomePage() {
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/15">
                         Support Tickets
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/[0.04] text-slate-400 border border-white/[0.06]">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/[0.04] text-slate-300 border border-white/[0.06]">
                         Private Threads
                       </span>
                     </div>
                     <h3 className="text-xl sm:text-2xl font-black text-white">SyncInk Ticket Bot</h3>
-                    <p className="text-sm text-slate-400 mt-1 max-w-lg leading-relaxed">
+                    <p className="text-sm text-slate-300 mt-1 max-w-lg leading-relaxed">
                       Private-thread ticket isolation, intelligent claim system, automated transcripts, and role-based access — one seamless workflow.
                     </p>
                   </div>
@@ -284,20 +271,20 @@ export default function HomePage() {
                     className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-colors flex items-center gap-2 active:scale-[0.98]"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    Invite Bot
+                    <span>Invite Bot</span>
                   </a>
                   <Link
                     href="/dashboard/tickets"
                     className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-semibold text-xs transition-colors border border-white/[0.06] flex items-center gap-2 active:scale-[0.98]"
                   >
-                    Dashboard
+                    <span>Dashboard</span>
                   </Link>
                 </div>
               </div>
 
               {/* Category tags */}
               <div className="pt-5 pb-4">
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Customizable Categories</p>
+                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Customizable Categories</p>
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     { name: "General Request", id: "1513336781263732836" },
@@ -313,10 +300,10 @@ export default function HomePage() {
                     >
                       <img
                         src={`https://cdn.discordapp.com/emojis/${cat.id}.png`}
-                        className="w-4 h-4"
+                        className="w-4 h-4 object-contain select-none"
                         alt=""
                       />
-                      {cat.name}
+                      <span>{cat.name}</span>
                     </div>
                   ))}
                 </div>
@@ -347,7 +334,7 @@ export default function HomePage() {
           </div>
 
           {/* ─── BOT 2: VOICE BOT ──────────────────────────────────── */}
-          <div className="rounded-2xl bg-surface border border-white/[0.06] hover:border-cyan-500/20 transition-colors overflow-hidden">
+          <div className="rounded-2xl bg-surface border border-white/[0.06] hover:border-cyan-500/30 transition-all duration-200 overflow-hidden">
             <div className="p-6 sm:p-8 lg:p-10">
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
                 <div className="flex items-start sm:items-center gap-4">
@@ -364,12 +351,12 @@ export default function HomePage() {
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/15">
                         Voice Channels
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/[0.04] text-slate-400 border border-white/[0.06]">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/[0.04] text-slate-300 border border-white/[0.06]">
                         Auto-Generator
                       </span>
                     </div>
                     <h3 className="text-xl sm:text-2xl font-black text-white">SyncInk Voice Bot</h3>
-                    <p className="text-sm text-slate-400 mt-1 max-w-lg leading-relaxed">
+                    <p className="text-sm text-slate-300 mt-1 max-w-lg leading-relaxed">
                       Dynamic temporary voice channel manager. Users click a generator hub to create a room with custom naming, user limits, and instant cleanup when empty.
                     </p>
                   </div>
@@ -383,13 +370,13 @@ export default function HomePage() {
                     className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition-colors flex items-center gap-2 active:scale-[0.98]"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    Invite Bot
+                    <span>Invite Bot</span>
                   </a>
                   <Link
                     href="/dashboard"
                     className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-semibold text-xs transition-colors border border-white/[0.06] flex items-center gap-2 active:scale-[0.98]"
                   >
-                    Dashboard
+                    <span>Dashboard</span>
                   </Link>
                 </div>
               </div>
@@ -418,7 +405,7 @@ export default function HomePage() {
           </div>
 
           {/* ─── BOT 3: SUPPORT & SECURITY BOT ─────────────────────── */}
-          <div className="rounded-2xl bg-surface border border-white/[0.06] hover:border-indigo-500/20 transition-colors overflow-hidden">
+          <div className="rounded-2xl bg-surface border border-white/[0.06] hover:border-indigo-500/30 transition-all duration-200 overflow-hidden">
             <div className="p-6 sm:p-8 lg:p-10">
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
                 <div className="flex items-start sm:items-center gap-4">
@@ -439,9 +426,9 @@ export default function HomePage() {
                       </span>
                     </div>
                     <h3 className="text-xl sm:text-2xl font-black text-white">Support &amp; Security Bot</h3>
-                    <p className="text-sm text-slate-400 mt-1 max-w-lg leading-relaxed">
+                    <p className="text-sm text-slate-300 mt-1 max-w-lg leading-relaxed">
                       Dedicated defense shield protecting the official SyncInk Support Server 24/7.
-                      Raid dampening, quarantine isolation, and real-time moderation telemetry.
+                      Raid dampening, quarantine isolation, and synchronized moderation logs.
                     </p>
                   </div>
                 </div>
@@ -452,9 +439,9 @@ export default function HomePage() {
                     className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors flex items-center gap-2 active:scale-[0.98]"
                   >
                     <Shield className="w-3.5 h-3.5" />
-                    Security Console
+                    <span>Security Console</span>
                   </Link>
-                  <span className="hidden sm:inline-flex h-10 px-4 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[11px] font-mono text-slate-500 items-center">
+                  <span className="hidden sm:inline-flex h-10 px-4 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[11px] font-mono text-slate-400 items-center">
                     ID: 1520457643842342912
                   </span>
                 </div>
@@ -475,8 +462,8 @@ export default function HomePage() {
                 />
                 <FeatureItem
                   icon={Activity}
-                  title="PostgreSQL Forensics"
-                  description="Moderation cases, strike tallies, and audit trails synchronized to a persistent database."
+                  title="Persistent Database Sync"
+                  description="Moderation cases, strike tallies, and audit trails synchronized to a high-availability PostgreSQL engine."
                   accentClass="bg-indigo-500/10 text-indigo-400"
                 />
               </div>
@@ -488,7 +475,7 @@ export default function HomePage() {
              ═════════════════════════════════════════════════════════ */}
           <div className="rounded-2xl bg-surface border border-white/[0.06] p-6 sm:p-10">
             <div className="text-center max-w-lg mx-auto mb-6">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">Help</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">Help</p>
               <h3 className="text-xl sm:text-2xl font-black text-white">
                 Frequently Asked Questions
               </h3>
@@ -514,7 +501,7 @@ export default function HomePage() {
                     >
                       <span className="pr-4">{faq.q}</span>
                       <ChevronDown
-                        className={`w-4 h-4 text-slate-500 shrink-0 transition-transform duration-200 ${
+                        className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
                           isOpen ? "rotate-180 text-blue-400" : ""
                         }`}
                       />
@@ -529,7 +516,7 @@ export default function HomePage() {
                           transition={transition.expand}
                           className="overflow-hidden"
                         >
-                          <div className="px-4 pb-4 text-sm text-slate-400 leading-relaxed border-t border-white/[0.04] pt-3">
+                          <div className="px-4 pb-4 text-sm text-slate-300 leading-relaxed border-t border-white/[0.04] pt-3">
                             {faq.a}
                           </div>
                         </motion.div>
@@ -552,7 +539,7 @@ export default function HomePage() {
               <h3 className="text-xl sm:text-2xl font-black text-white">
                 Join the Team
               </h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
+              <p className="text-sm text-slate-300 leading-relaxed">
                 Passionate about community moderation or bot development? Apply through
                 our portal with your Discord account in under two minutes.
               </p>
@@ -561,17 +548,17 @@ export default function HomePage() {
                   href="/apply"
                   className="h-10 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-colors flex items-center gap-2 active:scale-[0.98]"
                 >
-                  Apply Now
+                  <span>Apply Now</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
                 <a
                   href="https://discord.gg/PmxfJwmQuB"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 px-6 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-semibold text-sm transition-colors border border-white/[0.06] flex items-center gap-2 active:scale-[0.98]"
+                  className="h-10 px-6 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 font-semibold text-sm transition-colors border border-white/[0.06] flex items-center gap-2 active:scale-[0.98]"
                 >
-                  Discord Server
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Discord Server</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                 </a>
               </div>
             </div>

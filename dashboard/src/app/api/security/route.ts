@@ -8,7 +8,44 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   if (!checkRequestAuth(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Return public safe metrics for official support server
+    const clientIp = getClientIp(request);
+    const rateLimit = rateLimiter.check(`sec_pub_${clientIp}`, 60, 60 * 1000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    try {
+      const officialGuildId = "1520457643842342912";
+      const settings = await queryOne(
+        "SELECT raid_state FROM guild_settings WHERE guild_id = $1",
+        [officialGuildId]
+      ).catch(() => null);
+
+      const [jailRes, incidentRes, modRes] = await Promise.all([
+        queryOne("SELECT COUNT(*) as count FROM automod_jails WHERE guild_id = $1", [officialGuildId]).catch(() => ({ count: "0" })),
+        queryOne("SELECT COUNT(*) as count FROM security_incidents WHERE guild_id = $1", [officialGuildId]).catch(() => ({ count: "0" })),
+        queryOne("SELECT COUNT(*) as count FROM mod_cases WHERE guild_id = $1", [officialGuildId]).catch(() => ({ count: "0" })),
+      ]);
+
+      return NextResponse.json({
+        raidState: settings?.raid_state || "NORMAL",
+        stats: {
+          jailedCount: parseInt(jailRes?.count || "0", 10),
+          incidentCount: parseInt(incidentRes?.count || "0", 10),
+          modCasesCount: parseInt(modRes?.count || "0", 10),
+        },
+      });
+    } catch {
+      return NextResponse.json({
+        raidState: "NORMAL",
+        stats: {
+          jailedCount: 0,
+          incidentCount: 0,
+          modCasesCount: 0,
+        },
+      });
+    }
   }
 
   // Rate limiting (Item 6)
