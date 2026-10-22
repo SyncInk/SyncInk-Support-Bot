@@ -96,7 +96,7 @@ function getCountryFlag(input: string): string | null {
 
 /**
  * Interactive Discord Custom Emoji Component
- * Renders high-resolution custom emojis with smooth hover animation and drop shadow.
+ * Renders high-resolution custom emojis inside a polished, semi-transparent frosted box.
  */
 function DiscordEmoji({
   src,
@@ -106,22 +106,35 @@ function DiscordEmoji({
 }: {
   src: string;
   alt: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
 }) {
-  const sizeClasses = {
+  const boxClasses = {
+    xs: "w-5 h-5 rounded p-0.5",
+    sm: "w-6 h-6 rounded-md p-1",
+    md: "w-7 h-7 rounded-lg p-1",
+    lg: "w-9 h-9 rounded-xl p-1.5",
+    xl: "w-11 h-11 rounded-xl p-2",
+  };
+  const imgClasses = {
+    xs: "w-3.5 h-3.5",
     sm: "w-4 h-4",
     md: "w-5 h-5",
     lg: "w-6 h-6",
-    xl: "w-8 h-8",
+    xl: "w-7 h-7",
   };
   return (
-    <img
-      src={src}
-      alt={alt}
-      className={`inline-block object-contain align-middle drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-transform duration-200 hover:scale-125 select-none ${sizeClasses[size]} ${className}`}
-      loading="lazy"
-    />
+    <span
+      className={`inline-flex items-center justify-center bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] hover:border-white/[0.22] backdrop-blur-sm shadow-[0_2px_8px_rgba(0,0,0,0.35)] transition-all duration-200 hover:scale-105 shrink-0 align-middle ${boxClasses[size]} ${className}`}
+      title={alt}
+    >
+      <img
+        src={src}
+        alt={alt}
+        className={`object-contain select-none transition-transform duration-200 ${imgClasses[size]}`}
+        loading="lazy"
+      />
+    </span>
   );
 }
 

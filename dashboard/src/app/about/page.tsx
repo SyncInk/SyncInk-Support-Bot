@@ -390,7 +390,7 @@ export default function AboutPage() {
                     className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2"
                   >
                     <Shield className="w-3.5 h-3.5" />
-                    <span>Security Telemetry</span>
+                    <span>Security Console</span>
                   </Link>
                 </div>
               </div>
@@ -505,7 +505,7 @@ export default function AboutPage() {
               </div>
               <h3 className="text-sm font-bold text-white">Next.js 14 App Router</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Server-rendered console hosted on Vercel with edge caching, strict security headers, and instant real-time telemetry polling.
+                Server-rendered console hosted on Vercel with edge caching, strict security headers, and instant real-time data synchronization.
               </p>
             </div>
 

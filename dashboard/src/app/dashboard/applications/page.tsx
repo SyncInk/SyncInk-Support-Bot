@@ -33,6 +33,50 @@ import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
 import { DISCORD_CUSTOM_EMOJIS } from "@/lib/custom-emojis";
 
+/**
+ * Interactive Discord Custom Emoji Component
+ * Renders high-resolution custom emojis inside a polished, semi-transparent frosted box.
+ */
+function DiscordEmoji({
+  src,
+  alt,
+  size = "md",
+  className = "",
+}: {
+  src: string;
+  alt: string;
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  className?: string;
+}) {
+  const boxClasses = {
+    xs: "w-5 h-5 rounded p-0.5",
+    sm: "w-6 h-6 rounded-md p-1",
+    md: "w-7 h-7 rounded-lg p-1",
+    lg: "w-9 h-9 rounded-xl p-1.5",
+    xl: "w-11 h-11 rounded-xl p-2",
+  };
+  const imgClasses = {
+    xs: "w-3.5 h-3.5",
+    sm: "w-4 h-4",
+    md: "w-5 h-5",
+    lg: "w-6 h-6",
+    xl: "w-7 h-7",
+  };
+  return (
+    <span
+      className={`inline-flex items-center justify-center bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] hover:border-white/[0.22] backdrop-blur-sm shadow-[0_2px_8px_rgba(0,0,0,0.35)] transition-all duration-200 hover:scale-105 shrink-0 align-middle ${boxClasses[size]} ${className}`}
+      title={alt}
+    >
+      <img
+        src={src}
+        alt={alt}
+        className={`object-contain select-none transition-transform duration-200 ${imgClasses[size]}`}
+        loading="lazy"
+      />
+    </span>
+  );
+}
+
 interface ApplicationItem {
   id: number;
   guild_id: string;
@@ -636,8 +680,8 @@ export default function ApplicationsAdminPage() {
                       <span>•</span>
                       <span>Age: {selectedApp.age}</span>
                       <span>•</span>
-                      <span className="inline-flex items-center gap-1">
-                        <img src={DISCORD_CUSTOM_EMOJIS.region.url} alt="Region" className="w-3.5 h-3.5 inline-block object-contain" />
+                      <span className="inline-flex items-center gap-1.5">
+                        <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.region.url} alt="Region" size="xs" />
                         Region: {selectedApp.timezone}
                       </span>
                       <span>•</span>
@@ -676,8 +720,8 @@ export default function ApplicationsAdminPage() {
                     </div>
 
                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-violet-400 mb-1 flex items-center gap-1.5">
-                        <img src={DISCORD_CUSTOM_EMOJIS.experience.url} alt="Experience" className="w-4 h-4 object-contain inline-block" />
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-violet-400 mb-1 flex items-center gap-2">
+                        <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.experience.url} alt="Experience" size="sm" />
                         Prior Moderation Experience & Bot Knowledge
                       </div>
                       <div className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
@@ -686,8 +730,8 @@ export default function ApplicationsAdminPage() {
                     </div>
 
                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1.5">
-                        <img src={DISCORD_CUSTOM_EMOJIS.scenario1.url} alt="Spam Warning" className="w-4 h-4 object-contain inline-block" />
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-2">
+                        <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.scenario1.url} alt="Spam Warning" size="sm" />
                         Scenario 1: Mass Spam / Filter Bypass in Public Channel
                       </div>
                       <div className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
@@ -696,8 +740,8 @@ export default function ApplicationsAdminPage() {
                     </div>
 
                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1.5">
-                        <img src={DISCORD_CUSTOM_EMOJIS.scenario2.url} alt="Argument" className="w-4 h-4 object-contain inline-block" />
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-2">
+                        <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.scenario2.url} alt="Argument" size="sm" />
                         Scenario 2: Escalating Argument between Veteran Community Members
                       </div>
                       <div className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
@@ -706,8 +750,8 @@ export default function ApplicationsAdminPage() {
                     </div>
 
                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1.5">
-                        <img src={DISCORD_CUSTOM_EMOJIS.scenario3.url} alt="Admin" className="w-4 h-4 object-contain inline-block" />
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-2">
+                        <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.scenario3.url} alt="Admin" size="sm" />
                         Scenario 3: Member Publicly Accuses Staff of Bias or Power Abuse
                       </div>
                       <div className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
@@ -719,8 +763,8 @@ export default function ApplicationsAdminPage() {
                   /* DEVELOPER FORM RESPONSES */
                   <div className="space-y-4">
                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-1.5">
-                        <img src={DISCORD_CUSTOM_EMOJIS.developer.url} alt="Developer" className="w-4 h-4 object-contain inline-block" />
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-2">
+                        <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.developer.url} alt="Developer" size="sm" />
                         Primary Programming Languages & Frameworks
                       </div>
                       <div className="text-sm text-slate-200 font-mono">{selectedApp.languages || "None"}</div>
@@ -746,8 +790,8 @@ export default function ApplicationsAdminPage() {
                     </div>
 
                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-1.5">
-                        <img src={DISCORD_CUSTOM_EMOJIS.experience.url} alt="Experience" className="w-4 h-4 object-contain inline-block" />
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-2">
+                        <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.experience.url} alt="Experience" size="sm" />
                         Discord Bot Development Experience
                       </div>
                       <div className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
