@@ -14,24 +14,31 @@ const config: Config = {
         "surface-card": "#131826",
         "surface-hover": "#1c2336",
         border: "#232c40",
+        // Primary brand — Discord Blurple
         "brand-blue": "#5865F2",
-        "brand-purple": "#5865F2", // mapped to blue so existing classes still compile but appear blue
+        // Aliases kept so existing class references compile without breakage
+        "brand-purple": "#5865F2",
         "brand-violet": "#5865F2",
         "brand-indigo": "#6366f1",
         "brand-lilac": "#5865F2",
+        // Functional accents
         "brand-red": "#e74c3c",
         "brand-crimson": "#ff4757",
-        "brand-glow": "rgba(88, 101, 242, 0.2)",
         "accent-cyan": "#00d4ff",
         "accent-emerald": "#10b981",
         "accent-amber": "#f59e0b",
       },
       boxShadow: {
-        glow: "0 0 25px -4px rgba(157, 124, 255, 0.35)",
-        "glow-lg": "0 0 35px -5px rgba(139, 92, 246, 0.5)",
-        "glow-purple": "0 0 30px -4px rgba(157, 124, 255, 0.45)",
-        "glow-cyan": "0 0 20px -5px rgba(0, 210, 211, 0.3)",
-        "glow-green": "0 0 20px -5px rgba(16, 185, 129, 0.3)",
+        // Single restrained elevation shadow — replaces all glow variants
+        subtle: "0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3)",
+        card: "0 4px 16px -4px rgba(0, 0, 0, 0.5)",
+        elevated: "0 8px 30px -8px rgba(0, 0, 0, 0.6)",
+        // Keep legacy names so existing pages compile — point to subtle values
+        glow: "0 4px 16px -4px rgba(0, 0, 0, 0.5)",
+        "glow-lg": "0 8px 30px -8px rgba(0, 0, 0, 0.6)",
+        "glow-purple": "0 4px 16px -4px rgba(0, 0, 0, 0.5)",
+        "glow-cyan": "0 4px 16px -4px rgba(0, 0, 0, 0.5)",
+        "glow-green": "0 4px 16px -4px rgba(0, 0, 0, 0.5)",
       },
     },
   },
