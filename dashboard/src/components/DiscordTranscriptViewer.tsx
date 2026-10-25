@@ -392,7 +392,7 @@ export function DiscordTranscriptViewer({
         containerRef.current.scrollHeight - containerRef.current.scrollTop <=
         containerRef.current.clientHeight + 200;
       if (isAtBottom) {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        containerRef.current.scrollTop = containerRef.current.scrollHeight;
       }
     }
   }, [messages.length]);

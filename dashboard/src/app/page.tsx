@@ -94,6 +94,13 @@ export default function HomePage() {
     modCasesCount: 0,
   });
 
+  // Ensure the page always starts at the top on initial load (unless arriving via hash)
+  useEffect(() => {
+    if (typeof window !== "undefined" && !window.location.hash) {
+      window.scrollTo(0, 0);
+    }
+  }, []);
+
   // Real-time live status updates (polls every 8s)
   useEffect(() => {
     let mounted = true;

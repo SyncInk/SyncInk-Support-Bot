@@ -158,7 +158,7 @@ export default function OwnerControlPanel() {
   const [savingNotes, setSavingNotes] = useState(false);
   const [updatingReportStatus, setUpdatingReportStatus] = useState(false);
   const [copiedGuildId, setCopiedGuildId] = useState(false);
-  const chatBottomRef = useRef<HTMLDivElement>(null);
+  const adminChatContainerRef = useRef<HTMLDivElement>(null);
 
   // 1. Initial Load & Auth Check
   useEffect(() => {
@@ -282,12 +282,12 @@ export default function OwnerControlPanel() {
     return () => clearInterval(interval);
   }, [selectedReport]);
 
-  // Auto-scroll chat to bottom
+  // Auto-scroll chat strictly within the admin chat container (NEVER scroll the page window)
   useEffect(() => {
-    if (selectedReport && reportMessages.length > 0) {
-      chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (adminChatContainerRef.current && reportMessages.length > 0) {
+      adminChatContainerRef.current.scrollTop = adminChatContainerRef.current.scrollHeight;
     }
-  }, [reportMessages, selectedReport]);
+  }, [reportMessages.length]);
 
   // Send admin reply in chat
   async function handleSendAdminReply(e: React.FormEvent) {
@@ -1047,7 +1047,7 @@ export default function OwnerControlPanel() {
                     </div>
 
                     {/* Messages Body */}
-                    <div className="flex-1 p-4 overflow-y-auto space-y-3.5">
+                    <div ref={adminChatContainerRef} className="flex-1 p-4 overflow-y-auto space-y-3.5">
                       {messagesLoading && reportMessages.length === 0 ? (
                         <div className="h-full flex items-center justify-center text-slate-500 text-xs gap-2">
                           <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
@@ -1110,7 +1110,6 @@ export default function OwnerControlPanel() {
                           );
                         })
                       )}
-                      <div ref={chatBottomRef} />
                     </div>
 
                     {/* Chat Input Composer */}

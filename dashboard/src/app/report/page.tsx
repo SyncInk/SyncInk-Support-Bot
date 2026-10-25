@@ -141,7 +141,7 @@ export default function ReportPortalPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Form state
   const [botTarget, setBotTarget] = useState("SyncInk Ticket Bot");
@@ -159,6 +159,13 @@ export default function ReportPortalPage() {
   const [formSuccess, setFormSuccess] = useState("");
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Ensure the page stays at the top on initial mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && !window.location.hash) {
+      window.scrollTo(0, 0);
+    }
+  }, []);
 
   // 1. Fetch current user authentication
   useEffect(() => {
@@ -199,10 +206,12 @@ export default function ReportPortalPage() {
     return () => clearInterval(interval);
   }, [selectedReport]);
 
-  // Auto scroll messages to bottom
+  // Auto scroll messages strictly within the inner chat container (NEVER scroll the page window)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (chatContainerRef.current && messages.length > 0) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages.length]);
 
   async function fetchReports() {
     setReportsLoading(true);
@@ -908,7 +917,7 @@ export default function ReportPortalPage() {
                       </div>
 
                       {/* Chat Messages Body */}
-                      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                      <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
                         {/* Initial system banner */}
                         <div className="p-3 rounded-xl bg-blue-500/[0.05] border border-blue-500/15 text-xs text-slate-300 flex items-start gap-2.5">
                           <Sparkles className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
@@ -996,7 +1005,6 @@ export default function ReportPortalPage() {
                             );
                           })
                         )}
-                        <div ref={messagesEndRef} />
                       </div>
 
                       {/* Chat Input */}
