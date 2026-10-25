@@ -23,6 +23,7 @@ import {
   ExternalLink,
   ChevronRight,
   ClipboardList,
+  LifeBuoy,
 } from "lucide-react";
 
 interface AuthenticatedUser {
@@ -274,6 +275,14 @@ export function PublicNavbar() {
               {resourcesOpen && (
                 <div className="absolute left-0 mt-2 w-48 rounded-xl bg-[#0b0e1d] border border-white/10 shadow-2xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   <Link
+                    href="/report"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-amber-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  >
+                    <LifeBuoy className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Report &amp; Recovery Desk</span>
+                  </Link>
+
+                  <Link
                     href="/rules"
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors"
                   >
@@ -408,6 +417,14 @@ export function PublicNavbar() {
                     )}
 
                     <Link
+                      href="/report"
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-amber-300 hover:text-white hover:bg-white/[0.05] transition-colors"
+                    >
+                      <LifeBuoy className="w-3.5 h-3.5 text-amber-400" />
+                      <span>My Recovery Reports</span>
+                    </Link>
+
+                    <Link
                       href="/dashboard"
                       className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-white/[0.05] transition-colors"
                     >
@@ -499,6 +516,14 @@ export function PublicNavbar() {
             )}
 
             <div className="grid grid-cols-2 gap-1.5">
+              <Link
+                href="/report"
+                onClick={() => setMobileMenuOpen(false)}
+                className="col-span-2 px-3 py-2 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 flex items-center gap-2"
+              >
+                <LifeBuoy className="w-3.5 h-3.5 text-amber-400" />
+                <span>Data Loss &amp; Incident Report</span>
+              </Link>
               <Link
                 href="/#bots"
                 onClick={() => setMobileMenuOpen(false)}
