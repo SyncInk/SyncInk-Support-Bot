@@ -4,6 +4,10 @@ import { query, queryOne } from "@/lib/db";
 import { validateCsrfOrigin, redactSensitive, sanitizeInputText } from "@/lib/security";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 import { ensureReportsTables, isStaffOrAdmin } from "@/lib/reports";
+import {
+  sendSystemWebhookUpdate,
+  createDiscordReportThread,
+} from "@/lib/discord-desk";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +76,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, priority, admin_notes } = body;
+    const { status, priority, admin_notes, attachments_allowed } = body;
 
     const validStatuses = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"];
     const validPriorities = ["LOW", "NORMAL", "HIGH", "CRITICAL"];
@@ -95,6 +99,11 @@ export async function PATCH(
       updates.push(`admin_notes = $${values.length}`);
     }
 
+    if (typeof attachments_allowed === "boolean") {
+      values.push(attachments_allowed);
+      updates.push(`attachments_allowed = $${values.length}`);
+    }
+
     // Set assigned staff
     values.push(String(user.id));
     updates.push(`assigned_staff_id = $${values.length}`);
@@ -112,22 +121,77 @@ export async function PATCH(
       return NextResponse.json({ error: "Report not found" }, { status: 404 });
     }
 
-    // Log status change message in chat thread
-    if (status) {
+    // Ensure Discord thread exists
+    let threadId = updated.discord_thread_id;
+    if (!threadId) {
+      threadId = await createDiscordReportThread(updated).catch(() => null);
+    }
+
+    // Handle attachment permission toggle notification
+    if (typeof attachments_allowed === "boolean") {
+      const permissionText = attachments_allowed
+        ? `🔓 ${user.global_name || user.username} granted permission to upload screenshots & file attachments.`
+        : `🔒 ${user.global_name || user.username} locked file attachment uploads for this case.`;
+
       await query(
         `INSERT INTO report_chat_messages (
-          report_id, sender_id, sender_name, sender_avatar, sender_role, message, is_staff_reply
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          report_id, sender_id, sender_name, sender_avatar, sender_role, message, is_staff_reply, message_type
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
           reportId,
           String(user.id),
           user.global_name || user.username || "System",
           user.avatar || null,
           user.id === "930306512864280607" || user.isOwner ? "OWNER" : "ADMIN",
-          `Status updated to [${String(status).toUpperCase()}] by ${user.global_name || user.username}.`,
+          permissionText,
           true,
+          "SYSTEM",
         ]
-      );
+      ).catch(() => {});
+
+      if (threadId) {
+        sendSystemWebhookUpdate({
+          threadId,
+          title: attachments_allowed
+            ? "🔓 Attachment Permission Granted"
+            : "🔒 Attachment Permission Restricted",
+          description: permissionText,
+          color: attachments_allowed ? 0x10b981 : 0xef4444,
+        }).catch(() => {});
+      }
+    }
+
+    // Log status change message in chat thread & mirror to Discord
+    if (status) {
+      const statusText = `Status updated to [${String(status).toUpperCase()}] by ${user.global_name || user.username}.`;
+
+      await query(
+        `INSERT INTO report_chat_messages (
+          report_id, sender_id, sender_name, sender_avatar, sender_role, message, is_staff_reply, message_type
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          reportId,
+          String(user.id),
+          user.global_name || user.username || "System",
+          user.avatar || null,
+          user.id === "930306512864280607" || user.isOwner ? "OWNER" : "ADMIN",
+          statusText,
+          true,
+          "SYSTEM",
+        ]
+      ).catch(() => {});
+
+      if (threadId) {
+        const statusColor =
+          status === "RESOLVED" ? 0x10b981 : status === "CLOSED" ? 0x6b7280 : 0x3b82f6;
+
+        sendSystemWebhookUpdate({
+          threadId,
+          title: `⚡ Report Status Updated — [${String(status).toUpperCase()}]`,
+          description: `Case **#${updated.report_code}** marked as **${String(status).toUpperCase()}** by <@${user.id}>.`,
+          color: statusColor,
+        }).catch(() => {});
+      }
     }
 
     return NextResponse.json({

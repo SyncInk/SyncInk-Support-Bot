@@ -95,13 +95,26 @@ class VerificationView(discord.ui.View):
             await interaction.followup.send(embed=denied_embed, ephemeral=True)
             return
 
+        UPDATES_ROLE_ID = 1547084124983132240
+
         if role in interaction.user.roles:
+            updates_role = interaction.guild.get_role(UPDATES_ROLE_ID)
+            if updates_role and updates_role not in interaction.user.roles:
+                try:
+                    await interaction.user.add_roles(updates_role, reason="Verification: Assigned Updates role")
+                except Exception:
+                    pass
             embed = SyncInkEmbed(title="Already Verified", description="You already possess the verification role and full access to the server.")
             await interaction.followup.send(embed=embed, ephemeral=True)
             return
 
         try:
-            await interaction.user.add_roles(role, reason="Passed Verification Checkpoint")
+            roles_to_add = [role]
+            updates_role = interaction.guild.get_role(UPDATES_ROLE_ID)
+            if updates_role:
+                roles_to_add.append(updates_role)
+
+            await interaction.user.add_roles(*roles_to_add, reason="Passed Verification Checkpoint (Verified + Updates role)")
             if unverified_role in interaction.user.roles:
                 await interaction.user.remove_roles(unverified_role, reason="Passed Verification Checkpoint")
             
@@ -109,7 +122,8 @@ class VerificationView(discord.ui.View):
             success_embed.title = "Welcome to SyncInk!"
             success_embed.description = (
                 "• Your account has been successfully verified.\n"
-                "• You now have access to the entire server.\n"
+                "• You have been granted the Verified and Updates roles.\n"
+                "• You now have full access to the server.\n"
                 "• If you need assistance, visit the Support channels."
             )
             await interaction.followup.send(embed=success_embed, ephemeral=True)

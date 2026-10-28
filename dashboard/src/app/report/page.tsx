@@ -14,6 +14,10 @@ import {
   ChevronRight,
   ChevronDown,
   Lock,
+  Unlock,
+  Paperclip,
+  X,
+  ArrowLeft,
   Copy,
   Check,
   RefreshCw,
@@ -66,6 +70,8 @@ interface ReportItem {
   assigned_staff_id: string | null;
   assigned_staff_name: string | null;
   admin_notes: string | null;
+  discord_thread_id?: string | null;
+  attachments_allowed?: boolean;
   created_at: string;
   updated_at: string;
   message_count?: number;
@@ -81,6 +87,12 @@ interface ChatMessage {
   sender_role: "OWNER" | "ADMIN" | "STAFF" | "USER";
   message: string;
   is_staff_reply: boolean;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_type?: string | null;
+  attachment_size?: number | null;
+  discord_message_id?: string | null;
+  message_type?: string;
   created_at: string;
 }
 
@@ -141,6 +153,10 @@ export default function ReportPortalPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [userAttachment, setUserAttachment] = useState<File | null>(null);
+  const [uploadingUserAttachment, setUploadingUserAttachment] = useState(false);
+  const userFileInputRef = useRef<HTMLInputElement>(null);
+  const [mobileShowChat, setMobileShowChat] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Form state
@@ -201,7 +217,7 @@ export default function ReportPortalPage() {
     fetchMessages(selectedReport.id);
     const interval = setInterval(() => {
       fetchMessages(selectedReport.id, true);
-    }, 6000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [selectedReport]);
@@ -235,10 +251,21 @@ export default function ReportPortalPage() {
   async function fetchMessages(reportId: number, silent = false) {
     if (!silent) setMessagesLoading(true);
     try {
-      const res = await fetch(`/api/reports/${reportId}/messages`);
-      if (res.ok) {
-        const data = await res.json();
+      const [msgRes, repRes] = await Promise.all([
+        fetch(`/api/reports/${reportId}/messages`),
+        fetch(`/api/reports/${reportId}`),
+      ]);
+
+      if (msgRes.ok) {
+        const data = await msgRes.json();
         setMessages(data.messages || []);
+      }
+
+      if (repRes.ok) {
+        const repData = await repRes.json();
+        if (repData.report) {
+          setSelectedReport((prev) => (prev && prev.id === reportId ? { ...prev, ...repData.report } : prev));
+        }
       }
     } catch (err) {
       console.error("Failed to fetch messages:", err);
@@ -249,14 +276,48 @@ export default function ReportPortalPage() {
 
   async function handleSendMessage(e?: React.FormEvent) {
     if (e) e.preventDefault();
-    if (!selectedReport || !newMessage.trim() || sendingMessage) return;
+    if (!selectedReport || sendingMessage || uploadingUserAttachment) return;
+    if (!newMessage.trim() && !userAttachment) return;
 
     setSendingMessage(true);
     try {
+      let attachmentUrl: string | null = null;
+      let attachmentName: string | null = null;
+      let attachmentType: string | null = null;
+      let attachmentSize: number | null = null;
+
+      if (userAttachment) {
+        setUploadingUserAttachment(true);
+        const fd = new FormData();
+        fd.append("file", userAttachment);
+
+        const upRes = await fetch(`/api/reports/${selectedReport.id}/upload`, {
+          method: "POST",
+          body: fd,
+        });
+
+        if (!upRes.ok) {
+          const errData = await upRes.json().catch(() => ({}));
+          throw new Error(errData.error || "Attachment upload failed");
+        }
+
+        const upData = await upRes.json();
+        attachmentUrl = upData.url;
+        attachmentName = upData.name;
+        attachmentType = upData.type;
+        attachmentSize = upData.size;
+      }
+
       const res = await fetch(`/api/reports/${selectedReport.id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: newMessage.trim() }),
+        body: JSON.stringify({
+          message: newMessage.trim(),
+          attachment_url: attachmentUrl,
+          attachment_name: attachmentName,
+          attachment_type: attachmentType,
+          attachment_size: attachmentSize,
+        }),
       });
 
       if (res.ok) {
@@ -264,12 +325,18 @@ export default function ReportPortalPage() {
         if (data.message) {
           setMessages((prev) => [...prev, data.message]);
           setNewMessage("");
+          setUserAttachment(null);
+          if (userFileInputRef.current) userFileInputRef.current.value = "";
         }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || "Failed to send message");
       }
-    } catch (err) {
-      console.error("Failed to send message:", err);
+    } catch (err: any) {
+      alert(err?.message || "Failed to send message");
     } finally {
       setSendingMessage(false);
+      setUploadingUserAttachment(false);
     }
   }
 
@@ -486,7 +553,11 @@ export default function ReportPortalPage() {
                   {/* Bot Target Selector */}
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                      Target Bot System <span className="text-red-400">*</span>
+                      <span className="flex items-center gap-1.5">
+                        <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.developer.url} alt="Bot" size="xs" />
+                        <span>Target Bot System</span>
+                        <span className="text-red-400">*</span>
+                      </span>
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {[
@@ -515,7 +586,11 @@ export default function ReportPortalPage() {
                   {/* Incident Category */}
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                      Inquiry Category <span className="text-red-400">*</span>
+                      <span className="flex items-center gap-1.5">
+                        <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.scenario2.url} alt="Category" size="xs" />
+                        <span>Inquiry Category</span>
+                        <span className="text-red-400">*</span>
+                      </span>
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {[
@@ -544,7 +619,11 @@ export default function ReportPortalPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                        Discord Server ID (Guild ID) <span className="text-red-400">*</span>
+                        <span className="flex items-center gap-1.5">
+                          <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.region.url} alt="Server" size="xs" />
+                          <span>Discord Server ID (Guild ID)</span>
+                          <span className="text-red-400">*</span>
+                        </span>
                       </label>
                       <input
                         type="text"
@@ -574,7 +653,11 @@ export default function ReportPortalPage() {
                   {/* Subject Title */}
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                      Subject / Summary <span className="text-red-400">*</span>
+                      <span className="flex items-center gap-1.5">
+                        <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.scenario1.url} alt="Subject" size="xs" />
+                        <span>Subject / Summary</span>
+                        <span className="text-red-400">*</span>
+                      </span>
                     </label>
                     <input
                       type="text"
@@ -603,7 +686,10 @@ export default function ReportPortalPage() {
 
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                        Affected Channel / Thread IDs
+                        <span className="flex items-center gap-1.5">
+                          <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.scenario3.url} alt="Channels" size="xs" />
+                          <span>Affected Channels / Threads</span>
+                        </span>
                       </label>
                       <input
                         type="text"
@@ -618,7 +704,11 @@ export default function ReportPortalPage() {
                   {/* Detailed Description */}
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                      Detailed Incident Notes &amp; Data Lost <span className="text-red-400">*</span>
+                      <span className="flex items-center gap-1.5">
+                        <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.experience.url} alt="Notes" size="xs" />
+                        <span>Detailed Incident Notes &amp; Data Lost</span>
+                        <span className="text-red-400">*</span>
+                      </span>
                     </label>
                     <textarea
                       rows={5}
@@ -633,7 +723,10 @@ export default function ReportPortalPage() {
                   {/* Evidence / Transcript Hashes */}
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                      Transcript URLs, Screenshot Links, or Backup Hashes (Optional)
+                      <span className="flex items-center gap-1.5">
+                        <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.verified.url} alt="Evidence" size="xs" />
+                        <span>Evidence Links, Transcripts or Screenshot URLs</span>
+                      </span>
                     </label>
                     <input
                       type="text"
@@ -796,9 +889,13 @@ export default function ReportPortalPage() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[640px]">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[580px] lg:min-h-[640px]">
                 {/* Reports Selector Sidebar */}
-                <div className="lg:col-span-4 bg-[#0b0e1d] border border-white/[0.08] rounded-2xl p-4 flex flex-col h-[640px]">
+                <div
+                  className={`lg:col-span-4 bg-[#0b0e1d] border border-white/[0.08] rounded-2xl p-4 flex flex-col h-[580px] lg:h-[640px] ${
+                    mobileShowChat && selectedReport ? "hidden lg:flex" : "flex"
+                  }`}
+                >
                   <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-3">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
                       Your Inquiries ({reports.length})
@@ -826,7 +923,10 @@ export default function ReportPortalPage() {
                       return (
                         <button
                           key={rep.id}
-                          onClick={() => setSelectedReport(rep)}
+                          onClick={() => {
+                            setSelectedReport(rep);
+                            setMobileShowChat(true);
+                          }}
                           className={`w-full p-3.5 rounded-xl border text-left transition-all ${
                             isSelected
                               ? "bg-blue-600/15 border-blue-500 text-white shadow-sm"
@@ -837,7 +937,11 @@ export default function ReportPortalPage() {
                             <span className="font-mono text-xs font-bold text-blue-400">
                               #{rep.report_code}
                             </span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${statusColors[rep.status] || statusColors.OPEN}`}>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${
+                                statusColors[rep.status] || statusColors.OPEN
+                              }`}
+                            >
                               {rep.status.replace("_", " ")}
                             </span>
                           </div>
@@ -867,41 +971,70 @@ export default function ReportPortalPage() {
                 </div>
 
                 {/* Main Chat Workspace */}
-                <div className="lg:col-span-8 bg-[#0b0e1d] border border-white/[0.08] rounded-2xl flex flex-col h-[640px] overflow-hidden">
+                <div
+                  className={`lg:col-span-8 bg-[#0b0e1d] border border-white/[0.08] rounded-2xl flex flex-col h-[580px] lg:h-[640px] overflow-hidden ${
+                    !mobileShowChat && !selectedReport ? "hidden lg:flex" : "flex"
+                  }`}
+                >
                   {selectedReport ? (
                     <>
                       {/* Case Header */}
-                      <div className="p-4 sm:p-5 border-b border-white/[0.08] bg-white/[0.02] flex flex-wrap items-center justify-between gap-3 shrink-0">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-mono text-sm font-black text-blue-400">
-                              #{selectedReport.report_code}
-                            </span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                              {selectedReport.bot_target}
-                            </span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/[0.04] text-slate-300 border border-white/10">
-                              {selectedReport.category.replace("_", " ")}
-                            </span>
-                          </div>
-                          <h3 className="font-bold text-sm sm:text-base text-white">
-                            {selectedReport.title}
-                          </h3>
-                          <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 mt-1">
-                            <span>Guild ID: <code className="font-mono text-slate-300">{selectedReport.guild_id}</code></span>
-                            <span>•</span>
-                            <span>Reported by: <span className="text-slate-300">{selectedReport.username}</span></span>
-                            {selectedReport.assigned_staff_name && (
-                              <>
-                                <span>•</span>
-                                <span className="text-emerald-400 font-semibold">Assigned: {selectedReport.assigned_staff_name}</span>
-                              </>
-                            )}
+                      <div className="p-3.5 sm:p-5 border-b border-white/[0.08] bg-white/[0.02] flex flex-wrap items-center justify-between gap-3 shrink-0">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {/* Back Button on Mobile */}
+                          <button
+                            type="button"
+                            onClick={() => setMobileShowChat(false)}
+                            className="lg:hidden p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 transition-colors shrink-0"
+                            title="Back to inquiries"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                          </button>
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="font-mono text-sm font-black text-blue-400">
+                                #{selectedReport.report_code}
+                              </span>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                {selectedReport.bot_target}
+                              </span>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/[0.04] text-slate-300 border border-white/10">
+                                {selectedReport.category.replace("_", " ")}
+                              </span>
+                              {selectedReport.attachments_allowed ? (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                                  <Unlock className="w-2.5 h-2.5" />
+                                  <span>Uploads Active</span>
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/[0.03] text-slate-400 border border-white/5 flex items-center gap-1">
+                                  <Lock className="w-2.5 h-2.5 text-slate-500" />
+                                  <span>Uploads Locked</span>
+                                </span>
+                              )}
+                            </div>
+                            <h3 className="font-bold text-xs sm:text-base text-white truncate">
+                              {selectedReport.title}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                              <span>
+                                Server ID: <code className="font-mono text-slate-300">{selectedReport.guild_id}</code>
+                              </span>
+                              {selectedReport.assigned_staff_name && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-emerald-400 font-semibold">
+                                    Assigned: {selectedReport.assigned_staff_name}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
 
                         {/* Status badge */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           <span
                             className={`px-3 py-1 rounded-xl text-xs font-bold border uppercase tracking-wider ${
                               selectedReport.status === "RESOLVED"
@@ -917,28 +1050,43 @@ export default function ReportPortalPage() {
                       </div>
 
                       {/* Chat Messages Body */}
-                      <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                      <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-3.5">
                         {/* Initial system banner */}
                         <div className="p-3 rounded-xl bg-blue-500/[0.05] border border-blue-500/15 text-xs text-slate-300 flex items-start gap-2.5">
                           <Sparkles className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
                           <div>
-                            <span className="font-bold text-white">Recovery Channel Initialized:</span> An engineer will inspect database backups, velocity logs, and transcripts matching Guild <code className="font-mono text-blue-300">{selectedReport.guild_id}</code>. Please keep all communication inside this thread.
+                            <span className="font-bold text-white">Live Support Mirror:</span> Messages sent here mirror directly to our Discord Support staff thread. If screenshots or database logs are requested, staff can grant attachment upload access inside this desk.
                           </div>
                         </div>
 
                         {messagesLoading && messages.length === 0 ? (
-                          <div className="text-center py-10 text-xs text-slate-500">
-                            Loading case history...
+                          <div className="text-center py-10 text-xs text-slate-500 flex items-center justify-center gap-2">
+                            <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
+                            <span>Loading case conversation...</span>
                           </div>
                         ) : (
                           messages.map((msg) => {
+                            if (msg.message_type === "SYSTEM") {
+                              return (
+                                <div key={msg.id} className="flex justify-center my-1.5">
+                                  <div className="px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-[11px] text-slate-300 flex items-center gap-2 shadow-sm">
+                                    <Sparkles className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                                    <span>{msg.message}</span>
+                                    <span className="text-slate-500 text-[10px] ml-1">
+                                      {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            }
+
                             const isStaffMsg = msg.is_staff_reply || msg.sender_role !== "USER";
                             const isMe = String(msg.sender_id) === String(currentUser?.id);
 
                             return (
                               <div
                                 key={msg.id}
-                                className={`flex items-start gap-3 ${isMe ? "justify-end" : "justify-start"}`}
+                                className={`flex items-start gap-2.5 sm:gap-3 ${isMe ? "justify-end" : "justify-start"}`}
                               >
                                 {!isMe && (
                                   <img
@@ -948,22 +1096,26 @@ export default function ReportPortalPage() {
                                         : `https://cdn.discordapp.com/embed/avatars/0.png`
                                     }
                                     alt={msg.sender_name}
-                                    className="w-8 h-8 rounded-lg object-cover border border-white/10 shrink-0 mt-1"
+                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover border border-white/10 shrink-0 mt-1"
                                   />
                                 )}
 
-                                <div className={`max-w-[80%] ${isMe ? "items-end" : "items-start"}`}>
+                                <div className={`max-w-[88%] sm:max-w-[78%] ${isMe ? "items-end" : "items-start"}`}>
                                   {/* Sender info */}
-                                  <div className={`flex items-center gap-1.5 mb-1 text-[11px] ${isMe ? "justify-end" : "justify-start"}`}>
-                                    <span className="font-bold text-white">{msg.sender_name}</span>
+                                  <div
+                                    className={`flex items-center gap-1.5 mb-1 text-[11px] ${
+                                      isMe ? "justify-end" : "justify-start"
+                                    }`}
+                                  >
+                                    <span className="font-bold text-white text-[11px]">{msg.sender_name}</span>
                                     {msg.sender_role === "OWNER" && (
                                       <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                        Owner
+                                        👑 Owner
                                       </span>
                                     )}
                                     {msg.sender_role === "ADMIN" && (
                                       <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase tracking-wider bg-red-500/20 text-red-300 border border-red-500/30">
-                                        Admin
+                                        🛡️ Admin
                                       </span>
                                     )}
                                     {msg.sender_role === "STAFF" && (
@@ -972,13 +1124,16 @@ export default function ReportPortalPage() {
                                       </span>
                                     )}
                                     <span className="text-slate-500 text-[10px]">
-                                      {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                      {new Date(msg.created_at).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
                                     </span>
                                   </div>
 
                                   {/* Bubble */}
                                   <div
-                                    className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
+                                    className={`p-3 sm:p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
                                       isMe
                                         ? "bg-blue-600 text-white rounded-tr-none shadow-md"
                                         : isStaffMsg
@@ -986,7 +1141,49 @@ export default function ReportPortalPage() {
                                         : "bg-white/[0.04] border border-white/[0.08] text-slate-200 rounded-tl-none"
                                     }`}
                                   >
-                                    {msg.message}
+                                    {msg.message && <div>{msg.message}</div>}
+
+                                    {/* Attachment rendering */}
+                                    {msg.attachment_url && (
+                                      <div className="mt-2.5 pt-2 border-t border-white/[0.1]">
+                                        {/\.(png|jpe?g|gif|webp)(\?.*)?$/i.test(msg.attachment_url) ? (
+                                          <a
+                                            href={msg.attachment_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block group"
+                                          >
+                                            <img
+                                              src={msg.attachment_url}
+                                              alt={msg.attachment_name || "Attachment"}
+                                              className="max-h-56 max-w-full rounded-xl object-contain bg-black/40 border border-white/15 group-hover:opacity-90 transition-opacity"
+                                            />
+                                            <div className="flex items-center gap-1 text-[10px] text-slate-300 mt-1 group-hover:underline">
+                                              <ExternalLink className="w-3 h-3" />
+                                              <span className="truncate">{msg.attachment_name || "View image"}</span>
+                                            </div>
+                                          </a>
+                                        ) : (
+                                          <a
+                                            href={msg.attachment_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            download={msg.attachment_name || "download"}
+                                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/40 hover:bg-black/60 border border-white/10 text-cyan-300 text-xs font-mono transition-colors"
+                                          >
+                                            <Paperclip className="w-3.5 h-3.5 shrink-0" />
+                                            <span className="truncate max-w-[180px]">
+                                              {msg.attachment_name || "Download File"}
+                                            </span>
+                                            {msg.attachment_size && (
+                                              <span className="text-[10px] text-slate-400">
+                                                ({Math.round(msg.attachment_size / 1024)} KB)
+                                              </span>
+                                            )}
+                                          </a>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
 
@@ -998,7 +1195,7 @@ export default function ReportPortalPage() {
                                         : `https://cdn.discordapp.com/embed/avatars/0.png`
                                     }
                                     alt="You"
-                                    className="w-8 h-8 rounded-lg object-cover border border-white/10 shrink-0 mt-1"
+                                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover border border-white/10 shrink-0 mt-1"
                                   />
                                 )}
                               </div>
@@ -1007,27 +1204,104 @@ export default function ReportPortalPage() {
                         )}
                       </div>
 
-                      {/* Chat Input */}
+                      {/* Chat Input & Composer */}
                       <form
                         onSubmit={handleSendMessage}
-                        className="p-3 sm:p-4 border-t border-white/[0.08] bg-[#070914] flex items-center gap-2 shrink-0"
+                        className="p-3 sm:p-4 border-t border-white/[0.08] bg-[#070914] flex flex-col gap-2 shrink-0"
                       >
-                        <input
-                          type="text"
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          placeholder="Type recovery response, transcript ID, or inquiry... (Press Enter)"
-                          disabled={sendingMessage}
-                          className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                        />
-                        <button
-                          type="submit"
-                          disabled={sendingMessage || !newMessage.trim()}
-                          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 shadow-md shrink-0"
-                        >
-                          <Send className="w-4 h-4" />
-                          <span className="hidden sm:inline">Send</span>
-                        </button>
+                        {/* Selected file preview pill */}
+                        {userAttachment && (
+                          <div className="px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-between text-xs text-blue-200">
+                            <div className="flex items-center gap-2 truncate">
+                              <Paperclip className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                              <span className="truncate font-medium">{userAttachment.name}</span>
+                              <span className="text-[10px] text-blue-300/70 shrink-0">
+                                ({Math.round(userAttachment.size / 1024)} KB)
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUserAttachment(null);
+                                if (userFileInputRef.current) userFileInputRef.current.value = "";
+                              }}
+                              className="p-1 hover:bg-blue-500/20 rounded text-blue-300 transition-colors ml-2"
+                              title="Remove attachment"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          {/* Hidden File Input */}
+                          <input
+                            type="file"
+                            ref={userFileInputRef}
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                setUserAttachment(e.target.files[0]);
+                              }
+                            }}
+                            className="hidden"
+                            disabled={!selectedReport.attachments_allowed}
+                          />
+
+                          {/* Paperclip Button with Security Permission State */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedReport.attachments_allowed) {
+                                userFileInputRef.current?.click();
+                              }
+                            }}
+                            disabled={!selectedReport.attachments_allowed || sendingMessage || uploadingUserAttachment}
+                            className={`p-2.5 rounded-xl transition-all border shrink-0 flex items-center justify-center ${
+                              selectedReport.attachments_allowed
+                                ? "bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border-blue-500/40 cursor-pointer shadow-[0_0_12px_rgba(59,130,246,0.2)]"
+                                : "bg-white/[0.02] text-slate-600 border-white/5 cursor-not-allowed opacity-60"
+                            }`}
+                            title={
+                              selectedReport.attachments_allowed
+                                ? "Attach screenshot, logs, or file (Permission granted)"
+                                : "Attachment uploads locked by support staff. Ask in chat to enable."
+                            }
+                          >
+                            {selectedReport.attachments_allowed ? (
+                              <Paperclip className="w-4 h-4 text-blue-400" />
+                            ) : (
+                              <Lock className="w-4 h-4 text-slate-500" />
+                            )}
+                          </button>
+
+                          <input
+                            type="text"
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            placeholder={
+                              selectedReport.attachments_allowed
+                                ? "Type recovery reply or attach files... (Press Enter)"
+                                : "Type recovery inquiry or statement... (Press Enter)"
+                            }
+                            disabled={sendingMessage || uploadingUserAttachment}
+                            className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                          />
+
+                          <button
+                            type="submit"
+                            disabled={
+                              sendingMessage ||
+                              uploadingUserAttachment ||
+                              (!newMessage.trim() && !userAttachment)
+                            }
+                            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 shadow-md shrink-0"
+                          >
+                            <Send className="w-4 h-4" />
+                            <span className="hidden sm:inline">
+                              {uploadingUserAttachment ? "Uploading..." : sendingMessage ? "Sending..." : "Send"}
+                            </span>
+                          </button>
+                        </div>
                       </form>
                     </>
                   ) : (

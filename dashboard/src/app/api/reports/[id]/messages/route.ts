@@ -4,6 +4,10 @@ import { query, queryOne } from "@/lib/db";
 import { validateCsrfOrigin, redactSensitive, sanitizeInputText } from "@/lib/security";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 import { ensureReportsTables, isStaffOrAdmin } from "@/lib/reports";
+import {
+  createDiscordReportThread,
+  sendDittoWebhookMessage,
+} from "@/lib/discord-desk";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +47,8 @@ export async function GET(
     }
 
     const messages = await query(
-      `SELECT id, report_id, sender_id, sender_name, sender_avatar, sender_role, message, is_staff_reply, created_at
+      `SELECT id, report_id, sender_id, sender_name, sender_avatar, sender_role, message, is_staff_reply,
+              attachment_url, attachment_name, attachment_type, attachment_size, discord_message_id, message_type, created_at
        FROM report_chat_messages
        WHERE report_id = $1
        ORDER BY created_at ASC`,
@@ -86,7 +91,7 @@ export async function POST(
     }
 
     const report = await queryOne(
-      "SELECT id, user_id, status, assigned_staff_name FROM data_loss_reports WHERE id = $1",
+      "SELECT * FROM data_loss_reports WHERE id = $1",
       [reportId]
     );
 
@@ -103,12 +108,26 @@ export async function POST(
     }
 
     const body = await request.json();
-    const cleanMessage = sanitizeInputText(body.message || "", 2000);
-    if (!cleanMessage || cleanMessage.trim().length === 0) {
-      return NextResponse.json({ error: "Message cannot be empty." }, { status: 400 });
+    const rawMessage = body.message || "";
+    const cleanMessage = sanitizeInputText(rawMessage, 2000);
+    const attachmentUrl = body.attachment_url ? String(body.attachment_url).trim() : null;
+    const attachmentName = body.attachment_name ? sanitizeInputText(String(body.attachment_name), 255) : null;
+    const attachmentType = body.attachment_type ? sanitizeInputText(String(body.attachment_type), 64) : null;
+    const attachmentSize = typeof body.attachment_size === "number" ? Math.round(body.attachment_size) : null;
+
+    // Security Check: Non-staff users must have permission from admin to attach files
+    if (attachmentUrl && !staff && !report.attachments_allowed) {
+      return NextResponse.json(
+        { error: "Attachment permissions are currently locked for this report. Please ask support staff to enable attachment uploads." },
+        { status: 403 }
+      );
     }
 
-    let role = "USER";
+    if ((!cleanMessage || cleanMessage.trim().length === 0) && !attachmentUrl) {
+      return NextResponse.json({ error: "Message or attachment is required." }, { status: 400 });
+    }
+
+    let role: "OWNER" | "ADMIN" | "STAFF" | "USER" = "USER";
     if (user.id === "930306512864280607" || user.isOwner) {
       role = "OWNER";
     } else if (user.isAdmin) {
@@ -121,17 +140,23 @@ export async function POST(
 
     const newMessage = await queryOne(
       `INSERT INTO report_chat_messages (
-        report_id, sender_id, sender_name, sender_avatar, sender_role, message, is_staff_reply
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, report_id, sender_id, sender_name, sender_avatar, sender_role, message, is_staff_reply, created_at`,
+        report_id, sender_id, sender_name, sender_avatar, sender_role, message, is_staff_reply,
+        attachment_url, attachment_name, attachment_type, attachment_size, message_type
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'CHAT')
+      RETURNING id, report_id, sender_id, sender_name, sender_avatar, sender_role, message, is_staff_reply,
+                attachment_url, attachment_name, attachment_type, attachment_size, discord_message_id, message_type, created_at`,
       [
         reportId,
         String(user.id),
         user.global_name || user.username || "Member",
         user.avatar || null,
         role,
-        cleanMessage,
+        cleanMessage || (attachmentUrl ? "(Sent an attachment)" : ""),
         isStaffReply,
+        attachmentUrl,
+        attachmentName,
+        attachmentType,
+        attachmentSize,
       ]
     );
 
@@ -151,6 +176,37 @@ export async function POST(
         `UPDATE data_loss_reports SET updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
         [reportId]
       );
+    }
+
+    // Mirror to Discord thread via Ditto Webhook
+    try {
+      let threadId = report.discord_thread_id;
+      if (!threadId) {
+        threadId = await createDiscordReportThread(report);
+      }
+
+      if (threadId) {
+        const discordMsgId = await sendDittoWebhookMessage({
+          threadId,
+          senderId: String(user.id),
+          senderName: user.global_name || user.username || "Member",
+          senderAvatar: user.avatar || null,
+          message: cleanMessage,
+          role,
+          attachmentUrl,
+          attachmentName,
+        });
+
+        if (discordMsgId && newMessage?.id) {
+          await query(
+            "UPDATE report_chat_messages SET discord_message_id = $1 WHERE id = $2",
+            [discordMsgId, newMessage.id]
+          ).catch(() => {});
+          newMessage.discord_message_id = discordMsgId;
+        }
+      }
+    } catch (dErr: any) {
+      console.warn("Discord thread message mirror error:", redactSensitive(dErr?.message || ""));
     }
 
     return NextResponse.json({ success: true, message: newMessage });

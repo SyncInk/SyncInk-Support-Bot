@@ -4,6 +4,11 @@ import { query, queryOne } from "@/lib/db";
 import { validateCsrfOrigin, redactSensitive, sanitizeInputText } from "@/lib/security";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 import { ensureReportsTables, isStaffOrAdmin } from "@/lib/reports";
+import {
+  createDiscordReportThread,
+  sendDittoWebhookMessage,
+  reconcileExistingOpenReports,
+} from "@/lib/discord-desk";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +37,13 @@ export async function GET(request: Request) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10)));
 
     const staffMode = isStaffOrAdmin(user);
+
+    // If staff accesses the list, asynchronously ensure any unthreaded open report gets a thread
+    if (staffMode) {
+      reconcileExistingOpenReports().catch((err: any) => {
+        console.warn("Background report reconciliation error:", redactSensitive(err?.message || ""));
+      });
+    }
 
     let sql = `
       SELECT r.*,
@@ -247,10 +259,11 @@ export async function POST(request: Request) {
       ? user.id === "930306512864280607" || user.isOwner ? "OWNER" : "ADMIN"
       : "USER";
 
-    await query(
+    const initialMsg = await queryOne(
       `INSERT INTO report_chat_messages (
         report_id, sender_id, sender_name, sender_avatar, sender_role, message, is_staff_reply
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id`,
       [
         newReport.id,
         String(user.id),
@@ -261,6 +274,32 @@ export async function POST(request: Request) {
         false,
       ]
     );
+
+    // Create Discord Thread on channel 1541796896199417906 & mirror initial statement
+    try {
+      const threadId = await createDiscordReportThread(newReport);
+      if (threadId) {
+        newReport.discord_thread_id = threadId;
+
+        const discordMsgId = await sendDittoWebhookMessage({
+          threadId,
+          senderId: String(user.id),
+          senderName: user.global_name || user.username || "Discord Member",
+          senderAvatar: user.avatar || null,
+          message: cleanDescription,
+          role: userRole,
+        });
+
+        if (discordMsgId && initialMsg?.id) {
+          await query(
+            "UPDATE report_chat_messages SET discord_message_id = $1 WHERE id = $2",
+            [discordMsgId, initialMsg.id]
+          ).catch(() => {});
+        }
+      }
+    } catch (dErr: any) {
+      console.warn("Discord thread mirror warning on creation:", redactSensitive(dErr?.message || ""));
+    }
 
     return NextResponse.json({
       success: true,

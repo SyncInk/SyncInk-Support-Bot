@@ -12,6 +12,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   Lock,
+  Unlock,
+  Paperclip,
+  Sparkles,
   Plus,
   Trash2,
   RefreshCw,
@@ -84,6 +87,8 @@ interface AdminReportItem {
   assigned_staff_id: string | null;
   assigned_staff_name: string | null;
   admin_notes: string | null;
+  discord_thread_id?: string | null;
+  attachments_allowed?: boolean;
   created_at: string;
   updated_at: string;
   message_count?: number;
@@ -99,6 +104,12 @@ interface AdminChatMessage {
   sender_role: "OWNER" | "ADMIN" | "STAFF" | "USER";
   message: string;
   is_staff_reply: boolean;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_type?: string | null;
+  attachment_size?: number | null;
+  discord_message_id?: string | null;
+  message_type?: string;
   created_at: string;
 }
 
@@ -158,6 +169,9 @@ export default function OwnerControlPanel() {
   const [savingNotes, setSavingNotes] = useState(false);
   const [updatingReportStatus, setUpdatingReportStatus] = useState(false);
   const [copiedGuildId, setCopiedGuildId] = useState(false);
+  const [adminAttachment, setAdminAttachment] = useState<File | null>(null);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const adminFileInputRef = useRef<HTMLInputElement>(null);
   const adminChatContainerRef = useRef<HTMLDivElement>(null);
 
   // 1. Initial Load & Auth Check
@@ -289,32 +303,92 @@ export default function OwnerControlPanel() {
     }
   }, [reportMessages.length]);
 
-  // Send admin reply in chat
+  // Toggle attachment permission for this case
+  async function handleToggleAttachments(reportId: number, allowed: boolean) {
+    try {
+      const res = await fetch(`/api/reports/${reportId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attachments_allowed: allowed }),
+      });
+
+      if (res.ok) {
+        if (selectedReport && selectedReport.id === reportId) {
+          setSelectedReport((prev) => (prev ? { ...prev, attachments_allowed: allowed } : null));
+          await fetchReportMessages(reportId, true);
+        }
+        fetchReports(false);
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to update attachment permission");
+      }
+    } catch {
+      alert("Error updating attachment permission");
+    }
+  }
+
+  // Send admin reply in chat with optional attachment
   async function handleSendAdminReply(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedReport || !chatInput.trim() || sendingChat) return;
+    if (!selectedReport || sendingChat) return;
+    if (!chatInput.trim() && !adminAttachment) return;
 
     setSendingChat(true);
-    const content = chatInput.trim();
     try {
+      let attachmentUrl: string | null = null;
+      let attachmentName: string | null = null;
+      let attachmentType: string | null = null;
+      let attachmentSize: number | null = null;
+
+      if (adminAttachment) {
+        setUploadingAttachment(true);
+        const fd = new FormData();
+        fd.append("file", adminAttachment);
+
+        const upRes = await fetch(`/api/reports/${selectedReport.id}/upload`, {
+          method: "POST",
+          body: fd,
+        });
+
+        if (!upRes.ok) {
+          const errData = await upRes.json().catch(() => ({}));
+          throw new Error(errData.error || "Failed to upload file");
+        }
+
+        const upData = await upRes.json();
+        attachmentUrl = upData.url;
+        attachmentName = upData.name;
+        attachmentType = upData.type;
+        attachmentSize = upData.size;
+      }
+
       const res = await fetch(`/api/reports/${selectedReport.id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: content }),
+        body: JSON.stringify({
+          message: chatInput.trim(),
+          attachment_url: attachmentUrl,
+          attachment_name: attachmentName,
+          attachment_type: attachmentType,
+          attachment_size: attachmentSize,
+        }),
       });
 
       if (res.ok) {
         setChatInput("");
+        setAdminAttachment(null);
+        if (adminFileInputRef.current) adminFileInputRef.current.value = "";
         await fetchReportMessages(selectedReport.id, true);
         fetchReports(false);
       } else {
         const err = await res.json();
         alert(err.error || "Failed to send message");
       }
-    } catch {
-      alert("Network error sending message");
+    } catch (err: any) {
+      alert(err?.message || "Network error sending message");
     } finally {
       setSendingChat(false);
+      setUploadingAttachment(false);
     }
   }
 
@@ -895,6 +969,51 @@ export default function OwnerControlPanel() {
                           Reopen Case
                         </button>
                       </div>
+
+                      {/* Desk Permissions & Mirror Integration */}
+                      <div className="pt-3 border-t border-white/[0.06] space-y-2">
+                        <div className="text-[11px] font-semibold text-slate-400">Desk Permission &amp; Mirror:</div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleAttachments(selectedReport.id, !selectedReport.attachments_allowed)}
+                            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
+                              selectedReport.attachments_allowed
+                                ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30"
+                                : "bg-red-500/15 text-red-300 border-red-500/30 hover:bg-red-500/25"
+                            }`}
+                            title={
+                              selectedReport.attachments_allowed
+                                ? "Revoke submitter's permission to upload attachments"
+                                : "Permit submitter to upload screenshots and files"
+                            }
+                          >
+                            {selectedReport.attachments_allowed ? (
+                              <>
+                                <Unlock className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>Attachments: ALLOWED</span>
+                              </>
+                            ) : (
+                              <>
+                                <Lock className="w-3.5 h-3.5 text-red-400" />
+                                <span>Attachments: LOCKED</span>
+                              </>
+                            )}
+                          </button>
+
+                          {selectedReport.discord_thread_id && (
+                            <a
+                              href={`https://discord.com/channels/1520457643842342912/${selectedReport.discord_thread_id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-2 rounded-xl bg-[#5865F2]/20 hover:bg-[#5865F2]/30 text-[#8ea1e1] border border-[#5865F2]/40 text-xs font-bold transition-all flex items-center gap-1.5"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>Open Discord Thread ↗</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Incident Details Card */}
@@ -1060,6 +1179,20 @@ export default function OwnerControlPanel() {
                         </div>
                       ) : (
                         reportMessages.map((msg) => {
+                          if (msg.message_type === "SYSTEM") {
+                            return (
+                              <div key={msg.id} className="flex justify-center my-1.5">
+                                <div className="px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-[11px] text-slate-300 flex items-center gap-2 shadow-sm">
+                                  <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                  <span>{msg.message}</span>
+                                  <span className="text-slate-500 text-[10px] ml-1">
+                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+
                           const isStaff = msg.is_staff_reply || msg.sender_role === "OWNER" || msg.sender_role === "ADMIN" || msg.sender_role === "STAFF";
 
                           return (
@@ -1102,9 +1235,50 @@ export default function OwnerControlPanel() {
                                   </span>
                                 </div>
 
-                                <p className="whitespace-pre-wrap leading-relaxed text-xs">
-                                  {msg.message}
-                                </p>
+                                {msg.message && (
+                                  <p className="whitespace-pre-wrap leading-relaxed text-xs">
+                                    {msg.message}
+                                  </p>
+                                )}
+
+                                {msg.attachment_url && (
+                                  <div className="mt-2.5 pt-2 border-t border-white/[0.08]">
+                                    {/\.(png|jpe?g|gif|webp)(\?.*)?$/i.test(msg.attachment_url) ? (
+                                      <a
+                                        href={msg.attachment_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block group"
+                                      >
+                                        <img
+                                          src={msg.attachment_url}
+                                          alt={msg.attachment_name || "Attachment"}
+                                          className="max-h-56 max-w-full rounded-xl object-contain bg-black/40 border border-white/15 group-hover:opacity-90 transition-opacity"
+                                        />
+                                        <div className="flex items-center gap-1 text-[10px] text-slate-400 mt-1 group-hover:text-blue-300">
+                                          <ExternalLink className="w-3 h-3" />
+                                          <span className="truncate">{msg.attachment_name || "View image"}</span>
+                                        </div>
+                                      </a>
+                                    ) : (
+                                      <a
+                                        href={msg.attachment_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        download={msg.attachment_name || "download"}
+                                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/40 hover:bg-black/60 border border-white/10 text-cyan-300 text-xs font-mono transition-colors"
+                                      >
+                                        <Paperclip className="w-3.5 h-3.5 shrink-0" />
+                                        <span className="truncate max-w-[200px]">{msg.attachment_name || "Download File"}</span>
+                                        {msg.attachment_size && (
+                                          <span className="text-[10px] text-slate-400">
+                                            ({Math.round(msg.attachment_size / 1024)} KB)
+                                          </span>
+                                        )}
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
@@ -1115,32 +1289,81 @@ export default function OwnerControlPanel() {
                     {/* Chat Input Composer */}
                     <form
                       onSubmit={handleSendAdminReply}
-                      className="p-3.5 bg-[#090c1a] border-t border-white/[0.08] flex items-end gap-2"
+                      className="p-3.5 bg-[#090c1a] border-t border-white/[0.08] flex flex-col gap-2"
                     >
-                      <div className="flex-1">
-                        <textarea
-                          rows={2}
-                          value={chatInput}
-                          onChange={(e) => setChatInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              handleSendAdminReply(e);
+                      {/* Attachment preview chip if selected */}
+                      {adminAttachment && (
+                        <div className="px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-between text-xs text-amber-200">
+                          <div className="flex items-center gap-2 truncate">
+                            <Paperclip className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <span className="truncate font-medium">{adminAttachment.name}</span>
+                            <span className="text-[10px] text-amber-300/70 shrink-0">
+                              ({Math.round(adminAttachment.size / 1024)} KB)
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAdminAttachment(null);
+                              if (adminFileInputRef.current) adminFileInputRef.current.value = "";
+                            }}
+                            className="p-1 hover:bg-amber-500/20 rounded text-amber-300 transition-colors ml-2"
+                            title="Remove attachment"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="flex items-end gap-2">
+                        {/* Hidden file input */}
+                        <input
+                          type="file"
+                          ref={adminFileInputRef}
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              setAdminAttachment(e.target.files[0]);
                             }
                           }}
-                          placeholder="Type official reply or transcript recovery link (Enter to send)..."
-                          className="w-full bg-[#060812] border border-white/10 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 resize-none"
+                          className="hidden"
                         />
-                      </div>
 
-                      <button
-                        type="submit"
-                        disabled={sendingChat || !chatInput.trim()}
-                        className="px-4 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(245,158,11,0.3)] disabled:opacity-50 shrink-0"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>{sendingChat ? "Sending..." : "Reply"}</span>
-                      </button>
+                        {/* Paperclip Button */}
+                        <button
+                          type="button"
+                          onClick={() => adminFileInputRef.current?.click()}
+                          disabled={sendingChat || uploadingAttachment}
+                          className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white transition-colors border border-white/10 shrink-0"
+                          title="Attach screenshot or file"
+                        >
+                          <Paperclip className="w-4 h-4" />
+                        </button>
+
+                        <div className="flex-1">
+                          <textarea
+                            rows={2}
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendAdminReply(e);
+                              }
+                            }}
+                            placeholder="Type official reply or transcript recovery link (Enter to send)..."
+                            className="w-full bg-[#060812] border border-white/10 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 resize-none"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={sendingChat || uploadingAttachment || (!chatInput.trim() && !adminAttachment)}
+                          className="px-4 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(245,158,11,0.3)] disabled:opacity-50 shrink-0"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>{uploadingAttachment ? "Uploading..." : sendingChat ? "Sending..." : "Reply"}</span>
+                        </button>
+                      </div>
                     </form>
                   </div>
                 </div>
