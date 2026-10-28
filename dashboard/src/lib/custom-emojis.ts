@@ -70,10 +70,10 @@ export const DISCORD_CUSTOM_EMOJIS = {
     animated: false,
   },
   owner: {
-    id: "1517253606686986323",
+    id: "1513803214674464788",
     name: "sync_owner",
-    url: "https://cdn.discordapp.com/emojis/1517253606686986323.png",
-    discordFormat: "<:sync_owner:1517253606686986323>",
+    url: "https://cdn.discordapp.com/emojis/1513803214674464788.png",
+    discordFormat: "<:sync_owner:1513803214674464788>",
     animated: false,
   },
 } as const;

@@ -16,6 +16,8 @@ import {
   Lock,
   Unlock,
   Paperclip,
+  Maximize2,
+  Minimize2,
   X,
   ArrowLeft,
   Copy,
@@ -36,7 +38,6 @@ import {
   Layers,
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
-import { PublicFooter } from "@/components/PublicFooter";
 import { DISCORD_CUSTOM_EMOJIS } from "@/lib/custom-emojis";
 
 interface CurrentUser {
@@ -94,6 +95,17 @@ interface ChatMessage {
   discord_message_id?: string | null;
   message_type?: string;
   created_at: string;
+}
+
+function getAvatarUrl(userId?: string | null, avatarHash?: string | null): string {
+  if (avatarHash) {
+    if (avatarHash.startsWith("http")) return avatarHash;
+    const isGif = avatarHash.startsWith("a_");
+    const ext = isGif ? "gif" : "png";
+    return `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.${ext}?size=128`;
+  }
+  const idx = Math.abs(parseInt(userId || "0", 10) % 5);
+  return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
 }
 
 function DiscordEmoji({
@@ -157,6 +169,7 @@ export default function ReportPortalPage() {
   const [uploadingUserAttachment, setUploadingUserAttachment] = useState(false);
   const userFileInputRef = useRef<HTMLInputElement>(null);
   const [mobileShowChat, setMobileShowChat] = useState(false);
+  const [isFullscreenChat, setIsFullscreenChat] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Form state
@@ -446,18 +459,6 @@ export default function ReportPortalPage() {
                 Experiencing missing ticket transcripts, accidental wipe, or technical bot disruptions? Open a recovery inquiry to communicate directly with SyncInk administrators and engineering leads.
               </p>
             </div>
-
-            {/* Quick Admin shortcut if privileged user */}
-            {isStaff && (
-              <Link
-                href="/dashboard/admin"
-                className="px-4 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
-              >
-                <Crown className="w-4 h-4 text-amber-400" />
-                <span>Open Admin Control Panel</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            )}
           </div>
 
           {/* Navigation Mode Switcher */}
@@ -810,7 +811,7 @@ export default function ReportPortalPage() {
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
                     <span>
-                      <strong className="text-white">Admin Two-Way Chat:</strong> Administrators and the primary owner can reply, provide recovery links, and troubleshoot directly in the browser chat.
+                      <strong className="text-white">Direct Support Chat:</strong> Staff and administrators communicate directly with you in this chat to review your issue and recover lost data.
                     </span>
                   </li>
                 </ul>
@@ -821,11 +822,7 @@ export default function ReportPortalPage() {
                 <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center gap-3">
                   <div className="relative">
                     <img
-                      src={
-                        currentUser.avatar
-                          ? `https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png`
-                          : `https://cdn.discordapp.com/embed/avatars/0.png`
-                      }
+                      src={getAvatarUrl(currentUser.id, currentUser.avatar)}
                       alt={currentUser.username}
                       className="w-11 h-11 rounded-xl object-cover border border-white/10"
                     />
@@ -844,26 +841,6 @@ export default function ReportPortalPage() {
                   </span>
                 </div>
               )}
-
-              {/* Direct Discord Support Emergency Server */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-900/20 to-purple-900/10 border border-blue-500/20 space-y-3">
-                <div className="flex items-center gap-2 text-blue-300 text-xs font-bold uppercase tracking-wider">
-                  <Sparkles className="w-4 h-4 text-blue-400" />
-                  <span>Immediate Escalation</span>
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Need real-time voice or urgent raid response? Join our official support guild to ping our on-call moderation and development teams directly.
-                </p>
-                <a
-                  href="https://discord.gg/PmxfJwmQuB"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2"
-                >
-                  <span>Support Discord Server</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                </a>
-              </div>
             </div>
           </div>
         )}
@@ -972,7 +949,11 @@ export default function ReportPortalPage() {
 
                 {/* Main Chat Workspace */}
                 <div
-                  className={`lg:col-span-8 bg-[#0b0e1d] border border-white/[0.08] rounded-2xl flex flex-col h-[580px] lg:h-[640px] overflow-hidden ${
+                  className={`bg-[#0b0e1d] border border-white/[0.08] rounded-2xl flex flex-col overflow-hidden ${
+                    isFullscreenChat
+                      ? "fixed inset-0 z-50 rounded-none border-0 h-screen w-screen bg-[#070914]"
+                      : "lg:col-span-8 h-[580px] lg:h-[640px]"
+                  } ${
                     !mobileShowChat && !selectedReport ? "hidden lg:flex" : "flex"
                   }`}
                 >
@@ -1033,8 +1014,20 @@ export default function ReportPortalPage() {
                           </div>
                         </div>
 
-                        {/* Status badge */}
+                        {/* Status badge & Fullscreen toggle */}
                         <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setIsFullscreenChat(!isFullscreenChat)}
+                            className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/10 transition-colors"
+                            title={isFullscreenChat ? "Exit Fullscreen" : "Fullscreen Chat"}
+                          >
+                            {isFullscreenChat ? (
+                              <Minimize2 className="w-4 h-4" />
+                            ) : (
+                              <Maximize2 className="w-4 h-4" />
+                            )}
+                          </button>
                           <span
                             className={`px-3 py-1 rounded-xl text-xs font-bold border uppercase tracking-wider ${
                               selectedReport.status === "RESOLVED"
@@ -1052,10 +1045,10 @@ export default function ReportPortalPage() {
                       {/* Chat Messages Body */}
                       <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-3.5">
                         {/* Initial system banner */}
-                        <div className="p-3 rounded-xl bg-blue-500/[0.05] border border-blue-500/15 text-xs text-slate-300 flex items-start gap-2.5">
+                        <div className="p-3 rounded-xl bg-white/[0.03] border border-white/10 text-xs text-slate-300 flex items-start gap-2.5">
                           <Sparkles className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
                           <div>
-                            <span className="font-bold text-white">Live Support Mirror:</span> Messages sent here mirror directly to our Discord Support staff thread. If screenshots or database logs are requested, staff can grant attachment upload access inside this desk.
+                            <span className="font-semibold text-white">Direct Support Channel:</span> You are connected with the SyncInk technical support team. When additional files or logs are needed, staff will enable attachment uploads for your case.
                           </div>
                         </div>
 
@@ -1090,11 +1083,7 @@ export default function ReportPortalPage() {
                               >
                                 {!isMe && (
                                   <img
-                                    src={
-                                      msg.sender_avatar
-                                        ? `https://cdn.discordapp.com/avatars/${msg.sender_id}/${msg.sender_avatar}.png`
-                                        : `https://cdn.discordapp.com/embed/avatars/0.png`
-                                    }
+                                    src={getAvatarUrl(msg.sender_id, msg.sender_avatar)}
                                     alt={msg.sender_name}
                                     className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover border border-white/10 shrink-0 mt-1"
                                   />
@@ -1109,18 +1098,23 @@ export default function ReportPortalPage() {
                                   >
                                     <span className="font-bold text-white text-[11px]">{msg.sender_name}</span>
                                     {msg.sender_role === "OWNER" && (
-                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                        👑 Owner
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20 inline-flex items-center gap-1">
+                                        <img
+                                          src="https://cdn.discordapp.com/emojis/1513803214674464788.png"
+                                          alt="Owner"
+                                          className="w-3.5 h-3.5 object-contain inline-block"
+                                        />
+                                        <span>Owner</span>
                                       </span>
                                     )}
                                     {msg.sender_role === "ADMIN" && (
-                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase tracking-wider bg-red-500/20 text-red-300 border border-red-500/30">
-                                        🛡️ Admin
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 inline-flex items-center gap-1">
+                                        <span>Admin</span>
                                       </span>
                                     )}
                                     {msg.sender_role === "STAFF" && (
-                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                                        Staff
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-300 border border-blue-500/20 inline-flex items-center gap-1">
+                                        <span>Staff</span>
                                       </span>
                                     )}
                                     <span className="text-slate-500 text-[10px]">
@@ -1137,7 +1131,7 @@ export default function ReportPortalPage() {
                                       isMe
                                         ? "bg-blue-600 text-white rounded-tr-none shadow-md"
                                         : isStaffMsg
-                                        ? "bg-gradient-to-r from-[#171b30] to-[#121626] border border-blue-500/30 text-slate-100 rounded-tl-none shadow-sm"
+                                        ? "bg-white/[0.06] border border-white/[0.1] text-slate-100 rounded-tl-none shadow-sm"
                                         : "bg-white/[0.04] border border-white/[0.08] text-slate-200 rounded-tl-none"
                                     }`}
                                   >
@@ -1189,11 +1183,7 @@ export default function ReportPortalPage() {
 
                                 {isMe && (
                                   <img
-                                    src={
-                                      currentUser?.avatar
-                                        ? `https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png`
-                                        : `https://cdn.discordapp.com/embed/avatars/0.png`
-                                    }
+                                    src={getAvatarUrl(currentUser?.id, currentUser?.avatar)}
                                     alt="You"
                                     className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover border border-white/10 shrink-0 mt-1"
                                   />
@@ -1258,12 +1248,12 @@ export default function ReportPortalPage() {
                             disabled={!selectedReport.attachments_allowed || sendingMessage || uploadingUserAttachment}
                             className={`p-2.5 rounded-xl transition-all border shrink-0 flex items-center justify-center ${
                               selectedReport.attachments_allowed
-                                ? "bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border-blue-500/40 cursor-pointer shadow-[0_0_12px_rgba(59,130,246,0.2)]"
+                                ? "bg-white/[0.05] hover:bg-white/[0.08] text-slate-200 border-white/10 cursor-pointer shadow-sm"
                                 : "bg-white/[0.02] text-slate-600 border-white/5 cursor-not-allowed opacity-60"
                             }`}
                             title={
                               selectedReport.attachments_allowed
-                                ? "Attach screenshot, logs, or file (Permission granted)"
+                                ? "Attach screenshot, logs, or file"
                                 : "Attachment uploads locked by support staff. Ask in chat to enable."
                             }
                           >
@@ -1280,11 +1270,11 @@ export default function ReportPortalPage() {
                             onChange={(e) => setNewMessage(e.target.value)}
                             placeholder={
                               selectedReport.attachments_allowed
-                                ? "Type recovery reply or attach files... (Press Enter)"
-                                : "Type recovery inquiry or statement... (Press Enter)"
+                                ? "Type your reply or attach files... (Press Enter)"
+                                : "Type your reply... (Press Enter)"
                             }
                             disabled={sendingMessage || uploadingUserAttachment}
-                            className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                            className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-white/20 transition-all"
                           />
 
                           <button
@@ -1318,7 +1308,9 @@ export default function ReportPortalPage() {
         )}
       </main>
 
-      <PublicFooter />
+      <footer className="py-6 border-t border-white/[0.06] text-center text-xs text-slate-500">
+        © 2026 SyncInk Incident Response Desk. All rights reserved.
+      </footer>
     </div>
   );
 }

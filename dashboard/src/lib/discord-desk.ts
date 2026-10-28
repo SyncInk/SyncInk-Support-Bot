@@ -175,7 +175,7 @@ export async function createDiscordReportThread(report: any): Promise<string | n
         },
       ],
       footer: {
-        text: "SyncInk Support Platform • Two-Way Live Mirror Active",
+        text: "SyncInk Support Desk",
         icon_url: "https://syncink.site/syncink-main-logo.png",
       },
       timestamp: new Date().toISOString(),
@@ -189,7 +189,7 @@ export async function createDiscordReportThread(report: any): Promise<string | n
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        content: `🚨 **New Recovery Ticket Dispatched** — <@&${SUPPORT_MANAGER_ROLE_ID}>`,
+        content: `**New Support Case Filed** — <@&${SUPPORT_MANAGER_ROLE_ID}>`,
         embeds: [overviewEmbed],
       }),
     });
@@ -228,15 +228,8 @@ export async function sendDittoWebhookMessage({
     const webhookUrl = await getDeskWebhookUrl();
     const avatarUrl = getDiscordAvatarUrl(senderId, senderAvatar);
 
-    // Profile Display Name with subtle official badge
-    let displayName = senderName || "Discord Member";
-    if (role === "OWNER") {
-      displayName = `👑 ${senderName} [Owner]`;
-    } else if (role === "ADMIN") {
-      displayName = `🛡️ ${senderName} [Admin]`;
-    } else if (role === "STAFF") {
-      displayName = `✨ ${senderName} [Staff]`;
-    }
+    // Clean profile display name without emojis
+    const displayName = senderName || "Member";
 
     // Format content with attachment if present
     let content = message || "";
@@ -308,7 +301,7 @@ export async function sendSystemWebhookUpdate({
             title,
             description,
             color,
-            footer: { text: "SyncInk Desk Protocol" },
+            footer: { text: "SyncInk Support Desk" },
             timestamp: new Date().toISOString(),
           },
         ],

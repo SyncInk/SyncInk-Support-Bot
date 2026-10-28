@@ -192,9 +192,9 @@ class ReportDeskCog(commands.Cog):
                     overview.add_field(name="📅 Incident Date", value=f"`{report['incident_date'] or 'N/A'}`", inline=True)
                     overview.add_field(name="<:admin:1562590696337047744> Affected Channels", value=report["affected_channels"] or "None noted", inline=False)
                     overview.add_field(name="<:experience:1562588852324143125> Incident Statement", value=f"```\n{(report['description'] or '')[:1000]}\n```", inline=False)
-                    overview.set_footer(text="SyncInk Support Platform • Two-Way Live Mirror Active", icon_url="https://syncink.site/syncink-main-logo.png")
+                    overview.set_footer(text="SyncInk Support Desk", icon_url="https://syncink.site/syncink-main-logo.png")
 
-                    await thread.send(content=f"🚨 **New Recovery Ticket Dispatched** — <@&{SUPPORT_MANAGER_ROLE_ID}>", embed=overview)
+                    await thread.send(content=f"**New Support Case Filed** — <@&{SUPPORT_MANAGER_ROLE_ID}>", embed=overview)
                     log.info(f"[ReportDesk] Reconciled and created thread {thread.id} for report #{report['id']}")
 
                 except Exception as ex:
