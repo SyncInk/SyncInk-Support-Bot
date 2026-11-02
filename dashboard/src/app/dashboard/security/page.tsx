@@ -45,7 +45,9 @@ import {
   Code,
   Flame,
   UserCheck,
-  ShieldX
+  ShieldX,
+  Menu,
+  LifeBuoy,
 } from "lucide-react";
 import { DISCORD_CUSTOM_EMOJIS } from "@/lib/custom-emojis";
 
@@ -229,6 +231,20 @@ export default function DashboardPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const getUserAvatar = (user: CurrentUser | null) => {
+    if (!user) return "https://cdn.discordapp.com/embed/avatars/0.png";
+    if (user.id === "admin" || (user.avatar && user.avatar.includes("syncink-admin"))) {
+      return "/syncink-admin.jpg";
+    }
+    if (user.avatar) {
+      if (user.avatar.startsWith("http") || user.avatar.startsWith("/")) return user.avatar;
+      return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`;
+    }
+    const idx = Math.abs(parseInt(user.id || "0", 10) % 5);
+    return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
+  };
 
   // In-App Toast & Confirmation Modal
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -1168,7 +1184,7 @@ export default function DashboardPage() {
   const isLockdown = raidState === "LOCKDOWN";
 
   return (
-    <div className="min-h-screen bg-[#07090e] text-slate-100 pb-24 selection:bg-brand-red/30 selection:text-white">
+    <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col lg:flex-row selection:bg-brand-red/30 selection:text-white">
       {/* --- IN-APP TOAST SYSTEM --- */}
       <div className="fixed top-4 right-4 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
         {toasts.map((t) => (
@@ -1246,312 +1262,549 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* --- TOP COMMAND BAR --- */}
-      <header className="sticky top-0 z-40 border-b border-border/70 bg-[#07090e]/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          {/* Logo & Server Ident */}
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-surface-card border border-border shadow-glow overflow-hidden">
-              <img
-                src="https://files.catbox.moe/74l9su.png"
-                alt="SyncInk Logo"
-                className="h-8 w-8 object-contain"
-              />
+      {/* ========================================================= */}
+      {/* DESKTOP SIDE PANEL (>= lg) */}
+      {/* ========================================================= */}
+      <aside className="hidden lg:flex flex-col justify-between w-64 xl:w-72 bg-[#07090f] border-r border-border/70 p-4 shrink-0 sticky top-0 h-screen overflow-y-auto z-30">
+        <div className="space-y-5">
+          {/* Brand & Server Header */}
+          <div className="pb-4 border-b border-border/70">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-surface-card border border-border shadow-glow overflow-hidden">
+                <img
+                  src="https://files.catbox.moe/74l9su.png"
+                  alt="SyncInk Logo"
+                  className="h-8 w-8 object-contain"
+                />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-extrabold text-white text-sm tracking-tight truncate">SyncInk Security</span>
+                </div>
+                <div className="flex items-center gap-1 text-[11px] text-brand-red font-bold uppercase tracking-wider">
+                  <span className="h-1.5 w-1.5 rounded-full bg-brand-red animate-pulse" />
+                  <span>Defense Engine</span>
+                </div>
+              </div>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-white text-base tracking-tight">SyncInk Security</span>
-                <span className="rounded-full bg-brand-red/20 px-2.5 py-0.5 text-[10px] font-bold text-brand-red border border-brand-red/35 uppercase tracking-wider">
-                  Command Center
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <span className="font-medium text-slate-300">
-                  {currentUser?.guildName || "SyncInk Support"}
-                </span>
-                <span className="text-slate-600">•</span>
-                <span className="font-mono text-[11px] text-slate-400">
-                  ID: {data?.guildId || currentUser?.guildId || "1520457643842342912"}
-                </span>
-              </div>
+
+            <div className="mt-3 pt-2.5 border-t border-white/[0.05] flex items-center justify-between text-xs">
+              <Link
+                href="/dashboard"
+                className="text-slate-400 hover:text-white transition-colors flex items-center gap-1 font-semibold text-[11px]"
+              >
+                <span>&larr; Multi-Bot Console</span>
+              </Link>
+              <span className="text-[10px] font-mono text-slate-500">v2.4.0</span>
             </div>
           </div>
 
-          {/* Action & User Telemetry */}
-          <div className="flex items-center gap-3">
-            {/* Live Polling Pulse */}
-            <div
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className="hidden sm:flex items-center gap-2 rounded-xl border border-border/80 bg-surface-card/90 px-3 py-1.5 text-xs text-slate-300 cursor-pointer hover:border-slate-600 transition-colors"
-              title="Click to toggle live auto-sync"
+          {/* Navigation Tabs List */}
+          <nav className="space-y-1">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 pb-1">
+              Security Modules
+            </div>
+
+            <NavTab
+              active={activeTab === "overview"}
+              onClick={() => setActiveTab("overview")}
+              icon={<Shield className="h-4 w-4" />}
+              label="Overview"
+              badge={raidState !== "NORMAL" ? raidState : undefined}
+              badgeColor="red"
+            />
+
+            {isAdmin && (
+              <>
+                <NavTab
+                  active={activeTab === "shields"}
+                  onClick={() => setActiveTab("shields")}
+                  icon={<Sliders className="h-4 w-4" />}
+                  label="Shields & Defenses"
+                />
+                <NavTab
+                  active={activeTab === "thresholds"}
+                  onClick={() => setActiveTab("thresholds")}
+                  icon={<Settings className="h-4 w-4" />}
+                  label="Velocity Tuning"
+                />
+              </>
+            )}
+
+            {isStaff && (
+              <>
+                <NavTab
+                  active={activeTab === "members"}
+                  onClick={() => setActiveTab("members")}
+                  icon={<Users className="h-4 w-4" />}
+                  label="Members & Infractions"
+                  badge={members.length > 0 ? String(members.length) : undefined}
+                  badgeColor="emerald"
+                />
+                <NavTab
+                  active={activeTab === "moderation"}
+                  onClick={() => setActiveTab("moderation")}
+                  icon={<FileText className="h-4 w-4" />}
+                  label="Moderation Cases"
+                  badge={data?.stats?.modCasesCount ? String(data.stats.modCasesCount) : undefined}
+                />
+              </>
+            )}
+
+            {isAdmin && (
+              <NavTab
+                active={activeTab === "automod"}
+                onClick={() => setActiveTab("automod")}
+                icon={<AlertOctagon className="h-4 w-4" />}
+                label="AutoMod & Filters"
+                badge={data?.stats?.violationsCount ? `${data.stats.violationsCount} strikes` : undefined}
+                badgeColor="amber"
+              />
+            )}
+
+            {isStaff && (
+              <NavTab
+                active={activeTab === "quarantine"}
+                onClick={() => setActiveTab("quarantine")}
+                icon={<ShieldX className="h-4 w-4" />}
+                label="Quarantine Roster"
+                badge={data?.stats?.jailedCount ? String(data.stats.jailedCount) : undefined}
+                badgeColor="red"
+              />
+            )}
+
+            {isAdmin && (
+              <>
+                <NavTab
+                  active={activeTab === "whitelist"}
+                  onClick={() => setActiveTab("whitelist")}
+                  icon={<CheckCircle2 className="h-4 w-4" />}
+                  label="Security Whitelist"
+                  badge={data?.stats?.whitelistCount ? String(data.stats.whitelistCount) : undefined}
+                />
+                <NavTab
+                  active={activeTab === "channels"}
+                  onClick={() => setActiveTab("channels")}
+                  icon={<Hash className="h-4 w-4" />}
+                  label="Log Routing"
+                />
+              </>
+            )}
+
+            <NavTab
+              active={activeTab === "suggestions"}
+              onClick={() => setActiveTab("suggestions")}
+              icon={<MessageSquare className="h-4 w-4" />}
+              label="Suggestions"
+              badge={data?.stats?.suggestionsCount ? String(data.stats.suggestionsCount) : undefined}
+            />
+
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 pt-3 pb-1">
+              Platform & Governance
+            </div>
+
+            {isStaff && (
+              <Link
+                href="/dashboard/applications"
+                className="w-full flex items-center justify-between gap-2.5 px-3.5 py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-white hover:bg-surface-hover transition-all"
+              >
+                <div className="flex items-center gap-2.5">
+                  <FileText className="h-4 w-4 text-violet-400" />
+                  <span>Member Applications</span>
+                </div>
+                <span className="rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-extrabold text-violet-300 border border-violet-500/30">
+                  Panel
+                </span>
+              </Link>
+            )}
+
+            <Link
+              href="/report"
+              className="w-full flex items-center justify-between gap-2.5 px-3.5 py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-white hover:bg-surface-hover transition-all"
             >
+              <div className="flex items-center gap-2.5">
+                <LifeBuoy className="h-4 w-4 text-blue-400" />
+                <span>Recovery Desk</span>
+              </div>
+              <span className="text-[10px] text-blue-400 font-mono">#desk</span>
+            </Link>
+
+            <a
+              href="/rules"
+              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-white hover:bg-surface-hover transition-all"
+            >
+              <BookOpen className="h-4 w-4 text-brand-crimson" />
+              <span>Server Rules</span>
+            </a>
+
+            <a
+              href="/faq"
+              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-white hover:bg-surface-hover transition-all"
+            >
+              <HelpCircle className="h-4 w-4 text-amber-400" />
+              <span>Security FAQ</span>
+            </a>
+          </nav>
+        </div>
+
+        {/* Side Panel Bottom Profile & Actions */}
+        <div className="pt-4 border-t border-border/70 space-y-3">
+          {/* Live Polling Toggle */}
+          <button
+            type="button"
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            className="w-full flex items-center justify-between rounded-xl border border-border/80 bg-surface-card px-3 py-2 text-xs text-slate-300 hover:border-slate-600 transition-colors"
+            title="Click to toggle live auto-sync"
+          >
+            <div className="flex items-center gap-2">
               <span
                 className={`h-2 w-2 rounded-full ${
                   autoRefresh ? "bg-emerald-400 shadow-glow-green animate-pulse" : "bg-slate-500"
                 }`}
               />
               <span className="text-[11px] font-medium">
-                {autoRefresh ? "Live Telemetry" : "Paused"}
+                {autoRefresh ? "Live Telemetry" : "Telemetry Paused"}
               </span>
             </div>
+            <span className="text-[10px] font-mono text-slate-500">1.5s</span>
+          </button>
 
-            {/* Authenticated User Capsule */}
-            {currentUser && (
-              <div className="flex items-center gap-2.5 rounded-xl border border-border bg-surface-card/90 px-3 py-1.5 shadow-sm">
-                {currentUser.avatar ? (
-                  <img
-                    src={`https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png`}
-                    alt={currentUser.username}
-                    className="h-7 w-7 rounded-full object-cover ring-1 ring-border"
-                  />
-                ) : (
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#5865F2] text-xs font-bold text-white">
-                    {(currentUser.global_name || currentUser.username || "U").charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="flex flex-col text-left">
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs font-bold text-white leading-tight">
-                      {currentUser.global_name || currentUser.username}
-                    </span>
-                    {currentUser.isVerified && (
-                      <img
-                        src={DISCORD_CUSTOM_EMOJIS.verified.url}
-                        alt="Verified"
-                        title="Verified Member"
-                        className="w-3.5 h-3.5 object-contain shrink-0"
-                      />
-                    )}
-                  </div>
-                  <span
-                    className={`text-[10px] font-bold leading-tight flex items-center gap-1.5 mt-0.5 ${
-                      currentUser.roleType === "owner" || currentUser.isOwner
-                        ? "text-amber-400"
-                        : currentUser.roleType === "admin" || currentUser.isAdmin
-                        ? "text-emerald-400"
-                        : currentUser.roleType === "staff" || currentUser.isStaff
-                        ? "text-violet-400"
-                        : currentUser.roleType === "developer"
-                        ? "text-cyan-400"
-                        : currentUser.roleType === "booster" || currentUser.isBooster
-                        ? "text-pink-400"
-                        : currentUser.roleType === "partner"
-                        ? "text-indigo-400"
-                        : currentUser.roleType === "verified"
-                        ? "text-emerald-300"
-                        : "text-slate-400"
-                    }`}
-                  >
-                    <span>
-                      {currentUser.roleIcon && currentUser.roleIcon.startsWith("http") ? (
-                        <img
-                          src={currentUser.roleIcon}
-                          alt="Role"
-                          className="w-3.5 h-3.5 object-contain inline-block shrink-0"
-                        />
-                      ) : (
-                        currentUser.roleIcon || "👤"
-                      )}
-                    </span>
-                    <span>
-                      {currentUser.role ||
-                        (currentUser.roleType === "owner" || currentUser.isOwner
-                          ? "Server Owner"
-                          : currentUser.roleType === "admin" || currentUser.isAdmin
-                          ? "Support Manager"
-                          : currentUser.roleType === "staff" || currentUser.isStaff
-                          ? "Staff"
-                          : currentUser.roleType === "developer"
-                          ? "Developer"
-                          : currentUser.roleType === "booster" || currentUser.isBooster
-                          ? "Server Booster"
-                          : currentUser.roleType === "partner"
-                          ? "Partner"
-                          : currentUser.roleType === "verified"
-                          ? "Verified Member"
-                          : "Server Member")}
-                    </span>
+          {/* User Capsule */}
+          {currentUser && (
+            <div className="flex items-center gap-2.5 rounded-xl border border-border bg-surface-card p-2.5 shadow-sm">
+              <img
+                src={getUserAvatar(currentUser)}
+                alt={currentUser.username}
+                className="h-8 w-8 rounded-xl object-cover ring-1 ring-border shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-bold text-white truncate">
+                    {currentUser.id === "admin" ? "SyncInk Admin" : currentUser.global_name || currentUser.username}
                   </span>
+                  {currentUser.isVerified && (
+                    <img
+                      src={DISCORD_CUSTOM_EMOJIS.verified.url}
+                      alt="Verified"
+                      className="w-3 h-3 object-contain inline-block shrink-0"
+                    />
+                  )}
+                </div>
+                <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                  {currentUser.id === "admin" ? (
+                    <span className="text-purple-400 font-bold">SyncInk Admin</span>
+                  ) : isOwner ? (
+                    <span className="text-amber-400 font-bold flex items-center gap-1">
+                      <img src="https://cdn.discordapp.com/emojis/1513803214674464788.png" className="w-2.5 h-2.5 inline" alt="Owner" />
+                      <span>Owner</span>
+                    </span>
+                  ) : (
+                    <span>{currentUser.role || "Verified Member"}</span>
+                  )}
                 </div>
               </div>
-            )}
 
-            {/* Refresh Button */}
-            <button
-              onClick={() => fetchData()}
-              disabled={refreshing}
-              title="Refresh security metrics"
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface-card text-slate-300 hover:text-white hover:border-slate-500 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin text-brand-red" : ""}`} />
-            </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => fetchData()}
+                  disabled={refreshing}
+                  title="Refresh security metrics"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-slate-300 hover:text-white transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin text-brand-red" : ""}`} />
+                </button>
+                <button
+                  onClick={handleLogout}
+                  title="Log out"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-slate-400 hover:text-red-400 transition-colors"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </aside>
 
-            {/* Logout */}
-            <button
-              onClick={handleLogout}
-              title="Log out"
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface-card text-slate-400 hover:text-red-400 hover:border-red-500/40 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+      {/* ========================================================= */}
+      {/* MOBILE COMPACT TOP BAR (< lg) */}
+      {/* ========================================================= */}
+      <header className="lg:hidden sticky top-0 z-40 border-b border-border/70 bg-[#07090e]/95 backdrop-blur-xl px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Open Security Navigation"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface-card text-slate-300 hover:text-white transition-colors"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+
+          <div className="flex items-center gap-2">
+            <img
+              src="https://files.catbox.moe/74l9su.png"
+              alt="SyncInk Logo"
+              className="h-7 w-7 object-contain"
+            />
+            <div>
+              <span className="font-extrabold text-white text-xs tracking-tight">SyncInk Security</span>
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
+                <span className="capitalize text-brand-red font-bold">{activeTab}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* --- MULTI-BOT CONSOLE SWITCHER --- */}
-        <div className="border-t border-border/60 bg-[#0a0d15] px-4 sm:px-6 lg:px-8 py-2.5">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-brand-crimson" />
-              <span className="text-sm font-bold text-white tracking-wide uppercase">Security Engine</span>
-            </div>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[9px] font-extrabold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>{raidState}</span>
+          </span>
 
-            <div className="flex items-center gap-3">
-              <a
-                href="/"
-                className="text-xs font-semibold text-slate-400 hover:text-accent-cyan transition-colors flex items-center gap-1"
-              >
-                &larr; Back to Showcase
-              </a>
-              <a
-                href="/apply"
-                className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-slate-200 transition-all flex items-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-brand-crimson" />
-                Apply for Staff / Dev
-              </a>
-            </div>
-          </div>
+          <button
+            onClick={() => fetchData()}
+            disabled={refreshing}
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-surface-card text-slate-300 hover:text-white disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin text-brand-red" : ""}`} />
+          </button>
+
+          {currentUser && (
+            <img
+              src={getUserAvatar(currentUser)}
+              alt={currentUser.username}
+              className="h-8 w-8 rounded-xl object-cover ring-1 ring-border"
+            />
+          )}
         </div>
+      </header>
 
-        {/* --- NAVIGATION TABS BAR --- */}
-        {botSystem === "security" && (
-          <div className="border-t border-border/50 bg-surface/40 px-4 sm:px-6 lg:px-8">
-            <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto py-2 scrollbar-none">
-              <NavTab
-                active={activeTab === "overview"}
-                onClick={() => setActiveTab("overview")}
-                icon={<Shield className="h-4 w-4" />}
-                label="Overview"
-                badge={raidState !== "NORMAL" ? raidState : undefined}
-                badgeColor="red"
-              />
+      {/* ========================================================= */}
+      {/* MOBILE SLIDE-OUT DRAWER OVERLAY (< lg) */}
+      {/* ========================================================= */}
+      {mobileNavOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md transition-opacity duration-200 lg:hidden"
+          onClick={() => setMobileNavOpen(false)}
+        >
+          <div
+            className="w-[84%] max-w-[320px] h-full bg-[#07090f] border-r border-border/80 p-5 flex flex-col justify-between overflow-y-auto shadow-2xl animate-in slide-in-from-left duration-250"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-5">
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-border/70">
+                <div className="flex items-center gap-2.5">
+                  <img
+                    src="https://files.catbox.moe/74l9su.png"
+                    alt="SyncInk Logo"
+                    className="h-8 w-8 object-contain"
+                  />
+                  <div>
+                    <h3 className="font-extrabold text-white text-sm">SyncInk Security</h3>
+                    <p className="text-[10px] text-slate-400">Official Support Server</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMobileNavOpen(false)}
+                  className="w-8 h-8 rounded-xl bg-surface-card border border-border flex items-center justify-center text-slate-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-              {isAdmin && (
-                <>
-                  <NavTab
-                    active={activeTab === "shields"}
-                    onClick={() => setActiveTab("shields")}
-                    icon={<Sliders className="h-4 w-4" />}
-                    label="Shields & Defenses"
-                  />
-                  <NavTab
-                    active={activeTab === "thresholds"}
-                    onClick={() => setActiveTab("thresholds")}
-                    icon={<Settings className="h-4 w-4" />}
-                    label="Velocity Tuning"
-                  />
-                </>
-              )}
+              {/* Navigation Tabs List */}
+              <nav className="space-y-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 pb-1">
+                  Security Modules
+                </div>
 
-              {isStaff && (
-                <>
+                <NavTab
+                  active={activeTab === "overview"}
+                  onClick={() => { setActiveTab("overview"); setMobileNavOpen(false); }}
+                  icon={<Shield className="h-4 w-4" />}
+                  label="Overview"
+                  badge={raidState !== "NORMAL" ? raidState : undefined}
+                  badgeColor="red"
+                />
+
+                {isAdmin && (
+                  <>
+                    <NavTab
+                      active={activeTab === "shields"}
+                      onClick={() => { setActiveTab("shields"); setMobileNavOpen(false); }}
+                      icon={<Sliders className="h-4 w-4" />}
+                      label="Shields & Defenses"
+                    />
+                    <NavTab
+                      active={activeTab === "thresholds"}
+                      onClick={() => { setActiveTab("thresholds"); setMobileNavOpen(false); }}
+                      icon={<Settings className="h-4 w-4" />}
+                      label="Velocity Tuning"
+                    />
+                  </>
+                )}
+
+                {isStaff && (
+                  <>
+                    <NavTab
+                      active={activeTab === "members"}
+                      onClick={() => { setActiveTab("members"); setMobileNavOpen(false); }}
+                      icon={<Users className="h-4 w-4" />}
+                      label="Members & Infractions"
+                      badge={members.length > 0 ? String(members.length) : undefined}
+                      badgeColor="emerald"
+                    />
+                    <NavTab
+                      active={activeTab === "moderation"}
+                      onClick={() => { setActiveTab("moderation"); setMobileNavOpen(false); }}
+                      icon={<FileText className="h-4 w-4" />}
+                      label="Moderation Cases"
+                      badge={data?.stats?.modCasesCount ? String(data.stats.modCasesCount) : undefined}
+                    />
+                  </>
+                )}
+
+                {isAdmin && (
                   <NavTab
-                    active={activeTab === "members"}
-                    onClick={() => setActiveTab("members")}
-                    icon={<Users className="h-4 w-4" />}
-                    label="Members & Infractions"
-                    badge={members.length > 0 ? String(members.length) : undefined}
-                    badgeColor="emerald"
+                    active={activeTab === "automod"}
+                    onClick={() => { setActiveTab("automod"); setMobileNavOpen(false); }}
+                    icon={<AlertOctagon className="h-4 w-4" />}
+                    label="AutoMod & Filters"
+                    badge={data?.stats?.violationsCount ? `${data.stats.violationsCount} strikes` : undefined}
+                    badgeColor="amber"
                   />
+                )}
+
+                {isStaff && (
                   <NavTab
-                    active={activeTab === "moderation"}
-                    onClick={() => setActiveTab("moderation")}
-                    icon={<FileText className="h-4 w-4" />}
-                    label="Moderation Cases"
-                    badge={data?.stats?.modCasesCount ? String(data.stats.modCasesCount) : undefined}
+                    active={activeTab === "quarantine"}
+                    onClick={() => { setActiveTab("quarantine"); setMobileNavOpen(false); }}
+                    icon={<ShieldX className="h-4 w-4" />}
+                    label="Quarantine Roster"
+                    badge={data?.stats?.jailedCount ? String(data.stats.jailedCount) : undefined}
+                    badgeColor="red"
                   />
+                )}
+
+                {isAdmin && (
+                  <>
+                    <NavTab
+                      active={activeTab === "whitelist"}
+                      onClick={() => { setActiveTab("whitelist"); setMobileNavOpen(false); }}
+                      icon={<CheckCircle2 className="h-4 w-4" />}
+                      label="Security Whitelist"
+                      badge={data?.stats?.whitelistCount ? String(data.stats.whitelistCount) : undefined}
+                    />
+                    <NavTab
+                      active={activeTab === "channels"}
+                      onClick={() => { setActiveTab("channels"); setMobileNavOpen(false); }}
+                      icon={<Hash className="h-4 w-4" />}
+                      label="Log Routing"
+                    />
+                  </>
+                )}
+
+                <NavTab
+                  active={activeTab === "suggestions"}
+                  onClick={() => { setActiveTab("suggestions"); setMobileNavOpen(false); }}
+                  icon={<MessageSquare className="h-4 w-4" />}
+                  label="Suggestions"
+                  badge={data?.stats?.suggestionsCount ? String(data.stats.suggestionsCount) : undefined}
+                />
+
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 pt-3 pb-1">
+                  Platform & Governance
+                </div>
+
+                {isStaff && (
                   <Link
                     href="/dashboard/applications"
-                    className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-surface-card transition-all shrink-0"
+                    onClick={() => setMobileNavOpen(false)}
+                    className="w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl text-slate-400 hover:text-white hover:bg-surface-hover transition-all"
                   >
-                    <FileText className="h-4 w-4 text-violet-400" />
-                    <span>Member Applications</span>
+                    <div className="flex items-center gap-2.5">
+                      <FileText className="h-4 w-4 text-violet-400" />
+                      <span>Member Applications</span>
+                    </div>
                     <span className="rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-extrabold text-violet-300 border border-violet-500/30">
                       Panel
                     </span>
                   </Link>
-                </>
-              )}
+                )}
 
-              {isAdmin && (
-                <NavTab
-                  active={activeTab === "automod"}
-                  onClick={() => setActiveTab("automod")}
-                  icon={<AlertOctagon className="h-4 w-4" />}
-                  label="AutoMod & Filters"
-                  badge={data?.stats?.violationsCount ? `${data.stats.violationsCount} strikes` : undefined}
-                  badgeColor="amber"
-                />
-              )}
+                <Link
+                  href="/report"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl text-slate-400 hover:text-white hover:bg-surface-hover transition-all"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <LifeBuoy className="h-4 w-4 text-blue-400" />
+                    <span>Recovery Desk</span>
+                  </div>
+                  <span className="text-[10px] text-blue-400 font-mono">#desk</span>
+                </Link>
 
-              {isStaff && (
-                <NavTab
-                  active={activeTab === "quarantine"}
-                  onClick={() => setActiveTab("quarantine")}
-                  icon={<Users className="h-4 w-4" />}
-                  label="Quarantine Roster"
-                  badge={data?.stats?.jailedCount ? String(data.stats.jailedCount) : undefined}
-                  badgeColor="red"
-                />
-              )}
+                <a
+                  href="/rules"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl text-slate-400 hover:text-white hover:bg-surface-hover transition-all"
+                >
+                  <BookOpen className="h-4 w-4 text-brand-crimson" />
+                  <span>Server Rules</span>
+                </a>
 
-              {isAdmin && (
-                <>
-                  <NavTab
-                    active={activeTab === "whitelist"}
-                    onClick={() => setActiveTab("whitelist")}
-                    icon={<CheckCircle2 className="h-4 w-4" />}
-                    label="Security Whitelist"
-                    badge={data?.stats?.whitelistCount ? String(data.stats.whitelistCount) : undefined}
+                <a
+                  href="/faq"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl text-slate-400 hover:text-white hover:bg-surface-hover transition-all"
+                >
+                  <HelpCircle className="h-4 w-4 text-amber-400" />
+                  <span>Security FAQ</span>
+                </a>
+
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-bold rounded-xl text-brand-red bg-brand-red/10 border border-brand-red/20 transition-all mt-2"
+                >
+                  <span>&larr; Multi-Bot Console</span>
+                </Link>
+              </nav>
+            </div>
+
+            {/* Mobile Drawer Bottom User Identity */}
+            <div className="pt-4 border-t border-border/70 space-y-3">
+              {currentUser && (
+                <div className="flex items-center gap-2.5 rounded-xl border border-border bg-surface-card p-2.5 shadow-sm">
+                  <img
+                    src={getUserAvatar(currentUser)}
+                    alt={currentUser.username}
+                    className="h-8 w-8 rounded-xl object-cover ring-1 ring-border shrink-0"
                   />
-                  <NavTab
-                    active={activeTab === "channels"}
-                    onClick={() => setActiveTab("channels")}
-                    icon={<Hash className="h-4 w-4" />}
-                    label="Log Routing"
-                  />
-                </>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold text-white truncate">
+                      {currentUser.id === "admin" ? "SyncInk Admin" : currentUser.global_name || currentUser.username}
+                    </div>
+                    <div className="text-[10px] text-slate-400 truncate">
+                      {currentUser.role || "Verified Member"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    title="Log out"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-slate-400 hover:text-red-400 transition-colors"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               )}
-
-              <NavTab
-                active={activeTab === "suggestions"}
-                onClick={() => setActiveTab("suggestions")}
-                icon={<MessageSquare className="h-4 w-4" />}
-                label="Suggestions"
-                badge={data?.stats?.suggestionsCount ? String(data.stats.suggestionsCount) : undefined}
-              />
-            <div className="h-4 w-px bg-border/80 mx-1 self-center" />
-            <a
-              href="/rules"
-              className="flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-surface-card transition-all"
-            >
-              <BookOpen className="h-4 w-4 text-brand-crimson" />
-              <span>Rules</span>
-            </a>
-            <a
-              href="/faq"
-              className="flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-surface-card transition-all"
-            >
-              <HelpCircle className="h-4 w-4 text-amber-400" />
-              <span>FAQ</span>
-            </a>
+            </div>
           </div>
         </div>
-        )}
-      </header>
+      )}
 
       {/* --- MAIN DASHBOARD CONTENT --- */}
-      <main className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8 space-y-6">
+      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-6 overflow-y-auto max-w-7xl mx-auto w-full">
         {botSystem === "security" && (
           <>
             {/* Staff Operational Banner */}
@@ -4395,17 +4648,19 @@ function NavTab({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap ${
+      className={`w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all text-left ${
         active
           ? "bg-brand-red text-white shadow-glow"
           : "text-slate-400 hover:text-slate-200 hover:bg-surface-hover"
       }`}
     >
-      {icon}
-      <span>{label}</span>
+      <div className="flex items-center gap-2.5 truncate">
+        {icon}
+        <span className="truncate">{label}</span>
+      </div>
       {badge && (
         <span
-          className={`rounded-full px-1.5 py-0.2 text-[9px] font-extrabold uppercase ${
+          className={`rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase shrink-0 ${
             badgeColor === "red"
               ? "bg-red-500 text-white"
               : badgeColor === "amber"
