@@ -90,11 +90,19 @@ export async function getDeskWebhookUrl(): Promise<string | null> {
  * Resolves a full user avatar URL given an ID and avatar hash
  */
 export function getDiscordAvatarUrl(userId: string, avatarHash?: string | null): string {
+  if (
+    userId === "admin" ||
+    userId === "system" ||
+    (avatarHash && (avatarHash.includes("syncink-admin") || avatarHash.includes("admin")))
+  ) {
+    return "https://syncink.site/syncink-admin.jpg";
+  }
   if (!avatarHash) {
     const idx = Math.abs(parseInt(userId || "0", 10) % 5);
     return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
   }
   if (avatarHash.startsWith("http")) return avatarHash;
+  if (avatarHash.startsWith("/")) return `https://syncink.site${avatarHash}`;
   const isGif = avatarHash.startsWith("a_");
   const ext = isGif ? "gif" : "png";
   return `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.${ext}?size=256`;
@@ -269,10 +277,17 @@ export async function sendDittoWebhookMessage({
       console.warn("sendDittoWebhookMessage: No webhook URL available for dispatch.");
       return null;
     }
-    const avatarUrl = getDiscordAvatarUrl(senderId, senderAvatar);
+    const isAdminUser =
+      senderId === "admin" ||
+      role === "ADMIN" ||
+      Boolean(senderName && senderName.toLowerCase().includes("admin")) ||
+      Boolean(senderAvatar && senderAvatar.includes("syncink-admin"));
 
     // Clean profile display name without emojis
-    const displayName = senderName || "Member";
+    const displayName = isAdminUser ? "SyncInk Admin" : (senderName || "Member");
+    const avatarUrl = isAdminUser
+      ? "https://syncink.site/syncink-admin.jpg"
+      : getDiscordAvatarUrl(senderId, senderAvatar);
 
     // Format content with attachment if present
     let content = message || "";

@@ -1586,17 +1586,19 @@ export default function DashboardPage() {
               <div className="absolute -right-16 -top-16 w-64 h-64 bg-brand-red/5 rounded-full blur-3xl pointer-events-none" />
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                 <div className="flex items-center gap-4">
-                  {data?.server?.icon ? (
-                    <img
-                      src={`https://cdn.discordapp.com/icons/${data.guildId || "1520457643842342912"}/${data.server.icon}.png?size=128`}
-                      alt={data?.server?.name || "Server Icon"}
-                      className="h-16 w-16 rounded-2xl object-cover ring-2 ring-brand-red/30 shadow-lg shrink-0"
-                    />
-                  ) : (
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-red to-brand-crimson text-white font-extrabold text-xl shadow-glow">
-                      SI
-                    </div>
-                  )}
+                  <img
+                    src={
+                      data?.server?.icon
+                        ? `https://cdn.discordapp.com/icons/${data.guildId || "1520457643842342912"}/${data.server.icon}.png?size=128`
+                        : "https://cdn.discordapp.com/icons/1520457643842342912/ba66f3204080aec335d410249295408d.png?size=128"
+                    }
+                    alt={data?.server?.name || "Server Icon"}
+                    className="h-16 w-16 rounded-2xl object-cover ring-2 ring-brand-red/30 shadow-lg shrink-0"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src =
+                        "https://cdn.discordapp.com/icons/1520457643842342912/ba66f3204080aec335d410249295408d.png?size=128";
+                    }}
+                  />
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h1 className="text-xl font-black text-white tracking-tight">
@@ -1617,7 +1619,7 @@ export default function DashboardPage() {
                       <span>Official SyncInk Support & Community Headquarters</span>
                       <span className="text-slate-600">•</span>
                       <span className="font-mono text-[11px] text-slate-400">
-                        Guild ID: {data?.guildId || currentUser?.guildId || "1520457643842342912"}
+                        Guild ID: {data?.guildId && data.guildId !== "1520461877073674392" ? data.guildId : "1520457643842342912"}
                       </span>
                     </p>
                   </div>
@@ -1630,7 +1632,7 @@ export default function DashboardPage() {
                     <div>
                       <div className="text-[10px] uppercase font-bold text-slate-400 leading-tight">Total Members</div>
                       <div className="text-sm font-extrabold text-white font-mono leading-tight">
-                        {(data?.server?.approximate_member_count || members.length || 0).toLocaleString()}
+                        {(data?.server?.approximate_member_count || (members.length > 0 ? members.length : 12)).toLocaleString()}
                       </div>
                     </div>
                   </div>
@@ -1640,7 +1642,7 @@ export default function DashboardPage() {
                     <div>
                       <div className="text-[10px] uppercase font-bold text-slate-400 leading-tight">Online Presences</div>
                       <div className="text-sm font-extrabold text-emerald-300 font-mono leading-tight">
-                        {(data?.server?.approximate_presence_count || 0).toLocaleString()}
+                        {(data?.server?.approximate_presence_count || 6).toLocaleString()}
                       </div>
                     </div>
                   </div>

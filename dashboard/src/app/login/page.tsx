@@ -134,14 +134,18 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* Secondary: Administrator Passkey */}
+          {/* Secondary: SyncInk Admin Passkey */}
           <button
             type="button"
             onClick={() => setShowPasskey(!showPasskey)}
-            className="flex items-center justify-center gap-1.5 w-full text-xs font-medium text-slate-400 hover:text-white py-1 transition-colors"
+            className="flex items-center justify-center gap-2 w-full text-xs font-medium text-slate-400 hover:text-white py-1.5 transition-colors"
           >
-            <Key className="h-3.5 w-3.5 text-slate-500" />
-            <span>Use Administrator Passkey</span>
+            <img
+              src="/syncink-admin.jpg"
+              alt="SyncInk Admin"
+              className="h-4 w-4 rounded-md object-cover border border-purple-500/40"
+            />
+            <span>Use SyncInk Admin Passkey</span>
             {showPasskey ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </button>
 
@@ -149,25 +153,25 @@ function LoginForm() {
             <form onSubmit={handlePasskeyLogin} className="space-y-2.5 pt-1 transition-all">
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
-                  <Lock className="h-3.5 w-3.5" />
+                  <Lock className="h-3.5 w-3.5 text-purple-400" />
                 </div>
                 <input
                   type="password"
                   value={key}
                   onChange={(e) => setKey(e.target.value)}
-                  placeholder="Enter administrator passkey..."
+                  placeholder="Enter SyncInk Admin passkey..."
                   required
-                  className="w-full rounded-xl border border-white/10 bg-surface py-2 pl-9 pr-3 text-xs text-white placeholder-slate-500 outline-none transition-all focus:border-brand-red focus:ring-1 focus:ring-brand-red"
+                  className="w-full rounded-xl border border-purple-500/20 bg-surface py-2 pl-9 pr-3 text-xs text-white placeholder-slate-500 outline-none transition-all focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-surface-card hover:bg-surface-hover border border-white/10 py-2 px-3 text-xs font-semibold text-white transition-all disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/30 py-2 px-3 text-xs font-semibold text-purple-200 transition-all disabled:opacity-50"
               >
-                <span>{loading ? "Verifying..." : "Unlock Console"}</span>
-                <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
+                <span>{loading ? "Verifying..." : "Unlock SyncInk Admin"}</span>
+                <ArrowRight className="h-3.5 w-3.5 text-purple-400" />
               </button>
             </form>
           )}

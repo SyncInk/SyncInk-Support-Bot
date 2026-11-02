@@ -133,18 +133,21 @@ export async function getCurrentUser(): Promise<DiscordUser | null> {
 
   const adminToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
   if (adminToken && isValidAdminSessionToken(adminToken)) {
+    const rawGid = (process.env.DEFAULT_GUILD_ID || "1520457643842342912").trim();
+    const finalGid = rawGid === "1520461877073674392" ? "1520457643842342912" : rawGid;
     return {
       id: "admin",
-      username: "Server Administrator",
-      global_name: "Admin Passkey",
+      username: "SyncInk Admin",
+      global_name: "SyncInk Admin",
+      avatar: "/syncink-admin.jpg",
       isOwner: true,
       isAdmin: true,
       isStaff: true,
       isVerified: true,
       roleType: "owner",
-      roleIcon: "https://cdn.discordapp.com/emojis/1517253606686986323.png",
-      role: "Server Administrator",
-      guildId: (process.env.DEFAULT_GUILD_ID || "1520457643842342912").trim(),
+      roleIcon: "/syncink-admin.jpg",
+      role: "SyncInk Admin",
+      guildId: finalGid,
       guildName: "SyncInk Support",
     };
   }

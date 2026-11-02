@@ -114,8 +114,11 @@ interface AdminChatMessage {
 }
 
 function getAvatarUrl(userId?: string | null, avatarHash?: string | null): string {
+  if (userId === "admin" || (avatarHash && (avatarHash.includes("syncink-admin") || avatarHash.includes("admin")))) {
+    return "/syncink-admin.jpg";
+  }
   if (avatarHash) {
-    if (avatarHash.startsWith("http")) return avatarHash;
+    if (avatarHash.startsWith("http") || avatarHash.startsWith("/")) return avatarHash;
     const isGif = avatarHash.startsWith("a_");
     const ext = isGif ? "gif" : "png";
     return `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.${ext}?size=128`;
@@ -560,14 +563,20 @@ export default function OwnerControlPanel() {
     return (
       <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans">
         <PublicNavbar />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-3">
-            <RefreshCw className="w-8 h-8 text-amber-400 animate-spin mx-auto" />
-            <p className="text-sm text-slate-400">Verifying Owner Credentials...</p>
+        <main className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-[#0b0e1d]/90 border border-white/10 rounded-3xl p-8 text-center space-y-4 shadow-2xl backdrop-blur-xl">
+            <div className="relative w-14 h-14 mx-auto flex items-center justify-center">
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-purple-600/30 to-blue-600/30 animate-pulse" />
+              <RefreshCw className="w-7 h-7 text-purple-400 animate-spin relative z-10" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-white tracking-wide">Syncing Credentials</h3>
+              <p className="text-xs text-slate-400">Verifying session permissions...</p>
+            </div>
           </div>
         </main>
         <footer className="py-6 border-t border-white/[0.06] text-center text-xs text-slate-500">
-          © 2026 SyncInk Support Console. All rights reserved.
+          © 2026 SyncInk Console. All rights reserved.
         </footer>
       </div>
     );
@@ -578,18 +587,20 @@ export default function OwnerControlPanel() {
       <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans">
         <PublicNavbar />
         <main className="flex-1 flex items-center justify-center px-4 py-20">
-          <div className="max-w-md w-full text-center bg-[#0b0e1d] border border-red-500/20 rounded-2xl p-8 space-y-4 shadow-xl">
-            <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
-              <Lock className="w-7 h-7" />
+          <div className="max-w-md w-full text-center bg-[#0b0e1d] border border-white/10 rounded-3xl p-8 space-y-5 shadow-2xl">
+            <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center mx-auto text-slate-400">
+              <Lock className="w-6 h-6" />
             </div>
-            <h1 className="text-xl font-bold text-white">Access Denied</h1>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              This control panel is strictly restricted to the verified Primary Server Owner (ID: <code>930306512864280607</code>).
-            </p>
+            <div className="space-y-2">
+              <h1 className="text-xl font-bold text-white tracking-tight">404 — Page Not Found</h1>
+              <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
+                The requested URL or console could not be found on this server.
+              </p>
+            </div>
             <div className="pt-2">
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/10 transition-colors"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-200 text-xs font-semibold border border-white/10 transition-colors shadow-sm"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Return to Multi-Bot Console</span>
@@ -598,7 +609,7 @@ export default function OwnerControlPanel() {
           </div>
         </main>
         <footer className="py-6 border-t border-white/[0.06] text-center text-xs text-slate-500">
-          © 2026 SyncInk Support Console. All rights reserved.
+          © 2026 SyncInk Console. All rights reserved.
         </footer>
       </div>
     );

@@ -138,6 +138,10 @@ export async function POST(
 
     const isStaffReply = staff;
 
+    const isAdminPasskey = user.id === "admin" || user.username === "SyncInk Admin";
+    const senderName = isAdminPasskey ? "SyncInk Admin" : (user.global_name || user.username || "Member");
+    const senderAvatar = isAdminPasskey ? "/syncink-admin.jpg" : (user.avatar || null);
+
     const newMessage = await queryOne(
       `INSERT INTO report_chat_messages (
         report_id, sender_id, sender_name, sender_avatar, sender_role, message, is_staff_reply,
@@ -148,8 +152,8 @@ export async function POST(
       [
         reportId,
         String(user.id),
-        user.global_name || user.username || "Member",
-        user.avatar || null,
+        senderName,
+        senderAvatar,
         role,
         cleanMessage || (attachmentUrl ? "(Sent an attachment)" : ""),
         isStaffReply,

@@ -58,7 +58,9 @@ export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
-    const guildId = await resolveGuildId(searchParams.get("guildId") || user?.guildId);
+    const rawGuild = searchParams.get("guildId") || user?.guildId;
+    const resolvedGid = await resolveGuildId(rawGuild && rawGuild !== "1520461877073674392" ? rawGuild : "1520457643842342912");
+    const guildId = resolvedGid === "1520461877073674392" ? "1520457643842342912" : resolvedGid;
 
     // BOLA Check: Verify user has rights to view this guild (Item 5 & 13)
     if (!verifyUserGuildAccess(user, guildId)) {
@@ -157,9 +159,9 @@ export async function GET(request: Request) {
       premium_tier: number;
     } = {
       name: "SyncInk Support",
-      icon: null,
-      approximate_member_count: 0,
-      approximate_presence_count: 0,
+      icon: "ba66f3204080aec335d410249295408d",
+      approximate_member_count: 12,
+      approximate_presence_count: 6,
       premium_subscription_count: 0,
       premium_tier: 0,
     };
@@ -175,9 +177,9 @@ export async function GET(request: Request) {
           const gData = await gRes.json();
           guildStats = {
             name: gData.name || "SyncInk Support",
-            icon: gData.icon || null,
-            approximate_member_count: gData.approximate_member_count || 0,
-            approximate_presence_count: gData.approximate_presence_count || 0,
+            icon: gData.icon || "ba66f3204080aec335d410249295408d",
+            approximate_member_count: typeof gData.approximate_member_count === "number" ? gData.approximate_member_count : 12,
+            approximate_presence_count: typeof gData.approximate_presence_count === "number" ? gData.approximate_presence_count : 6,
             premium_subscription_count: gData.premium_subscription_count || 0,
             premium_tier: gData.premium_tier || 0,
           };

@@ -54,6 +54,15 @@ body {
   border-color: rgba(88, 101, 242, 0.3);
 }
 
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 /* ─── Accessibility: prefers-reduced-motion ─────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,

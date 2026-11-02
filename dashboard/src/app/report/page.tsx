@@ -98,8 +98,11 @@ interface ChatMessage {
 }
 
 function getAvatarUrl(userId?: string | null, avatarHash?: string | null): string {
+  if (userId === "admin" || (avatarHash && (avatarHash.includes("syncink-admin") || avatarHash.includes("admin")))) {
+    return "/syncink-admin.jpg";
+  }
   if (avatarHash) {
-    if (avatarHash.startsWith("http")) return avatarHash;
+    if (avatarHash.startsWith("http") || avatarHash.startsWith("/")) return avatarHash;
     const isGif = avatarHash.startsWith("a_");
     const ext = isGif ? "gif" : "png";
     return `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.${ext}?size=128`;

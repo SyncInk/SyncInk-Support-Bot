@@ -31,7 +31,7 @@ Expand the **"Environment Variables"** section and add the following 3 variables
 | :--- | :--- | :--- |
 | **`DATABASE_URL`** | `postgres://...` | **Required**: The exact same PostgreSQL database connection URL used by your Discord bot (e.g. from Railway, Supabase, Neon). |
 | **`ADMIN_ACCESS_KEY`** | `YourSecretPassword123!` | **Required**: A secure secret passkey of your choice to log in and unlock the dashboard. |
-| **`DEFAULT_GUILD_ID`** | `1520461877073674392` | *(Optional)* The SyncInk Support Discord Server ID. Defaults to `1520461877073674392`. |
+| **`DEFAULT_GUILD_ID`** | `1520457643842342912` | *(Optional)* The SyncInk Support Discord Server ID. Defaults to `1520457643842342912`. |
 
 ---
 

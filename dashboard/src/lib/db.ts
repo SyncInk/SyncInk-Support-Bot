@@ -71,26 +71,29 @@ export async function queryOne<T = any>(text: string, params: any[] = []): Promi
 let cachedGuildId: string | null = null;
 let lastGuildFetch = 0;
 
+export const PRIMARY_GUILD_ID = "1520457643842342912";
+
 export async function resolveGuildId(providedGuildId?: string | null): Promise<string> {
   if (
     providedGuildId &&
     providedGuildId.trim() &&
     providedGuildId !== "null" &&
-    providedGuildId !== "undefined"
+    providedGuildId !== "undefined" &&
+    providedGuildId !== "1520461877073674392"
   ) {
     return providedGuildId.trim();
   }
 
   const now = Date.now();
-  if (cachedGuildId && now - lastGuildFetch < 60000) {
+  if (cachedGuildId && now - lastGuildFetch < 60000 && cachedGuildId !== "1520461877073674392") {
     return cachedGuildId;
   }
 
   try {
     const existing = await queryOne<{ guild_id: string | number }>(
-      "SELECT guild_id FROM guild_settings ORDER BY guild_id ASC LIMIT 1"
+      "SELECT guild_id FROM guild_settings WHERE guild_id != '1520461877073674392' ORDER BY (guild_id = '1520457643842342912') DESC LIMIT 1"
     );
-    if (existing?.guild_id) {
+    if (existing?.guild_id && String(existing.guild_id) !== "1520461877073674392") {
       cachedGuildId = String(existing.guild_id);
       lastGuildFetch = now;
       return cachedGuildId;
@@ -99,5 +102,6 @@ export async function resolveGuildId(providedGuildId?: string | null): Promise<s
     // ignore query error, fallback below
   }
 
-  return process.env.DEFAULT_GUILD_ID || "1520457643842342912";
+  const envDefault = (process.env.DEFAULT_GUILD_ID || PRIMARY_GUILD_ID).trim();
+  return envDefault === "1520461877073674392" ? PRIMARY_GUILD_ID : envDefault;
 }
