@@ -140,6 +140,7 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "17. Ask AI Channel: <#1544361954574073916> (Dedicated channel for AI questions)",
         "18. Server Boosters Channel: <#1558585414829211668> (Where server boosts are celebrated with the Boosters Webhook)",
         "19. VIP Support Chat: <#1558589470469525504> (Dedicated VIP lounge & priority support channel exclusive to Server Boosters)",
+        "20. Incident Recovery Channel: <#1541796896199417906> (Dedicated channel mirroring reports created on https://syncink.site/report for recovering lost transcripts and bot disruptions)",
         "",
         "--- OFFICIAL SUPPORT SERVER RULES (<#1520460587522330634>) & WEBSITE DOCUMENTATION ---",
         "Discord Guide Channel: <#1520460587522330634> (Reference Post: https://discord.com/channels/1520457643842342912/1520460587522330634/1539582756001161238)",
@@ -148,7 +149,8 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "Official Terms of Use (Public - No Login Required): https://syncink.site/terms",
         "Official Privacy Policy (Public - No Login Required): https://syncink.site/privacy",
         "Official Security & Defense Dashboard: https://syncink.site/",
-        "• Rule 1: Verification Required — All members must complete verification in <#1520748219100041348> before gaining access to the rest of the server.",
+        "Official Data Loss Recovery Desk: https://syncink.site/report",
+        "• Rule 1: Verification Required — All members must complete verification in <#1520748219100041348> before gaining access to the rest of the server. Upon completing verification, members automatically receive BOTH the Verified role (<@&1520871574088056952>) AND the UPDATES role (<@&1547084124983132240>).",
         "• Rule 2: Professional Conduct & Respect — Treat all members, staff, and developers with respect. Strictly prohibited: harassment, bullying, hate speech, discrimination, personal attacks, toxic behavior, provoking arguments.",
         "• Rule 3: Keep Discussions Relevant — Keep conversations in proper channels:",
         "  - General Chat: <#1520461481857122485> (Casual & off-topic discussions)",
@@ -223,6 +225,10 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "• Community & Partnerships:",
         f"  - Partner: {EmojiManager.get_role_emoji(guild, 'partner')} <@&1551337053185114242> (Official server partners and affiliated communities)",
         f"  - Verified: {EmojiManager.get_role_emoji(guild, 'verified')} <@&1520871574088056952> (Community members who completed verification checkpoint in <#1520748219100041348>)",
+        f"  - Updates: <:time:1558804154963468288> <@&1547084124983132240> (Granted automatically upon verification in <#1520748219100041348>)",
+        "• Incident Recovery Support Desk:",
+        "  - Dedicated Incident Portal: https://syncink.site/report (Browser chat with support staff and owner for data loss, accidental channel wipes, or missing ticket transcripts)",
+        "  - Discord Desk Channel: <#1541796896199417906> (Private support threads created dynamically per report)",
         "• Server Boosters & VIP:",
         f"  - Server Booster: <:booster:1558595630660714616> <@&1558584451724738640> (Awarded automatically to members who boost the server)",
         "",
@@ -1177,6 +1183,7 @@ class ChatGPT(commands.Cog):
             "     • Community & Partnerships:\n"
             f"       - Partner: {partner_emoji} <@&1551337053185114242> (Partnered servers & collabs)\n"
             f"       - Verified: {verified_emoji} <@&1520871574088056952> (Verify in <#1520748219100041348>)\n"
+            f"       - Updates: <:time:1558804154963468288> <@&1547084124983132240> (Awarded automatically upon verification in <#1520748219100041348>)\n"
             "     • Server Boosters & VIP:\n"
             f"       - Server Booster: <:booster:1558595630660714616> <@&1558584451724738640> (Awarded automatically upon boosting the server)\n"
             "11. **SERVER BOOSTERS & EXCLUSIVE VIP PERKS (<#1558585414829211668>)**:\n"
@@ -1198,6 +1205,21 @@ class ChatGPT(commands.Cog):
             "     <a:pengubonk:1558803021507600506> Pengubonk celebration\n"
             "     <a:earthblurple:1558803274813935666> Rotating earth blurple\n"
             "     <:syncinkradio:1558804305044045844> SyncInk radio\n"
+            "     • Section Headers & Titles: <a:arrow:1558799019927543878> or <:SyncInkAI:1549154093421826058>\n"
+            "     • Bullet points & Sub-lists: <:s_arrow:1558799699102793801> (ALWAYS use <:s_arrow:1558799699102793801> instead of ↳ or ╰)\n"
+            "     • Approvals, Best Practices & Successes: <a:approved:1547035150964236379> or <a:check_yes:1547034079076032512>\n"
+            "     • Warnings, Cautions & Prohibitions: <a:syncwarning:1547034231438319616> or <a:syncalert:1547036006455189626>\n"
+            "     • Security & Permissions: <:syncink_lock:1547034002689491025>\n"
+            "     • Bot & Automation Features: <:syncbot:1552437282059980810>\n"
+            "     • Time, Cooldowns & Schedules: <:time:1558804154963468288>\n"
+            "     • Member Community & Roster: <:member:1559185207033077901>\n"
+            "     • Celebrations, Banter & Playful responses: <a:pengubonk:1558803021507600506>, <a:heartpop:1558594180937424896>, <a:scribbleheart:1558596661087969300>, <:neonheart:1558594319227813949>, <a:purpleheartexclaim:1558799132871757844>\n"
+            "   - Emojis must be output in clean Discord format (`<:name:id>` or `<a:name:id>`), NEVER inside backticks.\n"
+            "13. **DATA LOSS RECOVERY & BOT INQUIRIES DESK (https://syncink.site/report)**:\n"
+            "   - When anyone asks about missing transcripts, bot downtime, lost roles, or technical server data loss:\n"
+            "     • Direct them immediately to the Data Loss Recovery Desk: [syncink.site/report](https://syncink.site/report).\n"
+            "     • Explain that their report opens a private two-way chat directly with administrators and the server owner, synced in real-time to Discord support channel <#1541796896199417906>.\n"
+            "     • If screenshots or logs are needed, administrators can unlock file attachment permissions inside the desk.\n"
         )
         if server_context:
             system_prompt += f"### SERVER STRUCTURE & CHANNELS\n{server_context}\n\n"

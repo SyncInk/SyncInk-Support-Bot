@@ -17,13 +17,33 @@ import {
   Users,
   Settings,
   ArrowRight,
-  Zap,
+  LifeBuoy,
+  ClipboardList,
+  RotateCcw,
+  Crown,
+  FileText,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
-import { PublicFooter } from "@/components/PublicFooter";
+
+interface CurrentUser {
+  id: string;
+  username: string;
+  global_name?: string | null;
+  avatar?: string | null;
+  isOwner?: boolean;
+  isAdmin?: boolean;
+  isStaff?: boolean;
+  role?: string;
+}
 
 export default function MasterDashboardHub() {
   const router = useRouter();
+
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   const [securityStats, setSecurityStats] = useState({
     jailedCount: 0,
     whitelistCount: 0,
@@ -32,293 +52,552 @@ export default function MasterDashboardHub() {
     violationsCount: 0,
   });
   const [raidState, setRaidState] = useState("NORMAL");
-  const [loading, setLoading] = useState(true);
+  const [reportCount, setReportCount] = useState<number | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
+  // 1. Authenticate user & load profile
   useEffect(() => {
-    async function loadStats() {
+    async function loadUser() {
       try {
-        const res = await fetch("/api/security");
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
         if (res.status === 401) {
           router.push("/login?redirect=/dashboard");
           return;
         }
         if (res.ok) {
           const data = await res.json();
-          if (data.stats) {
+          if (data.authenticated && data.user) {
+            setCurrentUser(data.user);
+          } else {
+            router.push("/login?redirect=/dashboard");
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Auth verification failed:", err);
+      } finally {
+        setAuthLoading(false);
+      }
+    }
+    loadUser();
+  }, [router]);
+
+  // 2. Fetch ecosystem statistics
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        // Fetch security telemetry
+        const secRes = await fetch("/api/security");
+        if (secRes.ok) {
+          const secData = await secRes.json();
+          if (secData.stats) {
             setSecurityStats({
-              jailedCount: data.stats.jailedCount || 0,
-              whitelistCount: data.stats.whitelistCount || 0,
-              incidentCount: data.stats.incidentCount || 0,
-              modCasesCount: data.stats.modCasesCount || 0,
-              violationsCount: data.stats.violationsCount || 0,
+              jailedCount: secData.stats.jailedCount || 0,
+              whitelistCount: secData.stats.whitelistCount || 0,
+              incidentCount: secData.stats.incidentCount || 0,
+              modCasesCount: secData.stats.modCasesCount || 0,
+              violationsCount: secData.stats.violationsCount || 0,
             });
           }
-          if (data.raidState) {
-            setRaidState(data.raidState);
+          if (secData.raidState) {
+            setRaidState(secData.raidState);
+          }
+        }
+
+        // Fetch recovery reports count
+        const repRes = await fetch("/api/reports");
+        if (repRes.ok) {
+          const repData = await repRes.json();
+          if (Array.isArray(repData.reports)) {
+            setReportCount(repData.reports.length);
           }
         }
       } catch (e) {
-        console.error("Telemetry fetch error:", e);
+        console.error("Ecosystem telemetry error:", e);
       } finally {
-        setLoading(false);
+        setStatsLoading(false);
       }
     }
     loadStats();
   }, []);
 
+  const isOwner =
+    currentUser?.isOwner ||
+    currentUser?.id === "930306512864280607";
+  const isPrivilegedStaff =
+    isOwner || currentUser?.isAdmin || currentUser?.isStaff;
+
+  const getAvatarUrl = (user: CurrentUser | null) => {
+    if (!user) return "https://cdn.discordapp.com/embed/avatars/0.png";
+    if (user.avatar) {
+      const ext = user.avatar.startsWith("a_") ? "gif" : "png";
+      return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${ext}?size=128`;
+    }
+    const idx = Math.abs(parseInt(user.id || "0", 10) % 5);
+    return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans">
+        <PublicNavbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-3">
+            <RefreshCw className="w-8 h-8 text-blue-400 animate-spin mx-auto" />
+            <p className="text-xs sm:text-sm text-slate-400">Loading Secure Bot Console...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-brand-purple selection:text-white">
+    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       <PublicNavbar />
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 space-y-10">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/[0.08]">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#5865F2]/10 border border-[#5865F2]/30 text-[#5865F2] text-xs font-bold uppercase tracking-wider mb-2">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Unified Bot Management</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              Bot Command Centers
-            </h1>
-            <p className="text-sm text-slate-400 mt-1 max-w-xl">
-              Select a bot below to open its specialized console and manage your server settings.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>All 3 Dedicated Consoles Online</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Applications Command Center Callout Banner */}
-        <div className="p-6 rounded-3xl bg-gradient-to-r from-[#120f26] via-[#10132b] to-[#0e1628] border border-violet-500/30 flex flex-col md:flex-row md:items-center justify-between gap-5 shadow-2xl relative overflow-hidden">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-violet-500/40 flex items-center justify-center text-violet-400 shrink-0 shadow-[0_0_20px_rgba(139,92,246,0.3)]">
-              <Users className="w-6 h-6" />
-            </div>
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
+        {/* ========================================================= */}
+        {/* TOP COMMAND CENTER HEADER & USER STATUS */}
+        {/* ========================================================= */}
+        <div className="bg-[#0b0e1d] border border-white/[0.08] rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-black text-white">Member Applications Panel</h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-violet-500/20 text-violet-300 border border-violet-500/30">
-                  Staff & Dev Roster
-                </span>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-400 text-xs font-bold uppercase tracking-wider mb-3">
+                <Shield className="w-3.5 h-3.5 text-blue-400" />
+                <span>SyncInk Bot Operations Console</span>
               </div>
-              <p className="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
-                Review, evaluate, and manage candidate submissions for Staff and Developer positions with internal feedback notes.
+              <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+                Unified Support Bot Dashboard
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-2xl leading-relaxed">
+                Centralized management for incident recovery, server automod defense, ticket archives, and developer governance.
               </p>
             </div>
-          </div>
-          <Link
-            href="/dashboard/applications"
-            className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs sm:text-sm transition-all shadow-glow flex items-center justify-center gap-2 shrink-0 hover:scale-105"
-          >
-            <span>Open Applications Panel</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto w-full">
-          {/* CARD 1: TICKET BOT DASHBOARD */}
-          <div className="w-full p-6 sm:p-8 rounded-[2rem] bg-gradient-to-b from-[#0f111a] to-[#08090e] border border-[#5865F2]/30 shadow-[0_20px_60px_-15px_rgba(88,101,242,0.2)] relative overflow-hidden flex flex-col justify-between group hover:border-[#5865F2]/60 hover:shadow-[0_20px_60px_-15px_rgba(88,101,242,0.4)] transition-all duration-500 hover:-translate-y-1">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-[#5865F2]/15 rounded-full blur-3xl pointer-events-none group-hover:bg-[#5865F2]/25 transition-all duration-500" />
-
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <div className="w-16 h-16 rounded-full bg-[#5865F2]/20 border-2 border-[#5865F2]/40 flex items-center justify-center shadow-[0_0_25px_rgba(88,101,242,0.4)] overflow-hidden shrink-0">
+            {/* Authenticated Identity Pill */}
+            {currentUser && (
+              <div className="flex items-center gap-3.5 p-3 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] shrink-0">
+                <div className="relative">
                   <img
-                    src="/ticket-logo.png"
-                    alt="Ticket Bot"
-                    className="w-full h-full object-cover rounded-full"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = "none";
-                    }}
+                    src={getAvatarUrl(currentUser)}
+                    alt={currentUser.username}
+                    className="w-11 h-11 rounded-xl object-cover border border-white/10"
                   />
+                  <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#0b0e1d]" />
                 </div>
-                <span className="px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-[#5865F2]/20 text-blue-300 border border-[#5865F2]/30 shadow-sm">
-                  Dedicated Console
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs sm:text-sm font-bold text-white truncate max-w-[160px]">
+                      {currentUser.global_name || currentUser.username}
+                    </span>
+                    {isOwner ? (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                        <img
+                          src="https://cdn.discordapp.com/emojis/1513803214674464788.png"
+                          alt="Owner"
+                          className="w-3 h-3 object-contain inline-block"
+                        />
+                        <span>Owner</span>
+                      </span>
+                    ) : isPrivilegedStaff ? (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                        {currentUser.role || "Staff"}
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        Verified
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] font-mono text-slate-400 mt-0.5 flex items-center gap-2">
+                    <span>ID: {currentUser.id}</span>
+                    <span className="text-slate-600">•</span>
+                    <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5" />
+                      <span>Encrypted</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* LIVE ECOSYSTEM STATUS BAR */}
+        {/* ========================================================= */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Tile 1: Security Shield */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#0b0e1d] border border-white/[0.08] flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+              <Shield className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Raid Shield
+              </div>
+              <div className="text-sm sm:text-base font-black text-white flex items-center gap-1.5 mt-0.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{raidState}</span>
+              </div>
+              <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                {securityStats.jailedCount} Quarantined
+              </div>
+            </div>
+          </div>
+
+          {/* Tile 2: Incident Recovery */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#0b0e1d] border border-white/[0.08] flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+              <LifeBuoy className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Recovery Desk
+              </div>
+              <div className="text-sm sm:text-base font-black text-white mt-0.5">
+                {reportCount !== null ? `${reportCount} Total Reports` : "Active"}
+              </div>
+              <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                Two-Way Discord Mirror
+              </div>
+            </div>
+          </div>
+
+          {/* Tile 3: Ticket System */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#0b0e1d] border border-white/[0.08] flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Ticket Engine
+              </div>
+              <div className="text-sm sm:text-base font-black text-white mt-0.5">
+                6 Categories
+              </div>
+              <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                Private HTML Transcripts
+              </div>
+            </div>
+          </div>
+
+          {/* Tile 4: AutoMod Defense */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#0b0e1d] border border-white/[0.08] flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+              <Activity className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                AutoMod Filters
+              </div>
+              <div className="text-sm sm:text-base font-black text-white mt-0.5">
+                {securityStats.violationsCount} Filtered
+              </div>
+              <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                Anti-Nuke Velocity Active
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* COMMAND CENTERS GRID */}
+        {/* ========================================================= */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* CARD 1: DATA LOSS RECOVERY & INCIDENT DESK */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-[#0b0e1d] border border-blue-500/20 flex flex-col justify-between hover:border-blue-500/40 transition-all shadow-lg group">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-600/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-sm">
+                  <LifeBuoy className="w-6 h-6" />
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                  Subdomain Ready
                 </span>
               </div>
-
-              <h2 className="text-2xl sm:text-3xl font-black text-white group-hover:text-blue-300 transition-colors">
-                SyncInk Ticket Bot
+              <h2 className="text-xl font-bold text-white group-hover:text-blue-300 transition-colors">
+                Incident &amp; Data Recovery Desk
               </h2>
-              <p className="text-sm text-slate-300 mt-3 leading-relaxed">
-                Configure private threads, custom emojis, panels, and view encrypted HTML transcripts.
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Experiencing missing ticket transcripts, accidental channel wipe, or bot disruptions? Open a recovery inquiry with private two-way chat with staff and engineering leads.
               </p>
-
-              {/* Live Feature Highlights */}
-              <div className="mt-6 space-y-2.5 text-sm">
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
-                  <span className="text-slate-400 font-medium">Operating Mode</span>
-                  <span className="font-bold text-blue-400">Private Threads</span>
+              <div className="mt-5 space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Direct browser-to-Discord thread synchronization</span>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
-                  <span className="text-slate-400 font-medium">Configured Categories</span>
-                  <span className="font-bold text-amber-300">6 Departments</span>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Secure attachment permissions managed by staff</span>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
-                  <span className="text-slate-400 font-medium">Auto-Transcripts</span>
-                  <span className="font-bold text-emerald-400">Retained HTML</span>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Dedicated escalation on channel #1541796896199417906</span>
                 </div>
               </div>
             </div>
+            <div className="mt-6 pt-5 border-t border-white/[0.06] space-y-2.5">
+              <Link
+                href="/report"
+                className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2"
+              >
+                <span>Open Recovery Desk</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
 
-            <div className="mt-8 space-y-3">
+          {/* CARD 2: SUPPORT SERVER SECURITY & AUTOMOD */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-[#0b0e1d] border border-red-500/20 flex flex-col justify-between hover:border-red-500/40 transition-all shadow-lg group">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-600/15 border border-red-500/30 flex items-center justify-center text-red-400 shadow-sm">
+                  <Shield className="w-6 h-6" />
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-red-500/10 text-red-300 border border-red-500/20">
+                  Defense Engine
+                </span>
+              </div>
+              <h2 className="text-xl font-bold text-white group-hover:text-red-300 transition-colors">
+                Support Security &amp; AutoMod
+              </h2>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Automated security engine protecting the official SyncInk Support Server. Manage velocity dampeners, auto-quarantine, security thresholds, and export audit reports.
+              </p>
+              <div className="mt-5 space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Real-time raid velocity monitor and quarantine</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Customizable spam &amp; invite link filters</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Audited incident history and JSON/CSV export</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 pt-5 border-t border-white/[0.06] space-y-2.5">
+              <Link
+                href="/dashboard/security"
+                className="w-full py-3 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2"
+              >
+                <span>Launch Security Console</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          {/* CARD 3: TICKET BOT & TRANSCRIPTS */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-[#0b0e1d] border border-indigo-500/20 flex flex-col justify-between hover:border-indigo-500/40 transition-all shadow-lg group">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-600/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-sm">
+                  <MessageSquare className="w-6 h-6" />
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                  Support Engine
+                </span>
+              </div>
+              <h2 className="text-xl font-bold text-white group-hover:text-indigo-300 transition-colors">
+                Ticket Bot &amp; Transcripts
+              </h2>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Configure private thread ticket departments, staff claim actions, embed panels, and view encrypted HTML transcripts directly in your browser.
+              </p>
+              <div className="mt-5 space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Private threads organized by 6 departments</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>HTML transcripts retained with attachments</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Staff transfer and claim button interactions</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 pt-5 border-t border-white/[0.06] space-y-2.5">
               <Link
                 href="/dashboard/tickets"
-                className="w-full py-3.5 px-4 rounded-2xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-bold text-sm transition-all shadow-[0_0_20px_rgba(88,101,242,0.4)] hover:shadow-[0_0_30px_rgba(88,101,242,0.6)] flex items-center justify-center gap-2 transform hover:scale-[1.02]"
+                className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2"
               >
                 <span>Launch Ticket Dashboard</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link
-                href="/dashboard/tickets?tab=transcripts"
-                className="w-full py-3 px-4 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition-all border border-white/10 flex items-center justify-center gap-1.5"
-              >
-                <span>Browse Transcripts Archive</span>
-                <ChevronRight className="w-3 h-3" />
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           </div>
 
-          {/* CARD 2: VOICE BOT DASHBOARD */}
-          <div className="w-full p-6 sm:p-8 rounded-[2rem] bg-gradient-to-b from-[#0a151f] to-[#060c12] border border-cyan-500/30 shadow-[0_20px_60px_-15px_rgba(6,182,212,0.2)] relative overflow-hidden flex flex-col justify-between group hover:border-cyan-500/60 hover:shadow-[0_20px_60px_-15px_rgba(6,182,212,0.4)] transition-all duration-500 hover:-translate-y-1">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none group-hover:bg-cyan-500/25 transition-all duration-500" />
-
+          {/* CARD 4: MEMBER APPLICATIONS PANEL */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-[#0b0e1d] border border-violet-500/20 flex flex-col justify-between hover:border-violet-500/40 transition-all shadow-lg group">
             <div>
-              <div className="flex items-center justify-between mb-6">
-                <div className="w-16 h-16 rounded-full bg-cyan-600/20 border-2 border-cyan-500/40 flex items-center justify-center shadow-[0_0_25px_rgba(6,182,212,0.4)] overflow-hidden shrink-0">
-                  <img
-                    src="/voice-logo.png"
-                    alt="Voice Bot"
-                    className="w-full h-full object-cover rounded-full"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = "none";
-                    }}
-                  />
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-violet-600/15 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-sm">
+                  <ClipboardList className="w-6 h-6" />
                 </div>
-                <span className="px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm">
-                  Dedicated Console
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-violet-500/10 text-violet-300 border border-violet-500/20">
+                  Staff &amp; Dev Roster
                 </span>
               </div>
-
-              <h2 className="text-2xl sm:text-3xl font-black text-white group-hover:text-cyan-300 transition-colors">
-                SyncInk Voice Bot
+              <h2 className="text-xl font-bold text-white group-hover:text-violet-300 transition-colors">
+                Candidate Applications
               </h2>
-              <p className="text-sm text-slate-300 mt-3 leading-relaxed">
-                Configure join-to-create voice hubs, customizable room naming schemes, bitrate limits, and auto-cleanup.
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Review and evaluate submissions for Staff and Developer roles. Inspect applicant questionnaires, evaluate experience, and store confidential reviewer feedback.
               </p>
-
-              {/* Live Feature Highlights */}
-              <div className="mt-6 space-y-2.5 text-sm">
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
-                  <span className="text-slate-400 font-medium">Channel Engine</span>
-                  <span className="font-bold text-cyan-400">Join-to-Create</span>
+              <div className="mt-5 space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Verified applicant background questionnaire</span>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
-                  <span className="text-slate-400 font-medium">Empty Purge Delay</span>
-                  <span className="font-bold text-emerald-400">1.5s Auto-Delete</span>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Application status toggling: Pending, Accepted, Rejected</span>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
-                  <span className="text-slate-400 font-medium">Room Controls</span>
-                  <span className="font-bold text-indigo-300">Lock, Hide & Limit</span>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Internal team notes and audit logging</span>
                 </div>
               </div>
             </div>
-
-            <div className="mt-8 space-y-3">
+            <div className="mt-6 pt-5 border-t border-white/[0.06] space-y-2.5">
               <Link
-                href="/dashboard/voice"
-                className="w-full py-3.5 px-4 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] flex items-center justify-center gap-2 transform hover:scale-[1.02]"
+                href="/dashboard/applications"
+                className="w-full py-3 px-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2"
               >
-                <span>Launch Voice Dashboard</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Open Applications Panel</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
+            </div>
+          </div>
+
+          {/* CARD 5: OWNER / ADMIN GOVERNANCE CONSOLE */}
+          {isPrivilegedStaff && (
+            <div className="p-6 sm:p-7 rounded-3xl bg-[#0b0e1d] border border-amber-500/25 flex flex-col justify-between hover:border-amber-500/40 transition-all shadow-lg group">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-sm">
+                    <Crown className="w-6 h-6" />
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    Governance Hub
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold text-white group-hover:text-amber-300 transition-colors">
+                  Executive Admin Console
+                </h2>
+                <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                  Dedicated control room for the primary owner and administrators. Manage team role assignments, configure website parameters, and supervise recovery cases.
+                </p>
+                <div className="mt-5 space-y-2 text-xs">
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Role assignments: Owner, Admin, Developer, Staff</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Live data loss recovery desk queue management</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Immutable administrative audit trail</span>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 pt-5 border-t border-white/[0.06] space-y-2.5">
+                <Link
+                  href="/dashboard/admin"
+                  className="w-full py-3 px-4 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2"
+                >
+                  <Crown className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Enter Governance Console</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* CARD 6: VOICE & RADIO ECOSYSTEM */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-[#0b0e1d] border border-cyan-500/20 flex flex-col justify-between hover:border-cyan-500/40 transition-all shadow-lg group">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-600/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-sm">
+                  <Radio className="w-6 h-6" />
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                  Audio &amp; Voice
+                </span>
+              </div>
+              <h2 className="text-xl font-bold text-white group-hover:text-cyan-300 transition-colors">
+                Voice &amp; Radio Stations
+              </h2>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Join-to-Create temporary voice hubs with automatic cleanup, plus lossless 24/7 radio and smart playback protection so listening sessions are never disrupted.
+              </p>
+              <div className="mt-5 space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Smart anti-disruption protection across voice channels</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Join-to-Create private voice rooms with lock/hide</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Continuous 24/7 lofi &amp; worldwide radio streams</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 pt-5 border-t border-white/[0.06] space-y-2.5">
               <a
-                href="https://discord.com/oauth2/authorize?client_id=1516578887109181520&permissions=285220880&integration_type=0&scope=bot+applications.commands"
+                href="https://discord.gg/PmxfJwmQuB"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3 px-4 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition-all border border-white/10 flex items-center justify-center gap-1.5"
+                className="w-full py-3 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2"
               >
-                <span>Invite Voice Bot</span>
-                <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Join Official Support Server</span>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
               </a>
             </div>
           </div>
+        </div>
 
-          {/* CARD 3: SUPPORT SERVER SECURITY DASHBOARD */}
-          <div className="w-full p-6 sm:p-8 rounded-[2rem] bg-gradient-to-b from-[#180d12] to-[#0d070a] border border-brand-red/30 shadow-[0_20px_60px_-15px_rgba(231,76,60,0.2)] relative overflow-hidden flex flex-col justify-between group hover:border-brand-red/60 hover:shadow-[0_20px_60px_-15px_rgba(231,76,60,0.4)] transition-all duration-500 hover:-translate-y-1">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-brand-red/15 rounded-full blur-3xl pointer-events-none group-hover:bg-brand-red/25 transition-all duration-500" />
-
+        {/* ========================================================= */}
+        {/* SECURITY & DATA INTEGRITY COMMITMENT */}
+        {/* ========================================================= */}
+        <div className="p-5 sm:p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-slate-400">
+          <div className="flex items-center gap-3">
+            <Lock className="w-4 h-4 text-blue-400 shrink-0" />
             <div>
-              <div className="flex items-center justify-between mb-6">
-                <div className="w-16 h-16 rounded-full bg-brand-red/10 border-2 border-brand-red/40 flex items-center justify-center shadow-[0_0_25px_rgba(231,76,60,0.4)] overflow-hidden shrink-0">
-                  <img
-                    src="/syncink-main-logo.png"
-                    alt="SyncInk Shield"
-                    className="w-full h-full object-cover rounded-full"
-                  />
-                </div>
-                <span className="px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-brand-red/20 text-brand-crimson border border-brand-red/30 shadow-sm">
-                  Internal Server Shield
-                </span>
-              </div>
-
-              <h2 className="text-2xl sm:text-3xl font-black text-white group-hover:text-red-300 transition-colors">
-                Support Security
-              </h2>
-              <p className="text-sm text-slate-300 mt-3 leading-relaxed">
-                Non-invitable security & automod bot dedicated strictly to keeping the official SyncInk Support Server safe with real-time raid velocity dampeners and auto-quarantine.
-              </p>
-
-              {/* Live Feature Highlights */}
-              <div className="mt-6 space-y-2.5 text-sm">
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
-                  <span className="text-slate-400 font-medium">Raid State</span>
-                  <span
-                    className={`font-bold ${
-                      raidState === "NORMAL" ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" : "text-red-400 animate-pulse"
-                    }`}
-                  >
-                    {raidState}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
-                  <span className="text-slate-400 font-medium">Quarantine Inmates</span>
-                  <span className="font-bold text-white">
-                    {loading ? "..." : `${securityStats.jailedCount} isolated`}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
-                  <span className="text-slate-400 font-medium">AutoMod Violations</span>
-                  <span className="font-bold text-amber-400">
-                    {loading ? "..." : `${securityStats.violationsCount} strikes`}
-                  </span>
-                </div>
-              </div>
+              <span className="font-semibold text-white">Platform Security Standard:</span> Webhook endpoints, OAuth2 tokens, and database sessions are strictly encrypted with TLS 1.3 and zero client-side credential exposure.
             </div>
-
-            <div className="mt-8 space-y-3">
-              <Link
-                href="/dashboard/security"
-                className="w-full py-3.5 px-4 rounded-2xl bg-brand-red hover:bg-brand-crimson text-white font-bold text-sm transition-all shadow-[0_0_20px_rgba(231,76,60,0.4)] hover:shadow-[0_0_30px_rgba(231,76,60,0.6)] flex items-center justify-center gap-2 transform hover:scale-[1.02]"
-              >
-                <span>Launch Console</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <div className="w-full py-3 px-4 rounded-2xl bg-white/5 text-slate-400 text-xs font-semibold text-center border border-white/5">
-                Official SyncInk Support Server
-              </div>
-            </div>
+          </div>
+          <div className="flex items-center gap-4 shrink-0 font-medium">
+            <Link href="/terms" className="hover:text-white transition-colors">
+              Terms
+            </Link>
+            <span>•</span>
+            <Link href="/privacy" className="hover:text-white transition-colors">
+              Privacy
+            </Link>
+            <span>•</span>
+            <Link href="/rules" className="hover:text-white transition-colors">
+              Rules
+            </Link>
           </div>
         </div>
       </main>
 
-      <PublicFooter />
+      <footer className="py-6 border-t border-white/[0.06] text-center text-xs text-slate-500">
+        © 2026 SyncInk Security &amp; Bot Operations Platform. All rights reserved.
+      </footer>
     </div>
   );
 }

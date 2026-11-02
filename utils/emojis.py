@@ -22,13 +22,16 @@ class Emojis:
     BOT = SYNCBOT
     CPU = "<:CPU:1551310556038701118>"
     # Official Server Role Emojis (Default fallbacks; updated dynamically by EmojiManager)
-    ROLE_OWNER = "👑"
-    ROLE_MANAGER = "💼"
-    ROLE_DEVELOPER = "💻"
-    ROLE_STAFF = "🛡️"
+    ROLE_OWNER = "<:sync_owner:1513803214674464788>"
+    ROLE_MANAGER = "<:sync_admin:1513805305492799508>"
+    ROLE_DEVELOPER = "<:developer:1562591562754424872>"
+    ROLE_STAFF = "<:staff:1562591917295009802>"
     ROLE_PARTNER = "<:partnered:1551337413660381255>"
     ROLE_VERIFIED = "<:verified:1551336293017845822>"
     ROLE_BOOSTER = "<:booster:1558595630660714616>"
+    EXPERIENCE = "<:experience:1562588852324143125>"
+    REGION = "<a:region:1562591209543966831>"
+    ARGUMENT = "<:argument:1562587869762158762>"
     NEON_HEART = "<:neonheart:1558594319227813949>"
     HEART_POP = "<a:heartpop:1558594180937424896>"
     SCRIBBLE_HEART = "<a:scribbleheart:1558596661087969300>"
@@ -227,7 +230,21 @@ EMOJI_NAME_MAP = {
     "cpu": "<:CPU:1551310556038701118>",
 
     # Roles & Brand Emojis
+    "sync_owner": "<:sync_owner:1513803214674464788>",
+    "owner": "<:sync_owner:1513803214674464788>",
+    "sync_admin": "<:sync_admin:1513805305492799508>",
+    "admin": "<:sync_admin:1513805305492799508>",
+    "developer": "<:developer:1562591562754424872>",
+    "dev": "<:developer:1562591562754424872>",
+    "staff": "<:staff:1562591917295009802>",
+    "experience": "<:experience:1562588852324143125>",
+    "region": "<a:region:1562591209543966831>",
+    "argument": "<:argument:1562587869762158762>",
+    "syncbot": "<:syncbot:1552437282059980810>",
+    "syncinkai": "<:SyncInkAI:1549154093421826058>",
+    "ai": "<:SyncInkAI:1549154093421826058>",
     "partnered": "<:partnered:1551337413660381255>",
+    "partner": "<:partnered:1551337413660381255>",
     "verified": "<:verified:1551336293017845822>",
     "syncalert": "<a:syncalert:1547036006455189626>",
     "syncwarning": "<a:syncwarning:1547034231438319616>",

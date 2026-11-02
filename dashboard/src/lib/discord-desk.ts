@@ -4,8 +4,7 @@ import { redactSensitive } from "@/lib/security";
 export const SUPPORT_GUILD_ID = "1520457643842342912";
 export const REPORT_CHANNEL_ID = "1541796896199417906";
 export const SUPPORT_MANAGER_ROLE_ID = "1520854378192572546";
-const FALLBACK_WEBHOOK_URL =
-  "https://discord.com/api/webhooks/1542150781170360332/WifYse9LfJqDrEBYaMEDXhY2WT2an5mG5BWX1pw1WFIEhR2O5sc05c4HmGIofzuO6P1D";
+let cachedDeskWebhookUrl: string | null = null;
 
 function getBotToken(): string {
   return (
@@ -16,13 +15,29 @@ function getBotToken(): string {
 }
 
 /**
- * Resolves or caches the webhook URL on channel 1541796896199417906
+ * Dynamically resolves or creates a dedicated support desk webhook on channel 1541796896199417906.
+ * Completely confidential: never hardcoded in git. If a webhook was deleted, it automatically
+ * recreates a fresh webhook using the Discord Bot Token with zero manual intervention required.
  */
-export async function getDeskWebhookUrl(): Promise<string> {
+export async function getDeskWebhookUrl(): Promise<string | null> {
+  if (cachedDeskWebhookUrl) {
+    return cachedDeskWebhookUrl;
+  }
+
+  // 1. Check if user configured an optional custom webhook URL in their private environment
+  if (process.env.DISCORD_DESK_WEBHOOK_URL) {
+    cachedDeskWebhookUrl = process.env.DISCORD_DESK_WEBHOOK_URL.trim();
+    return cachedDeskWebhookUrl;
+  }
+
   const token = getBotToken();
-  if (!token) return FALLBACK_WEBHOOK_URL;
+  if (!token) {
+    console.warn("getDeskWebhookUrl: No Discord bot token found in environment.");
+    return null;
+  }
 
   try {
+    // 2. Fetch existing webhooks on the target support channel
     const res = await fetch(
       `https://discord.com/api/v10/channels/${REPORT_CHANNEL_ID}/webhooks`,
       {
@@ -36,15 +51,39 @@ export async function getDeskWebhookUrl(): Promise<string> {
       if (Array.isArray(webhooks) && webhooks.length > 0) {
         const found = webhooks.find((w: any) => w.token) || webhooks[0];
         if (found?.token && found?.id) {
-          return `https://discord.com/api/webhooks/${found.id}/${found.token}`;
+          cachedDeskWebhookUrl = `https://discord.com/api/webhooks/${found.id}/${found.token}`;
+          return cachedDeskWebhookUrl;
         }
       }
     }
+
+    // 3. If no webhooks exist on the channel, automatically create a brand new confidential webhook
+    const createRes = await fetch(
+      `https://discord.com/api/v10/channels/${REPORT_CHANNEL_ID}/webhooks`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: "SyncInk Support Desk",
+        }),
+      }
+    );
+
+    if (createRes.ok) {
+      const newWh = await createRes.json();
+      if (newWh?.id && newWh?.token) {
+        cachedDeskWebhookUrl = `https://discord.com/api/webhooks/${newWh.id}/${newWh.token}`;
+        return cachedDeskWebhookUrl;
+      }
+    }
   } catch (err: any) {
-    console.warn("Could not fetch webhooks from Discord API:", redactSensitive(err?.message || ""));
+    console.warn("Could not dynamically resolve/create Discord webhook:", redactSensitive(err?.message || ""));
   }
 
-  return FALLBACK_WEBHOOK_URL;
+  return null;
 }
 
 /**
@@ -226,6 +265,10 @@ export async function sendDittoWebhookMessage({
 }): Promise<string | null> {
   try {
     const webhookUrl = await getDeskWebhookUrl();
+    if (!webhookUrl) {
+      console.warn("sendDittoWebhookMessage: No webhook URL available for dispatch.");
+      return null;
+    }
     const avatarUrl = getDiscordAvatarUrl(senderId, senderAvatar);
 
     // Clean profile display name without emojis
@@ -290,6 +333,7 @@ export async function sendSystemWebhookUpdate({
 }): Promise<void> {
   try {
     const webhookUrl = await getDeskWebhookUrl();
+    if (!webhookUrl) return;
     await fetch(`${webhookUrl}?thread_id=${threadId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

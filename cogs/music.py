@@ -1819,6 +1819,20 @@ class Music(commands.Cog):
                         pass
                 vc = await channel.connect(self_deaf=True, timeout=30.0, reconnect=True)
             elif vc.channel.id != channel.id:
+                listeners = [m for m in vc.channel.members if not m.bot]
+                is_active = vc.is_playing() or vc.is_paused()
+                if len(listeners) > 0 or is_active:
+                    await self.send_error_embed(
+                        ctx,
+                        description=(
+                            f"### {Emojis.WARNING} Already Active in Another Channel\n\n"
+                            f"I am currently playing music in **{vc.channel.name}** ({vc.channel.mention}) for other listeners.\n\n"
+                            f"Please join {vc.channel.mention} to listen together or add songs to the queue!"
+                        ),
+                        is_warning=True,
+                        delay=15
+                    )
+                    return None
                 await vc.move_to(channel)
         except Exception as e:
             log.exception("[Voice Connect Error] %s: %r", type(e).__name__, str(e))
@@ -2503,6 +2517,20 @@ class Music(commands.Cog):
                         pass
                     vc = await channel.connect(self_deaf=True, timeout=30.0, reconnect=True)
             elif vc.channel.id != channel.id:
+                listeners = [m for m in vc.channel.members if not m.bot]
+                is_active = vc.is_playing() or vc.is_paused()
+                if len(listeners) > 0 or is_active:
+                    await self.send_error_embed(
+                        ctx,
+                        description=(
+                            f"### {Emojis.WARNING} Already Active in Another Channel\n\n"
+                            f"I am currently playing music in **{vc.channel.name}** ({vc.channel.mention}) for other listeners.\n\n"
+                            f"Please join {vc.channel.mention} to listen together or add songs to the queue!"
+                        ),
+                        is_warning=True,
+                        delay=15
+                    )
+                    return None
                 await vc.move_to(channel)
         except Exception as e:
             log.exception("[Voice Connect Error] %s: %r", type(e).__name__, str(e))
