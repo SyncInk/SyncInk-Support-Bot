@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { getClientIp, rateLimiter, redactSensitive } from "@/lib/security";
+import { getClientIp, rateLimiter } from "@/lib/rate-limit";
+import { redactSensitive } from "@/lib/security";
 import { queryOne } from "@/lib/db";
 import {
   getVerificationSession,

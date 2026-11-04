@@ -16,8 +16,8 @@ import {
   AlertCircle,
   Sparkles,
 } from "lucide-react";
-import PublicNavbar from "@/components/PublicNavbar";
-import PublicFooter from "@/components/PublicFooter";
+import { PublicNavbar } from "@/components/PublicNavbar";
+import { PublicFooter } from "@/components/PublicFooter";
 
 type ViewState =
   | "LOADING"

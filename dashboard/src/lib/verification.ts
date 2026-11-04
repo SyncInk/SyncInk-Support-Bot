@@ -72,7 +72,7 @@ export function calculateDiscordAccountAge(userId: string): {
 } {
   try {
     const snowflake = BigInt(userId);
-    const timestampMs = Number((snowflake >> 22n) + 1420070400000n);
+    const timestampMs = Number((snowflake >> BigInt(22)) + BigInt("1420070400000"));
     const createdAt = new Date(timestampMs);
     const now = Date.now();
     const ageDays = Math.max(0, (now - timestampMs) / (1000 * 60 * 60 * 24));
