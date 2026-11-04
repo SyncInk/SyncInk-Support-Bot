@@ -30,6 +30,13 @@ type ViewState =
   | "EXPIRED"
   | "ERROR";
 
+const CAPTCHA_OPTIONS = [
+  { id: "shield", label: "Shield", Icon: ShieldCheck },
+  { id: "lock", label: "Lock", Icon: Lock },
+  { id: "clock", label: "Clock", Icon: Clock },
+  { id: "star", label: "Star", Icon: Sparkles },
+];
+
 function VerifyContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -50,19 +57,26 @@ function VerifyContent() {
     currentUsername?: string;
   } | null>(null);
 
-  // 1. Validate session on mount
-  useEffect(() => {
-    if (!sessionToken) {
-      setState("ERROR");
-      setErrorMessage(
-        "No verification session token was found. Please return to the Discord server, visit #verification, and click 'Verify Now'."
-      );
-      return;
-    }
+  const [captchaTarget, setCaptchaTarget] = useState<string>("shield");
+  const [captchaSelected, setCaptchaSelected] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState<boolean>(false);
 
+  // Initialize or reset friendly captcha challenge
+  const resetCaptcha = () => {
+    const random = CAPTCHA_OPTIONS[Math.floor(Math.random() * CAPTCHA_OPTIONS.length)].id;
+    setCaptchaTarget(random);
+    setCaptchaSelected(null);
+    setCaptchaError(false);
+  };
+
+  // 1. Validate session on mount (supports direct recovery for logged in users)
+  useEffect(() => {
     async function checkSession() {
       try {
-        const res = await fetch(`/api/verify?session=${encodeURIComponent(sessionToken)}`);
+        const url = sessionToken
+          ? `/api/verify?session=${encodeURIComponent(sessionToken)}`
+          : `/api/verify`;
+        const res = await fetch(url);
         const data = await res.json();
 
         if (res.status === 429) {
@@ -84,7 +98,7 @@ function VerifyContent() {
 
         if (data.status === "INVALID" || !res.ok) {
           setState("ERROR");
-          setErrorMessage(data.message || "Invalid or unknown verification session.");
+          setErrorMessage(data.message || "No active verification session. Please visit #verification in Discord.");
           return;
         }
 
@@ -107,6 +121,7 @@ function VerifyContent() {
         if (data.status === "READY") {
           setUserInfo(data.currentUser);
           setAccountAgeDays(data.accountAgeDays);
+          resetCaptcha();
           setState("READY");
         }
       } catch (err: any) {
@@ -118,14 +133,35 @@ function VerifyContent() {
     checkSession();
   }, [sessionToken]);
 
+  const handleCaptchaClick = (id: string) => {
+    setCaptchaSelected(id);
+    if (id === captchaTarget) {
+      setCaptchaError(false);
+    } else {
+      setCaptchaError(true);
+      setTimeout(() => {
+        resetCaptcha();
+      }, 900);
+    }
+  };
+
   // 2. Perform verification submission
   async function handleCompleteVerification() {
+    if (captchaSelected !== captchaTarget) {
+      setCaptchaError(true);
+      return;
+    }
+
     setState("VERIFYING");
     try {
       const res = await fetch("/api/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session: sessionToken }),
+        body: JSON.stringify({
+          session: sessionToken,
+          captchaChallenge: captchaTarget,
+          captchaAnswer: captchaSelected,
+        }),
       });
 
       const data = await res.json();
@@ -305,12 +341,68 @@ function VerifyContent() {
                   </div>
                 </div>
 
+                {/* Friendly Human Verification CAPTCHA (Not very tough) */}
+                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] text-left space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-200 font-semibold flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Human Verification</span>
+                    </span>
+                    {captchaSelected === captchaTarget ? (
+                      <span className="text-emerald-400 font-bold text-[11px] flex items-center gap-1 animate-in fade-in">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Check passed
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 text-[11px]">
+                        Select the <strong className="text-purple-300 font-bold">{CAPTCHA_OPTIONS.find((o) => o.id === captchaTarget)?.label}</strong>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2">
+                    {CAPTCHA_OPTIONS.map((item) => {
+                      const isSelected = captchaSelected === item.id;
+                      const isCorrect = isSelected && item.id === captchaTarget;
+                      const isWrong = isSelected && item.id !== captchaTarget;
+
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleCaptchaClick(item.id)}
+                          className={`py-3 px-2 rounded-xl border transition-all flex flex-col items-center justify-center gap-1.5 active:scale-95 ${
+                            isCorrect
+                              ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300 ring-2 ring-emerald-500/30 scale-105"
+                              : isWrong
+                              ? "bg-red-500/20 border-red-500/40 text-red-300"
+                              : "bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-slate-300 hover:text-white hover:border-purple-500/40"
+                          }`}
+                        >
+                          <item.Icon className="w-5 h-5" />
+                          <span className="text-[10px] font-semibold">{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {captchaError && (
+                    <p className="text-[11px] text-red-400 text-center animate-in fade-in">
+                      Incorrect choice. Shuffling a fresh challenge...
+                    </p>
+                  )}
+                </div>
+
                 <button
                   onClick={handleCompleteVerification}
-                  className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-purple-600/30 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                  disabled={captchaSelected !== captchaTarget}
+                  className={`w-full py-3.5 px-5 rounded-2xl font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2 ${
+                    captchaSelected === captchaTarget
+                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-600/30 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                      : "bg-white/10 text-slate-400 border border-white/5 cursor-not-allowed opacity-60"
+                  }`}
                 >
                   <ShieldCheck className="w-4 h-4" />
-                  <span>Complete Verification</span>
+                  <span>{captchaSelected === captchaTarget ? "Complete Verification" : "Select requested icon above"}</span>
                 </button>
               </div>
             )}

@@ -21,8 +21,11 @@ export async function GET(request: Request) {
   const baseUrl = "https://syncink.site";
   const redirectUri = `${baseUrl}/api/auth/discord/callback`;
 
-  // Validate redirectTo to prevent open redirects
-  const rawRedirectTo = url.searchParams.get("redirect_to") || "/dashboard";
+  // Validate redirectTo to prevent open redirects (supports redirect_to or redirect)
+  const rawRedirectTo =
+    url.searchParams.get("redirect_to") ||
+    url.searchParams.get("redirect") ||
+    "/dashboard";
   const safeRedirectTo =
     rawRedirectTo.startsWith("/") && !rawRedirectTo.startsWith("//") && !rawRedirectTo.includes(":")
       ? rawRedirectTo

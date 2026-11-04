@@ -40,22 +40,52 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const rawToken = searchParams.get("session");
 
-  if (!rawToken || !rawToken.trim()) {
-    return NextResponse.json(
-      { status: "INVALID", message: "No verification session token provided." },
-      { status: 400 }
-    );
-  }
-
   try {
-    const session = await getVerificationSession(rawToken);
+    let session = null;
+
+    if (rawToken && rawToken.trim()) {
+      session = await getVerificationSession(rawToken.trim());
+    } else {
+      // Auto-recovery: If user visits /verify directly while logged in,
+      // recover their most recent active PENDING session
+      const user = await getCurrentUser();
+      if (user) {
+        // First check if already verified in the support server
+        const member = await getGuildMember(SUPPORT_GUILD_ID, user.id);
+        if (member && Array.isArray(member.roles) && member.roles.includes(ROLE_VERIFIED_ID)) {
+          return NextResponse.json({
+            status: "ALREADY_COMPLETED",
+            message: "Your account is already verified on the SyncInk Support Server!",
+          });
+        }
+
+        const activePending = await queryOne<any>(
+          "SELECT * FROM verification_sessions WHERE user_id = $1 AND status = 'PENDING' AND expires_at > CURRENT_TIMESTAMP ORDER BY id DESC LIMIT 1",
+          [user.id]
+        );
+        if (activePending) {
+          session = activePending;
+        }
+      }
+    }
+
     if (!session) {
+      const user = await getCurrentUser();
+      if (user) {
+        const member = await getGuildMember(SUPPORT_GUILD_ID, user.id);
+        if (member && Array.isArray(member.roles) && member.roles.includes(ROLE_VERIFIED_ID)) {
+          return NextResponse.json({
+            status: "ALREADY_COMPLETED",
+            message: "Your account is already verified on the SyncInk Support Server!",
+          });
+        }
+      }
       return NextResponse.json(
         {
           status: "INVALID",
-          message: "Verification session not found or invalid. Please click 'Verify Now' in Discord to generate a new session.",
+          message: "No active verification session found. Return to Discord channel #verification and click 'Verify Now'.",
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
 
@@ -76,11 +106,11 @@ export async function GET(request: NextRequest) {
     // Session is PENDING - check current user authentication
     const user = await getCurrentUser();
     if (!user) {
-      const redirectUri = encodeURIComponent(`/verify?session=${encodeURIComponent(rawToken.trim())}`);
+      const redirectUri = encodeURIComponent(`/verify${rawToken ? `?session=${encodeURIComponent(rawToken.trim())}` : ""}`);
       return NextResponse.json({
         status: "NEEDS_AUTH",
         sessionUserId: session.user_id,
-        oauthUrl: `/api/auth/discord?redirect=${redirectUri}`,
+        oauthUrl: `/api/auth/discord?redirect_to=${redirectUri}`,
       });
     }
 
@@ -150,18 +180,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const rawToken = String(body.session || "").trim();
 
-    if (!rawToken) {
-      return NextResponse.json(
-        { error: "Verification session token is required." },
-        { status: 400 }
+    // 1. Session lookup & atomic validation
+    let session = rawToken ? await getVerificationSession(rawToken) : null;
+    if (!session && user) {
+      session = await queryOne<any>(
+        "SELECT * FROM verification_sessions WHERE user_id = $1 AND status = 'PENDING' AND expires_at > CURRENT_TIMESTAMP ORDER BY id DESC LIMIT 1",
+        [user.id]
       );
     }
 
-    // 1. Session lookup & atomic validation
-    const session = await getVerificationSession(rawToken);
     if (!session) {
       return NextResponse.json(
-        { error: "Invalid verification session. Please request a new link in Discord." },
+        { error: "No active verification session found. Please click 'Verify Now' in Discord." },
         { status: 400 }
       );
     }
@@ -178,7 +208,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Strict User ID Validation (Must match the session owner)
+    // 2. Human Verification (Interactive CAPTCHA validation)
+    const { captchaChallenge, captchaAnswer } = body;
+    if (
+      !captchaChallenge ||
+      !captchaAnswer ||
+      String(captchaChallenge).trim().toLowerCase() !== String(captchaAnswer).trim().toLowerCase()
+    ) {
+      return NextResponse.json(
+        { error: "Security check: Please click the correct requested icon to verify you are human." },
+        { status: 400 }
+      );
+    }
+
+    // 3. Strict User ID Validation (Must match the session owner)
     if (session.user_id !== user.id && user.id !== "admin") {
       return NextResponse.json(
         { error: "Security violation: Authenticated Discord account does not match the session creator." },
@@ -186,10 +229,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Guild Membership Check (User must still be in the server)
+    // 4. Guild Membership Check (User must still be in the server)
     const targetUserId = session.user_id;
-    const member = await getGuildMember(SUPPORT_GUILD_ID, targetUserId);
-    if (!member) {
+    const targetGuildId = session.guild_id || SUPPORT_GUILD_ID;
+    const member = await getGuildMember(targetGuildId, targetUserId);
+    if (member === null) {
       return NextResponse.json(
         {
           error: "You are not a member of the SyncInk Support Discord server. Please join the server first.",
@@ -198,11 +242,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Already Verified Check
-    const memberRoles = member.roles || [];
+    // 5. Already Verified Check
+    const memberRoles = member?.roles || [];
     if (memberRoles.includes(ROLE_VERIFIED_ID)) {
       // User is already verified: Ensure UPDATES role is assigned, mark session completed
-      await assignVerifiedRoles(SUPPORT_GUILD_ID, targetUserId, "Verification: Already verified member sync");
+      await assignVerifiedRoles(targetGuildId, targetUserId, "Verification: Already verified member sync");
       await completeVerificationSession(session.session_id, clientIp, userAgent, {
         alreadyVerified: true,
         method: "OAUTH2_IDENTIFY",
@@ -215,19 +259,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 5. Account Age & Eligibility Checks
+    // 6. Account Age & Eligibility Checks
     const ageInfo = calculateDiscordAccountAge(targetUserId);
     let settings = await queryOne(
       "SELECT * FROM guild_settings WHERE guild_id = $1",
-      [SUPPORT_GUILD_ID]
+      [targetGuildId]
     ).catch(() => null);
 
     const minAgeDays = Number(settings?.account_age_requirement || 0);
     const isVeryNewAccount = ageInfo.ageDays < 1;
 
-    // 6. Role Assignment via Discord API (Server-side Bot Engine)
+    // 7. Role Assignment via Discord API (Server-side Bot Engine)
     const assignResult = await assignVerifiedRoles(
-      SUPPORT_GUILD_ID,
+      targetGuildId,
       targetUserId,
       `Passed Web Verification (OAuth2 identify • Account age: ${ageInfo.ageDays}d)`
     );

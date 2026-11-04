@@ -14,6 +14,7 @@ import os
 import secrets
 import hashlib
 import datetime
+import time
 
 class WebVerificationRedirectView(discord.ui.View):
     def __init__(self, token: str):
@@ -29,6 +30,8 @@ class WebVerificationRedirectView(discord.ui.View):
         )
 
 class VerificationView(discord.ui.View):
+    _user_cooldowns: dict[int, float] = {}
+
     def __init__(self):
         super().__init__(timeout=None)
 
@@ -36,6 +39,22 @@ class VerificationView(discord.ui.View):
     async def verify_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         # 1. Immediately defer to avoid Discord 3-second timeout ("didn't respond")
         await interaction.response.defer(ephemeral=True)
+
+        # Enforce 30-second cooldown per member to avoid verification spam / rate limits
+        now = time.time()
+        last_clicked = self._user_cooldowns.get(interaction.user.id, 0)
+        cooldown_window = 30
+        if now - last_clicked < cooldown_window:
+            remaining = int(cooldown_window - (now - last_clicked))
+            embed = ErrorEmbed(
+                description=f"You are requesting verification too quickly! Please wait **{remaining} seconds**.",
+                resolution="Check your previous message above for the verification link, or wait a moment before trying again."
+            )
+            embed.title = "Verification Cooldown Active"
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        self._user_cooldowns[interaction.user.id] = now
 
         settings = await SettingsService.get_guild_settings(interaction.guild.id)
         role_id = settings.get("verification_role_id") or "1520871574088056952"

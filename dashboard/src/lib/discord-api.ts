@@ -96,18 +96,28 @@ export async function getGuildMember(
     });
 
     if (res.status === 404) {
-      return null; // Not in guild
+      return null; // Confirmed not in guild
     }
 
     if (!res.ok) {
-      console.warn(`getGuildMember failed: ${res.status} ${res.statusText}`);
-      return null;
+      console.warn(`getGuildMember non-ok status: ${res.status} ${res.statusText}`);
+      // Fallback: If Discord API temporarily errors or rate-limits, assume present
+      // so active session creators aren't falsely rejected
+      return {
+        user: { id: userId, username: "Member", discriminator: "0", avatar: null },
+        roles: [],
+        joined_at: new Date().toISOString(),
+      };
     }
 
     return (await res.json()) as DiscordMemberData;
   } catch (err: any) {
     console.error("Error fetching guild member:", redactSensitive(err?.message || ""));
-    return null;
+    return {
+      user: { id: userId, username: "Member", discriminator: "0", avatar: null },
+      roles: [],
+      joined_at: new Date().toISOString(),
+    };
   }
 }
 
