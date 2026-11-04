@@ -137,9 +137,13 @@ export async function assignVerifiedRoles(
     return { success: false, error: "Bot token not configured on server." };
   }
 
+  const sanitizedReason = (auditReason || "Passed Web Verification Checkpoint")
+    .replace(/[^\x20-\x7E]/g, "-")
+    .trim();
+
   const headers = {
     ...getDiscordAuthHeaders(token),
-    "X-Audit-Log-Reason": auditReason,
+    "X-Audit-Log-Reason": sanitizedReason,
   };
 
   try {

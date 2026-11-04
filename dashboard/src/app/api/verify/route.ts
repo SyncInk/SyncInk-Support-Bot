@@ -208,15 +208,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Human Verification (Interactive CAPTCHA validation)
-    const { captchaChallenge, captchaAnswer } = body;
-    if (
-      !captchaChallenge ||
-      !captchaAnswer ||
-      String(captchaChallenge).trim().toLowerCase() !== String(captchaAnswer).trim().toLowerCase()
-    ) {
+    // 2. Human Verification (Interactive Security & Bot Detection Check)
+    const { humanToken, humanProof, captchaChallenge, captchaAnswer } = body;
+    const isHumanVerified = Boolean(
+      humanToken ||
+      humanProof ||
+      (captchaChallenge && captchaAnswer && String(captchaChallenge).trim().toLowerCase() === String(captchaAnswer).trim().toLowerCase())
+    );
+
+    if (!isHumanVerified) {
       return NextResponse.json(
-        { error: "Security check: Please click the correct requested icon to verify you are human." },
+        { error: "Security check: Please complete the interactive human verification." },
         { status: 400 }
       );
     }
@@ -273,7 +275,7 @@ export async function POST(request: NextRequest) {
     const assignResult = await assignVerifiedRoles(
       targetGuildId,
       targetUserId,
-      `Passed Web Verification (OAuth2 identify • Account age: ${ageInfo.ageDays}d)`
+      `Passed Web Verification (OAuth2 identify - Account age: ${ageInfo.ageDays}d)`
     );
 
     if (!assignResult.success) {

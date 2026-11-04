@@ -46,8 +46,9 @@ class VerificationView(discord.ui.View):
         cooldown_window = 30
         if now - last_clicked < cooldown_window:
             remaining = int(cooldown_window - (now - last_clicked))
+            retry_ts = int(now + remaining)
             embed = ErrorEmbed(
-                description=f"You are requesting verification too quickly! Please wait **{remaining} seconds**.",
+                description=f"{Emojis.WARNING} You are requesting verification too quickly! You can retry <t:{retry_ts}:R>.",
                 resolution="Check your previous message above for the verification link, or wait a moment before trying again."
             )
             embed.title = "Verification Cooldown Active"
@@ -124,9 +125,10 @@ class VerificationView(discord.ui.View):
                 except Exception:
                     pass
             embed = SyncInkEmbed(
-                title="Already Verified",
-                description="You already possess the Verified role and have full community access to the server."
+                title=f"{Emojis.APPROVED} **Already Verified**",
+                color=SUCCESS_COLOR
             )
+            embed.description = f"{Emojis.ROLE_VERIFIED} You already possess the Verified role and have full community access to the server."
             await interaction.followup.send(embed=embed, ephemeral=True)
             return
 
@@ -183,23 +185,16 @@ class VerificationView(discord.ui.View):
                 log.error(f"Fallback verification session creation failed: {e2}")
 
         # 3. Present ephemeral response with direct web portal link
+        expiry_ts = int(expires_at.timestamp())
         reply_embed = SyncInkEmbed(
-            title="<:trusted_user:1547621146558730340> **Identity Verification**",
+            title=f"{Emojis.LOCK} **Identity Verification**",
             color=BRAND_ACCENT
         )
         reply_embed.description = (
-            f"Hello **{interaction.user.name}**!\n\n"
-            f"To protect the community and unlock server access, please click the button below to complete verification on our official portal."
-        )
-        reply_embed.add_field(
-            name="⏱️ Session Validity",
-            value="This link is single-use and expires in **5 minutes**.",
-            inline=False
-        )
-        reply_embed.add_field(
-            name="🛡️ Roles Granted",
-            value=f"• <@&{role_id}> (Verified)\n• <@&{UPDATES_ROLE_ID}> (UPDATES)",
-            inline=False
+            f"Hello {interaction.user.mention}!\n\n"
+            f"Click the button below to verify your account on our web portal.\n\n"
+            f"{Emojis.WARNING} **Notice:** Link expires <t:{expiry_ts}:R>.\n"
+            f"{Emojis.ROLE_VERIFIED} **Unlocks:** <@&{role_id}> {Emojis.S_ARROW} <@&{UPDATES_ROLE_ID}>"
         )
         reply_embed.set_footer(
             text="SyncInk Platform | Server Security",
