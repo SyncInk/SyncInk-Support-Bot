@@ -104,7 +104,12 @@ export async function GET(request: Request) {
     try {
       const memberRes = await fetch(
         `https://discord.com/api/v10/users/@me/guilds/${targetGuildId}/member`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "User-Agent": "DiscordBot (https://syncink.site, 1.0.0)",
+          },
+        }
       );
       if (memberRes.ok) {
         memberData = await memberRes.json();
@@ -120,7 +125,12 @@ export async function GET(request: Request) {
         try {
           const botMemberRes = await fetch(
             `https://discord.com/api/v10/guilds/${targetGuildId}/members/${discordUser.id}`,
-            { headers: { Authorization: `Bot ${botToken}` } }
+            {
+              headers: {
+                Authorization: `Bot ${botToken}`,
+                "User-Agent": "DiscordBot (https://syncink.site, 1.0.0)",
+              },
+            }
           );
           if (botMemberRes.ok) {
             memberData = await botMemberRes.json();

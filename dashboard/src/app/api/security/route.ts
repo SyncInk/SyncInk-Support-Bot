@@ -171,7 +171,12 @@ export async function GET(request: Request) {
       try {
         const gRes = await fetch(
           `https://discord.com/api/v10/guilds/${guildId}?with_counts=true`,
-          { headers: { Authorization: `Bot ${botToken}` } }
+          {
+            headers: {
+              Authorization: `Bot ${botToken}`,
+              "User-Agent": "DiscordBot (https://syncink.site, 1.0.0)",
+            },
+          }
         );
         if (gRes.ok) {
           const gData = await gRes.json();

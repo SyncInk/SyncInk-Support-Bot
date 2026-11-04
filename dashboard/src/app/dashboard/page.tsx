@@ -496,7 +496,7 @@ export default function MasterDashboardHub() {
 
           {/* CARD 5: CONFIDENTIAL OWNER / ADMIN GOVERNANCE CONSOLE */}
           {/* Strictly restricted and hidden from normal members */}
-          {isOwner && (
+          {(isOwner || currentUser?.isAdmin) && (
             <div className="p-6 sm:p-7 rounded-3xl bg-[#0b0e1d] border border-amber-500/25 flex flex-col justify-between hover:border-amber-500/40 transition-all shadow-lg group">
               <div>
                 <div className="flex items-center justify-between mb-4">

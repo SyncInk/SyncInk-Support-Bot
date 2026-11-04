@@ -394,8 +394,8 @@ export function PublicNavbar() {
                       </div>
                     </div>
 
-                    {/* OWNER-EXCLUSIVE CONTROL PANEL LINK */}
-                    {isOwnerUser && (
+                    {/* ADMIN / OWNER CONTROL PANEL LINK */}
+                    {(isOwnerUser || currentUser?.isAdmin) && (
                       <Link
                         href="/dashboard/admin"
                         className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors my-1"
@@ -591,6 +591,17 @@ export function PublicNavbar() {
                 <Layers className="w-4 h-4 text-sky-400" />
                 <span>Multi-Bot Console</span>
               </Link>
+
+              {(isOwnerUser || currentUser?.isAdmin) && (
+                <Link
+                  href="/dashboard/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20"
+                >
+                  <Crown className="w-4 h-4 text-amber-400" />
+                  <span>Admin Control Panel</span>
+                </Link>
+              )}
 
               {currentUser ? (
                 <button

@@ -41,7 +41,10 @@ export async function getDeskWebhookUrl(): Promise<string | null> {
     const res = await fetch(
       `https://discord.com/api/v10/channels/${REPORT_CHANNEL_ID}/webhooks`,
       {
-        headers: { Authorization: `Bot ${token}` },
+        headers: {
+          Authorization: `Bot ${token}`,
+          "User-Agent": "DiscordBot (https://syncink.site, 1.0.0)",
+        },
         cache: "no-store",
       }
     );
@@ -64,6 +67,7 @@ export async function getDeskWebhookUrl(): Promise<string | null> {
         method: "POST",
         headers: {
           Authorization: `Bot ${token}`,
+          "User-Agent": "DiscordBot (https://syncink.site, 1.0.0)",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -233,6 +237,7 @@ export async function createDiscordReportThread(report: any): Promise<string | n
       method: "POST",
       headers: {
         Authorization: `Bot ${token}`,
+        "User-Agent": "DiscordBot (https://syncink.site, 1.0.0)",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

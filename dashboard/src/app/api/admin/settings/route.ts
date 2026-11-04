@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { isOwner, logAdminAudit } from "@/lib/permissions";
+import { isOwner, isAdmin, logAdminAudit } from "@/lib/permissions";
 import { query } from "@/lib/db";
 import { validateCsrfOrigin, sanitizeInputText } from "@/lib/security";
 
@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user || !isOwner(user)) {
-    return NextResponse.json({ error: "Access Denied. Owner authorization required." }, { status: 403 });
+  if (!user || (!isOwner(user) && !isAdmin(user))) {
+    return NextResponse.json({ error: "Access Denied. Administrator authorization required." }, { status: 403 });
   }
 
   try {

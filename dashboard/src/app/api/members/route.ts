@@ -52,7 +52,12 @@ export async function GET(request: Request) {
         try {
           const dRes = await fetch(
             `https://discord.com/api/v10/guilds/${guildId}/members/${cleanUserId}`,
-            { headers: { Authorization: `Bot ${botToken}` } }
+            {
+              headers: {
+                Authorization: `Bot ${botToken}`,
+                "User-Agent": "DiscordBot (https://syncink.site, 1.0.0)",
+              },
+            }
           );
           if (dRes.ok) {
             memberObj = await dRes.json();
@@ -61,7 +66,12 @@ export async function GET(request: Request) {
             // Member might have left; fetch public user profile
             const uRes = await fetch(
               `https://discord.com/api/v10/users/${cleanUserId}`,
-              { headers: { Authorization: `Bot ${botToken}` } }
+              {
+                headers: {
+                  Authorization: `Bot ${botToken}`,
+                  "User-Agent": "DiscordBot (https://syncink.site, 1.0.0)",
+                },
+              }
             );
             if (uRes.ok) {
               userObj = await uRes.json();
@@ -153,7 +163,12 @@ export async function GET(request: Request) {
       try {
         const mRes = await fetch(
           `https://discord.com/api/v10/guilds/${guildId}/members?limit=100`,
-          { headers: { Authorization: `Bot ${botToken}` } }
+          {
+            headers: {
+              Authorization: `Bot ${botToken}`,
+              "User-Agent": "DiscordBot (https://syncink.site, 1.0.0)",
+            },
+          }
         );
         if (mRes.ok) {
           discordMembers = await mRes.json();

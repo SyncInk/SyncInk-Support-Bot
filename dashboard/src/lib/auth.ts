@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { queryOne } from "./db";
 import {
   timingSafeCompare,
   createSignedToken,
@@ -126,6 +127,28 @@ export async function getCurrentUser(): Promise<DiscordUser | null> {
         user.roleType = "owner";
         user.role = "Server Owner";
         user.roleIcon = "https://cdn.discordapp.com/emojis/1517253606686986323.png";
+      } else {
+        try {
+          const dbRole = await queryOne<{ role: string }>(
+            "SELECT role FROM admin_roles WHERE user_id = $1 LIMIT 1",
+            [user.id]
+          );
+          if (dbRole?.role === "owner") {
+            user.isOwner = true;
+            user.isAdmin = true;
+            user.isStaff = true;
+            user.roleType = "owner";
+          } else if (dbRole?.role === "admin") {
+            user.isAdmin = true;
+            user.isStaff = true;
+            user.roleType = "admin";
+          } else if (dbRole?.role === "staff" || dbRole?.role === "developer") {
+            user.isStaff = true;
+            user.roleType = dbRole.role as any;
+          }
+        } catch {
+          // Ignore transient db lookup errors
+        }
       }
       return user;
     }
