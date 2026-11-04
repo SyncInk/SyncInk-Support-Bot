@@ -1,46 +1,55 @@
-#!/data/data/com.termux/files/usr/bin/bash
-# SyncInk Support Bot - Termux Auto-Updater & Keepalive Runner
+#!/usr/bin/env bash
+# SyncInk Support Bot - Termux & Linux Auto-Updater and Keepalive Runner
+
+# Ensure script runs from the bot directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR" || exit 1
 
 echo "=================================================="
-echo "    Starting SyncInk Support Bot (Termux Runner)  "
+echo "    Starting SyncInk Support Bot (Keepalive)      "
 echo "=================================================="
 
 export SYNCINK_RUNNER=1
 
-# Acquire Termux wake-lock to prevent Android battery optimization from pausing the bot
+# Detect Python interpreter
+if command -v python3 >/dev/null 2>&1; then
+    PY_CMD="python3"
+elif command -v python >/dev/null 2>&1; then
+    PY_CMD="python"
+else
+    echo "[SyncInk Error] Python was not found. Please install Python (e.g. 'pkg install python')."
+    exit 1
+fi
+
+# Acquire Termux wake-lock to prevent Android battery optimization from sleeping the bot
 if command -v termux-wake-lock >/dev/null 2>&1; then
-    termux-wake-lock
+    termux-wake-lock 2>/dev/null || true
     echo "[SyncInk] Acquired Termux wake-lock to keep bot running 24/7."
 fi
 
 while true; do
     echo ""
     echo "[SyncInk] Checking GitHub for updates..."
-    git pull origin main
-    echo "[SyncInk] Checking dependencies..."
-    if ! python -c "import PIL, yt_dlp, nacl, davey, discord; assert discord.version_info >= (2, 7, 1)" >/dev/null 2>&1; then
-        echo "[SyncInk] Installing missing music, native Discord voice/DAVE & graphics dependencies..."
-        if command -v pkg >/dev/null 2>&1; then
-            pkg install -y python-pillow ffmpeg libopus libsodium python-pynacl clang make python-dev libffi rust cmake pkg-config >/dev/null 2>&1 || true
-        fi
-        if command -v rustc >/dev/null 2>&1; then
-            export CARGO_BUILD_TARGET="$(rustc -Vv | sed -n 's/^host: //p')"
-        fi
-        # maturin needs Android's API level when compiling davey on Termux.
-        # Termux exposes the SDK level through Android's getprop utility.
-        if command -v getprop >/dev/null 2>&1; then
-            export ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-$(getprop ro.build.version.sdk 2>/dev/null)}"
-        fi
-        if [ -n "$ANDROID_API_LEVEL" ]; then
-            echo "[SyncInk] Building Android voice support for API level $ANDROID_API_LEVEL."
-        else
-            echo "[SyncInk] Android API level unavailable; DAVE native build may fail."
-        fi
-        python -m pip install -r requirements.txt --quiet >/dev/null 2>&1 || true
+    # GIT_TERMINAL_PROMPT=0 ensures git does not freeze waiting for credentials if repo is private
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        GIT_TERMINAL_PROMPT=0 git pull origin main 2>/dev/null || {
+            echo "[SyncInk] Note: GitHub pull skipped (private repo requires token or offline). Continuing locally..."
+        }
     fi
-    echo "[SyncInk] Launching bot..."
-    python main.py
+
+    echo "[SyncInk] Checking dependencies..."
+    if ! "$PY_CMD" -c "import PIL, yt_dlp, nacl, discord; assert discord.version_info >= (2, 7, 0)" >/dev/null 2>&1; then
+        echo "[SyncInk] Installing missing core dependencies..."
+        if command -v pkg >/dev/null 2>&1; then
+            pkg install -y python-pillow ffmpeg libopus libsodium python-pynacl clang make python-dev libffi >/dev/null 2>&1 || true
+        fi
+        "$PY_CMD" -m pip install -r requirements.txt --quiet >/dev/null 2>&1 || "$PY_CMD" -m pip install -r requirements.txt || true
+    fi
+
+    echo "[SyncInk] Launching bot ($PY_CMD main.py)..."
+    "$PY_CMD" main.py
     EXIT_CODE=$?
+
     echo "[SyncInk] Bot stopped with code $EXIT_CODE."
     echo "[SyncInk] Restarting in 3 seconds (Press Ctrl+C to stop)..."
     sleep 3
