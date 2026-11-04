@@ -57,6 +57,7 @@ class Emojis:
     LOOKING = "<:looking:1547034317018898552>"
     LOGO = "<:syncinkmainlogo:1547034265076760707>"
     RULES = "<:rules:1547034188702818426>"
+    TERMS = "<:terms:1567518395677548585>"
     LOCK = "<:syncink_lock:1547034002689491025>"
     SUGGESTION = "<:syncinksuggestion:1547033969646903437>"
     QUESTION = "<:syncinkquestion:1547033451029594222>"
@@ -146,6 +147,7 @@ class EmojiPartials:
     LOOKING = discord.PartialEmoji(name="looking", id=1547034317018898552, animated=False)
     LOGO = discord.PartialEmoji(name="syncinkmainlogo", id=1547034265076760707, animated=False)
     RULES = discord.PartialEmoji(name="rules", id=1547034188702818426, animated=False)
+    TERMS = discord.PartialEmoji(name="terms", id=1567518395677548585, animated=False)
     LOCK = discord.PartialEmoji(name="syncink_lock", id=1547034002689491025, animated=False)
     SUGGESTION = discord.PartialEmoji(name="syncinksuggestion", id=1547033969646903437, animated=False)
     QUESTION = discord.PartialEmoji(name="syncinkquestion", id=1547033451029594222, animated=False)

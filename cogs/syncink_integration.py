@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from utils.ui import SyncInkEmbed, BRAND_ACCENT, check_bot_online_status, get_latency_badge, send_clean_v2_message
-from utils.emojis import Emojis
+from utils.emojis import Emojis, EmojiPartials
 
 TICKET_BOT_ID = 1513075101992747158
 VOICE_BOT_ID = 1516578887109181520
@@ -101,12 +101,11 @@ class SyncInkIntegration(commands.Cog):
     def _build_links_payload(self):
         embed = SyncInkEmbed(title=f"{Emojis.LOOKING} Official Resources")
         embed.description = (
-            "Quick access to the official SyncInk platform, documentation, and security consoles.\n\n"
-            "• 📖 **Rules:** [syncink.site/rules](https://syncink.site/rules)\n"
-            "• ❓ **FAQ:** [syncink.site/faq](https://syncink.site/faq)\n"
-            "• ⚖️ **Terms:** [syncink.site/terms](https://syncink.site/terms)\n"
-            "• 🔒 **Privacy:** [syncink.site/privacy](https://syncink.site/privacy)\n"
-            "• 🛡️ **Verify:** [syncink.site/verify](https://syncink.site/verify)"
+            "Quick access to the official SyncInk platform, documentation, and community guidelines.\n\n"
+            "• <:rules:1547034188702818426> **Rules:** [syncink.site/rules](https://syncink.site/rules) • <#1520460587522330634>\n"
+            "• <:syncinkquestion:1547033451029594222> **FAQ:** [syncink.site/faq](https://syncink.site/faq) • <#1520460624864350218>\n"
+            "• <:terms:1567518395677548585> **Terms:** [syncink.site/terms](https://syncink.site/terms)\n"
+            "• <:moderation:1547035031275573289> **Privacy:** [syncink.site/privacy](https://syncink.site/privacy)"
         )
         embed.set_footer(
             text="SyncInk Platform | Official Network",
@@ -115,9 +114,8 @@ class SyncInkIntegration(commands.Cog):
         
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Website", style=discord.ButtonStyle.link, url="https://syncink.site"))
-        view.add_item(discord.ui.Button(label="Rules", style=discord.ButtonStyle.link, url="https://syncink.site/rules"))
-        view.add_item(discord.ui.Button(label="FAQ", style=discord.ButtonStyle.link, url="https://syncink.site/faq"))
-        view.add_item(discord.ui.Button(label="Verify", style=discord.ButtonStyle.link, url="https://syncink.site/verify"))
+        view.add_item(discord.ui.Button(label="Rules", style=discord.ButtonStyle.link, url="https://syncink.site/rules", emoji=EmojiPartials.RULES))
+        view.add_item(discord.ui.Button(label="FAQ", style=discord.ButtonStyle.link, url="https://syncink.site/faq", emoji=EmojiPartials.QUESTION))
         view.add_item(discord.ui.Button(label="Community", style=discord.ButtonStyle.link, url="https://discord.gg/PmxfJwmQuB"))
         return embed, view
 
