@@ -71,38 +71,65 @@ class SyncInkIntegration(commands.Cog):
             else:
                 await interaction.followup.send(embed=fallback)
 
-    @commands.command(name="products", description="Browse the suite of SyncInk products and services.")
-    async def products(self, ctx: commands.Context):
+    def _build_products_payload(self):
         embed = SyncInkEmbed(title=f"{Emojis.SETTINGS} Our Products")
         embed.description = "Explore our ecosystem of premium Discord applications and web platforms."
-        embed.set_thumbnail(url="https://syncink.xyz/assets/products_icon.png")
+        embed.set_thumbnail(url="https://files.catbox.moe/74l9su.png")
         
         embed.add_field(name="SyncInk Studio", value="Professional bot hosting and management.", inline=False)
         embed.add_field(name="SyncInk Support", value="Advanced community moderation platform.", inline=False)
-        
-        view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="View All Products", style=discord.ButtonStyle.link, url="https://syncink.xyz"))
-        
-        await ctx.send(embed=embed, view=view)
-
-    @commands.command(name="links", description="View official SyncInk platform links.")
-    async def links(self, ctx: commands.Context):
-        embed = SyncInkEmbed(title=f"{Emojis.LOOKING} Official Resources")
-        embed.description = (
-            "Quick access to the official SyncInk platform, documentation, and security consoles.\n\n"
-            "• 📖 **Rules:** [sync-ink-support-bot.vercel.app/rules](https://sync-ink-support-bot.vercel.app/rules)\n"
-            "• ❓ **FAQ:** [sync-ink-support-bot.vercel.app/faq](https://sync-ink-support-bot.vercel.app/faq)\n"
-            "• ⚖️ **Terms:** [sync-ink-support-bot.vercel.app/terms](https://sync-ink-support-bot.vercel.app/terms)\n"
-            "• 🔒 **Privacy:** [sync-ink-support-bot.vercel.app/privacy](https://sync-ink-support-bot.vercel.app/privacy)"
+        embed.set_footer(
+            text="SyncInk Platform | Product Ecosystem",
+            icon_url="https://files.catbox.moe/74l9su.png"
         )
         
         view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="Website", style=discord.ButtonStyle.link, url="https://sync-ink-support-bot.vercel.app"))
-        view.add_item(discord.ui.Button(label="Rules", style=discord.ButtonStyle.link, url="https://sync-ink-support-bot.vercel.app/rules"))
-        view.add_item(discord.ui.Button(label="FAQ", style=discord.ButtonStyle.link, url="https://sync-ink-support-bot.vercel.app/faq"))
-        view.add_item(discord.ui.Button(label="Community", style=discord.ButtonStyle.link, url="https://discord.gg/PmxfJwmQuB"))
-        
+        view.add_item(discord.ui.Button(label="Official Website", style=discord.ButtonStyle.link, url="https://syncink.site"))
+        view.add_item(discord.ui.Button(label="Support Server", style=discord.ButtonStyle.link, url="https://discord.gg/PmxfJwmQuB"))
+        return embed, view
+
+    @commands.command(name="products", description="Browse the suite of SyncInk products and services.")
+    async def products(self, ctx: commands.Context):
+        embed, view = self._build_products_payload()
         await ctx.send(embed=embed, view=view)
+
+    @app_commands.command(name="products", description="Browse the suite of SyncInk products and services.")
+    async def slash_products(self, interaction: discord.Interaction):
+        embed, view = self._build_products_payload()
+        await interaction.response.send_message(embed=embed, view=view)
+
+    def _build_links_payload(self):
+        embed = SyncInkEmbed(title=f"{Emojis.LOOKING} Official Resources")
+        embed.description = (
+            "Quick access to the official SyncInk platform, documentation, and security consoles.\n\n"
+            "• 📖 **Rules:** [syncink.site/rules](https://syncink.site/rules)\n"
+            "• ❓ **FAQ:** [syncink.site/faq](https://syncink.site/faq)\n"
+            "• ⚖️ **Terms:** [syncink.site/terms](https://syncink.site/terms)\n"
+            "• 🔒 **Privacy:** [syncink.site/privacy](https://syncink.site/privacy)\n"
+            "• 🛡️ **Verify:** [syncink.site/verify](https://syncink.site/verify)"
+        )
+        embed.set_footer(
+            text="SyncInk Platform | Official Network",
+            icon_url="https://files.catbox.moe/74l9su.png"
+        )
+        
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(label="Website", style=discord.ButtonStyle.link, url="https://syncink.site"))
+        view.add_item(discord.ui.Button(label="Rules", style=discord.ButtonStyle.link, url="https://syncink.site/rules"))
+        view.add_item(discord.ui.Button(label="FAQ", style=discord.ButtonStyle.link, url="https://syncink.site/faq"))
+        view.add_item(discord.ui.Button(label="Verify", style=discord.ButtonStyle.link, url="https://syncink.site/verify"))
+        view.add_item(discord.ui.Button(label="Community", style=discord.ButtonStyle.link, url="https://discord.gg/PmxfJwmQuB"))
+        return embed, view
+
+    @commands.command(name="links", description="View official SyncInk platform links.")
+    async def links(self, ctx: commands.Context):
+        embed, view = self._build_links_payload()
+        await ctx.send(embed=embed, view=view)
+
+    @app_commands.command(name="links", description="View official SyncInk platform links.")
+    async def slash_links(self, interaction: discord.Interaction):
+        embed, view = self._build_links_payload()
+        await interaction.response.send_message(embed=embed, view=view)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(SyncInkIntegration(bot))
