@@ -92,6 +92,18 @@ class Emojis:
     DISLIKE = "<:dislike:1559660727373930657>"
     PLAYING = "<a:playing:1559661648011075664>"
 
+    # AutoPlay & Music Preference Emojis (<:name:id>)
+    PUNJABI_POP = "<:PunjabiPop:1568327108533551144>"
+    LOFI_COFFEE = "<:LofiCoffee:1568327227983007864>"
+    KPOP = "<:Kpop:1568327830981583039>"
+    INDIE_ACOUSTIC = "<:Indieacoustic:1568327695639650464>"
+    HIP_HOP = "<:HipHop:1568327544279662663>"
+    ENERGETIC_HIGH_BPM = "<:EnergetichighBPM:1568327456434430093>"
+    EDM = "<:EDM:1568327771501895762>"
+    ROMANTIC_SOULFUL = "<:Romanticsoulful:1568327378504130600>"
+    REFRESH = "<:refresh:1568357873224781835>"
+    SCALE = "<:scale:1568355166913167430>"
+
 class EmojiPartials:
     """discord.PartialEmoji instances for interactive UI components (Buttons, Menus)."""
     # Animated partials
@@ -178,6 +190,18 @@ class EmojiPartials:
     LIKE = discord.PartialEmoji(name="like", id=1559660676853797005, animated=False)
     DISLIKE = discord.PartialEmoji(name="dislike", id=1559660727373930657, animated=False)
     PLAYING = discord.PartialEmoji(name="playing", id=1559661648011075664, animated=True)
+
+    # AutoPlay & Music Preference Partials
+    PUNJABI_POP = discord.PartialEmoji(name="PunjabiPop", id=1568327108533551144, animated=False)
+    LOFI_COFFEE = discord.PartialEmoji(name="LofiCoffee", id=1568327227983007864, animated=False)
+    KPOP = discord.PartialEmoji(name="Kpop", id=1568327830981583039, animated=False)
+    INDIE_ACOUSTIC = discord.PartialEmoji(name="Indieacoustic", id=1568327695639650464, animated=False)
+    HIP_HOP = discord.PartialEmoji(name="HipHop", id=1568327544279662663, animated=False)
+    ENERGETIC_HIGH_BPM = discord.PartialEmoji(name="EnergetichighBPM", id=1568327456434430093, animated=False)
+    EDM = discord.PartialEmoji(name="EDM", id=1568327771501895762, animated=False)
+    ROMANTIC_SOULFUL = discord.PartialEmoji(name="Romanticsoulful", id=1568327378504130600, animated=False)
+    REFRESH = discord.PartialEmoji(name="refresh", id=1568357873224781835, animated=False)
+    SCALE = discord.PartialEmoji(name="scale", id=1568355166913167430, animated=False)
 
 import re
 
@@ -312,6 +336,22 @@ EMOJI_NAME_MAP = {
     "tidal": "<:tidal:1558919190461685840>",
     "looking": "<:looking:1558919508855357531>",
     "soundcloud": "<:soundcloud:1558919344199700620>",
+    "punjabipop": "<:PunjabiPop:1568327108533551144>",
+    "punjabi_pop": "<:PunjabiPop:1568327108533551144>",
+    "loficoffee": "<:LofiCoffee:1568327227983007864>",
+    "lofi_coffee": "<:LofiCoffee:1568327227983007864>",
+    "kpop": "<:Kpop:1568327830981583039>",
+    "indieacoustic": "<:Indieacoustic:1568327695639650464>",
+    "indie_acoustic": "<:Indieacoustic:1568327695639650464>",
+    "hiphop": "<:HipHop:1568327544279662663>",
+    "hip_hop": "<:HipHop:1568327544279662663>",
+    "energetichighbpm": "<:EnergetichighBPM:1568327456434430093>",
+    "energetic_high_bpm": "<:EnergetichighBPM:1568327456434430093>",
+    "edm": "<:EDM:1568327771501895762>",
+    "romanticsoulful": "<:Romanticsoulful:1568327378504130600>",
+    "romantic_soulful": "<:Romanticsoulful:1568327378504130600>",
+    "refresh": "<:refresh:1568357873224781835>",
+    "scale": "<:scale:1568355166913167430>",
 }
 
 def format_discord_emojis(text: str) -> str:

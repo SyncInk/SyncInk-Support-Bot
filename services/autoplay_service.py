@@ -217,6 +217,182 @@ MUSIC_CLUSTERS = {
 }
 
 
+# ─────────────────────────────────────────────────────────────
+# Record Labels, Corporate Channels & Multi-Artist Channels
+# (These must NOT be treated as individual artists in profiles)
+# ─────────────────────────────────────────────────────────────
+INDIAN_RECORD_LABELS = {
+    "t-series", "tseries", "t-series apna punjab", "t-series regional",
+    "sony music india", "sony music", "sonymusicindiavevo", "sony music south",
+    "zee music company", "zee music", "zeemusic", "zee music south",
+    "tips official", "tips music", "tips punjabi", "tips bhojpuri",
+    "speed records", "speed records bhojpuri",
+    "yrf", "yash raj films", "yrf music",
+    "saregama", "saregama music", "saregama hum bhojpuri", "saregama telugu",
+    "geet mp3", "geetmp3", "white hill music", "white hill dhangar",
+    "deshi music", "dm - desi melodies", "desi melodies",
+    "dhvani", "eros now", "eros now music", "shemaroo", "shemaroo filmi gaane",
+    "venus", "venus music", "aditya music", "adityamusic",
+    "lahari music", "times music", "times music hub", "rajshri",
+    "panj-aab records", "single track studios", "vyrl originals", "vyrl",
+    "jiosaavn", "gaana", "hungama", "t-series classics"
+}
+
+GENERIC_CHANNELS = {
+    "vevo", "official audio", "official video", "records", "music",
+    "warner music", "universal music group", "atlantic records", "interscope",
+    "def jam", "columbia records", "rca records", "epic records"
+}
+
+# Known Indic Artists (Hindi, Bollywood, Punjabi, Urdu, etc.)
+INDIC_ARTISTS = {
+    "arijit singh", "atif aslam", "pritam", "badshah", "diljit dosanjh",
+    "karan aujla", "shubh", "sidhu moose wala", "sidhu moosewala", "jubin nautiyal",
+    "darshan raval", "anuv jain", "prateek kuhad", "jasleen royal", "ritviz",
+    "neha kakkar", "tony kakkar", "sonu kakkar", "b praak", "harrdy sandhu",
+    "yo yo honey singh", "honey singh", "mc stan", "divine", "raftaar",
+    "shreya ghoshal", "sonu nigam", "alka yagnik", "kumar sanu", "sunidhi chauhan",
+    "armaan malik", "amrinder gill", "jassie gill", "guru randhawa", "mika singh",
+    "daler mehndi", "ap dhillon", "gurinder gill", "sukhe", "bohemia", "ikka",
+    "seedhe maut", "kr$na", "krsna", "sachin-jigar", "sachin jigar", "mithoon",
+    "vishal mishra", "mohit chauhan", "shaan", "kk", "udit narayan", "roop kumar",
+    "javed ali", "ali zafar", "rahat fateh ali khan", "nusrat fateh ali khan",
+    "abida parveen", "lucky ali", "the local train", "when chai met toast",
+    "twin strings", "zaeden", "vishal-shekhar", "vishal dadlani", "shekhar ravjiani",
+    "shankar ehsaan loy", "amit trivedi", "ar rahman", "a.r. rahman", "king",
+    "asim azhar", "shae gill", "ali sethi", "quratulain balouch", "falguni pathak"
+}
+
+INDIC_TITLE_KEYWORDS = {
+    "bollywood", "hindi", "punjabi", "bhojpuri", "tamil", "telugu", "malayalam",
+    "kannada", "bhangra", "tum hi ho", "kesariya", "apna bana le", "channa mereya",
+    "brown munde", "raataan lambiyan", "hawayein", "ranjha", "agar tum saath ho",
+    "dil diyan gallan", "baarishein", "choo lo", "o sanam", "kinni kinni", "tauba tauba",
+    "no love", "elevated", "chorni", "baller", "qawwali", "bhajan", "ghazal",
+    "slowed hindi", "lofi hindi", "hindi lofi", "hindi slowed", "remix hindi"
+}
+
+
+def extract_real_artist(title: str, author: str) -> str:
+    """
+    If author is a known corporate label (e.g. 'T-Series', 'Sony Music India'),
+    extracts the actual performing artist from the track title (e.g. 'Badshah - Soulmate' -> 'Badshah').
+    """
+    a_clean = author.strip()
+    a_low = a_clean.lower()
+    if any(label in a_low for label in INDIAN_RECORD_LABELS) or any(gen in a_low for gen in GENERIC_CHANNELS):
+        # 1. Hyphen separator: "Badshah - Soulmate"
+        if " - " in title:
+            parts = title.split(" - ", 1)
+            candidate_art = parts[0].strip()
+            if len(candidate_art) > 1 and not any(l in candidate_art.lower() for l in INDIAN_RECORD_LABELS):
+                return candidate_art
+        # 2. Pipe separator: "Soulmate | Badshah"
+        if " | " in title:
+            parts = title.split(" | ")
+            for p in parts:
+                p_clean = p.strip()
+                p_low = p_clean.lower()
+                if not any(l in p_low for l in INDIAN_RECORD_LABELS) and not any(tag in p_low for tag in ["official", "video", "lyric", "audio"]):
+                    for ind in INDIC_ARTISTS:
+                        if ind in p_low:
+                            return ind.title()
+    return a_clean
+
+
+def is_track_allowed_for_language(title: str, artist: str, target_language: Optional[str]) -> Tuple[bool, str]:
+    """
+    Hard-validates whether a candidate or extracted track strictly matches the target language.
+    Guarantees that when English is chosen, Hindi/Bollywood/Punjabi songs and Indian record labels
+    are unconditionally blocked, avoiding any language drift.
+    """
+    if not target_language or target_language.lower() in ("reset", "auto", "any language (auto)", "all languages / dynamic"):
+        return True, "Dynamic language adaptation"
+
+    t_low = title.lower().strip()
+    a_low = artist.lower().strip()
+    lang = target_language.lower()
+
+    if "hindi + english" in lang:
+        return True, "Bilingual mode accepts Hindi and English"
+
+    if "english" in lang:
+        # 1. Block Indian record labels / corporate channels
+        for label in INDIAN_RECORD_LABELS:
+            if label in a_low or label in t_low:
+                return False, f"Channel/Artist '{artist}' is an Indian record label ({label}); blocked under English preference."
+
+        # 2. Block Devanagari (\u0900-\u097F) and Gurmukhi (\u0A00-\u0A7F) Indic scripts
+        if re.search(r'[\u0900-\u097F]', title) or re.search(r'[\u0A00-\u0A7F]', title):
+            return False, "Title contains Indic script (Devanagari/Gurmukhi); blocked under English preference."
+        if re.search(r'[\u0900-\u097F]', artist) or re.search(r'[\u0A00-\u0A7F]', artist):
+            return False, "Artist contains Indic script (Devanagari/Gurmukhi); blocked under English preference."
+
+        # 3. Block known Indic artists
+        for ind_art in INDIC_ARTISTS:
+            if ind_art in a_low or ind_art in t_low:
+                return False, f"Artist '{artist}' is known for Hindi/Indic music; blocked under English preference."
+
+        # 4. Block known Indic keywords
+        for kw in INDIC_TITLE_KEYWORDS:
+            if re.search(rf'\b{re.escape(kw)}\b', t_low):
+                return False, f"Title contains Indic keyword '{kw}'; blocked under English preference."
+
+        return True, "Valid English candidate"
+
+    if "hindi" in lang:
+        is_indic = False
+        if re.search(r'[\u0900-\u097F]', title) or re.search(r'[\u0900-\u097F]', artist):
+            is_indic = True
+        for ind_art in INDIC_ARTISTS:
+            if ind_art in a_low or ind_art in t_low:
+                is_indic = True
+                break
+        for kw in INDIC_TITLE_KEYWORDS:
+            if kw in t_low:
+                is_indic = True
+                break
+        for label in INDIAN_RECORD_LABELS:
+            if label in a_low or label in t_low:
+                is_indic = True
+                break
+        if not is_indic:
+            cl = MUSIC_CLUSTERS.get("bollywood_romantic", {})
+            if any(art.lower() in a_low for art in cl.get("artists", [])):
+                is_indic = True
+        if not is_indic:
+            return False, f"Track '{artist} - {title}' does not match Hindi/Bollywood focus."
+        return True, "Valid Hindi candidate"
+
+    if "punjabi" in lang:
+        punjabi_artists = MUSIC_CLUSTERS.get("punjabi_hits", {}).get("artists", [])
+        is_punjabi = any(p.lower() in a_low or p.lower() in t_low for p in punjabi_artists) or "punjabi" in t_low or re.search(r'[\u0A00-\u0A7F]', title)
+        if not is_punjabi:
+            for pa in ["diljit", "ap dhillon", "karan aujla", "shubh", "sidhu", "b praak", "harrdy", "amrinder", "gurinder"]:
+                if pa in a_low or pa in t_low:
+                    is_punjabi = True
+                    break
+        if not is_punjabi:
+            return False, f"Track '{artist} - {title}' does not match Punjabi focus."
+        return True, "Valid Punjabi candidate"
+
+    if "korean" in lang or "k-pop" in lang:
+        kpop_artists = MUSIC_CLUSTERS.get("kpop", {}).get("artists", [])
+        is_kpop = any(k.lower() in a_low for k in kpop_artists) or "k-pop" in t_low or "kpop" in t_low or re.search(r'[\uAC00-\uD7AF]', title)
+        if not is_kpop:
+            return False, f"Track '{artist} - {title}' is not K-Pop."
+        return True, "Valid Korean candidate"
+
+    if "japanese" in lang or "anime" in lang:
+        jpop_artists = MUSIC_CLUSTERS.get("japanese_anime", {}).get("artists", [])
+        is_jpop = any(j.lower() in a_low for j in jpop_artists) or "anime" in t_low or re.search(r'[\u3040-\u30FF\u4E00-\u9FAF]', title)
+        if not is_jpop:
+            return False, f"Track '{artist} - {title}' is not Japanese/Anime."
+        return True, "Valid Japanese candidate"
+
+    return True, "Accepted"
+
+
 def normalize_title(title: str) -> str:
     """Normalize song title to remove video metadata and detect alternate uploads."""
     t = title.lower()
@@ -314,6 +490,12 @@ class UserMusicProfile:
         self.manual_language: Optional[str] = data.get("manual_language")
         self.recently_played: List[Dict[str, Any]] = data.get("recently_played", [])
         self.total_listened: int = data.get("total_listened", 0)
+
+        # Sanitize artist affinity by purging corporate labels and channel names
+        for label in INDIAN_RECORD_LABELS.union(GENERIC_CHANNELS):
+            for k in list(self.artist_affinity.keys()):
+                if k.lower() == label or label in k.lower():
+                    self.artist_affinity.pop(k, None)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -430,30 +612,31 @@ class AutoPlayService:
         p = self.get_user_profile(user_id)
         p.total_listened += 1
 
-        artist = track.author.strip()
-        cluster_info = self._detect_cluster(track.clean_title, artist)
+        raw_artist = (track.author or "").strip()
+        real_artist = extract_real_artist(track.clean_title, raw_artist)
+        cluster_info = self._detect_cluster(track.clean_title, real_artist)
 
-        # Mild affinity signal on play (+0.4 for manual queue, +0.2 for autoplay)
-        boost = 0.4 if manual else 0.2
-        if artist:
-            p.artist_affinity[artist] = p.artist_affinity.get(artist, 0.0) + boost
+        # Significant affinity boost for manual /play queues (+1.0), gentle for autoplay (+0.2)
+        boost = 1.0 if manual else 0.2
+        if real_artist and not any(l in real_artist.lower() for l in INDIAN_RECORD_LABELS.union(GENERIC_CHANNELS)):
+            p.artist_affinity[real_artist] = p.artist_affinity.get(real_artist, 0.0) + boost
 
         genre = cluster_info.get("genre")
         if genre:
-            p.genre_affinity[genre] = p.genre_affinity.get(genre, 0.0) + boost
+            p.genre_affinity[genre] = p.genre_affinity.get(genre, 0.0) + (0.8 if manual else 0.2)
 
         lang = cluster_info.get("language")
         if lang:
-            p.language_affinity[lang] = p.language_affinity.get(lang, 0.0) + boost
+            p.language_affinity[lang] = p.language_affinity.get(lang, 0.0) + (0.8 if manual else 0.2)
 
         mood = cluster_info.get("mood")
         if mood:
-            p.mood_affinity[mood] = p.mood_affinity.get(mood, 0.0) + boost
+            p.mood_affinity[mood] = p.mood_affinity.get(mood, 0.0) + (0.5 if manual else 0.1)
 
         # Record into recently played
         p.recently_played.append({
             "title": track.clean_title,
-            "artist": artist,
+            "artist": real_artist,
             "timestamp": time.time(),
         })
         p.recently_played = p.recently_played[-50:]
@@ -690,6 +873,13 @@ class AutoPlayService:
             if ctx_info.get("discovery_mode") != "familiar":
                 return False, f"Artist '{candidate_artist}' was just played (artist diversity cooldown)."
 
+        # 7. Strict Language Isolation Check
+        target_lang = ctx_info.get("seed_language")
+        if target_lang:
+            allowed, lang_reason = is_track_allowed_for_language(candidate_title, candidate_artist, target_lang)
+            if not allowed:
+                return False, lang_reason
+
         return True, "Valid"
 
     # ─────────────────────────────────────────────────────────────
@@ -711,12 +901,28 @@ class AutoPlayService:
 
     async def _call_gemini_api(self, ctx_info: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
         """Calls Gemini API with structured prompt for music recommendations."""
-        bilingual_prompt_note = ""
-        if "Hindi + English" in str(ctx_info.get("seed_language", "")):
-            bilingual_prompt_note = (
+        seed_lang = str(ctx_info.get("seed_language", ""))
+        language_directive = ""
+        if "Hindi + English" in seed_lang:
+            language_directive = (
                 "- BILINGUAL PREFERENCE: The listener wants a balanced blend of both Hindi songs "
                 "(Bollywood Romantic, Hindi Indie, Urban) and English songs (Pop, Lo-Fi, Acoustic). "
                 "Provide a diverse mix of both languages.\n"
+            )
+        elif "english" in seed_lang.lower():
+            language_directive = (
+                "- STRICT LANGUAGE: The listener has STRICTLY configured their language preference to: ENGLISH / INTERNATIONAL.\n"
+                "- You are STRICTLY FORBIDDEN from suggesting ANY songs in Hindi, Punjabi, Bollywood, or any Indian regional language.\n"
+                "- All 4 recommendations MUST be mainstream international English songs by recognized Western / International English-singing artists (Pop, Hip-Hop, Indie, R&B, Rock, EDM, or Lo-Fi).\n"
+            )
+        elif "hindi" in seed_lang.lower():
+            language_directive = (
+                "- STRICT LANGUAGE: The listener has STRICTLY configured their language preference to: HINDI / BOLLYWOOD.\n"
+                "- All 4 recommendations MUST be Hindi songs (Bollywood, Hindi Indie, Hindi Romantic).\n"
+            )
+        elif "punjabi" in seed_lang.lower():
+            language_directive = (
+                "- STRICT LANGUAGE: All 4 recommendations MUST be Punjabi Pop / Urban Punjabi songs.\n"
             )
 
         prompt = (
@@ -733,7 +939,7 @@ class AutoPlayService:
             f"- Discovery Style: {ctx_info['discovery_mode']} (balance familiar favorites and fresh discoveries)\n"
             f"- Recently Played (DO NOT REPEAT): {', '.join(ctx_info['recent_tracks'][:4]) if ctx_info['recent_tracks'] else 'None'}\n"
             f"- Blocked Artists: {', '.join(ctx_info['blocked_artists'][:5]) if ctx_info['blocked_artists'] else 'None'}\n"
-            f"{bilingual_prompt_note}\n"
+            f"{language_directive}\n"
             f"TASK:\n"
             f"Generate 4 diverse, musically coherent song candidates that seamlessly follow this song.\n"
             f"Preserve the genre, language, and mood unless transitioning naturally.\n"
@@ -796,13 +1002,21 @@ class AutoPlayService:
         """Calls OpenAI Chat Completions as secondary AI fallback."""
         if not self.openai_key:
             return None
-        bilingual_prompt_note = ""
-        if "Hindi + English" in str(ctx_info.get("seed_language", "")):
-            bilingual_prompt_note = "Blend both Hindi and English tracks. "
+        seed_lang = str(ctx_info.get("seed_language", ""))
+        language_note = ""
+        if "Hindi + English" in seed_lang:
+            language_note = "Blend both Hindi and English tracks. "
+        elif "english" in seed_lang.lower():
+            language_note = "STRICT: Suggest ONLY English songs by international artists. Absolutely NO Hindi, Bollywood or Punjabi songs. "
+        elif "hindi" in seed_lang.lower():
+            language_note = "STRICT: Suggest ONLY Hindi / Bollywood songs. "
+        elif "punjabi" in seed_lang.lower():
+            language_note = "STRICT: Suggest ONLY Punjabi Pop / Urban songs. "
+
         prompt = (
             f"Seed: '{ctx_info['seed_title']}' by {ctx_info['seed_artist']} ({ctx_info['seed_genre']}, {ctx_info['seed_language']}).\n"
             f"Listeners: {ctx_info['mode']}. Mode: {ctx_info['discovery_mode']}.\n"
-            f"{bilingual_prompt_note}"
+            f"{language_note}"
             f"Suggest 4 distinct songs matching this vibe in JSON array format: "
             f"[{{\"title\": \"...\", \"artist\": \"...\", \"genre\": \"...\", \"language\": \"...\", \"reason\": \"...\"}}]"
         )
@@ -860,11 +1074,11 @@ class AutoPlayService:
 
     def _get_heuristic_candidates(self, ctx_info: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Generates candidates from local affinity clusters when remote AI is offline."""
-        seed_cluster = self._detect_cluster(ctx_info["seed_title"], ctx_info["seed_artist"])
+        target_lang = str(ctx_info.get("seed_language", ""))
         candidates = []
 
         # 1. If Hindi + English bilingual mode is active, sample from both Hindi and English clusters
-        if "Hindi + English" in str(ctx_info.get("seed_language", "")):
+        if "Hindi + English" in target_lang:
             bilingual_samples = []
             for cluster_key in ["bollywood_romantic", "hindi_indie_acoustic", "pop_rnb_hits", "lofi_chill", "punjabi_hits"]:
                 if cluster_key in MUSIC_CLUSTERS:
@@ -883,33 +1097,118 @@ class AutoPlayService:
             random.shuffle(bilingual_samples)
             candidates.extend(bilingual_samples[:8])
 
-        # 2. From same cluster
-        samples = list(seed_cluster.get("sample_tracks", []))
-        random.shuffle(samples)
-        for s_title, s_artist in samples:
-            if s_artist.lower() == ctx_info["seed_artist"].lower():
-                continue
-            candidates.append({
-                "title": s_title,
-                "artist": s_artist,
-                "genre": seed_cluster["genre"],
-                "language": seed_cluster["language"],
-                "mood": seed_cluster["mood"],
-                "reason": f"Matches the {seed_cluster['mood'].lower()} {seed_cluster['genre']} vibe of {ctx_info['seed_artist']}."
-            })
+        # 2. If target language is strictly English / International
+        elif "english" in target_lang.lower():
+            english_cluster_keys = ["pop_rnb_hits", "lofi_chill", "hiphop_rap", "rock_indie", "edm_dance"]
+            samples = []
+            for ck in english_cluster_keys:
+                cl = MUSIC_CLUSTERS[ck]
+                for s_title, s_artist in cl.get("sample_tracks", []):
+                    if s_artist.lower() != ctx_info["seed_artist"].lower():
+                        samples.append({
+                            "title": s_title,
+                            "artist": s_artist,
+                            "genre": cl["genre"],
+                            "language": "English",
+                            "mood": cl["mood"],
+                            "reason": f"English recommendation ({cl['genre']}) tailored to your international focus."
+                        })
+            random.shuffle(samples)
+            candidates.extend(samples[:8])
 
-        # 3. From user's favorite artists
+        # 3. If target language is strictly Hindi / Bollywood
+        elif "hindi" in target_lang.lower():
+            hindi_cluster_keys = ["bollywood_romantic", "hindi_indie_acoustic"]
+            samples = []
+            for ck in hindi_cluster_keys:
+                cl = MUSIC_CLUSTERS[ck]
+                for s_title, s_artist in cl.get("sample_tracks", []):
+                    if s_artist.lower() != ctx_info["seed_artist"].lower():
+                        samples.append({
+                            "title": s_title,
+                            "artist": s_artist,
+                            "genre": cl["genre"],
+                            "language": "Hindi",
+                            "mood": cl["mood"],
+                            "reason": f"Hindi recommendation ({cl['genre']}) tailored to your Bollywood focus."
+                        })
+            random.shuffle(samples)
+            candidates.extend(samples[:8])
+
+        # 4. If target language is Punjabi
+        elif "punjabi" in target_lang.lower():
+            cl = MUSIC_CLUSTERS["punjabi_hits"]
+            for s_title, s_artist in cl.get("sample_tracks", []):
+                candidates.append({
+                    "title": s_title,
+                    "artist": s_artist,
+                    "genre": cl["genre"],
+                    "language": "Punjabi",
+                    "mood": cl["mood"],
+                    "reason": "Punjabi recommendation tailored to your Punjabi Pop focus."
+                })
+
+        # 5. If Korean / K-Pop
+        elif "korean" in target_lang.lower() or "k-pop" in target_lang.lower():
+            cl = MUSIC_CLUSTERS["kpop"]
+            for s_title, s_artist in cl.get("sample_tracks", []):
+                candidates.append({
+                    "title": s_title,
+                    "artist": s_artist,
+                    "genre": cl["genre"],
+                    "language": "Korean",
+                    "mood": cl["mood"],
+                    "reason": "K-Pop recommendation."
+                })
+
+        # 6. If Japanese / Anime
+        elif "japanese" in target_lang.lower() or "anime" in target_lang.lower():
+            cl = MUSIC_CLUSTERS["japanese_anime"]
+            for s_title, s_artist in cl.get("sample_tracks", []):
+                candidates.append({
+                    "title": s_title,
+                    "artist": s_artist,
+                    "genre": cl["genre"],
+                    "language": "Japanese",
+                    "mood": cl["mood"],
+                    "reason": "J-Pop & Anime recommendation."
+                })
+
+        # 7. Otherwise, dynamically adapt from seed cluster
+        else:
+            seed_cluster = self._detect_cluster(ctx_info["seed_title"], ctx_info["seed_artist"])
+            samples = list(seed_cluster.get("sample_tracks", []))
+            random.shuffle(samples)
+            for s_title, s_artist in samples:
+                if s_artist.lower() == ctx_info["seed_artist"].lower():
+                    continue
+                candidates.append({
+                    "title": s_title,
+                    "artist": s_artist,
+                    "genre": seed_cluster["genre"],
+                    "language": seed_cluster["language"],
+                    "mood": seed_cluster["mood"],
+                    "reason": f"Matches the {seed_cluster['mood'].lower()} {seed_cluster['genre']} vibe of {ctx_info['seed_artist']}."
+                })
+
+        # 8. Add recommendations from user's learned favorite artists (ONLY IF they match the target language!):
         top_artists = ctx_info.get("top_artists", [])
         for fav in top_artists:
-            if fav.lower() != ctx_info["seed_artist"].lower():
-                candidates.append({
-                    "title": f"Popular hit",
-                    "artist": fav,
-                    "genre": ctx_info.get("seed_genre", "Pop"),
-                    "language": ctx_info.get("seed_language", "English"),
-                    "mood": ctx_info.get("seed_mood", "Chill"),
-                    "reason": f"Recommended from your high-affinity artist profile ({fav})."
-                })
+            if fav.lower() == ctx_info["seed_artist"].lower():
+                continue
+            # CRITICAL: Verify favorite artist matches the selected language filter
+            if target_lang:
+                allowed, _ = is_track_allowed_for_language("", fav, target_lang)
+                if not allowed:
+                    continue
+            candidates.append({
+                "title": "Popular hit",
+                "artist": fav,
+                "genre": ctx_info.get("seed_genre", "Pop"),
+                "language": ctx_info.get("seed_language", "English"),
+                "mood": ctx_info.get("seed_mood", "Chill"),
+                "reason": f"Recommended from your high-affinity artist profile ({fav})."
+            })
 
         return candidates
 
@@ -986,9 +1285,17 @@ class AutoPlayService:
                     continue
                 chosen_track = tracks[0]
 
-                # Check duration: songs between 45s and 720s (12 mins) to avoid memes/sound-effects/10hr loops
+                # Check duration: songs between 40s and 720s (12 mins) to avoid memes/sound-effects/10hr loops
                 dur = chosen_track.duration or 0
                 if 40 <= dur <= 720 and not chosen_track.is_live:
+                    # Strict Language Check on extracted track author and title
+                    target_lang = ctx.get("seed_language")
+                    if target_lang:
+                        allowed, lang_reason = is_track_allowed_for_language(chosen_track.clean_title, chosen_track.author, target_lang)
+                        if not allowed:
+                            log.info(f"[AutoPlay Extracted Track Blocked by Language] {chosen_track.author} - {chosen_track.clean_title}: {lang_reason}")
+                            continue
+
                     # Final duplicate check on actual extracted track title
                     ok, _ = self.is_candidate_valid(chosen_track.clean_title, chosen_track.author, guild_queue, ctx)
                     if ok:

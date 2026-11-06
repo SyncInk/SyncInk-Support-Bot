@@ -1279,13 +1279,17 @@ class AutoPlayFeedbackView(discord.ui.View):
     @discord.ui.button(label="Tune DJ", emoji="⚙️", style=discord.ButtonStyle.secondary, custom_id="ap_btn_tune")
     async def on_tune(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = AutoPlayControlCenterView(self.music_cog, interaction.user, self.queue)
-        embed = view.build_embed()
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        try:
+            await interaction.response.send_message(view=view, ephemeral=True)
+        except Exception:
+            embed = view.build_embed()
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 
-class AutoPlayControlCenterView(discord.ui.View):
+class AutoPlayControlCenterView(discord.ui.LayoutView):
     """
-    Interactive Control Center for AI AutoPlay:
+    Discord Components V2 Interactive Control Center for AI AutoPlay:
+    Uses native discord.ui.Separator (visible=True), Container, and clean Discord V2 layout.
     Allows user to tune genre, mood, language, discovery style, block artists, and toggle.
     """
     def __init__(self, music_cog: 'Music', user: Union[discord.Member, discord.User], queue: GuildMusicQueue):
@@ -1302,13 +1306,14 @@ class AutoPlayControlCenterView(discord.ui.View):
         ctx = AutoPlayService.get_instance().build_recommendation_context(self.queue, fallback_user=self.user)
         mode_str = ctx.get("mode", "Personal")
 
-        fav_artists = [f"`{a}`" for a, _ in sorted(prof.artist_affinity.items(), key=lambda x: x[1], reverse=True)[:3]]
+        clean_artists = [a for a, _ in sorted(prof.artist_affinity.items(), key=lambda x: x[1], reverse=True) if a and not any(l in a.lower() for l in ["t-series", "sony music", "zee music", "tips", "yrf", "saregama"])]
+        fav_artists = [f"`{a}`" for a in clean_artists[:3]]
         fav_str = ", ".join(fav_artists) if fav_artists else "*None yet (plays will auto-learn)*"
 
         disc_map = {
-            "balanced": "Balanced ⚖️ (Favorites + Fresh Finds)",
-            "familiar": "Familiar 🎵 (Beloved Favorites)",
-            "explore": "Explore ✨ (Fresh Discoveries & Hidden Gems)"
+            "balanced": f"Balanced {Emojis.SCALE}",
+            "familiar": f"Familiar {Emojis.SYNCINK_MUSIC}",
+            "explore": "Explore ✨"
         }
         disc_str = disc_map.get(prof.discovery_mode, "Balanced")
 
@@ -1324,7 +1329,7 @@ class AutoPlayControlCenterView(discord.ui.View):
             f"{Emojis.S_ARROW} **Style Focus:** {mood_genre_str}\n"
             f"{Emojis.S_ARROW} **Language Focus:** {lang_str}\n"
             f"{Emojis.S_ARROW} **Top Learned Artists:** {fav_str}\n\n"
-            f"*Tune your personalized listening experience using the interactive controls below:*"
+            f"-# Tune your personalized listening experience using the interactive controls below:"
         )
 
         embed = discord.Embed(description=desc, color=BRAND_COLOR)
@@ -1334,94 +1339,186 @@ class AutoPlayControlCenterView(discord.ui.View):
     def build_components(self):
         self.clear_items()
         prof = AutoPlayService.get_instance().get_user_profile(self.user.id)
+        status_str = f"**ENABLED** {Emojis.CHECK_YES}" if self.queue.autoplay else f"**DISABLED** {Emojis.REFUSED}"
 
-        # 1. Select Menu: Mood & Genre (Row 0)
+        ctx = AutoPlayService.get_instance().build_recommendation_context(self.queue, fallback_user=self.user)
+        mode_str = ctx.get("mode", "Personal")
+
+        clean_artists = [a for a, _ in sorted(prof.artist_affinity.items(), key=lambda x: x[1], reverse=True) if a and not any(l in a.lower() for l in ["t-series", "sony music", "zee music", "tips", "yrf", "saregama"])]
+        fav_artists = [f"`{a}`" for a in clean_artists[:3]]
+        fav_str = ", ".join(fav_artists) if fav_artists else "*None yet (plays will auto-learn)*"
+
+        disc_map = {
+            "balanced": f"Balanced {Emojis.SCALE}",
+            "familiar": f"Familiar {Emojis.SYNCINK_MUSIC}",
+            "explore": "Explore ✨"
+        }
+        disc_str = disc_map.get(prof.discovery_mode, "Balanced")
+        mood_genre_str = f"Genre: `{prof.manual_genre or 'Auto-Detect'}` • Mood: `{prof.manual_mood or 'Dynamic'}`"
+        lang_str = f"`{prof.manual_language or 'All Languages / Dynamic'}`"
+
+        # 1. Native Discord V2 Header & Status Container with Native Separators
+        header_text = discord.ui.TextDisplay(
+            f"### {Emojis.AI} SyncInk AI DJ • Auto Play Control Center\n"
+            "Your personal AI music companion continuously learns your musical preferences and keeps high-fidelity audio playing seamlessly when the queue ends."
+        )
+        sep1 = discord.ui.Separator(visible=True, spacing=discord.enums.SeparatorSpacing.small)
+        status_display = discord.ui.TextDisplay(
+            f"**Status:** {status_str} • **Listening Mode:** `{mode_str}`\n"
+            f"**Discovery Style:** {disc_str}\n"
+            f"**Style Focus:** {mood_genre_str}\n"
+            f"**Language Focus:** {lang_str}\n"
+            f"**Top Learned Artists:** {fav_str}"
+        )
+        sep2 = discord.ui.Separator(visible=True, spacing=discord.enums.SeparatorSpacing.small)
+        footer_hint = discord.ui.TextDisplay("-# Tune your personalized listening experience using the interactive controls below:")
+
+        cnt = discord.ui.Container(header_text, sep1, status_display, sep2, footer_hint, accent_color=BRAND_COLOR)
+        self.add_item(cnt)
+
+        # 2. Select Menu: Mood & Genre
         mood_options = [
-            discord.SelectOption(label="Romantic & Soulful", value="Romantic|Bollywood Romantic", description="Acoustic melodies, heartfelt love songs", emoji="💖"),
-            discord.SelectOption(label="Lo-Fi & Chill", value="Relaxing|Lo-Fi Beats & Chillhop", description="Relaxing beats, study & chillhop vibes", emoji="☕"),
-            discord.SelectOption(label="Energetic & High BPM", value="Energetic|Pop & R&B Hits", description="Uplifting pop hits, dance grooves", emoji="⚡"),
-            discord.SelectOption(label="Punjabi Pop & Urban", value="Energetic|Punjabi Pop & Urban", description="Punjabi folk, urban pop & bass", emoji="🔥"),
-            discord.SelectOption(label="Hip-Hop & Rap", value="Energetic|Hip-Hop & Rap", description="Modern hip-hop, trap & rap rhythms", emoji="🎤"),
-            discord.SelectOption(label="Indie & Acoustic", value="Chill|Hindi Indie & Acoustic", description="Coffeehouse acoustic & indie vibes", emoji="🎸"),
-            discord.SelectOption(label="EDM & Dance", value="Energetic|EDM & Dance", description="Festival electronic, melodic EDM", emoji="🎧"),
-            discord.SelectOption(label="K-Pop & J-Pop", value="Energetic|K-Pop", description="Korean pop & Japanese anime hits", emoji="🌸"),
-            discord.SelectOption(label="↺ Reset Genre & Mood", value="reset", description="Clear focus; let AI dynamically adapt", emoji="🔄"),
+            discord.SelectOption(
+                label="Romantic & Soulful",
+                value="Romantic|Bollywood Romantic",
+                description="Acoustic melodies, heartfelt love songs",
+                emoji=EmojiPartials.ROMANTIC_SOULFUL
+            ),
+            discord.SelectOption(
+                label="Lo-Fi & Chill",
+                value="Relaxing|Lo-Fi Beats & Chillhop",
+                description="Relaxing beats, study & chillhop vibes",
+                emoji=EmojiPartials.LOFI_COFFEE
+            ),
+            discord.SelectOption(
+                label="Energetic & High BPM",
+                value="Energetic|Pop & R&B Hits",
+                description="Uplifting pop hits, dance grooves",
+                emoji=EmojiPartials.ENERGETIC_HIGH_BPM
+            ),
+            discord.SelectOption(
+                label="Punjabi Pop & Urban",
+                value="Energetic|Punjabi Pop & Urban",
+                description="Punjabi folk, urban pop & bass",
+                emoji=EmojiPartials.PUNJABI_POP
+            ),
+            discord.SelectOption(
+                label="Hip-Hop & Rap",
+                value="Energetic|Hip-Hop & Rap",
+                description="Modern hip-hop, trap & rap rhythms",
+                emoji=EmojiPartials.HIP_HOP
+            ),
+            discord.SelectOption(
+                label="Indie & Acoustic",
+                value="Chill|Hindi Indie & Acoustic",
+                description="Coffeehouse acoustic & indie vibes",
+                emoji=EmojiPartials.INDIE_ACOUSTIC
+            ),
+            discord.SelectOption(
+                label="EDM & Dance",
+                value="Energetic|EDM & Dance",
+                description="Festival electronic, melodic EDM",
+                emoji=EmojiPartials.EDM
+            ),
+            discord.SelectOption(
+                label="K-Pop & Asian Pop",
+                value="Energetic|K-Pop",
+                description="Korean pop & Asian international hits",
+                emoji=EmojiPartials.KPOP
+            ),
+            discord.SelectOption(
+                label="↺ Reset Genre & Mood",
+                value="reset",
+                description="Clear focus; let AI dynamically adapt",
+                emoji=EmojiPartials.REFRESH
+            ),
         ]
         mood_select = discord.ui.Select(
             placeholder="🎭 Select Preferred Mood & Genre...",
             options=mood_options,
-            custom_id="ap_select_mood",
-            row=0
+            custom_id="ap_select_mood"
         )
         mood_select.callback = self.on_mood_select
-        self.add_item(mood_select)
+        self.add_item(discord.ui.ActionRow(mood_select))
 
-        # 2. Select Menu: Language (Row 1)
+        # 3. Select Menu: Language
         lang_options = [
             discord.SelectOption(label="Hindi + English (Bilingual)", value="Hindi + English", description="Seamless blend of Bollywood, Hindi Indie & English Pop", emoji="🇮🇳"),
             discord.SelectOption(label="Hindi / Bollywood", value="Hindi", description="Bollywood hits, Hindi indie & romantic tracks", emoji="🇮🇳"),
             discord.SelectOption(label="English / International", value="English", description="Global pop, billboard hits & English rock", emoji="🌐"),
-            discord.SelectOption(label="Punjabi", value="Punjabi", description="Punjabi pop, urban beats & bhangra", emoji="🪕"),
-            discord.SelectOption(label="Korean / K-Pop", value="Korean", description="K-Pop idols, OSTs & Korean R&B", emoji="🇰🇷"),
+            discord.SelectOption(label="Punjabi", value="Punjabi", description="Punjabi pop, urban beats & bhangra", emoji=EmojiPartials.PUNJABI_POP),
+            discord.SelectOption(label="Korean / K-Pop", value="Korean", description="K-Pop idols, OSTs & Korean R&B", emoji=EmojiPartials.KPOP),
             discord.SelectOption(label="Japanese / Anime", value="Japanese", description="J-Pop, J-Rock & anime OSTs", emoji="🇯🇵"),
             discord.SelectOption(label="Spanish / Latin", value="Spanish", description="Reggaeton, latin pop & urban latino", emoji="🇪🇸"),
-            discord.SelectOption(label="↺ Any Language (Auto)", value="reset", description="Dynamic language adaptation based on session", emoji="🔄"),
+            discord.SelectOption(label="↺ Any Language (Auto)", value="reset", description="Dynamic language adaptation based on session", emoji=EmojiPartials.REFRESH),
         ]
         lang_select = discord.ui.Select(
             placeholder="🌐 Select Preferred Language...",
             options=lang_options,
-            custom_id="ap_select_lang",
-            row=1
+            custom_id="ap_select_lang"
         )
         lang_select.callback = self.on_lang_select
-        self.add_item(lang_select)
+        self.add_item(discord.ui.ActionRow(lang_select))
 
-        # 3. Select Menu: Discovery Mode (Row 2)
+        # 4. Select Menu: Discovery Mode
         disc_options = [
-            discord.SelectOption(label="Balanced (Recommended)", value="balanced", description="Harmonious blend of favorites & new discoveries", emoji="⚖️", default=(prof.discovery_mode == "balanced")),
-            discord.SelectOption(label="Familiar Favorites", value="familiar", description="Stick primarily to songs & artists you love", emoji="🎵", default=(prof.discovery_mode == "familiar")),
-            discord.SelectOption(label="Fresh Discoveries", value="explore", description="Surfaces exciting new tracks & emerging artists", emoji="✨", default=(prof.discovery_mode == "explore")),
+            discord.SelectOption(
+                label="Balanced (Recommended)",
+                value="balanced",
+                description="Harmonious blend of favorites & new discoveries",
+                emoji=EmojiPartials.SCALE,
+                default=(prof.discovery_mode == "balanced")
+            ),
+            discord.SelectOption(
+                label="Familiar Favorites",
+                value="familiar",
+                description="Stick primarily to songs & artists you love",
+                emoji=EmojiPartials.SYNCINK_MUSIC,
+                default=(prof.discovery_mode == "familiar")
+            ),
+            discord.SelectOption(
+                label="Fresh Discoveries",
+                value="explore",
+                description="Surfaces exciting new tracks & emerging artists",
+                emoji="✨",
+                default=(prof.discovery_mode == "explore")
+            ),
         ]
         disc_select = discord.ui.Select(
             placeholder="✨ Choose Discovery Style...",
             options=disc_options,
-            custom_id="ap_select_disc",
-            row=2
+            custom_id="ap_select_disc"
         )
         disc_select.callback = self.on_disc_select
-        self.add_item(disc_select)
+        self.add_item(discord.ui.ActionRow(disc_select))
 
-        # 4. Action Row (Row 3): Toggle ON/OFF, Block Artist, View Taste Profile
+        # 5. Bottom Action Row: Toggle ON/OFF, Block Artist, View Taste Profile
         toggle_label = "Turn OFF AutoPlay" if self.queue.autoplay else "Turn ON AutoPlay"
         toggle_style = discord.ButtonStyle.danger if self.queue.autoplay else discord.ButtonStyle.success
         btn_toggle = discord.ui.Button(
             label=toggle_label,
             style=toggle_style,
-            custom_id="ap_btn_toggle",
-            row=3
+            custom_id="ap_btn_toggle"
         )
         btn_toggle.callback = self.on_toggle
-        self.add_item(btn_toggle)
 
         btn_block = discord.ui.Button(
             label="Block Artist",
             emoji="🚫",
             style=discord.ButtonStyle.secondary,
-            custom_id="ap_btn_block",
-            row=3
+            custom_id="ap_btn_block"
         )
         btn_block.callback = self.on_block_artist
-        self.add_item(btn_block)
 
         btn_profile = discord.ui.Button(
             label="My Taste Profile",
             emoji="📊",
             style=discord.ButtonStyle.secondary,
-            custom_id="ap_btn_profile",
-            row=3
+            custom_id="ap_btn_profile"
         )
         btn_profile.callback = self.on_view_profile
-        self.add_item(btn_profile)
+
+        self.add_item(discord.ui.ActionRow(btn_toggle, btn_block, btn_profile))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.user.id:
@@ -1449,7 +1546,10 @@ class AutoPlayControlCenterView(discord.ui.View):
         self.queue.prefetched_autoplay_meta = None
         AutoPlayService.get_instance().trigger_prefetch(self.queue, self.music_cog.service)
         self.build_components()
-        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+        try:
+            await interaction.response.edit_message(view=self)
+        except Exception:
+            await interaction.response.edit_message(embed=self.build_embed(), view=self)
         await interaction.followup.send(f"{Emojis.APPROVED} {msg}", ephemeral=True)
 
     async def on_lang_select(self, interaction: discord.Interaction):
@@ -1469,7 +1569,10 @@ class AutoPlayControlCenterView(discord.ui.View):
         self.queue.prefetched_autoplay_meta = None
         AutoPlayService.get_instance().trigger_prefetch(self.queue, self.music_cog.service)
         self.build_components()
-        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+        try:
+            await interaction.response.edit_message(view=self)
+        except Exception:
+            await interaction.response.edit_message(embed=self.build_embed(), view=self)
         await interaction.followup.send(f"{Emojis.APPROVED} {msg}", ephemeral=True)
 
     async def on_disc_select(self, interaction: discord.Interaction):
@@ -1481,7 +1584,10 @@ class AutoPlayControlCenterView(discord.ui.View):
         self.queue.prefetched_autoplay_meta = None
         AutoPlayService.get_instance().trigger_prefetch(self.queue, self.music_cog.service)
         self.build_components()
-        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+        try:
+            await interaction.response.edit_message(view=self)
+        except Exception:
+            await interaction.response.edit_message(embed=self.build_embed(), view=self)
         await interaction.followup.send(f"{Emojis.APPROVED} Discovery mode updated to **{val.title()}**.", ephemeral=True)
 
     async def on_toggle(self, interaction: discord.Interaction):
@@ -1493,7 +1599,10 @@ class AutoPlayControlCenterView(discord.ui.View):
             self.queue.prefetched_autoplay_track = None
             self.queue.prefetched_autoplay_meta = None
         self.build_components()
-        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+        try:
+            await interaction.response.edit_message(view=self)
+        except Exception:
+            await interaction.response.edit_message(embed=self.build_embed(), view=self)
         await interaction.followup.send(f"{Emojis.AI} AutoPlay is now **{status}**.", ephemeral=True)
 
     async def on_block_artist(self, interaction: discord.Interaction):
@@ -1501,7 +1610,8 @@ class AutoPlayControlCenterView(discord.ui.View):
 
     async def on_view_profile(self, interaction: discord.Interaction):
         prof = AutoPlayService.get_instance().get_user_profile(self.user.id)
-        top_art = [f"• **{a}** (score: {s:.1f})" for a, s in sorted(prof.artist_affinity.items(), key=lambda x: x[1], reverse=True)[:5]]
+        clean_artists = [a for a, _ in sorted(prof.artist_affinity.items(), key=lambda x: x[1], reverse=True) if a and not any(l in a.lower() for l in ["t-series", "sony music", "zee music", "tips", "yrf", "saregama"])]
+        top_art = [f"• **{a}** (score: {prof.artist_affinity[a]:.1f})" for a in clean_artists[:5]]
         top_gen = [f"• **{g}** (score: {s:.1f})" for g, s in sorted(prof.genre_affinity.items(), key=lambda x: x[1], reverse=True)[:5]]
         blocked = [f"`{b}`" for b in prof.blocked_artists[:10]]
 
@@ -1888,6 +1998,13 @@ class Music(commands.Cog):
         queue.text_channel = interaction.channel
         queue.cancel_inactivity()
 
+        # Actively learn member music taste from manual /play commands
+        for t in tracks:
+            try:
+                AutoPlayService.get_instance().record_track_play(interaction.user.id, t, manual=True)
+            except Exception as e:
+                log.debug(f"[AutoPlay Taste Learning] {e}")
+
         is_first = queue.current_track is None and not (queue.voice_client and queue.voice_client.is_playing())
 
         if is_first:
@@ -1977,7 +2094,7 @@ class Music(commands.Cog):
                     queue.session_artists.append(track.author)
                     queue.session_artists = queue.session_artists[-20:]
                     if track.requested_by and hasattr(track.requested_by, "id"):
-                        AutoPlayService.get_instance().record_track_play(track.requested_by.id, track, manual=True)
+                        AutoPlayService.get_instance().record_track_play(track.requested_by.id, track, manual=not queue.autoplay)
                     if queue.autoplay:
                         AutoPlayService.get_instance().trigger_prefetch(queue, self.service)
                 return True
@@ -2561,6 +2678,13 @@ class Music(commands.Cog):
         queue.text_channel = ctx.channel
         queue.cancel_inactivity()
 
+        # Actively learn member music taste from manual ?play commands
+        for t in tracks:
+            try:
+                AutoPlayService.get_instance().record_track_play(ctx.author.id, t, manual=True)
+            except Exception as e:
+                log.debug(f"[AutoPlay Taste Learning] {e}")
+
         is_first = queue.current_track is None and not (queue.voice_client and queue.voice_client.is_playing())
 
         if is_first:
@@ -2892,8 +3016,11 @@ class Music(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
         else:
             view = AutoPlayControlCenterView(self, interaction.user, queue)
-            embed = view.build_embed()
-            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            try:
+                await interaction.response.send_message(view=view, ephemeral=True)
+            except Exception:
+                embed = view.build_embed()
+                await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     @app_commands.command(name="247", description="Keep bot in voice channel 24/7.")
     @app_commands.describe(mode="Enable or disable 24/7 mode")
@@ -3238,8 +3365,11 @@ class Music(commands.Cog):
                 asyncio.create_task(_delayed_delete_msg(ctx.message, 5))
         else:
             view = AutoPlayControlCenterView(self, ctx.author, queue)
-            embed = view.build_embed()
-            await ctx.send(embed=embed, view=view)
+            try:
+                await ctx.send(view=view)
+            except Exception:
+                embed = view.build_embed()
+                await ctx.send(embed=embed, view=view)
 
     @commands.command(name="247", aliases=["alwayson"], description="Keep bot in voice channel 24/7.")
     async def cmd_247(self, ctx: commands.Context, mode: Optional[str] = None):
