@@ -10,7 +10,6 @@ import {
   Bug,
   Search,
   Calendar,
-  ExternalLink,
   GitCommit,
   Layers,
   ArrowRight,
@@ -23,6 +22,7 @@ import {
   Bookmark,
   Activity,
   Boxes,
+  Lock,
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
@@ -58,6 +58,16 @@ interface ChangelogCommit {
 }
 
 const BADGE_STYLES: Record<string, { bg: string; border: string; text: string }> = {
+  "AI DJ": {
+    bg: "bg-purple-500/15",
+    border: "border-purple-500/30",
+    text: "text-purple-300",
+  },
+  "ADMIN & BOOSTERS": {
+    bg: "bg-fuchsia-500/15",
+    border: "border-fuchsia-500/30",
+    text: "text-fuchsia-300",
+  },
   LATEST: {
     bg: "bg-blue-500/15",
     border: "border-blue-500/30",
@@ -87,11 +97,99 @@ const BADGE_STYLES: Record<string, { bg: string; border: string; text: string }>
 
 const PRODUCT_ICONS: Record<string, React.ElementType> = {
   "Support Bot": Shield,
+  "Higher Administrators": Shield,
+  Boosters: Sparkles,
+  "SyncInk Radio": Radio,
+  Radio: Radio,
   "Ticket Bot": MessageSquare,
   "Voice Bot": Radio,
   Platform: Boxes,
   Dashboard: Layers,
 };
+
+/**
+ * Parses markdown bold (**text**), Discord custom emojis (<:name:id> or <a:name:id>),
+ * and channel mentions (<#id>) into rich inline React nodes with authentic Discord CDN images.
+ */
+function renderFormattedContent(content: string): React.ReactNode {
+  if (!content) return null;
+
+  // Split content by custom emojis <:name:id> or <a:name:id>
+  const emojiRegex = /<(a)?:([a-zA-Z0-9_]+):([0-9]+)>/g;
+  const segments: (string | React.ReactNode)[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = emojiRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push(content.substring(lastIndex, match.index));
+    }
+    const isAnimated = match[1] === "a";
+    const name = match[2];
+    const id = match[3];
+    const ext = isAnimated ? "gif" : "png";
+    const src = `https://cdn.discordapp.com/emojis/${id}.${ext}?size=48&quality=lossless`;
+
+    segments.push(
+      <img
+        key={`emoji-${id}-${match.index}`}
+        src={src}
+        alt={`:${name}:`}
+        title={`:${name}:`}
+        className="inline-block w-4 h-4 align-text-bottom mx-0.5 object-contain select-none"
+        loading="lazy"
+      />
+    );
+    lastIndex = emojiRegex.lastIndex;
+  }
+
+  if (lastIndex < content.length) {
+    segments.push(content.substring(lastIndex));
+  }
+
+  // Parse markdown bold (**text**) and channel tags (<#id>) inside text strings
+  return segments.map((seg, sIdx) => {
+    if (typeof seg !== "string") return seg;
+
+    const partsWithChannels = seg.split(/(<#[0-9]+>)/g).map((sub, cIdx) => {
+      const chMatch = sub.match(/^<#([0-9]+)>$/);
+      if (chMatch) {
+        const id = chMatch[1];
+        const chName =
+          id === "1520460587522330634"
+            ? "guides"
+            : id === "1520460624864350218"
+            ? "faq"
+            : `channel-${id.slice(-4)}`;
+        return (
+          <span
+            key={`ch-${id}-${cIdx}`}
+            className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 font-mono text-[11px] font-semibold border border-blue-500/20 mx-0.5"
+          >
+            #{chName}
+          </span>
+        );
+      }
+      return sub;
+    });
+
+    return partsWithChannels.map((subPart, bIdx) => {
+      if (typeof subPart !== "string") return subPart;
+
+      const boldParts = subPart.split(/(\*\*.*?\*\*)/g);
+      return boldParts.map((bChunk, chunkIdx) => {
+        if (bChunk.startsWith("**") && bChunk.endsWith("**")) {
+          return (
+            <strong key={`b-${sIdx}-${bIdx}-${chunkIdx}`} className="text-white font-semibold">
+              {bChunk.slice(2, -2)}
+            </strong>
+          );
+        }
+        return bChunk;
+      });
+    });
+  });
+}
 
 export default function UpdatesPage() {
   const [activeTab, setActiveTab] = useState<"curated" | "commits">("curated");
@@ -197,7 +295,7 @@ export default function UpdatesPage() {
               }`}
             >
               <Bookmark className="w-4 h-4" />
-              <span>Curated Releases</span>
+              <span>Current Releases</span>
               <span className="text-xs px-2 py-0.5 rounded-full bg-white/20 text-white">
                 {releases.length}
               </span>
@@ -239,7 +337,7 @@ export default function UpdatesPage() {
             <span className="text-xs font-semibold text-slate-400 mr-1 flex items-center gap-1">
               <Filter className="w-3.5 h-3.5" /> Product:
             </span>
-            {["ALL", "Support Bot", "Ticket Bot", "Voice Bot", "Platform"].map((prod) => (
+            {["ALL", "SyncInk Radio", "Support Bot", "Higher Administrators", "Boosters", "Ticket Bot", "Voice Bot", "Platform"].map((prod) => (
               <button
                 key={prod}
                 onClick={() => setSelectedProduct(prod)}
@@ -352,11 +450,11 @@ export default function UpdatesPage() {
 
                     {/* Title & Executive Summary */}
                     <div className="mb-6">
-                      <h2 className="text-lg sm:text-xl font-bold text-slate-100">
-                        {release.title}
+                      <h2 className="text-lg sm:text-xl font-bold text-slate-100 flex items-center gap-2">
+                        {renderFormattedContent(release.title)}
                       </h2>
                       <p className="text-sm text-slate-400 mt-2 leading-relaxed">
-                        {release.summary}
+                        {renderFormattedContent(release.summary)}
                       </p>
                     </div>
 
@@ -375,7 +473,7 @@ export default function UpdatesPage() {
                                 key={idx}
                                 className="text-xs text-slate-300 leading-relaxed pl-3 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-cyan-400 before:rounded-full before:absolute before:left-0 before:top-1.5"
                               >
-                                {feat}
+                                {renderFormattedContent(feat)}
                               </li>
                             ))}
                           </ul>
@@ -395,7 +493,7 @@ export default function UpdatesPage() {
                                 key={idx}
                                 className="text-xs text-slate-300 leading-relaxed pl-3 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-blue-400 before:rounded-full before:absolute before:left-0 before:top-1.5"
                               >
-                                {imp}
+                                {renderFormattedContent(imp)}
                               </li>
                             ))}
                           </ul>
@@ -415,7 +513,7 @@ export default function UpdatesPage() {
                                 key={idx}
                                 className="text-xs text-slate-300 leading-relaxed pl-3 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-emerald-400 before:rounded-full before:absolute before:left-0 before:top-1.5"
                               >
-                                {fix}
+                                {renderFormattedContent(fix)}
                               </li>
                             ))}
                           </ul>
@@ -475,15 +573,11 @@ export default function UpdatesPage() {
                     </div>
                   </div>
 
-                  <a
-                    href={commit.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="self-start sm:self-center px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-slate-300 hover:text-white border border-white/10 flex items-center gap-1.5 transition-all shrink-0"
-                  >
-                    <span>Inspect</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+                  {/* Private Verified Release Indicator (Inspect button removed to prevent code leakage) */}
+                  <div className="self-start sm:self-center px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono text-emerald-400 flex items-center gap-1.5 shrink-0 select-none">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Verified Release</span>
+                  </div>
                 </div>
               ))
             )}
