@@ -50,20 +50,20 @@ const STATIC_CURATED_RELEASES: CuratedRelease[] = [
   {
     id: "v2.5.0",
     version: "v2.5.0",
-    title: "SyncInk Radio — AI DJ & AutoPlay Update",
+    title: "<:announce:920051412329725982> SyncInk Radio — `AI DJ & AutoPlay Update`",
     release_date: "2026-11-06",
     badge: "AI DJ",
     summary:
-      "Introducing SyncInk AI DJ, an intelligent AutoPlay system designed to learn your musical preferences, understand individual listening habits, and recommend songs seamlessly.",
+      "We're excited to introduce SyncInk AI DJ, bringing intelligent AutoPlay to SyncInk Radio, allowing the bot to learn your musical preferences and recommend songs based on your individual listening habits.",
     products: ["SyncInk Radio", "Voice Bot", "Platform"],
     features: [
       "<:syncinkmusic:1558918836303044688> **Personal Music Taste Profile:** Every member has their own individual taste profile. AI DJ learns from the songs you play and queue to understand your preferences.",
-      "<:rules:1547034188702818426> **Personalized Music Recommendations:** Discover songs based on your listening history, favorite artists, and musical preferences. AI DJ continuously adapts to your taste as you listen.",
-      "<:neonheart:1558594319227813949> **Mood & Genre Preferences:** Choose your preferred mood and genres, including Romantic & Soulful, Lo-Fi & Chill, EDM & Dance, Punjabi Pop, Hip-Hop, Indie, K-Pop, and more...",
-      "<a:earthblurple:1558803274813935666> **Language Preferences:** Customize your listening experience by selecting your preferred language, including Hindi + English, Bollywood, English, Punjabi, Korean, Japanese, Spanish, and more...",
-      "<:like:1559660676853797005> <:dislike:1559660727373930657> **Like & Dislike System:** Rate songs directly through the music player. Your feedback helps AI DJ improve your personal taste profile and provide better recommendations.",
-      "<a:approved:1547035150964236379> **Seamless AutoPlay:** When your queue ends, AI DJ automatically discovers and plays music based on your preferences, keeping the music going without interruption.",
-      "<:SyncProductSupport:1553532855278116956> **Support & Bug Reports:** Direct integration for opening support tickets and submitting bug reports to the SyncInk development team.",
+      "<:experience:1562588852324143125> **Personalized Music Recommendations:** Discover songs based on your listening history, favorite artists, and musical preferences. AI DJ continuously adapts to your taste as you listen.",
+      "<a:Playground_Heart:1559993483702304818> **Mood & Genre Preferences:** Choose your preferred mood and genres, including Romantic & Soulful, Lo-Fi & Chill, EDM & Dance, Punjabi Pop, Hip-Hop, Indie, K-Pop, and more...",
+      "<:syncinkvoiceregion:1517256470230732840> **Language Preferences:** Customize your listening experience by selecting your preferred language, including Hindi + English, Bollywood, English, Punjabi, Korean, Japanese, Spanish, and more...",
+      "<:like:1559660676853797005> / <:dislike:1559660727373930657> **Like & Dislike System:** Rate songs directly through the music player. Your feedback helps AI DJ improve your personal taste profile and provide better recommendations.",
+      "<:authorized:585790083161128980> **Seamless AutoPlay:** When your queue ends, AI DJ automatically discovers and plays music based on your preferences, keeping the music going without interruption.",
+      "<:productsupport:1521439491586396180> **Support & Bug Reports:** If you encounter any problems, unexpected behavior, or bugs with this update, please contact our support team:\n• <:syncclaimticket:1513812248957550683> **[Open a Support Ticket](https://discord.com/channels/1520457643842342912/1520460764937322566)**\n• <:bugreport:1513337174148513892> **[Submit a Bug Report](https://syncink.site/report)**",
     ],
     improvements: [
       "Dynamic audio bitrate balancing across voice channels ensuring high-fidelity, lag-free playback",

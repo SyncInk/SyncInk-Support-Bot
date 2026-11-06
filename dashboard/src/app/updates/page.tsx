@@ -23,6 +23,9 @@ import {
   Activity,
   Boxes,
   Lock,
+  Link2,
+  Check,
+  Share2,
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
@@ -108,87 +111,141 @@ const PRODUCT_ICONS: Record<string, React.ElementType> = {
 };
 
 /**
- * Parses markdown bold (**text**), Discord custom emojis (<:name:id> or <a:name:id>),
- * and channel mentions (<#id>) into rich inline React nodes with authentic Discord CDN images.
+ * Parses markdown bold (**text**), markdown links [label](url),
+ * Discord custom emojis (<:name:id> or <a:name:id>), inline code (`code`),
+ * and channel mentions (<#id>) into clickable, high-resolution React components.
  */
+function renderInlineFragment(text: string): React.ReactNode {
+  if (!text) return null;
+
+  // Pattern breakdown:
+  // 1. Markdown Links: [label](url)
+  // 2. Channel mentions: <#id>
+  // 3. Custom Discord Emojis: <:name:id> or <a:name:id>
+  // 4. Inline Code: `code`
+  // 5. Bold text: **text**
+  const tokenRegex = /(\[.*?\]\(https?:\/\/[^\s)]+\)|<#[0-9]+>|<(?:a)?:[a-zA-Z0-9_]+:[0-9]+>|`[^`]+`|\*\*.*?\*\*)/g;
+
+  const parts = text.split(tokenRegex);
+
+  return parts.map((part, pIdx) => {
+    if (!part) return null;
+
+    // 1. Markdown Link: [label](url)
+    const linkMatch = part.match(/^\[(.*?)\]\((https?:\/\/[^\s)]+)\)$/);
+    if (linkMatch) {
+      const label = linkMatch[1];
+      const url = linkMatch[2];
+      return (
+        <a
+          key={`link-${pIdx}`}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-400 hover:text-blue-300 underline underline-offset-2 font-semibold transition-colors inline-flex items-center gap-0.5 mx-0.5"
+        >
+          {renderInlineFragment(label)}
+        </a>
+      );
+    }
+
+    // 2. Channel Mention: <#id>
+    const chMatch = part.match(/^<#([0-9]+)>$/);
+    if (chMatch) {
+      const id = chMatch[1];
+      const channelName =
+        id === "1520460587522330634"
+          ? "guides"
+          : id === "1520460624864350218"
+          ? "faq"
+          : id === "1520460764937322566"
+          ? "support-tickets"
+          : `channel-${id.slice(-4)}`;
+      const discordUrl = `https://discord.com/channels/1520457643842342912/${id}`;
+
+      return (
+        <a
+          key={`ch-${id}-${pIdx}`}
+          href={discordUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={`Open #${channelName} in Discord`}
+          className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 hover:text-white font-mono text-[11px] font-semibold border border-blue-500/25 transition-all mx-0.5 align-middle select-none shadow-xs"
+        >
+          #{channelName}
+        </a>
+      );
+    }
+
+    // 3. Custom Discord Emoji: <:name:id> or <a:name:id>
+    const emojiMatch = part.match(/^<(a)?:([a-zA-Z0-9_]+):([0-9]+)>$/);
+    if (emojiMatch) {
+      const isAnimated = emojiMatch[1] === "a";
+      const name = emojiMatch[2];
+      const id = emojiMatch[3];
+      const ext = isAnimated ? "gif" : "png";
+      const src = `https://cdn.discordapp.com/emojis/${id}.${ext}?size=48&quality=lossless`;
+
+      return (
+        <img
+          key={`emoji-${id}-${pIdx}`}
+          src={src}
+          alt={`:${name}:`}
+          title={`:${name}:`}
+          className="inline-block w-4 h-4 sm:w-5 sm:h-5 align-middle mx-0.5 object-contain select-none"
+          loading="lazy"
+        />
+      );
+    }
+
+    // 4. Inline Code: `code`
+    const codeMatch = part.match(/^`([^`]+)`$/);
+    if (codeMatch) {
+      const code = codeMatch[1];
+      return (
+        <code
+          key={`code-${pIdx}`}
+          className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono text-xs sm:text-sm font-semibold mx-0.5 align-middle"
+        >
+          {code}
+        </code>
+      );
+    }
+
+    // 5. Bold: **text**
+    const boldMatch = part.match(/^\*\*(.*?)\*\*$/);
+    if (boldMatch) {
+      const boldText = boldMatch[1];
+      return (
+        <strong key={`bold-${pIdx}`} className="text-white font-semibold">
+          {renderInlineFragment(boldText)}
+        </strong>
+      );
+    }
+
+    // Plain text: normalize emoji alignment slashes (e.g. " / ")
+    return part;
+  });
+}
+
 function renderFormattedContent(content: string): React.ReactNode {
   if (!content) return null;
 
-  // Split content by custom emojis <:name:id> or <a:name:id>
-  const emojiRegex = /<(a)?:([a-zA-Z0-9_]+):([0-9]+)>/g;
-  const segments: (string | React.ReactNode)[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = emojiRegex.exec(content)) !== null) {
-    if (match.index > lastIndex) {
-      segments.push(content.substring(lastIndex, match.index));
-    }
-    const isAnimated = match[1] === "a";
-    const name = match[2];
-    const id = match[3];
-    const ext = isAnimated ? "gif" : "png";
-    const src = `https://cdn.discordapp.com/emojis/${id}.${ext}?size=48&quality=lossless`;
-
-    segments.push(
-      <img
-        key={`emoji-${id}-${match.index}`}
-        src={src}
-        alt={`:${name}:`}
-        title={`:${name}:`}
-        className="inline-block w-4 h-4 align-text-bottom mx-0.5 object-contain select-none"
-        loading="lazy"
-      />
-    );
-    lastIndex = emojiRegex.lastIndex;
+  // Split multi-line strings into paragraphs/sub-bullets
+  const lines = content.split("\n");
+  if (lines.length === 1) {
+    return renderInlineFragment(lines[0]);
   }
 
-  if (lastIndex < content.length) {
-    segments.push(content.substring(lastIndex));
-  }
-
-  // Parse markdown bold (**text**) and channel tags (<#id>) inside text strings
-  return segments.map((seg, sIdx) => {
-    if (typeof seg !== "string") return seg;
-
-    const partsWithChannels = seg.split(/(<#[0-9]+>)/g).map((sub, cIdx) => {
-      const chMatch = sub.match(/^<#([0-9]+)>$/);
-      if (chMatch) {
-        const id = chMatch[1];
-        const chName =
-          id === "1520460587522330634"
-            ? "guides"
-            : id === "1520460624864350218"
-            ? "faq"
-            : `channel-${id.slice(-4)}`;
-        return (
-          <span
-            key={`ch-${id}-${cIdx}`}
-            className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 font-mono text-[11px] font-semibold border border-blue-500/20 mx-0.5"
-          >
-            #{chName}
-          </span>
-        );
-      }
-      return sub;
-    });
-
-    return partsWithChannels.map((subPart, bIdx) => {
-      if (typeof subPart !== "string") return subPart;
-
-      const boldParts = subPart.split(/(\*\*.*?\*\*)/g);
-      return boldParts.map((bChunk, chunkIdx) => {
-        if (bChunk.startsWith("**") && bChunk.endsWith("**")) {
-          return (
-            <strong key={`b-${sIdx}-${bIdx}-${chunkIdx}`} className="text-white font-semibold">
-              {bChunk.slice(2, -2)}
-            </strong>
-          );
-        }
-        return bChunk;
-      });
-    });
-  });
+  return (
+    <div className="space-y-1.5">
+      {lines.map((line, lIdx) => (
+        <div key={`line-${lIdx}`} className={lIdx > 0 ? "pl-2 sm:pl-3 text-slate-300" : ""}>
+          {renderInlineFragment(line)}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function UpdatesPage() {
@@ -199,6 +256,9 @@ export default function UpdatesPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedProduct, setSelectedProduct] = useState<string>("ALL");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const [highlightedSlug, setHighlightedSlug] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadUpdates() {
@@ -217,6 +277,43 @@ export default function UpdatesPage() {
     }
     loadUpdates();
   }, []);
+
+  // Handle direct permalink navigation on load / hashchange
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    function handleHashScroll() {
+      const hash = window.location.hash.replace("#", "");
+      if (hash) {
+        setHighlightedSlug(hash);
+        setActiveTab("curated");
+        setTimeout(() => {
+          const el = document.getElementById(hash);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 400);
+      }
+    }
+
+    handleHashScroll();
+    window.addEventListener("hashchange", handleHashScroll);
+    return () => window.removeEventListener("hashchange", handleHashScroll);
+  }, [releases]);
+
+  const handleShareRelease = (slug: string) => {
+    if (typeof window === "undefined") return;
+    const shareUrl = `${window.location.origin}/updates#${slug}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl);
+    }
+    setCopiedSlug(slug);
+    setHighlightedSlug(slug);
+    window.history.replaceState(null, "", `#${slug}`);
+    setTimeout(() => {
+      setCopiedSlug(null);
+    }, 2500);
+  };
 
   // Filtered Curated Releases
   const filteredReleases = useMemo(() => {
@@ -268,24 +365,24 @@ export default function UpdatesPage() {
     <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-brand-blue selection:text-white">
       <PublicNavbar />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14">
         {/* Header Hero */}
-        <div className="relative border-b border-white/[0.08] pb-10 sm:pb-12 mb-8">
+        <div className="relative border-b border-white/[0.08] pb-8 sm:pb-12 mb-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-semibold uppercase tracking-wider mb-4">
             <Activity className="w-3.5 h-3.5 text-blue-400" />
-            <span>Official Changelog & Platform Releases</span>
+            <span>Official Changelog &amp; Platform Releases</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
             Updates &amp; Release Notes
           </h1>
-          <p className="text-base sm:text-lg text-slate-400 max-w-2xl mt-3 leading-relaxed">
-            Curated version releases, architectural security enhancements, and real-time development
-            logs across the entire SyncInk ecosystem.
+          <p className="text-sm sm:text-base md:text-lg text-slate-400 max-w-2xl mt-3 leading-relaxed">
+            Curated version releases, architectural security enhancements, and real-time ecosystem
+            milestones across SyncInk bots and platforms.
           </p>
 
           {/* Mode Switcher Tabs */}
-          <div className="mt-8 flex items-center gap-3">
+          <div className="mt-7 flex items-center gap-3">
             <button
               onClick={() => setActiveTab("curated")}
               className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
@@ -296,7 +393,7 @@ export default function UpdatesPage() {
             >
               <Bookmark className="w-4 h-4" />
               <span>Current Releases</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-white/20 text-white">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white/20 text-white font-mono">
                 {releases.length}
               </span>
             </button>
@@ -311,7 +408,7 @@ export default function UpdatesPage() {
             >
               <GitCommit className="w-4 h-4" />
               <span>Live Commit Feed</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-white/20 text-white">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white/20 text-white font-mono">
                 {commits.length}
               </span>
             </button>
@@ -319,7 +416,7 @@ export default function UpdatesPage() {
         </div>
 
         {/* Filter Toolbar */}
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-8 bg-white/[0.02] border border-white/[0.06] p-4 rounded-2xl">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-8 bg-white/[0.02] border border-white/[0.06] p-3.5 sm:p-4 rounded-2xl">
           {/* Search Box */}
           <div className="relative w-full md:w-80">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -341,9 +438,9 @@ export default function UpdatesPage() {
               <button
                 key={prod}
                 onClick={() => setSelectedProduct(prod)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   selectedProduct === prod
-                    ? "bg-white/15 text-white border border-white/20"
+                    ? "bg-white/15 text-white border border-white/20 shadow-xs"
                     : "bg-white/[0.03] text-slate-400 hover:text-slate-200 border border-white/[0.05]"
                 }`}
               >
@@ -403,18 +500,25 @@ export default function UpdatesPage() {
               filteredReleases.map((release) => {
                 const badgeStyle =
                   BADGE_STYLES[release.badge.toUpperCase()] || BADGE_STYLES.STABLE;
+                const slug = `release-${String(release.version).toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+                const isTarget = highlightedSlug === slug || highlightedSlug === release.version;
 
                 return (
                   <motion.article
+                    id={slug}
                     key={release.version}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="bg-[#0b0e1d]/90 border border-white/[0.08] hover:border-white/15 rounded-2xl p-6 sm:p-8 transition-all relative overflow-hidden shadow-sm"
+                    className={`bg-[#0b0e1d]/90 border rounded-2xl p-5 sm:p-7 md:p-8 transition-all relative overflow-hidden shadow-sm ${
+                      isTarget
+                        ? "border-blue-500/60 ring-2 ring-blue-500/40 shadow-[0_0_35px_rgba(88,101,242,0.25)]"
+                        : "border-white/[0.08] hover:border-white/15"
+                    }`}
                   >
                     {/* Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-5 mb-5">
-                      <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-4 sm:pb-5 mb-5">
+                      <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
                         <span className="text-xl sm:text-2xl font-black text-white font-mono tracking-tight">
                           {release.version}
                         </span>
@@ -424,6 +528,26 @@ export default function UpdatesPage() {
                         >
                           {release.badge}
                         </span>
+
+                        {/* Direct Shareable Link Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleShareRelease(slug)}
+                          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-slate-300 hover:text-white transition-all active:scale-95"
+                          title="Share direct link to this update"
+                        >
+                          {copiedSlug === slug ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-300 text-[11px] font-semibold">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Link2 className="w-3.5 h-3.5 text-blue-400" />
+                              <span className="text-[11px] text-slate-300">Share</span>
+                            </>
+                          )}
+                        </button>
 
                         <div className="flex items-center gap-1.5 text-xs text-slate-400 ml-1">
                           <Calendar className="w-3.5 h-3.5" />
@@ -449,29 +573,29 @@ export default function UpdatesPage() {
                     </div>
 
                     {/* Title & Executive Summary */}
-                    <div className="mb-6">
-                      <h2 className="text-lg sm:text-xl font-bold text-slate-100 flex items-center gap-2">
+                    <div className="mb-6 space-y-2">
+                      <h2 className="text-lg sm:text-xl font-bold text-slate-100 flex items-center flex-wrap gap-1 leading-snug">
                         {renderFormattedContent(release.title)}
                       </h2>
-                      <p className="text-sm text-slate-400 mt-2 leading-relaxed">
+                      <div className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                         {renderFormattedContent(release.summary)}
-                      </p>
+                      </div>
                     </div>
 
                     {/* Categorized Changes */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/[0.05]">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 pt-4 border-t border-white/[0.05]">
                       {/* Features */}
                       {release.features && release.features.length > 0 && (
-                        <div className="space-y-2">
+                        <div className="space-y-2.5">
                           <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5" />
                             <span>New Features</span>
                           </h4>
-                          <ul className="space-y-2">
+                          <ul className="space-y-2.5">
                             {release.features.map((feat, idx) => (
                               <li
                                 key={idx}
-                                className="text-xs text-slate-300 leading-relaxed pl-3 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-cyan-400 before:rounded-full before:absolute before:left-0 before:top-1.5"
+                                className="text-xs sm:text-sm text-slate-300 leading-relaxed pl-3 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-cyan-400 before:rounded-full before:absolute before:left-0 before:top-2"
                               >
                                 {renderFormattedContent(feat)}
                               </li>
@@ -482,7 +606,7 @@ export default function UpdatesPage() {
 
                       {/* Improvements */}
                       {release.improvements && release.improvements.length > 0 && (
-                        <div className="space-y-2">
+                        <div className="space-y-2.5">
                           <h4 className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
                             <Zap className="w-3.5 h-3.5" />
                             <span>Improvements</span>
@@ -491,7 +615,7 @@ export default function UpdatesPage() {
                             {release.improvements.map((imp, idx) => (
                               <li
                                 key={idx}
-                                className="text-xs text-slate-300 leading-relaxed pl-3 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-blue-400 before:rounded-full before:absolute before:left-0 before:top-1.5"
+                                className="text-xs sm:text-sm text-slate-300 leading-relaxed pl-3 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-blue-400 before:rounded-full before:absolute before:left-0 before:top-2"
                               >
                                 {renderFormattedContent(imp)}
                               </li>
@@ -502,7 +626,7 @@ export default function UpdatesPage() {
 
                       {/* Fixes */}
                       {release.fixes && release.fixes.length > 0 && (
-                        <div className="space-y-2">
+                        <div className="space-y-2.5">
                           <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
                             <Bug className="w-3.5 h-3.5" />
                             <span>Fixes &amp; Security</span>
@@ -511,7 +635,7 @@ export default function UpdatesPage() {
                             {release.fixes.map((fix, idx) => (
                               <li
                                 key={idx}
-                                className="text-xs text-slate-300 leading-relaxed pl-3 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-emerald-400 before:rounded-full before:absolute before:left-0 before:top-1.5"
+                                className="text-xs sm:text-sm text-slate-300 leading-relaxed pl-3 relative before:content-[''] before:w-1.5 before:h-1.5 before:bg-emerald-400 before:rounded-full before:absolute before:left-0 before:top-2"
                               >
                                 {renderFormattedContent(fix)}
                               </li>
