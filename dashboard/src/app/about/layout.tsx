@@ -16,16 +16,17 @@ export const metadata: Metadata = {
     siteName: "SyncInk",
     images: [
       {
-        url: "/favicon.png",
-        width: 512,
-        height: 512,
+        url: "https://syncink.site/favicon.png",
+        width: 256,
+        height: 256,
         alt: "SyncInk Logo",
+        type: "image/png",
       },
     ],
     type: "website",
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: "About SyncInk • Discord Bot Ecosystem & Architecture",
     description:
       "Learn about SyncInk, our mission, and the engineering principles behind our Discord bot infrastructure, including private-thread tickets, dynamic temporary voice channels, and community security.",

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     url: "https://syncink.site/apply",
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: "Join the Team • Staff & Developer Applications | SyncInk",
     description:
       "Apply to join the SyncInk Operations, Community Support, or Engineering team. Help build and support Discord tools for active online communities.",

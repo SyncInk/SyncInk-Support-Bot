@@ -10,6 +10,12 @@ export const metadata: Metadata = {
       "Track every improvement, bug fix, and new feature shipped across all SyncInk bots in real time.",
     url: "https://syncink.site/updates",
   },
+  twitter: {
+    card: "summary",
+    title: "SyncInk — Updates & Changelog",
+    description:
+      "Track every improvement, bug fix, and new feature shipped across all SyncInk bots in real time.",
+  },
 };
 
 export default function UpdatesLayout({

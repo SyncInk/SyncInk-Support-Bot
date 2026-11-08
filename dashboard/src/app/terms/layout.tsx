@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     url: "https://syncink.site/terms",
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: "Terms of Service | SyncInk",
     description:
       "Official terms and conditions governing the use of SyncInk Discord bots, web dashboards, transcripts, and community services.",

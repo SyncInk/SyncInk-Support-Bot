@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     url: "https://syncink.site/rules",
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: "Community Rules & Platform Guidelines | SyncInk",
     description:
       "Official community standards, Discord bot conduct guidelines, and server management rules for the SyncInk ecosystem.",

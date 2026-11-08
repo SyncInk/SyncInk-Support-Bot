@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     url: "https://syncink.site/faq",
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: "Frequently Asked Questions | SyncInk",
     description:
       "Find answers to common questions about SyncInk Discord bots, setup guides, server integration, and support ticketing.",

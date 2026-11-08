@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   creator: "SyncInk",
   publisher: "SyncInk",
   alternates: {
-    canonical: "/",
+    canonical: "https://syncink.site",
   },
   icons: {
     icon: [
@@ -56,23 +56,18 @@ export const metadata: Metadata = {
     siteName: "SyncInk",
     images: [
       {
-        url: "/favicon.png",
-        width: 512,
-        height: 512,
-        alt: "SyncInk Circular Logo",
-      },
-      {
-        url: "/syncink-main-logo.png",
-        width: 512,
-        height: 512,
-        alt: "SyncInk Ecosystem",
+        url: "https://syncink.site/favicon.png",
+        width: 256,
+        height: 256,
+        alt: "SyncInk Logo",
+        type: "image/png",
       },
     ],
     locale: "en_US",
     type: "website",
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: "SyncInk — Discord Bots, Automation & Community Tools",
     description:
       "SyncInk builds professional Discord bots, automation tools, dashboards and community solutions for modern online communities.",

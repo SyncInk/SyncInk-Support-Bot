@@ -10,6 +10,12 @@ export const metadata: Metadata = {
       "Dedicated portal for community recovery requests, transcript retrieval, and bot outage reporting with direct administrator chat.",
     url: "https://syncink.site/report",
   },
+  twitter: {
+    card: "summary",
+    title: "SyncInk — Data Loss Recovery & Incident Desk",
+    description:
+      "Dedicated portal for community recovery requests, transcript retrieval, and bot outage reporting with direct administrator chat.",
+  },
 };
 
 export default function ReportLayout({

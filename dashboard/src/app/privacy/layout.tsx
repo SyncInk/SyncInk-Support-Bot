@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     url: "https://syncink.site/privacy",
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: "Privacy Policy | SyncInk",
     description:
       "Official privacy policy for the SyncInk Discord Bot Ecosystem. Learn how we handle Discord user data, encrypted transcripts, and privacy rights.",
