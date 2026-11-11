@@ -563,9 +563,23 @@ export default function UpdatesPage() {
                           return (
                             <span
                               key={prod}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.06] text-xs font-medium text-slate-300"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.06] text-xs font-medium text-slate-300"
                             >
-                              <Icon className="w-3 h-3 text-sky-400" />
+                              {prod === "SyncInk Radio" ? (
+                                <img
+                                  src="/radio-logo.png"
+                                  alt=""
+                                  className="w-3.5 h-3.5 rounded-full object-contain"
+                                />
+                              ) : prod === "Audia AI" ? (
+                                <img
+                                  src="/audia-ai-logo.png"
+                                  alt=""
+                                  className="w-3.5 h-3.5 object-contain"
+                                />
+                              ) : (
+                                <Icon className="w-3 h-3 text-sky-400" />
+                              )}
                               <span>{prod}</span>
                             </span>
                           );

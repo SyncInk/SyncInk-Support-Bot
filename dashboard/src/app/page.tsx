@@ -84,6 +84,41 @@ function FeatureItem({
   );
 }
 
+/* ─── Studio Audio SVG Symbols for SyncInk Radio & Audia AI ─────────── */
+function AutoPlayWaveSymbol({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12h3l2-5 3 10 3-12 3 9 2-4h3" />
+      <polygon points="17 8 21 12 17 16" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function ParametricTasteSymbol({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="21" x2="4" y2="14" />
+      <line x1="4" y1="10" x2="4" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12" y2="3" />
+      <line x1="20" y1="21" x2="20" y2="16" />
+      <line x1="20" y1="12" x2="20" y2="3" />
+      <circle cx="4" cy="12" r="2" fill="currentColor" />
+      <circle cx="12" cy="10" r="2" fill="currentColor" />
+      <circle cx="20" cy="14" r="2" fill="currentColor" />
+    </svg>
+  );
+}
+
+function AcousticIsolationSymbol({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M8 12h2l1.5-3 2.5 6 1.5-3h1.5" />
+    </svg>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    HOMEPAGE
    ═══════════════════════════════════════════════════════════════════════ */
@@ -427,41 +462,57 @@ export default function HomePage() {
             <div className="p-6 sm:p-8 lg:p-10 relative z-10">
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
                 <div className="flex items-start sm:items-center gap-4">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-purple-500/10 border border-purple-500/25 p-2 flex items-center justify-center shrink-0 overflow-hidden shadow-lg shadow-purple-950/30">
-                    <img
-                      src="/audia-ai-logo.png"
-                      alt="Audia AI Official Logo"
-                      className="w-12 h-12 object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = "none";
-                      }}
-                    />
+                  <div className="relative group/avatar shrink-0">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#0b0816] border-2 border-purple-500/40 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-[0_0_30px_rgba(168,85,247,0.35)] ring-1 ring-purple-400/20 group-hover/avatar:border-purple-400/60 transition-all duration-300">
+                      <img
+                        src="/radio-logo.png"
+                        alt="SyncInk Radio Official Logo"
+                        className="w-full h-full object-contain rounded-xl select-none"
+                      />
+                    </div>
+                    {/* Live Opus Audio Stream Indicator with SVG Equalizer Bars */}
+                    <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-md bg-purple-950/95 border border-purple-400/40 backdrop-blur-md flex items-center gap-1 shadow-md">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-[9px] font-mono font-bold text-purple-200">OPUS</span>
+                    </div>
                   </div>
                   <div>
                     <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/25 flex items-center gap-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1.5 shadow-sm shadow-purple-950/40">
                         <Sparkles className="w-3 h-3 text-purple-400" />
                         Powered by Audia AI
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
                         <Clock className="w-3 h-3 text-amber-400 animate-pulse" />
                         Coming Soon
                       </span>
-                      <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/[0.04] text-slate-300 border border-white/[0.06]">
-                        24/7 Lossless Audio
+                      {/* Studio Lossless Audio SVG Indicator */}
+                      <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/25 items-center gap-1.5">
+                        <svg className="w-3.5 h-3 text-purple-400" viewBox="0 0 16 12" fill="currentColor">
+                          <rect x="0" y="4" width="2" height="5" rx="1" className="animate-pulse" />
+                          <rect x="3.5" y="1" width="2" height="11" rx="1" style={{ animation: "pulse 1.1s ease-in-out infinite 0.2s" }} />
+                          <rect x="7" y="0" width="2" height="12" rx="1" style={{ animation: "pulse 0.85s ease-in-out infinite 0.4s" }} />
+                          <rect x="10.5" y="2" width="2" height="9" rx="1" style={{ animation: "pulse 1.3s ease-in-out infinite 0.1s" }} />
+                          <rect x="14" y="5" width="2" height="4" rx="1" className="animate-pulse" />
+                        </svg>
+                        48kHz Lossless Opus
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2.5">
-                      <h3 className="text-xl sm:text-2xl font-black text-white">SyncInk Radio</h3>
+                      <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">SyncInk Radio</h3>
                       <span className="text-slate-600 hidden sm:inline">•</span>
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-black/40 border border-purple-500/30">
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/50 border border-purple-500/30 shadow-inner">
                         <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Engine:</span>
-                        <span className="text-xs font-black tracking-wider text-white">AUDIA</span>
-                        <span className="text-xs font-black tracking-wider bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-400 bg-clip-text text-transparent">AI</span>
+                        <img
+                          src="/audia-ai-logo.png"
+                          alt="Audia AI"
+                          className="h-3.5 sm:h-4 object-contain brightness-110"
+                        />
                       </div>
                     </div>
-                    <p className="text-sm text-slate-300 mt-1 max-w-lg leading-relaxed">
-                      Next-generation 24/7 music streaming powered by Audia AI, SyncInk’s embedded intelligent music assistant. Seamlessly learns personal listener tastes, adapts to preferred moods and genres, and guarantees uninterrupted lossless audio.
+                    <p className="text-sm text-slate-300 mt-1 max-w-xl leading-relaxed">
+                      Next-generation 24/7 high-fidelity music streaming bot for Discord, powered natively by{" "}
+                      <span className="text-white font-semibold">Audia AI</span>. Seamlessly learns personal listener taste vectors, executes continuous AutoPlay, and enforces strict zero-bleed acoustic and language isolation.
                     </p>
                   </div>
                 </div>
@@ -498,29 +549,106 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Three-Tier Brand Hierarchy & Migration Banner */}
-              <div className="my-5 p-4 rounded-xl bg-purple-950/20 border border-purple-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">
-                    Ecosystem Hierarchy
-                  </span>
-                  <span className="text-white font-bold">SyncInk</span>
-                  <span className="text-slate-500">→</span>
-                  <span className="text-purple-300 font-semibold">SyncInk Radio (Audio Platform)</span>
-                  <span className="text-slate-500">→</span>
-                  <span className="text-white font-black">Audia AI (Embedded Intelligence)</span>
+              {/* Audia AI Embedded Engine Rack with Live Studio Telemetry */}
+              <div className="my-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#140b22]/90 via-[#0d0918]/90 to-[#120a24]/90 border border-purple-500/25 relative overflow-hidden shadow-lg">
+                <div className="absolute top-0 right-1/4 w-60 h-20 bg-purple-500/10 blur-2xl pointer-events-none" />
+
+                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-purple-500/15 border border-purple-500/30 p-2 flex items-center justify-center shrink-0">
+                      <img
+                        src="/audia-ai-logo.png"
+                        alt="Audia AI Engine Logo"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-white">Audia AI Engine</span>
+                        <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                          v1.0 Core
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Deep learning taste vectorization • 6-stage recommendation cycle • Zero-bleed filter
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 self-stretch md:self-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-white/[0.06]">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                      <span className="text-[11px] text-slate-400">Commands:</span>
+                      <code className="text-purple-300 font-bold bg-black/60 px-2 py-0.5 rounded-md border border-purple-500/30 text-[11px]">/audia</code>
+                      <code className="text-slate-400 bg-black/40 px-1.5 py-0.5 rounded-md border border-white/10 text-[11px]">/dj</code>
+                    </div>
+                    <Link
+                      href="/audia"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-purple-300 hover:text-white transition-colors bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 px-2.5 py-1 rounded-lg"
+                    >
+                      <span>Engine Architecture</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-slate-400 text-[11px]">
-                  <span>Commands:</span>
-                  <code className="text-purple-300 font-bold bg-black/40 px-1.5 py-0.5 rounded border border-white/10">/audia</code>
-                  <span className="text-slate-500">•</span>
-                  <code className="text-slate-300 font-mono bg-black/40 px-1.5 py-0.5 rounded border border-white/10">/dj</code>
-                  <span className="text-[10px] text-slate-500">(Alias)</span>
+
+                {/* Real-Time Studio Telemetry Metrics with Custom SVG Symbols */}
+                <div className="mt-4 pt-3.5 border-t border-white/[0.06] grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-black/30 border border-white/[0.04]">
+                    <svg className="w-3.5 h-3.5 text-purple-400 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="2" y="9" width="3" height="6" rx="1.5" />
+                      <rect x="8" y="4" width="3" height="16" rx="1.5" />
+                      <rect x="14" y="7" width="3" height="10" rx="1.5" />
+                      <rect x="20" y="10" width="3" height="4" rx="1.5" />
+                    </svg>
+                    <div>
+                      <div className="text-[10px] text-slate-500 uppercase font-mono">Audio Format</div>
+                      <div className="font-semibold text-slate-200">Opus 48kHz Stereo</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-black/30 border border-white/[0.04]">
+                    <svg className="w-3.5 h-3.5 text-fuchsia-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                      <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.26-8-12.355-8-5.096 0-5.096 8 0 8 5.095 0 7.26-8 12.355-8z" />
+                    </svg>
+                    <div>
+                      <div className="text-[10px] text-slate-500 uppercase font-mono">AutoPlay</div>
+                      <div className="font-semibold text-slate-200">Continuous AI Loop</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-black/30 border border-white/[0.04]">
+                    <svg className="w-3.5 h-3.5 text-indigo-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <line x1="4" y1="21" x2="4" y2="14" />
+                      <line x1="4" y1="10" x2="4" y2="3" />
+                      <line x1="12" y1="21" x2="12" y2="12" />
+                      <line x1="12" y1="8" x2="12" y2="3" />
+                      <line x1="20" y1="21" x2="20" y2="16" />
+                      <line x1="20" y1="12" x2="20" y2="3" />
+                      <circle cx="4" cy="12" r="2" fill="currentColor" />
+                      <circle cx="12" cy="10" r="2" fill="currentColor" />
+                      <circle cx="20" cy="14" r="2" fill="currentColor" />
+                    </svg>
+                    <div>
+                      <div className="text-[10px] text-slate-500 uppercase font-mono">Personal Taste</div>
+                      <div className="font-semibold text-slate-200">Mathematical Vectors</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-black/30 border border-white/[0.04]">
+                    <svg className="w-3.5 h-3.5 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      <path d="M9 12l2 2 4-4" />
+                    </svg>
+                    <div>
+                      <div className="text-[10px] text-slate-500 uppercase font-mono">Language Lock</div>
+                      <div className="font-semibold text-emerald-300">Strict Zero-Bleed</div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Genre / Mood Showcase */}
-              <div className="pt-2 pb-4">
+              <div className="pt-1 pb-4">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                     Curated Moods &amp; AutoPlay Genres (Strict Language Isolation)
@@ -558,22 +686,22 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Feature grid */}
+              {/* Feature grid with Studio SVG Symbols */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-4 border-t border-white/[0.04]">
                 <FeatureItem
-                  icon={Sparkles}
+                  icon={AutoPlayWaveSymbol}
                   title="Audia AI AutoPlay"
                   description="Six-stage recommendation pipeline continuously analyzes track completions, skips, and vibes to queue the next song automatically."
                   accentClass="bg-purple-500/10 text-purple-400"
                 />
                 <FeatureItem
-                  icon={Headphones}
+                  icon={ParametricTasteSymbol}
                   title="Parametric Taste Modeling"
                   description="Builds structured mathematical preference weights from your play history and explicit like/dislike ratings."
                   accentClass="bg-purple-500/10 text-purple-400"
                 />
                 <FeatureItem
-                  icon={Radio}
+                  icon={AcousticIsolationSymbol}
                   title="Acoustic & Language Isolation"
                   description="Multi-attribute classifier eliminates repetitive loops and guarantees strict zero-bleed language boundaries."
                   accentClass="bg-purple-500/10 text-purple-400"

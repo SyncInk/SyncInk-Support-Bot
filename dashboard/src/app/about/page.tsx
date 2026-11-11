@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   Shield,
@@ -432,17 +433,30 @@ export default function AboutPage() {
             <article className="p-6 sm:p-8 rounded-3xl bg-[#120a16] border border-purple-500/20">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
-                    <Radio className="w-6 h-6" />
+                  <div className="w-14 h-14 rounded-2xl bg-[#090714] border-2 border-purple-500/40 p-1 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(168,85,247,0.35)] ring-1 ring-purple-400/20">
+                    <Image
+                      src="/radio-logo.png"
+                      alt="SyncInk Radio Official Logo"
+                      width={52}
+                      height={52}
+                      className="object-contain rounded-xl select-none"
+                    />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-bold text-white">SyncInk Radio</h3>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1.5">
+                        <svg className="w-3 h-2.5 text-purple-400" viewBox="0 0 16 12" fill="currentColor">
+                          <rect x="0" y="3" width="2" height="6" rx="1" />
+                          <rect x="3.5" y="1" width="2" height="10" rx="1" />
+                          <rect x="7" y="0" width="2" height="12" rx="1" />
+                          <rect x="10.5" y="2" width="2" height="8" rx="1" />
+                          <rect x="14" y="4" width="2" height="4" rx="1" />
+                        </svg>
                         Powered by Audia AI
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
                       Next-generation 24/7 audio streaming engine featuring embedded Audia AI intelligence, parametric taste learning, AutoPlay, and strict language isolation.{" "}
                       <Link href="/audia" className="text-purple-400 hover:text-purple-300 underline font-medium">
                         Read Official Specification →
@@ -451,7 +465,7 @@ export default function AboutPage() {
                   </div>
                 </div>
 
-                <span className="text-xs text-purple-300 font-medium px-3 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                <span className="text-xs text-purple-300 font-medium px-3 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 shrink-0">
                   Status: In Development (Coming Soon)
                 </span>
               </div>

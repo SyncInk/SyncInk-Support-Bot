@@ -763,8 +763,14 @@ export default function AudiaSpecPage() {
                   Tier 2 — Flagship Bot Product
                 </span>
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-                    <Radio className="w-5 h-5 text-purple-400" />
+                  <div className="w-10 h-10 rounded-xl bg-[#090714] border-2 border-purple-500/40 p-1 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(168,85,247,0.3)] ring-1 ring-purple-400/20">
+                    <Image
+                      src="/radio-logo.png"
+                      alt="SyncInk Radio Logo"
+                      width={32}
+                      height={32}
+                      className="object-contain rounded-lg select-none"
+                    />
                   </div>
                   <div>
                     <h3 className="text-base font-black text-white">SyncInk Radio</h3>
