@@ -243,7 +243,7 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "     - Interactive Song Search: `/search` and `?search` 10-result interactive picker with Chip-bot style buttons to queue any song.",
         "     - Un-congested Queue: `/queue` and `?queue` formatted with clean bullets `*`, clear track spacing, and a dedicated Shuffle button (<:shuffle:1558914298544136192>).",
         "     - Rich Now Playing Card: `/np` and `?np` with real-time progress bar, volume, repeat mode, and requester footer (<:member:1559185207033077901>).",
-        "     - Comprehensive Playback Controls: `/skip`, `/previous`, `/pause`, `/resume`, `/stop`, `/loop`, `/volume`, `/autoplay`, `/247`, `/replay`.",
+        "     - Comprehensive Playback Controls: `/skip`, `/previous`, `/pause`, `/resume`, `/stop`, `/loop`, `/volume`, `/audia` (Audia AI AutoPlay), `/autoplay`, `/247`, `/replay`.",
         "     - Interactive player card with custom emoji action buttons (play/pause, previous, skip, stop, queue).",
         "  2. VIP Support Chat (<#1558589470469525504>): Private VIP chat channel for priority communication, direct developer assistance, and lounge discussions.",
         "  3. Media & Upload Privileges: Unrestricted permission to send images, video clips, and file attachments in chat.",
@@ -645,7 +645,7 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
             "<:s_arrow:1558799699102793801> **Interactive Song Search**: Search up to 10 tracks with instant picker buttons using `/search` or `?search`.\n"
             "<:s_arrow:1558799699102793801> **Un-Congested Queue with Shuffle**: View formatted queues with the dedicated Shuffle button (<:shuffle:1558914298544136192>) via `/queue` or `?queue`.\n"
             "<:s_arrow:1558799699102793801> **Chip-Style Now Playing Card**: Live progress bar, volume, repeat mode, and requester info via `/np` or `?np`.\n"
-            "<:s_arrow:1558799699102793801> **Full Playback Controls**: `/skip`, `/previous`, `/pause`, `/resume`, `/stop`, `/loop`, `/volume`, `/autoplay`, `/247`, `/replay`.\n\n"
+            "<:s_arrow:1558799699102793801> **Full Playback Controls**: `/skip`, `/previous`, `/pause`, `/resume`, `/stop`, `/loop`, `/volume`, `/audia` (Audia AI), `/autoplay`, `/247`, `/replay`.\n\n"
             "<a:arrow:1558799019927543878> **VIP Support Chat** (<#1558589470469525504>):\n"
             "<:s_arrow:1558799699102793801> Private lounge channel for priority discussions and direct developer assistance.\n\n"
             "<a:arrow:1558799019927543878> **Media & Upload Privileges**:\n"
@@ -1190,7 +1190,7 @@ class ChatGPT(commands.Cog):
             "   - When anyone asks about boosting the server, booster perks, or booster rewards:\n"
             "   - Congratulate and warmly greet boosters with compliments! Server Boosters are absolute royalty in our server.\n"
             "   - Detail the official booster perks:\n"
-            "     <a:arrow:1558799019927543878> **Exclusive Music & Radio System** (<#1520749466330857492>): Music and radio commands are exclusively reserved for Server Boosters (<@&1558584451724738640>) and higher admins in <#1520749466330857492>. Features include high-fidelity streaming (`/play`, `?play`), worldwide live country radio with 240+ countries and country autocomplete (`/radio`, `?radio`), interactive 10-result search picker (`/search`), un-jammed queue with dedicated Shuffle button (`/queue`, `<:shuffle:1558914298544136192>`), Now Playing card with live progress bar (`/np`), and full playback controls (`/skip`, `/previous`, `/pause`, `/resume`, `/stop`, `/loop`, `/volume`, `/autoplay`, `/247`, `/replay`).\n"
+            "     <a:arrow:1558799019927543878> **Exclusive Music & Radio System** (<#1520749466330857492>): Music and radio commands are exclusively reserved for Server Boosters (<@&1558584451724738640>) and higher admins in <#1520749466330857492>. Features include high-fidelity streaming (`/play`, `?play`), worldwide live country radio with 240+ countries and country autocomplete (`/radio`, `?radio`), interactive 10-result search picker (`/search`), un-jammed queue with dedicated Shuffle button (`/queue`, `<:shuffle:1558914298544136192>`), Now Playing card with live progress bar (`/np`), and full playback controls (`/skip`, `/previous`, `/pause`, `/resume`, `/stop`, `/loop`, `/volume`, `/audia` (Audia AI), `/autoplay`, `/247`, `/replay`).\n"
             "     <a:arrow:1558799019927543878> <:booster:1558595630660714616> **Booster Role**: Automatically awarded <@&1558584451724738640> and the booster badge on member lists.\n"
             "     <a:arrow:1558799019927543878> **VIP Support Chat**: Exclusive access to <#1558589470469525504> for fast, direct support and private chats with developers.\n"
             "     <a:arrow:1558799019927543878> **Media & Upload Privileges**: Full permissions to share pictures, video clips, and file attachments in chat.\n"

@@ -275,6 +275,14 @@ export function PublicNavbar() {
               {resourcesOpen && (
                 <div className="absolute left-0 mt-2 w-48 rounded-xl bg-[#0b0e1d] border border-white/10 shadow-2xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   <Link
+                    href="/audia"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-purple-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Audia AI Specification</span>
+                  </Link>
+
+                  <Link
                     href="/report"
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-amber-300 hover:text-white hover:bg-white/[0.06] transition-colors"
                   >

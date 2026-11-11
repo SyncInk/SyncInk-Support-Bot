@@ -439,11 +439,14 @@ export default function AboutPage() {
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-bold text-white">SyncInk Radio</h3>
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30">
-                        Coming Soon
+                        Powered by Audia AI
                       </span>
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Next-generation 24/7 audio streaming engine featuring intelligent AI DJ AutoPlay, personal taste learning, and strict language isolation.
+                      Next-generation 24/7 audio streaming engine featuring embedded Audia AI intelligence, parametric taste learning, AutoPlay, and strict language isolation.{" "}
+                      <Link href="/audia" className="text-purple-400 hover:text-purple-300 underline font-medium">
+                        Read Official Specification →
+                      </Link>
                     </p>
                   </div>
                 </div>

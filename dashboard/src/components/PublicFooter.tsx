@@ -135,6 +135,15 @@ export function PublicFooter() {
             <ul className="space-y-2 text-xs">
               <li>
                 <Link
+                  href="/audia"
+                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                >
+                  <Sparkles className="h-3 w-3 text-purple-400" />
+                  <span>Audia AI Technical Specification</span>
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/dashboard/tickets/terms"
                   className="hover:text-white transition-colors flex items-center gap-1.5"
                 >
@@ -188,7 +197,7 @@ export function PublicFooter() {
               </li>
               <li className="flex items-center gap-1.5 text-slate-300">
                 <span className="font-semibold text-white">SyncInk Radio:</span>
-                <span>AI DJ, AutoPlay & lossless streaming (Coming Soon)</span>
+                <span>Powered by Audia AI, AutoPlay &amp; lossless music (Coming Soon)</span>
               </li>
               <li className="flex items-center gap-1.5 text-slate-300">
                 <span className="font-semibold text-white">SyncInk Security Bot:</span>

@@ -103,6 +103,7 @@ const PRODUCT_ICONS: Record<string, React.ElementType> = {
   "Higher Administrators": Shield,
   Boosters: Sparkles,
   "SyncInk Radio": Radio,
+  "Audia AI": Sparkles,
   Radio: Radio,
   "Ticket Bot": MessageSquare,
   "Voice Bot": Radio,
@@ -434,7 +435,7 @@ export default function UpdatesPage() {
             <span className="text-xs font-semibold text-slate-400 mr-1 flex items-center gap-1">
               <Filter className="w-3.5 h-3.5" /> Product:
             </span>
-            {["ALL", "SyncInk Radio", "Support Bot", "Higher Administrators", "Boosters", "Ticket Bot", "Voice Bot", "Platform"].map((prod) => (
+            {["ALL", "Audia AI", "SyncInk Radio", "Support Bot", "Higher Administrators", "Boosters", "Ticket Bot", "Voice Bot", "Platform"].map((prod) => (
               <button
                 key={prod}
                 onClick={() => setSelectedProduct(prod)}

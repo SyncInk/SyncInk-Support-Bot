@@ -48,6 +48,34 @@ export interface ChangelogCommit {
 
 const STATIC_CURATED_RELEASES: CuratedRelease[] = [
   {
+    id: "v2.6.0-audia",
+    version: "Audia AI v1.0",
+    title: "<:announce:920051412329725982> Introducing Audia AI — Official Product Identity & Technical Specification",
+    release_date: "2026-11-12",
+    badge: "AUDIA AI v1.0",
+    summary:
+      "SyncInk Radio's intelligent music assistant has officially evolved from early automated queueing trials (AI DJ) into Audia AI by SyncInk. Version 1.0 delivers a dedicated 10-point recommendation architecture, six-stage real-time learning pipeline, acoustic signal processing, and official /audia command namespace with full legacy /dj alias compatibility.",
+    products: ["SyncInk Radio", "Audia AI", "Platform"],
+    features: [
+      "<:syncinkmusic:1558918836303044688> **Official Audia AI Rebranding:** The legacy working title 'AI DJ' is officially retired. Audia AI serves as the embedded intelligence engine powering SyncInk Radio's discovery, mood mapping, and autonomous playback.",
+      "<:authorized:585790083161128980> **New Command Namespace (`/audia`):** Primary `/audia` command suite with full `/dj` and `/autoplay` alias backwards compatibility. All existing member taste profiles and ratings are seamlessly preserved.",
+      "<:experience:1562588852324143125> **Ten Core Architectural Capabilities:** Parametric taste profiling, acoustic history analysis, multi-genre classification, language recognition, atmospheric energy curve matching, cycle-free track cooldowns, and dynamic habit learning.",
+      "<a:Playground_Heart:1559993483702304818> **Six-Stage Real-Time Pipeline:** Active observation → Profile construction → Attribute analysis → Feedback integration → Deduplicated autoplay selection → Continuous session adaptation.",
+      "<:syncinkvoiceregion:1517256470230732840> **Strict Acoustic & Language Isolation:** Multi-attribute classifiers ensure seamless transitions across 8 curated mood genres (Lo-Fi, Punjabi Pop, EDM, K-Pop, Romantic & Soulful, etc.) with zero cross-language leakages.",
+      "<:productsupport:1521439491586396180> **Official Specification Published:** Read the complete 12-section technical architecture specification document directly on our platform at **[syncink.site/audia](https://syncink.site/audia)**.",
+    ],
+    improvements: [
+      "Audia AI anti-repetition filter enforces artist and song cooldown windows across extended sessions",
+      "Strict Audio Boundary Commitment: Audia AI processes only playback telemetry and never listens to, records, or transcribes Discord voice channels",
+      "Transparent Engineering Roadmap distinguishing active production features from future H1/H2 2027 harmonic consensus modeling",
+    ],
+    fixes: [
+      "Eliminated unintentional language switches when streaming international or English-only queues",
+      "Preserved 100% of member listening history, artist affinities, and like/dislike ratings during the rebrand transition",
+    ],
+    status: "PUBLISHED",
+  },
+  {
     id: "v2.5.0",
     version: "v2.5.0",
     title: "<:announce:920051412329725982> SyncInk Radio — `AI DJ & AutoPlay Update`",

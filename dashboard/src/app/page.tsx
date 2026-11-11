@@ -23,6 +23,7 @@ import {
   Headphones,
   Sparkles,
   Clock,
+  FileText,
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
@@ -42,8 +43,8 @@ const FAQ_ITEMS = [
     a: "SyncInk Voice Bot creates an automated master generator hub. Whenever a member connects to the hub, the bot instantly spawns a dedicated temporary voice channel with full owner controls (/voice lock, /voice limit) and auto-deletes it when empty.",
   },
   {
-    q: "When will SyncInk Radio be publicly available?",
-    a: "SyncInk Radio is currently undergoing active pre-release development and closed testing on our official Discord server. We are fine-tuning our AI DJ AutoPlay algorithm, taste profiles, and high-bitrate streaming infrastructure before opening public invitations.",
+    q: "When will SyncInk Radio and Audia AI be publicly available?",
+    a: "SyncInk Radio and its embedded Audia AI intelligence engine are currently undergoing active pre-release development and closed testing on our official Discord server. We are fine-tuning our 10-point recommendation architecture, taste profiles, and high-bitrate streaming infrastructure before opening public invitations.",
   },
   {
     q: "Why is the Support & Security Bot non-invitable?",
@@ -418,19 +419,19 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* ─── BOT 3: SYNCINK RADIO (COMING SOON) ────────────────── */}
+          {/* ─── BOT 3: SYNCINK RADIO (POWERED BY AUDIA AI) ────────────────── */}
           <div className="rounded-2xl bg-surface border border-white/[0.06] hover:border-purple-500/30 transition-all duration-200 overflow-hidden relative">
             {/* Subtle purple gradient ambient accent in top-right */}
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -top-24 -right-24 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
 
             <div className="p-6 sm:p-8 lg:p-10 relative z-10">
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
                 <div className="flex items-start sm:items-center gap-4">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-purple-500/10 border border-purple-500/25 flex items-center justify-center shrink-0 overflow-hidden shadow-lg shadow-purple-950/20">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-purple-500/10 border border-purple-500/25 p-2 flex items-center justify-center shrink-0 overflow-hidden shadow-lg shadow-purple-950/30">
                     <img
-                      src="/syncink-s-purple.jpg"
-                      alt="SyncInk Radio"
-                      className="w-10 h-10 sm:w-12 sm:h-12 object-contain rounded-xl"
+                      src="/audia-ai-logo.png"
+                      alt="Audia AI Official Logo"
+                      className="w-12 h-12 object-contain"
                       onError={(e) => {
                         (e.target as HTMLElement).style.display = "none";
                       }}
@@ -440,7 +441,7 @@ export default function HomePage() {
                     <div className="flex flex-wrap items-center gap-2 mb-1.5">
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/25 flex items-center gap-1">
                         <Sparkles className="w-3 h-3 text-purple-400" />
-                        AI DJ &amp; AutoPlay
+                        Powered by Audia AI
                       </span>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
                         <Clock className="w-3 h-3 text-amber-400 animate-pulse" />
@@ -450,29 +451,39 @@ export default function HomePage() {
                         24/7 Lossless Audio
                       </span>
                     </div>
-                    <h3 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-                      <span>SyncInk Radio</span>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 hidden sm:inline-block">
-                        Pre-Release
-                      </span>
-                    </h3>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <h3 className="text-xl sm:text-2xl font-black text-white">SyncInk Radio</h3>
+                      <span className="text-slate-600 hidden sm:inline">•</span>
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-black/40 border border-purple-500/30">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Engine:</span>
+                        <span className="text-xs font-black tracking-wider text-white">AUDIA</span>
+                        <span className="text-xs font-black tracking-wider bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-400 bg-clip-text text-transparent">AI</span>
+                      </div>
+                    </div>
                     <p className="text-sm text-slate-300 mt-1 max-w-lg leading-relaxed">
-                      Next-generation music streaming powered by intelligent AI DJ AutoPlay. Learns individual listener tastes, adapts to preferred moods and genres, and guarantees uninterrupted 24/7 audio.
+                      Next-generation 24/7 music streaming powered by Audia AI, SyncInk’s embedded intelligent music assistant. Seamlessly learns personal listener tastes, adapts to preferred moods and genres, and guarantees uninterrupted lossless audio.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
-                  <div className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 font-semibold text-xs flex items-center gap-2 select-none">
+                  <div className="flex-1 lg:flex-initial justify-center h-10 px-4 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 font-semibold text-xs flex items-center gap-2 select-none">
                     <Clock className="w-3.5 h-3.5 text-purple-400" />
                     <span>Coming Soon</span>
                   </div>
                   <Link
+                    href="/audia"
+                    className="flex-1 lg:flex-initial justify-center h-10 px-4 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors flex items-center gap-2 active:scale-[0.98] shadow-md shadow-purple-900/30"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Audia AI Spec</span>
+                  </Link>
+                  <Link
                     href="/updates"
-                    className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-semibold text-xs transition-colors border border-white/[0.06] flex items-center gap-2 active:scale-[0.98]"
+                    className="flex-1 lg:flex-initial justify-center h-10 px-4 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-semibold text-xs transition-colors border border-white/[0.06] flex items-center gap-2 active:scale-[0.98]"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                    <span>AI DJ Updates</span>
+                    <span>Changelog</span>
                   </Link>
                   <a
                     href="https://discord.gg/PmxfJwmQuB"
@@ -481,21 +492,45 @@ export default function HomePage() {
                     className="hidden sm:inline-flex h-10 px-3.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-xs text-slate-400 hover:text-white items-center gap-1.5 transition-colors"
                     title="Test pre-release on official server"
                   >
-                    <span>Beta Server</span>
+                    <span>Beta Discord</span>
                     <ExternalLink className="w-3 h-3 text-slate-500" />
                   </a>
                 </div>
               </div>
 
+              {/* Three-Tier Brand Hierarchy & Migration Banner */}
+              <div className="my-5 p-4 rounded-xl bg-purple-950/20 border border-purple-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-bold px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">
+                    Ecosystem Hierarchy
+                  </span>
+                  <span className="text-white font-bold">SyncInk</span>
+                  <span className="text-slate-500">→</span>
+                  <span className="text-purple-300 font-semibold">SyncInk Radio (Audio Platform)</span>
+                  <span className="text-slate-500">→</span>
+                  <span className="text-white font-black">Audia AI (Embedded Intelligence)</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-400 text-[11px]">
+                  <span>Commands:</span>
+                  <code className="text-purple-300 font-bold bg-black/40 px-1.5 py-0.5 rounded border border-white/10">/audia</code>
+                  <span className="text-slate-500">•</span>
+                  <code className="text-slate-300 font-mono bg-black/40 px-1.5 py-0.5 rounded border border-white/10">/dj</code>
+                  <span className="text-[10px] text-slate-500">(Alias)</span>
+                </div>
+              </div>
+
               {/* Genre / Mood Showcase */}
-              <div className="pt-5 pb-4">
+              <div className="pt-2 pb-4">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Curated Moods &amp; AutoPlay Genres
+                    Curated Moods &amp; AutoPlay Genres (Strict Language Isolation)
                   </p>
-                  <span className="text-[11px] text-purple-400/80 font-medium">
-                    Adaptive Taste Profile
-                  </span>
+                  <Link
+                    href="/audia#sec-05"
+                    className="text-[11px] text-purple-400 hover:text-purple-300 font-medium transition-colors"
+                  >
+                    View Signal Processing →
+                  </Link>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {[
@@ -527,20 +562,20 @@ export default function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-4 border-t border-white/[0.04]">
                 <FeatureItem
                   icon={Sparkles}
-                  title="Intelligent AI DJ"
-                  description="When queue ends, AutoPlay predicts and queues matching songs based on current vibe so music never stops."
+                  title="Audia AI AutoPlay"
+                  description="Six-stage recommendation pipeline continuously analyzes track completions, skips, and vibes to queue the next song automatically."
                   accentClass="bg-purple-500/10 text-purple-400"
                 />
                 <FeatureItem
                   icon={Headphones}
-                  title="Personal Taste Profile"
-                  description="Remembers manual requests, artist affinities, and like/dislike ratings to build personalized recommendations."
+                  title="Parametric Taste Modeling"
+                  description="Builds structured mathematical preference weights from your play history and explicit like/dislike ratings."
                   accentClass="bg-purple-500/10 text-purple-400"
                 />
                 <FeatureItem
                   icon={Radio}
-                  title="Strict Language Isolation"
-                  description="Select preferred languages (English, Hindi, Punjabi, K-Pop, and global) with zero cross-genre leakages."
+                  title="Acoustic & Language Isolation"
+                  description="Multi-attribute classifier eliminates repetitive loops and guarantees strict zero-bleed language boundaries."
                   accentClass="bg-purple-500/10 text-purple-400"
                 />
               </div>

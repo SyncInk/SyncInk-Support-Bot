@@ -163,7 +163,9 @@ class Help(commands.Cog):
                 "repeat": ("`?repeat [off|track|queue]`", "Alias for `?loop` - Toggle loop mode.", False),
                 "volume": ("`?volume <1-200>` or `/volume`", "Adjust playback volume gain (Alias: `?vol`).", False),
                 "vol": ("`?vol <1-200>`", "Alias for `?volume` - Adjust audio volume.", False),
-                "autoplay": ("`?autoplay [on|off]` or `/autoplay`", "Toggle endless smart recommendations when queue ends.", False),
+                "audia": ("`?audia [on|off]` or `/audia`", "Audia AI intelligent music assistant & continuous AutoPlay (Aliases: `?autoplay`, `?dj`).", False),
+                "dj": ("`?dj [on|off]` or `/dj`", "Alias for `?audia` - Audia AI assistant & AutoPlay.", False),
+                "autoplay": ("`?autoplay [on|off]` or `/autoplay`", "Alias for `?audia` - Audia AI assistant & AutoPlay.", False),
                 "247": ("`?247 [on|off]` or `/247`", "Keep bot in voice channel 24/7 without disconnecting (Alias: `?alwayson`).", False),
                 "alwayson": ("`?alwayson [on|off]`", "Alias for `?247` - 24/7 voice channel mode.", False),
                 "replay": ("`?replay` or `/replay`", "Replay current track from the beginning.", False),
@@ -306,7 +308,7 @@ class Help(commands.Cog):
                     ("?queue [list/clear] • /queue", "View upcoming track list or clear queue (Alias: `?q`)."),
                     ("?shuffle • ?loop [off/track/queue]", "Randomize queue or loop current track/queue."),
                     ("?volume <percent> • /volume", "Adjust digital audio volume from 1% to 200% (Alias: `?vol`)."),
-                    ("?autoplay [on/off] • /autoplay", "Enable smart automatic song recommendations when queue finishes."),
+                    ("?audia [on/off] • /audia", "Audia AI intelligent music assistant & AutoPlay (Aliases: /dj, /autoplay)."),
                     ("?247 [on/off] • /247", "Keep bot in voice channel 24/7 without auto-disconnecting (Alias: `?alwayson`).")
                 ]
             )
