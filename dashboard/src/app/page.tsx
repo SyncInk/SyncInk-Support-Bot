@@ -20,6 +20,9 @@ import {
   ChevronDown,
   HelpCircle,
   Users,
+  Headphones,
+  Sparkles,
+  Clock,
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
@@ -37,6 +40,10 @@ const FAQ_ITEMS = [
   {
     q: "How does the Dynamic Voice generator work?",
     a: "SyncInk Voice Bot creates an automated master generator hub. Whenever a member connects to the hub, the bot instantly spawns a dedicated temporary voice channel with full owner controls (/voice lock, /voice limit) and auto-deletes it when empty.",
+  },
+  {
+    q: "When will SyncInk Radio be publicly available?",
+    a: "SyncInk Radio is currently undergoing active pre-release development and closed testing on our official Discord server. We are fine-tuning our AI DJ AutoPlay algorithm, taste profiles, and high-bitrate streaming infrastructure before opening public invitations.",
   },
   {
     q: "Why is the Support & Security Bot non-invitable?",
@@ -147,7 +154,7 @@ export default function HomePage() {
 
             <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto leading-relaxed mb-8">
               Private-thread ticket systems, dynamic temporary voice channels,
-              and a dedicated support server security shield — engineered for
+              intelligent 24/7 AI radio streaming, and a dedicated support server security shield — engineered for
               high-velocity communities.
             </p>
 
@@ -236,7 +243,7 @@ export default function HomePage() {
           <div className="text-center mb-4">
             <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">Bot Suite</p>
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Three bots. One ecosystem.
+              Four bots. One ecosystem.
             </h2>
           </div>
 
@@ -411,7 +418,136 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* ─── BOT 3: SUPPORT & SECURITY BOT ─────────────────────── */}
+          {/* ─── BOT 3: SYNCINK RADIO (COMING SOON) ────────────────── */}
+          <div className="rounded-2xl bg-surface border border-white/[0.06] hover:border-purple-500/30 transition-all duration-200 overflow-hidden relative">
+            {/* Subtle purple gradient ambient accent in top-right */}
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="p-6 sm:p-8 lg:p-10 relative z-10">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
+                <div className="flex items-start sm:items-center gap-4">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-purple-500/10 border border-purple-500/25 flex items-center justify-center shrink-0 overflow-hidden shadow-lg shadow-purple-950/20">
+                    <img
+                      src="/syncink-s-purple.jpg"
+                      alt="SyncInk Radio"
+                      className="w-10 h-10 sm:w-12 sm:h-12 object-contain rounded-xl"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/25 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-purple-400" />
+                        AI DJ &amp; AutoPlay
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-amber-400 animate-pulse" />
+                        Coming Soon
+                      </span>
+                      <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/[0.04] text-slate-300 border border-white/[0.06]">
+                        24/7 Lossless Audio
+                      </span>
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                      <span>SyncInk Radio</span>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 hidden sm:inline-block">
+                        Pre-Release
+                      </span>
+                    </h3>
+                    <p className="text-sm text-slate-300 mt-1 max-w-lg leading-relaxed">
+                      Next-generation music streaming powered by intelligent AI DJ AutoPlay. Learns individual listener tastes, adapts to preferred moods and genres, and guarantees uninterrupted 24/7 audio.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+                  <div className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 font-semibold text-xs flex items-center gap-2 select-none">
+                    <Clock className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Coming Soon</span>
+                  </div>
+                  <Link
+                    href="/updates"
+                    className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-semibold text-xs transition-colors border border-white/[0.06] flex items-center gap-2 active:scale-[0.98]"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                    <span>AI DJ Updates</span>
+                  </Link>
+                  <a
+                    href="https://discord.gg/PmxfJwmQuB"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hidden sm:inline-flex h-10 px-3.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-xs text-slate-400 hover:text-white items-center gap-1.5 transition-colors"
+                    title="Test pre-release on official server"
+                  >
+                    <span>Beta Server</span>
+                    <ExternalLink className="w-3 h-3 text-slate-500" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Genre / Mood Showcase */}
+              <div className="pt-5 pb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Curated Moods &amp; AutoPlay Genres
+                  </p>
+                  <span className="text-[11px] text-purple-400/80 font-medium">
+                    Adaptive Taste Profile
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { name: "Romantic & Soulful", id: "1568327378504130600" },
+                    { name: "Lo-Fi & Chill", id: "1568327227983007864" },
+                    { name: "Energetic & High BPM", id: "1568327456434430093" },
+                    { name: "Punjabi Pop & Urban", id: "1568327108533551144" },
+                    { name: "Hip-Hop & Rap", id: "1568327544279662663" },
+                    { name: "Indie Acoustic", id: "1568327695639650464" },
+                    { name: "EDM & Dance", id: "1568327771501895762" },
+                    { name: "K-Pop", id: "1568327830981583039" },
+                  ].map((genre) => (
+                    <div
+                      key={genre.id}
+                      className="flex items-center gap-1.5 px-2.5 py-1 bg-white/[0.03] border border-white/[0.06] hover:border-purple-500/30 rounded-lg text-xs text-slate-300 transition-colors"
+                    >
+                      <img
+                        src={`https://cdn.discordapp.com/emojis/${genre.id}.png`}
+                        className="w-4 h-4 object-contain select-none"
+                        alt=""
+                      />
+                      <span>{genre.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Feature grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-4 border-t border-white/[0.04]">
+                <FeatureItem
+                  icon={Sparkles}
+                  title="Intelligent AI DJ"
+                  description="When queue ends, AutoPlay predicts and queues matching songs based on current vibe so music never stops."
+                  accentClass="bg-purple-500/10 text-purple-400"
+                />
+                <FeatureItem
+                  icon={Headphones}
+                  title="Personal Taste Profile"
+                  description="Remembers manual requests, artist affinities, and like/dislike ratings to build personalized recommendations."
+                  accentClass="bg-purple-500/10 text-purple-400"
+                />
+                <FeatureItem
+                  icon={Radio}
+                  title="Strict Language Isolation"
+                  description="Select preferred languages (English, Hindi, Punjabi, K-Pop, and global) with zero cross-genre leakages."
+                  accentClass="bg-purple-500/10 text-purple-400"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ─── BOT 4: SUPPORT & SECURITY BOT ─────────────────────── */}
           <div className="rounded-2xl bg-surface border border-white/[0.06] hover:border-indigo-500/30 transition-all duration-200 overflow-hidden">
             <div className="p-6 sm:p-8 lg:p-10">
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">

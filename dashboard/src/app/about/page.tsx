@@ -429,27 +429,27 @@ export default function AboutPage() {
             </article>
 
             {/* PRODUCT 4: SYNCINK RADIO (FACTUAL STATUS) */}
-            <article className="p-6 sm:p-8 rounded-3xl bg-[#120a16] border border-pink-500/15 opacity-80">
+            <article className="p-6 sm:p-8 rounded-3xl bg-[#120a16] border border-purple-500/20">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-pink-500/15 border border-pink-500/30 flex items-center justify-center text-pink-400 shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
                     <Radio className="w-6 h-6" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-bold text-white">SyncInk Radio</h3>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                        Under Maintenance
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                        Coming Soon
                       </span>
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      High-fidelity audio streaming service currently undergoing scheduled backend upgrades to support larger listener capacities.
+                      Next-generation 24/7 audio streaming engine featuring intelligent AI DJ AutoPlay, personal taste learning, and strict language isolation.
                     </p>
                   </div>
                 </div>
 
-                <span className="text-xs text-slate-500 font-medium">
-                  Status: Temporarily Offline
+                <span className="text-xs text-purple-300 font-medium px-3 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                  Status: In Development (Coming Soon)
                 </span>
               </div>
             </article>

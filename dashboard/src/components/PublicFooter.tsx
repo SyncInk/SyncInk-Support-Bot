@@ -187,6 +187,10 @@ export function PublicFooter() {
                 <span>Dynamic join-to-create voice channels</span>
               </li>
               <li className="flex items-center gap-1.5 text-slate-300">
+                <span className="font-semibold text-white">SyncInk Radio:</span>
+                <span>AI DJ, AutoPlay & lossless streaming (Coming Soon)</span>
+              </li>
+              <li className="flex items-center gap-1.5 text-slate-300">
                 <span className="font-semibold text-white">SyncInk Security Bot:</span>
                 <span>Real-time anti-spam & telemetry shield</span>
               </li>
