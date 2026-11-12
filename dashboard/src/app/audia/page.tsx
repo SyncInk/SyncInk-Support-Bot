@@ -487,30 +487,23 @@ export default function AudiaSpecPage() {
             </div>
           </div>
 
-          {/* Standalone Audia AI Logo (DIRECTLY ON BACKGROUND — NO BOX, NO FRAME) */}
+          {/* HERO VISUAL IDENTITY: LARGE ORIGINAL AUDIA AI LOGO */}
           <div className="relative z-10 pt-2 pb-6">
             <Image
               src="/audia-ai-logo.png"
               alt="Audia AI Official Logo"
-              width={140}
-              height={47}
-              className="w-[90px] sm:w-[115px] md:w-[140px] h-auto object-contain select-none"
+              width={1024}
+              height={341}
+              className="w-full max-w-[340px] sm:max-w-[580px] md:max-w-[760px] lg:max-w-[820px] h-auto object-contain select-none"
               priority
             />
           </div>
 
-          {/* Large Hero Wordmark & Product Title */}
-          <div className="relative z-10 space-y-4">
-            <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-[#F8F8FC] tracking-tight leading-[0.95] select-none">
-              AUDIA{" "}
-              <span className="bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-400 bg-clip-text text-transparent">
-                AI
-              </span>
-            </h1>
-
-            <p className="text-xl sm:text-2xl md:text-3xl font-semibold text-[#F8F8FC] tracking-tight pt-2">
+          {/* Product Taglines & Narrative */}
+          <div className="relative z-10 space-y-3">
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-[#F8F8FC] tracking-tight">
               The Next Generation of Intelligent Music Experiences.
-            </p>
+            </h1>
 
             <p className="text-base sm:text-lg text-[#A1A4B8] max-w-2xl leading-relaxed font-normal">
               An intelligent music companion that understands your taste, discovers your next favourite track and keeps
