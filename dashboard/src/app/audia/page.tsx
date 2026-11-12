@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import type { Variants } from "framer-motion";
 import {
   Sparkles,
   Radio,
@@ -272,7 +273,7 @@ const DISCORD_MOOD_GENRES = [
 ];
 
 /* ─── Premium Motion & Micro-interaction Variants ───────────────────── */
-const heroContainerVariants = {
+const heroContainerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -283,19 +284,19 @@ const heroContainerVariants = {
   },
 };
 
-const heroItemVariants = {
+const heroItemVariants: Variants = {
   hidden: { opacity: 0, y: 14 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       duration: 0.55,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
     },
   },
 };
 
-const logoVariants = {
+const logoVariants: Variants = {
   hidden: { opacity: 0, y: 16, scale: 0.97 },
   visible: {
     opacity: 1,
@@ -303,19 +304,19 @@ const logoVariants = {
     scale: 1,
     transition: {
       duration: 0.75,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
     },
   },
 };
 
-const sectionRevealVariants = {
+const sectionRevealVariants: Variants = {
   hidden: { opacity: 0, y: 22 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       duration: 0.55,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
     },
   },
 };
