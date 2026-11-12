@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion, useInView } from "framer-motion";
 import {
   MessageSquare,
   Radio,
@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
-import { LivePulseBadge } from "@/components/MotionWrapper";
+import { LivePulseBadge, AnimatedCounter } from "@/components/MotionWrapper";
 import { transition } from "@/lib/motion-tokens";
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -137,6 +137,20 @@ export default function HomePage() {
     modCasesCount: 0,
   });
 
+  const [hasLoadedSecurity, setHasLoadedSecurity] = useState(false);
+  const statusSectionRef = useRef<HTMLDivElement>(null);
+  const isStatusInView = useInView(statusSectionRef, { once: true, margin: "-40px" });
+  const shouldReduceMotion = useReducedMotion();
+  const isCountersActive = hasLoadedSecurity && (isStatusInView || shouldReduceMotion);
+
+  // Safety fallback ensures numbers activate even if API is slow
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setHasLoadedSecurity(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Ensure the page always starts at the top on initial load (unless arriving via hash)
   useEffect(() => {
     if (typeof window !== "undefined" && !window.location.hash) {
@@ -158,9 +172,11 @@ export default function HomePage() {
             incidentCount: data.stats?.incidentCount || 0,
             modCasesCount: data.stats?.modCasesCount || 0,
           });
+          setHasLoadedSecurity(true);
         }
       } catch {
         // Fallback remains operational
+        if (mounted) setHasLoadedSecurity(true);
       }
     }
 
@@ -218,7 +234,7 @@ export default function HomePage() {
            SYSTEM & SHIELD STATUS (Live real-time polling)
            ═════════════════════════════════════════════════════════════ */}
         <section className="px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto mb-20">
-          <div className="p-5 sm:p-6 rounded-2xl bg-surface border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+          <div ref={statusSectionRef} className="p-5 sm:p-6 rounded-2xl bg-surface border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-5 border-b border-white/[0.06]">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
@@ -233,38 +249,59 @@ export default function HomePage() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5">
-              {/* Raid State */}
+              {/* Threat Level — Subtle Status Reveal Transition */}
               <div className="text-center p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <div className={`text-lg sm:text-2xl font-black ${
-                  securityData.raidState === "NORMAL"
-                    ? "text-emerald-400"
-                    : "text-red-400"
-                }`}>
+                <motion.div
+                  key={securityData.raidState}
+                  initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  className={`text-lg sm:text-2xl font-black ${
+                    securityData.raidState === "NORMAL"
+                      ? "text-emerald-400"
+                      : "text-red-400"
+                  }`}
+                >
                   {securityData.raidState === "NORMAL" ? "SECURE" : securityData.raidState}
-                </div>
+                </motion.div>
                 <div className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Threat Level</div>
               </div>
 
-              {/* Mod Cases */}
+              {/* Mod Cases — Stagger 0ms */}
               <div className="text-center p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                 <div className="text-lg sm:text-2xl font-black text-white">
-                  {securityData.modCasesCount.toLocaleString()}
+                  <AnimatedCounter
+                    value={securityData.modCasesCount}
+                    delay={0}
+                    duration={1700}
+                    enabled={isCountersActive}
+                  />
                 </div>
                 <div className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Mod Cases</div>
               </div>
 
-              {/* Quarantined */}
+              {/* Quarantined — Stagger 150ms */}
               <div className="text-center p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                 <div className="text-lg sm:text-2xl font-black text-white">
-                  {securityData.jailedCount.toLocaleString()}
+                  <AnimatedCounter
+                    value={securityData.jailedCount}
+                    delay={150}
+                    duration={1700}
+                    enabled={isCountersActive}
+                  />
                 </div>
                 <div className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Quarantined</div>
               </div>
 
-              {/* Incidents */}
+              {/* Incidents — Stagger 300ms */}
               <div className="text-center p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                 <div className="text-lg sm:text-2xl font-black text-white">
-                  {securityData.incidentCount.toLocaleString()}
+                  <AnimatedCounter
+                    value={securityData.incidentCount}
+                    delay={300}
+                    duration={1700}
+                    enabled={isCountersActive}
+                  />
                 </div>
                 <div className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Incidents</div>
               </div>
