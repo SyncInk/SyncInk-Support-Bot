@@ -271,6 +271,55 @@ const DISCORD_MOOD_GENRES = [
   { name: "K-Pop", id: "1568327830981583039", desc: "Korean pop hits, dynamic choreography anthems" },
 ];
 
+/* ─── Premium Motion & Micro-interaction Variants ───────────────────── */
+const heroContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.05,
+    },
+  },
+};
+
+const heroItemVariants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.55,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  },
+};
+
+const logoVariants = {
+  hidden: { opacity: 0, y: 16, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.75,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  },
+};
+
+const sectionRevealVariants = {
+  hidden: { opacity: 0, y: 22 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.55,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  },
+};
+
 /* ═══════════════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════════════ */
@@ -452,16 +501,24 @@ export default function AudiaSpecPage() {
 
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
         {/* ========================================================= */}
-        {/* HERO SECTION — PREMIUM EDITORIAL DESIGN                  */}
+        {/* HERO SECTION — UNIFIED CENTER-ALIGNED EDITORIAL DESIGN   */}
         {/* ========================================================= */}
-        <header className="relative pt-6 sm:pt-12 pb-16 sm:pb-24 border-b border-white/[0.07] mb-16 overflow-hidden">
-          {/* Subtle violet ambient atmospheric depth */}
-          <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[720px] h-[360px] bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(168,85,247,0.14),transparent)] pointer-events-none blur-2xl" />
+        <header className="relative pt-8 sm:pt-16 pb-16 sm:pb-24 border-b border-white/[0.07] mb-16 overflow-hidden text-center">
+          {/* Subtle violet ambient atmospheric glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[680px] sm:w-[860px] h-[360px] sm:h-[420px] bg-[radial-gradient(ellipse_70%_50%_at_50%_50%,rgba(168,85,247,0.12),transparent_70%)] pointer-events-none blur-3xl -z-10" />
 
-          {/* Top Meta Strip: Parent Provider & Specification Ref */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pb-8 text-xs relative z-10">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/[0.04] text-[#A1A4B8] border border-white/[0.07] flex items-center gap-1.5">
+          <motion.div
+            variants={heroContainerVariants}
+            initial="hidden"
+            animate="visible"
+            className="max-w-4xl mx-auto flex flex-col items-center text-center space-y-6 sm:space-y-7 relative z-10"
+          >
+            {/* 1. Technical Specification Label & Document Reference */}
+            <motion.div
+              variants={heroItemVariants}
+              className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 text-xs"
+            >
+              <span className="px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wider bg-white/[0.04] text-[#A1A4B8] border border-white/[0.08] flex items-center gap-1.5 shadow-sm">
                 <FileText className="w-3 h-3 text-purple-400" />
                 Technical Specification
               </span>
@@ -469,52 +526,55 @@ export default function AudiaSpecPage() {
               <span className="font-mono text-[11px] text-[#A1A4B8] hidden sm:inline">
                 DOC REF: SYNC-AUDIA-SPEC-V1
               </span>
-            </div>
-
-            {/* Parent Technology Provider Badge */}
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-[#A1A4B8] text-[11px]">Provider:</span>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.07]">
+              <span className="text-[#A1A4B8]/40 hidden sm:inline">•</span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.07] text-[#A1A4B8]">
                 <Image
                   src="/syncink-main-logo.png"
                   alt="SyncInk"
-                  width={14}
-                  height={14}
+                  width={13}
+                  height={13}
                   className="object-contain"
                 />
-                <span className="font-bold text-[#F8F8FC]">SyncInk Technologies</span>
+                <span className="font-semibold text-[#F8F8FC] text-[11px]">SyncInk Technologies</span>
               </div>
-            </div>
-          </div>
+            </motion.div>
 
-          {/* HERO VISUAL IDENTITY: LARGE ORIGINAL AUDIA AI LOGO */}
-          <div className="relative z-10 pt-2 pb-6">
-            <Image
-              src="/audia-ai-logo.png"
-              alt="Audia AI Official Logo"
-              width={1024}
-              height={341}
-              className="w-full max-w-[340px] sm:max-w-[580px] md:max-w-[760px] lg:max-w-[820px] h-auto object-contain select-none"
-              priority
-            />
-          </div>
+            {/* 2. Standalone Audia AI Horizontal Logo */}
+            <motion.div
+              variants={logoVariants}
+              className="relative w-full flex justify-center py-2 sm:py-3"
+            >
+              {/* Soft violet ambient halo behind the logo */}
+              <div className="absolute inset-0 max-w-[520px] mx-auto bg-purple-600/15 rounded-full blur-3xl -z-10 pointer-events-none" />
 
-          {/* Product Taglines & Narrative */}
-          <div className="relative z-10 space-y-3">
-            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-[#F8F8FC] tracking-tight">
-              The Next Generation of Intelligent Music Experiences.
-            </h1>
+              <Image
+                src="/audia-ai-logo.png"
+                alt="Audia AI Official Logo"
+                width={1024}
+                height={341}
+                className="w-full max-w-[310px] sm:max-w-[470px] md:max-w-[620px] h-auto object-contain select-none mx-auto drop-shadow-[0_4px_24px_rgba(168,85,247,0.18)]"
+                priority
+              />
+            </motion.div>
 
-            <p className="text-base sm:text-lg text-[#A1A4B8] max-w-2xl leading-relaxed font-normal">
-              An intelligent music companion that understands your taste, discovers your next favourite track and keeps
-              every listening session moving.
-            </p>
-          </div>
+            {/* 3. Main Product Tagline & Supporting Description */}
+            <motion.div variants={heroItemVariants} className="space-y-3 sm:space-y-4 max-w-3xl mx-auto text-center">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-[#F8F8FC] tracking-tight leading-snug">
+                The Next Generation of Intelligent Music Experiences.
+              </h1>
 
-          {/* Hero Metadata & Verification Bar */}
-          <div className="relative z-10 pt-8 mt-8 border-t border-white/[0.07] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex flex-wrap items-center gap-3 text-xs">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold">
+              <p className="text-sm sm:text-base md:text-lg text-[#A1A4B8] max-w-[720px] mx-auto leading-relaxed font-normal">
+                An intelligent music companion that understands your taste, discovers your next favourite track and keeps
+                every listening session moving.
+              </p>
+            </motion.div>
+
+            {/* 4. Production Status & Publication Info Row */}
+            <motion.div
+              variants={heroItemVariants}
+              className="pt-1 flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 text-xs text-[#A1A4B8]"
+            >
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold shadow-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span>Version 1.0 Production</span>
               </div>
@@ -524,32 +584,35 @@ export default function AudiaSpecPage() {
               <span className="text-[#A1A4B8]">
                 Host: <strong className="text-purple-300 font-semibold">SyncInk Radio</strong>
               </span>
-            </div>
+            </motion.div>
 
-            {/* Quick Actions */}
-            <div className="flex flex-wrap items-center gap-3">
+            {/* 5. Primary and Secondary Action Buttons */}
+            <motion.div
+              variants={heroItemVariants}
+              className="pt-2 flex flex-wrap items-center justify-center gap-3.5 w-full sm:w-auto"
+            >
               <a
                 href="#sec-01"
-                className="h-9 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors flex items-center gap-2 active:scale-[0.98] shadow-sm shadow-purple-950/40"
+                className="h-11 px-6 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs tracking-wide transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] shadow-lg shadow-purple-950/40 hover:shadow-purple-700/30 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
               >
                 <span>Read Specification</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </a>
               <Link
                 href="/updates"
-                className="h-9 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-[#F8F8FC] font-semibold text-xs transition-colors border border-white/[0.07] flex items-center gap-2"
+                className="h-11 px-6 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-[#F8F8FC] font-semibold text-xs tracking-wide transition-all duration-200 border border-white/[0.08] hover:border-purple-500/30 flex items-center justify-center gap-2 active:scale-[0.98] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
               >
                 <Sparkles className="w-3.5 h-3.5 text-purple-400" />
                 <span>Release Notes</span>
               </Link>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </header>
 
         {/* ========================================================= */}
         {/* DOCUMENT METADATA LEDGER                                   */}
         {/* ========================================================= */}
-        <section aria-label="Specification Ledger" className="mb-20">
+        <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} aria-label="Specification Ledger" className="mb-20">
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 py-4 border-y border-white/[0.07] text-xs">
             <div className="space-y-1">
               <div className="text-[10px] text-[#A1A4B8] font-semibold uppercase tracking-wider">Engineered By</div>
@@ -572,12 +635,12 @@ export default function AudiaSpecPage() {
               <div className="text-[#F8F8FC] font-bold">November 2026</div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ========================================================= */}
         {/* MASTER SPECIFICATION INDEX                                */}
         {/* ========================================================= */}
-        <section aria-labelledby="toc-heading" className="mb-24">
+        <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} aria-labelledby="toc-heading" className="mb-24">
           <div className="flex items-center justify-between pb-4 border-b border-white/[0.07] mb-6">
             <div className="flex items-center gap-2.5">
               <Compass className="w-4 h-4 text-purple-400" />
@@ -607,12 +670,12 @@ export default function AudiaSpecPage() {
               </a>
             ))}
           </div>
-        </section>
+        </motion.section>
 
         {/* ========================================================= */}
         {/* SECTION 01: EXECUTIVE INTRODUCTION                       */}
         {/* ========================================================= */}
-        <section id="sec-01" className="mb-24 scroll-mt-28">
+        <motion.section id="sec-01" initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} className="mb-24 scroll-mt-28">
           <div className="pb-4 border-b border-white/[0.07] mb-8">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono text-xs font-bold text-purple-400 uppercase tracking-widest">
@@ -644,12 +707,12 @@ export default function AudiaSpecPage() {
               Discord communities.
             </p>
           </div>
-        </section>
+        </motion.section>
 
         {/* ========================================================= */}
         {/* SECTION 02: SYSTEM DEFINITION                             */}
         {/* ========================================================= */}
-        <section id="sec-02" className="mb-24 scroll-mt-28">
+        <motion.section id="sec-02" initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} className="mb-24 scroll-mt-28">
           <div className="pb-4 border-b border-white/[0.07] mb-8">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono text-xs font-bold text-purple-400 uppercase tracking-widest">
@@ -770,12 +833,12 @@ export default function AudiaSpecPage() {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ========================================================= */}
         {/* SECTION 03: TEN CORE ARCHITECTURAL CAPABILITIES           */}
         {/* ========================================================= */}
-        <section id="sec-03" className="mb-24 scroll-mt-28">
+        <motion.section id="sec-03" initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} className="mb-24 scroll-mt-28">
           <div className="pb-4 border-b border-white/[0.07] mb-8">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono text-xs font-bold text-purple-400 uppercase tracking-widest">
@@ -819,12 +882,12 @@ export default function AudiaSpecPage() {
               ))}
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ========================================================= */}
         {/* SECTION 04: SIX-STAGE OPERATIONAL PIPELINE                */}
         {/* ========================================================= */}
-        <section id="sec-04" className="mb-24 scroll-mt-28">
+        <motion.section id="sec-04" initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} className="mb-24 scroll-mt-28">
           <div className="pb-4 border-b border-white/[0.07] mb-8">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono text-xs font-bold text-purple-400 uppercase tracking-widest">
@@ -875,12 +938,12 @@ export default function AudiaSpecPage() {
               ))}
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ========================================================= */}
         {/* SECTION 05: ACOUSTIC & CONTEXTUAL SIGNAL PROCESSING       */}
         {/* ========================================================= */}
-        <section id="sec-05" className="mb-24 scroll-mt-28">
+        <motion.section id="sec-05" initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} className="mb-24 scroll-mt-28">
           <div className="pb-4 border-b border-white/[0.07] mb-8">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono text-xs font-bold text-purple-400 uppercase tracking-widest">
@@ -958,12 +1021,12 @@ export default function AudiaSpecPage() {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ========================================================= */}
         {/* SECTION 06: PRODUCTION CAPABILITY VS ROADMAP              */}
         {/* ========================================================= */}
-        <section id="sec-06" className="mb-24 scroll-mt-28">
+        <motion.section id="sec-06" initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} className="mb-24 scroll-mt-28">
           <div className="pb-4 border-b border-white/[0.07] mb-8">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono text-xs font-bold text-purple-400 uppercase tracking-widest">
@@ -1024,12 +1087,12 @@ export default function AudiaSpecPage() {
               </table>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ========================================================= */}
         {/* SECTION 07: COMMUNITY LISTENING EXPERIENCE                */}
         {/* ========================================================= */}
-        <section id="sec-07" className="mb-24 scroll-mt-28">
+        <motion.section id="sec-07" initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} className="mb-24 scroll-mt-28">
           <div className="pb-4 border-b border-white/[0.07] mb-8">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono text-xs font-bold text-purple-400 uppercase tracking-widest">
@@ -1076,12 +1139,12 @@ export default function AudiaSpecPage() {
               ))}
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ========================================================= */}
         {/* SECTION 08: ECOSYSTEM & BRAND HIERARCHY                   */}
         {/* ========================================================= */}
-        <section id="sec-08" className="mb-24 scroll-mt-28">
+        <motion.section id="sec-08" initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} className="mb-24 scroll-mt-28">
           <div className="pb-4 border-b border-white/[0.07] mb-8">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono text-xs font-bold text-purple-400 uppercase tracking-widest">
@@ -1180,12 +1243,12 @@ export default function AudiaSpecPage() {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ========================================================= */}
         {/* SECTION 09: REBRANDING & COMMAND MIGRATION                */}
         {/* ========================================================= */}
-        <section id="sec-09" className="mb-24 scroll-mt-28">
+        <motion.section id="sec-09" initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} className="mb-24 scroll-mt-28">
           <div className="pb-4 border-b border-white/[0.07] mb-8">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono text-xs font-bold text-purple-400 uppercase tracking-widest">
@@ -1248,12 +1311,12 @@ export default function AudiaSpecPage() {
               </table>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ========================================================= */}
         {/* SECTION 10: PRIVACY FRAMEWORK & GOVERNANCE                */}
         {/* ========================================================= */}
-        <section id="sec-10" className="mb-24 scroll-mt-28">
+        <motion.section id="sec-10" initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} className="mb-24 scroll-mt-28">
           <div className="pb-4 border-b border-white/[0.07] mb-8">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono text-xs font-bold text-purple-400 uppercase tracking-widest">
@@ -1309,12 +1372,12 @@ export default function AudiaSpecPage() {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ========================================================= */}
         {/* SECTION 11: STRATEGIC FUTURE VISION                       */}
         {/* ========================================================= */}
-        <section id="sec-11" className="mb-24 scroll-mt-28">
+        <motion.section id="sec-11" initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} className="mb-24 scroll-mt-28">
           <div className="pb-4 border-b border-white/[0.07] mb-8">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono text-xs font-bold text-purple-400 uppercase tracking-widest">
@@ -1381,12 +1444,12 @@ export default function AudiaSpecPage() {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ========================================================= */}
         {/* SECTION 12: CONCLUSION & OFFICIAL COLOPHON                */}
         {/* ========================================================= */}
-        <section id="sec-12" className="mb-20 scroll-mt-28">
+        <motion.section id="sec-12" initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={sectionRevealVariants} className="mb-20 scroll-mt-28">
           <div className="pb-4 border-b border-white/[0.07] mb-8">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono text-xs font-bold text-purple-400 uppercase tracking-widest">
@@ -1425,7 +1488,7 @@ export default function AudiaSpecPage() {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ─── BOTTOM ACTION BUTTONS ──────────────────────────────────── */}
         <div className="pt-10 border-t border-white/[0.07] flex flex-wrap items-center justify-center gap-3">
