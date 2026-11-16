@@ -4,7 +4,7 @@ import re
 import shutil
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Tuple, Any, Callable, Dict, List, Optional
 import queue
 import threading
 import aiohttp
@@ -76,14 +76,8 @@ def get_ffmpeg_path() -> str:
         return sys_path
     return "ffmpeg"
 
-def clean_title(title: str) -> str:
-    """Removes video tags, bracketed text, and noise from titles."""
-    if not title:
-        return "Unknown Track"
-    cleaned = re.sub(r'(?i)\s*[\[(](official\s*(music\s*)?(video|audio|visualizer|lyric\s*video)?|hd|4k|hq|lyrics?)[\])]', '', title)
-    cleaned = re.sub(r'(?i)\s*\|\s*(official\s*(music\s*)?(video|audio)|visualizer)', '', cleaned)
-    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-    return cleaned or title
+from services.track_cleaner import clean_track_metadata, clean_title
+
 
 def format_duration(seconds: Optional[int]) -> str:
     if seconds is None or seconds < 0:
@@ -332,7 +326,7 @@ class MusicService:
     def __init__(self):
         self.queues: Dict[int, GuildMusicQueue] = {}
         self.ydl_opts = {
-            'format': 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
+            'format': 'bestaudio/bestaudio*/best/ba/b',
             'noplaylist': True,
             'quiet': True,
             'no_warnings': True,
@@ -341,11 +335,18 @@ class MusicService:
             'source_address': '0.0.0.0',
             'skip_download': True,
             'socket_timeout': 15,
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+            },
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['android', 'web', 'mweb'],
+                    'player_client': ['mweb', 'web', 'android', 'ios'],
+                    'lang': ['en'],
                 }
             },
+            'js_runtimes': {'node': {}},
         }
 
     @classmethod
@@ -462,8 +463,9 @@ class MusicService:
             if not entry:
                 continue
             raw_title = entry.get("title") or "Unknown Track"
-            c_title = clean_title(raw_title)
-            artist = entry.get("uploader") or entry.get("artist") or entry.get("channel") or "Unknown Artist"
+            raw_uploader = entry.get("uploader") or entry.get("artist") or entry.get("channel") or ""
+            c_title, c_artist = clean_track_metadata(raw_title, raw_uploader, entry)
+            artist = c_artist
             duration = entry.get("duration")
             webpage_url = entry.get("webpage_url") or entry.get("url") or query
             stream_url = entry.get("url") or webpage_url

@@ -1748,6 +1748,14 @@ class AutoPlayService:
                             log.info(f"[Audia AI Extracted Track Blocked by Genre] {chosen_track.author} - {chosen_track.clean_title}: {genre_reason}")
                             continue
 
+                    # Always prioritize clean curated title and main artist from candidate
+                    cand_title = cand.get("title")
+                    cand_artist = cand.get("artist")
+                    if cand_title:
+                        chosen_track.clean_title = cand_title
+                    if cand_artist and (chosen_track.author in ("Unknown Artist", "Various Artists") or any(lbl in chosen_track.author.lower() for lbl in ("music", "records", "company", "vevo", "t-series", "sony", "entertainment"))):
+                        chosen_track.author = cand_artist
+
                     # Final duplicate check on actual extracted track title
                     ok, _ = self.is_candidate_valid(chosen_track.clean_title, chosen_track.author, guild_queue, ctx)
                     if ok:

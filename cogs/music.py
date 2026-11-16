@@ -2013,8 +2013,10 @@ class Music(commands.Cog):
             meta = getattr(queue, "prefetched_autoplay_meta", None) or {}
 
             if prefetched:
-                lines.append(f"* [{prefetched.clean_title}]({prefetched.url})")
-                lines.append(f"  └ {Emojis.TIME} `{prefetched.formatted_duration}`  •  *{prefetched.author}*")
+                p_artist = prefetched.author if prefetched.author and prefetched.author not in ("Unknown Artist", "Various Artists") else (meta.get("artist") or "Various Artists")
+                p_title = prefetched.clean_title or meta.get("title") or "Upcoming Track"
+                lines.append(f"* [{p_title}]({prefetched.url})")
+                lines.append(f"  └ {Emojis.TIME} `{prefetched.formatted_duration}`  •  *{p_artist}*")
                 genre = meta.get("genre") or "Curated Style"
                 mood = meta.get("mood") or "Dynamic"
                 reason = meta.get("reason") or "Matched to listener taste profile."
