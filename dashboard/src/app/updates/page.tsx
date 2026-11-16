@@ -61,6 +61,11 @@ interface ChangelogCommit {
 }
 
 const BADGE_STYLES: Record<string, { bg: string; border: string; text: string }> = {
+  "Audia AI": {
+    bg: "bg-purple-500/15",
+    border: "border-purple-500/30",
+    text: "text-purple-300",
+  },
   "AI DJ": {
     bg: "bg-purple-500/15",
     border: "border-purple-500/30",

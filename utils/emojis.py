@@ -11,7 +11,8 @@ class Emojis:
     CHECK_YES = "<a:check_yes:1547034079076032512>"
 
     # Static application emojis (<:name:id>) verified via Discord CDN
-    AI = "<:SyncInkAI:1549154093421826058>"
+    AUDIA_AI = "<:Audia_AI:1571879222908031078>"
+    AI = "<:Audia_AI:1571879222908031078>"
     CHATGPT = AI
     CONNECTION_GOOD = "<:goodconnection:1551311911948394697>"
     CONNECTION_MODERATE = "<:moderateconnection:1551311891173740644>"
@@ -118,7 +119,8 @@ class EmojiPartials:
     CONNECTION_PING = discord.PartialEmoji(name="connectionping", id=1551311432392646737, animated=True)
 
     # Static partials
-    AI = discord.PartialEmoji(name="SyncInkAI", id=1549154093421826058, animated=False)
+    AUDIA_AI = discord.PartialEmoji(name="Audia_AI", id=1571879222908031078, animated=False)
+    AI = discord.PartialEmoji(name="Audia_AI", id=1571879222908031078, animated=False)
     CHATGPT = AI
     CONNECTION_GOOD = discord.PartialEmoji(name="goodconnection", id=1551311911948394697, animated=False)
     CONNECTION_MODERATE = discord.PartialEmoji(name="moderateconnection", id=1551311891173740644, animated=False)

@@ -1,4 +1,11 @@
 export const DISCORD_CUSTOM_EMOJIS = {
+  audia_ai: {
+    id: "1571879222908031078",
+    name: "Audia_AI",
+    url: "https://cdn.discordapp.com/emojis/1571879222908031078.png",
+    discordFormat: "<:Audia_AI:1571879222908031078>",
+    animated: false,
+  },
   developer: {
     id: "1562591562754424872",
     name: "developer",

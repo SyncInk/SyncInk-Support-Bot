@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     "Discord radio bot",
     "Discord music bot",
     "Discord security bot",
-    "AI DJ AutoPlay",
+    "Audia AI AutoPlay",
     "Discord automation",
     "Discord community tools",
     "temporary voice channels",
