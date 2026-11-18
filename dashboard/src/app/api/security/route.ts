@@ -3,6 +3,7 @@ import { checkRequestAuth, getCurrentUser, verifyUserGuildAccess } from "@/lib/a
 import { query, queryOne, resolveGuildId } from "@/lib/db";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 import { redactSensitive } from "@/lib/security";
+import { getSupportBotAvatar } from "@/lib/discord-api";
 
 export const dynamic = "force-dynamic";
 
@@ -22,14 +23,16 @@ export async function GET(request: Request) {
         [officialGuildId]
       ).catch(() => null);
 
-      const [jailRes, incidentRes, modRes] = await Promise.all([
+      const [jailRes, incidentRes, modRes, botAvatarUrl] = await Promise.all([
         queryOne("SELECT COUNT(*) as count FROM automod_jails WHERE guild_id = $1", [officialGuildId]).catch(() => ({ count: "0" })),
         queryOne("SELECT COUNT(*) as count FROM security_incidents WHERE guild_id = $1", [officialGuildId]).catch(() => ({ count: "0" })),
         queryOne("SELECT COUNT(*) as count FROM mod_cases WHERE guild_id = $1", [officialGuildId]).catch(() => ({ count: "0" })),
+        getSupportBotAvatar().catch(() => "/syncink-support-logo.png"),
       ]);
 
       return NextResponse.json({
         raidState: settings?.raid_state || "NORMAL",
+        botAvatarUrl: botAvatarUrl || "/syncink-support-logo.png",
         stats: {
           jailedCount: parseInt(jailRes?.count || "0", 10),
           incidentCount: parseInt(incidentRes?.count || "0", 10),
@@ -39,6 +42,7 @@ export async function GET(request: Request) {
     } catch {
       return NextResponse.json({
         raidState: "NORMAL",
+        botAvatarUrl: "/syncink-support-logo.png",
         stats: {
           jailedCount: 0,
           incidentCount: 0,

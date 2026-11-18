@@ -205,3 +205,37 @@ export async function sendVerificationAuditLog(
     return false;
   }
 }
+
+let cachedBotAvatar: { url: string; expiresAt: number } | null = null;
+
+/**
+ * Fetches the live avatar URL for the SyncInk Support Bot from Discord REST API.
+ * Uses an in-memory TTL cache (5 minutes) with fallback to /syncink-support-logo.png.
+ */
+export async function getSupportBotAvatar(): Promise<string> {
+  const now = Date.now();
+  if (cachedBotAvatar && cachedBotAvatar.expiresAt > now) {
+    return cachedBotAvatar.url;
+  }
+  const token = getBotToken();
+  if (!token) return "/syncink-support-logo.png";
+
+  try {
+    const res = await fetch(`${DISCORD_API_BASE}/users/@me`, {
+      headers: getDiscordAuthHeaders(token),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.id && data.avatar) {
+        const ext = data.avatar.startsWith("a_") ? "gif" : "png";
+        const url = `https://cdn.discordapp.com/avatars/${data.id}/${data.avatar}.${ext}?size=512`;
+        cachedBotAvatar = { url, expiresAt: now + 5 * 60 * 1000 };
+        return url;
+      }
+    }
+  } catch (err: any) {
+    console.warn("Could not fetch support bot avatar from Discord:", redactSensitive(err?.message || ""));
+  }
+  return "/syncink-support-logo.png";
+}
+

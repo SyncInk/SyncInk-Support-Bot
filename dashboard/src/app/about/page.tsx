@@ -356,11 +356,11 @@ export default function AboutPage() {
             <article className="p-6 sm:p-10 rounded-3xl bg-[#0f0c1a] border border-indigo-500/20 hover:border-indigo-500/40 transition-colors shadow-xl">
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-indigo-600/15 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#0b0816] border border-indigo-500/30 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-[0_0_20px_rgba(99,102,241,0.25)]">
                     <img
-                      src="/syncink-main-logo.png"
+                      src="/syncink-support-logo.png"
                       alt="SyncInk Support Bot Icon"
-                      className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl object-cover"
+                      className="w-full h-full rounded-xl object-cover select-none"
                       onError={(e) => {
                         (e.target as HTMLElement).style.display = "none";
                       }}
