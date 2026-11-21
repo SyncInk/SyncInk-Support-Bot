@@ -596,11 +596,14 @@ export default function HomePage() {
 
                 <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-xl bg-purple-500/15 border border-purple-500/30 p-2 flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 rounded-xl bg-purple-500/15 border border-purple-500/30 p-1.5 flex items-center justify-center shrink-0 shadow-inner">
                       <img
-                        src="/audia-ai-logo.png"
-                        alt="Audia AI Engine Logo"
-                        className="w-full h-full object-contain"
+                        src="/audia-symbol.png"
+                        alt="Audia AI Logo"
+                        className="w-full h-full object-contain select-none filter drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = "https://cdn.discordapp.com/emojis/1571879222908031078.png";
+                        }}
                       />
                     </div>
                     <div>
