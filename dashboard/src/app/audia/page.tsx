@@ -1493,12 +1493,21 @@ export default function AudiaSpecPage() {
 
         {/* ─── BOTTOM ACTION BUTTONS ──────────────────────────────────── */}
         <div className="pt-10 border-t border-white/[0.07] flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href="/#bots"
+          <a
+            href="https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands"
+            target="_blank"
+            rel="noopener noreferrer"
             className="h-10 px-5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors flex items-center gap-2 shadow-md shadow-purple-950/40 active:scale-[0.98]"
           >
-            <span>Explore SyncInk Radio</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Invite SyncInk Radio</span>
+          </a>
+          <Link
+            href="/dashboard/radio"
+            className="h-10 px-5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white font-semibold text-xs transition-colors border border-white/[0.1] flex items-center gap-2"
+          >
+            <Radio className="w-3.5 h-3.5 text-purple-400" />
+            <span>Radio Dashboard</span>
           </Link>
           <Link
             href="/updates"
@@ -1513,7 +1522,7 @@ export default function AudiaSpecPage() {
             rel="noopener noreferrer"
             className="h-10 px-5 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] text-[#A1A4B8] hover:text-white font-semibold text-xs transition-colors border border-white/[0.07] flex items-center gap-2"
           >
-            <span>Join Beta Discord</span>
+            <span>Official Discord Support</span>
             <ExternalLink className="w-3.5 h-3.5 text-[#A1A4B8]" />
           </a>
         </div>

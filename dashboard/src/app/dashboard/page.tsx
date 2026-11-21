@@ -542,46 +542,54 @@ export default function MasterDashboardHub() {
             </div>
           )}
 
-          {/* CARD 6: VOICE & RADIO ECOSYSTEM */}
-          <div className="p-6 sm:p-7 rounded-3xl bg-[#0b0e1d] border border-cyan-500/20 flex flex-col justify-between hover:border-cyan-500/40 transition-all shadow-lg group">
+          {/* CARD 6: SYNCINK RADIO & AUDIA AI */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-[#0b0e1d] border border-purple-500/20 flex flex-col justify-between hover:border-purple-500/40 transition-all shadow-lg group">
             <div>
               <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-cyan-600/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-sm">
+                <div className="w-12 h-12 rounded-2xl bg-purple-600/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-sm">
                   <Radio className="w-6 h-6" />
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
-                  Audio &amp; Voice
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/20 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-purple-400" />
+                  <span>Audia AI Engine • Live</span>
                 </span>
               </div>
-              <h2 className="text-xl font-bold text-white group-hover:text-cyan-300 transition-colors">
-                Voice &amp; Radio Stations
+              <h2 className="text-xl font-bold text-white group-hover:text-purple-300 transition-colors">
+                SyncInk Radio &amp; Audia AI
               </h2>
               <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                Join-to-Create temporary voice hubs with automatic cleanup, plus lossless 24/7 radio and smart playback protection so listening sessions are never disrupted.
+                High-fidelity 24/7 Discord music streaming and radio directory powered natively by Audia AI. Manage AutoPlay taste models, browse global radio stations, and control playback telemetry.
               </p>
               <div className="mt-5 space-y-2 text-xs">
                 <div className="flex items-center gap-2 text-slate-300">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>Smart anti-disruption protection across voice channels</span>
+                  <span>48kHz Opus hardware-aligned stereo audio pipeline</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>Join-to-Create private voice rooms with lock/hide</span>
+                  <span>Audia AI continuous AutoPlay with personal taste learning</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>Continuous 24/7 lofi &amp; worldwide radio streams</span>
+                  <span>Worldwide 24/7 radio stations &amp; Lo-Fi focus beats</span>
                 </div>
               </div>
             </div>
             <div className="mt-6 pt-5 border-t border-white/[0.06] space-y-2.5">
+              <Link
+                href="/dashboard/radio"
+                className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2"
+              >
+                <span>Launch Radio Console</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
               <a
-                href="https://discord.gg/PmxfJwmQuB"
+                href="https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-slate-300 hover:text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2"
               >
-                <span>Join Official Support Server</span>
+                <span>Invite SyncInk Radio</span>
                 <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
               </a>
             </div>

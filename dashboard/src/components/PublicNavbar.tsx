@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Shield,
+  Radio,
   BookOpen,
   HelpCircle,
   FileCheck,
@@ -275,6 +276,14 @@ export function PublicNavbar() {
               {resourcesOpen && (
                 <div className="absolute left-0 mt-2 w-48 rounded-xl bg-[#0b0e1d] border border-white/10 shadow-2xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   <Link
+                    href="/dashboard/radio"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-purple-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  >
+                    <Radio className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Radio Dashboard</span>
+                  </Link>
+
+                  <Link
                     href="/audia"
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-purple-300 hover:text-white hover:bg-white/[0.06] transition-colors"
                   >
@@ -524,6 +533,14 @@ export function PublicNavbar() {
             )}
 
             <div className="grid grid-cols-2 gap-1.5">
+              <Link
+                href="/dashboard/radio"
+                onClick={() => setMobileMenuOpen(false)}
+                className="col-span-2 px-3 py-2 rounded-lg text-xs font-semibold text-purple-300 bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 flex items-center gap-2"
+              >
+                <Radio className="w-3.5 h-3.5 text-purple-400" />
+                <span>SyncInk Radio Dashboard</span>
+              </Link>
               <Link
                 href="/report"
                 onClick={() => setMobileMenuOpen(false)}

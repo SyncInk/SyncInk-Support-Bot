@@ -43,8 +43,8 @@ const FAQ_ITEMS = [
     a: "SyncInk Voice Bot creates an automated master generator hub. Whenever a member connects to the hub, the bot instantly spawns a dedicated temporary voice channel with full owner controls (/voice lock, /voice limit) and auto-deletes it when empty.",
   },
   {
-    q: "When will SyncInk Radio and Audia AI be publicly available?",
-    a: "SyncInk Radio and its embedded Audia AI intelligence engine are currently undergoing active pre-release development and closed testing on our official Discord server. We are fine-tuning our 10-point recommendation architecture, taste profiles, and high-bitrate streaming infrastructure before opening public invitations.",
+    q: "Is SyncInk Radio and Audia AI publicly available?",
+    a: "Yes! SyncInk Radio powered natively by Audia AI is officially released and publicly available. You can invite the bot to your Discord server or manage audio telemetry, station presets, and taste models directly via our web dashboard at syncink.site/dashboard/radio.",
   },
   {
     q: "Why is the Support & Security Bot non-invitable?",
@@ -523,9 +523,9 @@ export default function HomePage() {
                         <Sparkles className="w-3 h-3 text-purple-400" />
                         Powered by Audia AI
                       </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
-                        <Clock className="w-3 h-3 text-amber-400 animate-pulse" />
-                        Coming Soon
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm shadow-emerald-950/40">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Official Release
                       </span>
                       {/* Studio Lossless Audio SVG Indicator */}
                       <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/25 items-center gap-1.5">
@@ -559,15 +559,27 @@ export default function HomePage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
-                  <div className="flex-1 lg:flex-initial justify-center h-10 px-4 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 font-semibold text-xs flex items-center gap-2 select-none">
-                    <Clock className="w-3.5 h-3.5 text-purple-400" />
-                    <span>Coming Soon</span>
-                  </div>
+                  <a
+                    href="https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors flex items-center gap-2 active:scale-[0.98] shadow-md shadow-purple-900/30"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Invite Bot</span>
+                  </a>
+                  <Link
+                    href="/dashboard/radio"
+                    className="flex-1 lg:flex-initial justify-center h-10 px-4 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white font-semibold text-xs transition-colors border border-white/[0.08] flex items-center gap-2 active:scale-[0.98]"
+                  >
+                    <Radio className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Dashboard</span>
+                  </Link>
                   <Link
                     href="/audia"
-                    className="flex-1 lg:flex-initial justify-center h-10 px-4 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors flex items-center gap-2 active:scale-[0.98] shadow-md shadow-purple-900/30"
+                    className="flex-1 lg:flex-initial justify-center h-10 px-4 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/25 font-semibold text-xs transition-colors flex items-center gap-2 active:scale-[0.98]"
                   >
-                    <FileText className="w-3.5 h-3.5" />
+                    <FileText className="w-3.5 h-3.5 text-purple-400" />
                     <span>Audia AI Spec</span>
                   </Link>
                   <Link
@@ -582,9 +594,9 @@ export default function HomePage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hidden sm:inline-flex h-10 px-3.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-xs text-slate-400 hover:text-white items-center gap-1.5 transition-colors"
-                    title="Test pre-release on official server"
+                    title="Join the official Discord server"
                   >
-                    <span>Beta Discord</span>
+                    <span>Support Server</span>
                     <ExternalLink className="w-3 h-3 text-slate-500" />
                   </a>
                 </div>
