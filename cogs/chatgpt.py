@@ -130,7 +130,7 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "9. Discussion Channel: <#1520477097494057041> (General discussions, ideas, and debates)",
         "10. Feature Suggestions Channel: <#1546548728721178724> (Submit feature suggestions using `/feature_request` or `?feature_request` ONLY in <#1546548728721178724>)",
         "11. Official SyncInk Products Channel: <#1520461321689104486>",
-        "    - Public Service Bots (<@&1521166171523780688>): Ticket Bot (<@1513075101992747158>), Voice Bot (<@1516578887109181520>)",
+        "    - Public Service Bots (<@&1521166171523780688>): Ticket Bot (<@1513075101992747158>), Voice Bot (<@1516578887109181520>), SyncInk Radio (<@1500567606648897819>)",
         "    - Private Bot (<@&1520533971476156469>): SyncInk Security Bot (<@1520522990280769727>) - protects community from spam and deletes blacklisted messages",
         "12. General Chat: <#1520461481857122485> (The designated channel where members hang out, talk, and have casual conversation. All general talking belongs here!)",
         "13. Media Showcase Channel: <#1520461517093343232> (Share images, media, clips. STRICT NOTE: Any NSFW content will result in an immediate permanent ban!)",
@@ -214,6 +214,29 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "  - Unghost / Unhide: Reveal channel back on server list.",
         "  - Transfer: Transfer room ownership to another user.",
         "• Action Buttons: Load Settings, Refresh Panel, Dashboard.",
+        "",
+        "--- SYNCINK RADIO BOT & AUDIA AI KNOWLEDGE BASE ---",
+        "• Bot: SyncInk Radio (<@1500567606648897819>) - Official Public 24/7 High-Fidelity Music Streaming Bot",
+        "• Official OAuth2 Invite: https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands",
+        "• Web Dashboard: https://syncink.site/dashboard/radio",
+        "• Audia AI Specification: https://syncink.site/audia",
+        "• Role & Emoji Distinction (CRITICAL):",
+        "  - SyncInk AI Assistant (<:SyncInkAI:1549154093421826058>): The conversational assistant for server support, guides, rules, code, and general Q&A (?ask and /ask).",
+        "  - Audia AI (<:Audia_AI:1571879222908031078>): The proprietary audio intelligence & recommendation engine powering music playback, AutoPlay, and taste curation in SyncInk Radio.",
+        "• Audio Architecture:",
+        "  - Hardware-aligned 48kHz Opus stereo at 192kbps (direct extraction via format 251, eliminating CPU resampling).",
+        "  - Zero-buffer socket reconnection protocol for 24/7 uninterrupted streaming.",
+        "  - 1-second bi-directional WebSocket (/ws) live synchronization with the web dashboard.",
+        "• Audia AI AutoPlay & Taste Engine:",
+        "  - Memorizes every track listened to per member in a permanent taste profile catalog.",
+        "  - Tracks complete plays, full listens, early skip penalties (<30s), and queue deletions.",
+        "  - Category-wise AutoPlay recommendations across 9 genres: Bollywood Romantic, Punjabi Urban/Pop, Lo-Fi, K-Pop/J-Pop, Indie/Acoustic, Hip-Hop/Rap, Energetic/High BPM, EDM/Club, Fresh Discoveries.",
+        "  - When AutoPlay is enabled, the Queue view (?queue, /queue) previews upcoming songs predicted by Audia AI.",
+        "  - Interactive Like and Dislike feedback buttons train user and server taste models in real-time.",
+        "  - Smart title cleaner strips junk video metadata (official video, lyrical, Hindi promotional text) down to clean song title and main artist.",
+        "• Web Dashboard Features (syncink.site/dashboard/radio):",
+        "  - Server-side RBAC: only owner, admin, or configured DJ role can change volume caps, default channels, or 24/7 mode.",
+        "  - Live real-time audio visualizer, queue reordering, and track playback control.",
         "",
         "--- OFFICIAL SYNCINK SERVER ROLES (CATEGORY-WISE) ---",
         "• Leadership & Administration:",
@@ -445,6 +468,9 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
             "<:s_arrow:1558799699102793801> **Official Website & Defense Dashboard:** [syncink.site](https://syncink.site)\n"
             "<:s_arrow:1558799699102793801> **Community Rules:** [syncink.site/rules](https://syncink.site/rules)\n"
             "<:s_arrow:1558799699102793801> **Frequently Asked Questions (FAQ):** [syncink.site/faq](https://syncink.site/faq)\n"
+            "<:s_arrow:1558799699102793801> **SyncInk Radio Web Dashboard:** [syncink.site/dashboard/radio](https://syncink.site/dashboard/radio)\n"
+            "<:s_arrow:1558799699102793801> **Audia AI Product Specification:** [syncink.site/audia](https://syncink.site/audia)\n"
+            "<:s_arrow:1558799699102793801> **Invite SyncInk Radio:** [Discord Bot Invite](https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands)\n"
             "<:s_arrow:1558799699102793801> **Unified Legal Hub (Terms of Use):** [syncink.site/terms](https://syncink.site/terms)\n"
             "<:s_arrow:1558799699102793801> **Unified Data Policy (Privacy Policy):** [syncink.site/privacy](https://syncink.site/privacy)"
         )
@@ -520,13 +546,36 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
     if p in ("join to create", "create vc", "voice channel", "voice chat", "join vc", "where is vc", "how to join vc"):
         return "You can join <#1520749464569253998> to automatically generate your own temporary private voice channel."
 
+    # 9b. SyncInk Radio & Audia AI
+    if any(k in p for k in (
+        "syncink radio", "radio bot", "music bot", "audia ai", "audia",
+        "how to invite radio", "radio invite", "radio link", "radio dashboard",
+        "music dashboard", "audia autoplay", "radio commands"
+    )):
+        return (
+            "<:syncinkradio:1558804305044045844> **SyncInk Radio (<@1500567606648897819>) & Audia AI Engine**\n\n"
+            "SyncInk Radio is our official, public 24/7 high-fidelity music streaming bot powered by the **Audia AI** engine!\n\n"
+            "<:s_arrow:1558799699102793801> **Add to Your Server:** [Invite SyncInk Radio](https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands)\n"
+            "<:s_arrow:1558799699102793801> **Web Dashboard:** [syncink.site/dashboard/radio](https://syncink.site/dashboard/radio)\n"
+            "<:s_arrow:1558799699102793801> **Audia AI Specification:** [syncink.site/audia](https://syncink.site/audia)\n\n"
+            "**Key Capabilities & Architecture:**\n"
+            "• **Opus 48kHz Stereo:** Pristine 192kbps audio directly extracted with zero CPU resampling.\n"
+            "• **Audia AI AutoPlay (<:Audia_AI:1571879222908031078>):** Personal taste vectorization memorizing all played tracks, full listens, early skip penalties, and queue removals.\n"
+            "• **Category-Wise Recommendations:** 9 genres (Bollywood Romantic, Punjabi Urban, Lo-Fi, K-Pop, Indie, Hip-Hop, EDM, etc.) with strict language locking.\n"
+            "• **Up Next Queue Preview:** When AutoPlay is active, the queue shows upcoming Audia AI predictions.\n"
+            "• **Real-Time Web Dashboard:** Live WebSocket sync, audio visualizer, and server-side RBAC (Owner/Admin/DJ Role)."
+        )
+
     # 10. Official Products & Bots
     if any(k in p for k in ("official product", "official products", "what are your products", "what bots", "list of bots", "syncink bots", "product channel")):
         return (
             "You can explore all official SyncInk products and bots in <#1520461321689104486>:\n\n"
             "**Public Service Bots** (<@&1521166171523780688>):\n"
             "• **Ticket Bot** — <@1513075101992747158>\n"
-            "• **Voice Bot** — <@1516578887109181520>\n\n"
+            "• **Voice Bot** — <@1516578887109181520>\n"
+            "• **SyncInk Radio** — <@1500567606648897819> (24/7 High-Fidelity Music Bot powered by Audia AI)\n"
+            "  - Dashboard: [syncink.site/dashboard/radio](https://syncink.site/dashboard/radio)\n"
+            "  - Invite: [Add to Server](https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands)\n\n"
             "**Private Bot** (<@&1520533971476156469>):\n"
             "• **SyncInk Security Bot** — <@1520522990280769727>\n"
             "> *SyncInk Security protects the community from spam and deletes blacklisted messages.*"
@@ -1141,6 +1190,22 @@ class ChatGPT(commands.Cog):
             "   - Room Settings: Rename, Limit (0-99), Status topic, Game sync, LFM broadcast, Bitrate, Region, Text chat, NSFW, Claim.\n"
             "   - Room Permissions: Lock, Unlock, Permit, Reject, Invite, Ghost (hide), Unghost (reveal), Transfer.\n"
             "   - Buttons: Load Settings, Refresh Panel, Dashboard.\n"
+            "5b. **SYNCINK RADIO BOT & AUDIA AI ARCHITECTURE (CRITICAL)**:\n"
+            "   - **SyncInk Radio** (<@1500567606648897819>) is the official public high-fidelity music streaming bot by SyncInk.\n"
+            "   - **Invite Link:** [Invite SyncInk Radio](https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands)\n"
+            "   - **Web Dashboard:** [syncink.site/dashboard/radio](https://syncink.site/dashboard/radio)\n"
+            "   - **Audia AI Specification:** [syncink.site/audia](https://syncink.site/audia)\n"
+            "   - **EMOJI & ROLE SEPARATION (CRITICAL)**:\n"
+            "     • SyncInk AI Assistant (<:SyncInkAI:1549154093421826058>): The conversational assistant for server support, ?ask / /ask, and general intelligence.\n"
+            "     • Audia AI (<:Audia_AI:1571879222908031078>): The proprietary audio intelligence engine for music playback, AutoPlay, taste vectoring, and song curation.\n"
+            "   - **SyncInk Radio & Audia AI Features**:\n"
+            "     • 48kHz Opus stereo at 192kbps (direct extraction via format 251, eliminating CPU resampling).\n"
+            "     • Zero-buffer socket reconnection protocol for 24/7 uninterrupted streaming.\n"
+            "     • 1-second bi-directional WebSocket (/ws) live synchronization with the web dashboard at syncink.site/dashboard/radio.\n"
+            "     • Deep learning taste vectorization: memorizes every track played, counts full listens, tracks early skips (<30s) as penalty, and tracks queue deletions.\n"
+            "     • Category-wise AutoPlay recommendations across 9 genres: Punjabi Pop, Bollywood Romantic, Lo-Fi, K-Pop/J-Pop, Indie/Acoustic, Hip-Hop/Rap, Energetic/High BPM, EDM/Club, Fresh Discoveries.\n"
+            "     • When AutoPlay is enabled, the queue button/command reveals upcoming tracks curated by Audia AI.\n"
+            "     • Professional clean title extraction: automatically strips YouTube video clutter (official video, lyrical, Hindi promotional text) to display only Song Name and Main Artist.\n"
             "6. **SUPPORT SERVER RULES & WEBSITE DOCUMENTATION (<#1520460587522330634>)**:\n"
             "   - Rule 1: Verification Required (<#1520748219100041348>).\n"
             "   - Rule 2: Professional Conduct & Respect (No harassment, hate speech, bullying, toxicity).\n"
@@ -1156,6 +1221,8 @@ class ChatGPT(commands.Cog):
             "     • **Official Website & Defense Dashboard:** [syncink.site](https://syncink.site)\n"
             "     • **Community Rules:** [syncink.site/rules](https://syncink.site/rules)\n"
             "     • **Frequently Asked Questions (FAQ):** [syncink.site/faq](https://syncink.site/faq)\n"
+            "     • **SyncInk Radio Web Dashboard:** [syncink.site/dashboard/radio](https://syncink.site/dashboard/radio)\n"
+            "     • **Audia AI Product Specification:** [syncink.site/audia](https://syncink.site/audia)\n"
             "     • **Unified Legal Hub (Terms of Use):** [syncink.site/terms](https://syncink.site/terms)\n"
             "     • **Unified Data Policy (Privacy Policy):** [syncink.site/privacy](https://syncink.site/privacy)\n"
             "7. **CHARISMATIC & ENJOYABLE TONE FOR CASUAL INQUIRIES**:\n"

@@ -12,7 +12,7 @@ class Emojis:
 
     # Static application emojis (<:name:id>) verified via Discord CDN
     AUDIA_AI = "<:Audia_AI:1571879222908031078>"
-    AI = "<:Audia_AI:1571879222908031078>"
+    AI = "<:SyncInkAI:1549154093421826058>"
     CHATGPT = AI
     CONNECTION_GOOD = "<:goodconnection:1551311911948394697>"
     CONNECTION_MODERATE = "<:moderateconnection:1551311891173740644>"
@@ -120,7 +120,7 @@ class EmojiPartials:
 
     # Static partials
     AUDIA_AI = discord.PartialEmoji(name="Audia_AI", id=1571879222908031078, animated=False)
-    AI = discord.PartialEmoji(name="Audia_AI", id=1571879222908031078, animated=False)
+    AI = discord.PartialEmoji(name="SyncInkAI", id=1549154093421826058, animated=False)
     CHATGPT = AI
     CONNECTION_GOOD = discord.PartialEmoji(name="goodconnection", id=1551311911948394697, animated=False)
     CONNECTION_MODERATE = discord.PartialEmoji(name="moderateconnection", id=1551311891173740644, animated=False)

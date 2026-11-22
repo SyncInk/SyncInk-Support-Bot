@@ -69,6 +69,15 @@ MUSIC_CLUSTERS = {
             ("Tera Ban Jaunga", "Akhil Sachdeva, Tulsi Kumar"),
             ("Dil Sambhal Ja Zara", "Arijit Singh, Mohd Irfan"),
             ("Ilahi", "Arijit Singh, Pritam"),
+            ("Satranga", "Arijit Singh, Sachin-Jigar"),
+            ("Pehle Bhi Main", "Vishal Mishra, Raj Shekhar"),
+            ("Ve Kamleya", "Arijit Singh, Shreya Ghoshal, Pritam"),
+            ("Tere Hawaale", "Arijit Singh, Shilpa Rao, Pritam"),
+            ("O Saathi", "Atif Aslam, Arko"),
+            ("Heeriye", "Jasleen Royal, Arijit Singh"),
+            ("Chaleya", "Arijit Singh, Shilpa Rao, Anirudh"),
+            ("Apna Mujhe Tu Laga", "Sonu Nigam"),
+            ("Main Rang Sharbaton Ka", "Atif Aslam, Chinmayi Sripaada"),
         ]
     },
     "hindi_indie_acoustic": {
@@ -103,6 +112,14 @@ MUSIC_CLUSTERS = {
             ("Bikhra", "Abdul Hannan, Rovalio"),
             ("Iraaday", "Abdul Hannan, Rovalio"),
             ("Dooriyan", "Zaeden"),
+            ("Jo Tum Mere Ho", "Anuv Jain"),
+            ("Faasle", "Aditya Rikhari"),
+            ("Samjho Na", "Aditya Rikhari"),
+            ("Tu Hai Kahan", "AUR"),
+            ("Kasoor (Acoustic)", "Prateek Kuhad"),
+            ("Teri Hogaiyaan", "Vishal Mishra"),
+            ("Bulleya (Acoustic)", "Papon"),
+            ("Kho Gaye Hum Kahan", "Jasleen Royal, Prateek Kuhad"),
         ]
     },
     "punjabi_hits": {
@@ -137,6 +154,16 @@ MUSIC_CLUSTERS = {
             ("Elevated", "Shubh"),
             ("Mexico", "Karan Aujla"),
             ("Off Course", "Karan Aujla"),
+            ("Still Rollin", "Shubh"),
+            ("Admirin' You", "Karan Aujla, Preston Pablo"),
+            ("Dil Nu", "AP Dhillon"),
+            ("One Love", "Shubh"),
+            ("King Shit", "Shubh"),
+            ("You & Me", "Shubh"),
+            ("Antidote", "Karan Aujla"),
+            ("52 Bars", "Karan Aujla, Ikky"),
+            ("Tauba Tauba", "Karan Aujla"),
+            ("Case", "Diljit Dosanjh"),
         ]
     },
     "lofi_chill": {

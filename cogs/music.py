@@ -119,11 +119,11 @@ def build_now_playing_embed(queue: GuildMusicQueue) -> discord.Embed:
     elif queue.autoplay:
         if getattr(queue, "prefetched_autoplay_track", None):
             pref = queue.prefetched_autoplay_track
-            up_next = f"{Emojis.AI} **Audia AI AutoPlay Next:** [{pref.clean_title}]({pref.url}) • *{pref.author}*"
+            up_next = f"{Emojis.AUDIA_AI} **Audia AI AutoPlay Next:** [{pref.clean_title}]({pref.url}) • *{pref.author}*"
         elif getattr(queue, "last_autoplay_meta", None):
-            up_next = f"{Emojis.AI} **Audia AI AutoPlay Active** (`{queue.last_autoplay_meta.get('genre', 'Smart Selection')}`)"
+            up_next = f"{Emojis.AUDIA_AI} **Audia AI AutoPlay Active** (`{queue.last_autoplay_meta.get('genre', 'Smart Selection')}`)"
         else:
-            up_next = f"{Emojis.AI} **Audia AI AutoPlay:** Intelligently matching upcoming tracks..."
+            up_next = f"{Emojis.AUDIA_AI} **Audia AI AutoPlay:** Intelligently matching upcoming tracks..."
     elif (current.is_radio or current.platform == "radio") and queue.active_radio_station:
         up_next = f"{Emojis.RADIO} **24/7 Continuous Radio Station**"
     else:
@@ -258,7 +258,7 @@ class MusicPlayerLayoutView(discord.ui.LayoutView):
         req_id = current.requested_by.id if (current.requested_by and hasattr(current.requested_by, "id")) else 1520522990280769727
         if self.queue.autoplay and getattr(self.queue, "last_autoplay_meta", None):
             genre_tag = self.queue.last_autoplay_meta.get("genre", "Smart Selection")
-            footer_text = f"-# {Emojis.AI} Audia AI AutoPlay Active (`{genre_tag}`) • Rate with {Emojis.LIKE} or {Emojis.DISLIKE}"
+            footer_text = f"-# {Emojis.AUDIA_AI} Audia AI AutoPlay Active (`{genre_tag}`) • Rate with {Emojis.LIKE} or {Emojis.DISLIKE}"
         else:
             footer_text = f"-# {Emojis.MEMBER} Track requested by <@{req_id}>"
         footer = discord.ui.TextDisplay(footer_text)
@@ -1254,9 +1254,9 @@ class AutoPlayFeedbackView(discord.ui.View):
         AutoPlayService.get_instance().trigger_prefetch(self.queue, self.music_cog.service)
         try:
             await interaction.response.edit_message(view=self)
-            await interaction.followup.send(f"{Emojis.AI} {msg}", ephemeral=True)
+            await interaction.followup.send(f"{Emojis.AUDIA_AI} {msg}", ephemeral=True)
         except Exception:
-            await interaction.response.send_message(f"{Emojis.AI} {msg}", ephemeral=True)
+            await interaction.response.send_message(f"{Emojis.AUDIA_AI} {msg}", ephemeral=True)
 
     @discord.ui.button(label="Discover", emoji="✨", style=discord.ButtonStyle.secondary, custom_id="ap_btn_discover")
     async def on_discover(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -1275,7 +1275,7 @@ class AutoPlayFeedbackView(discord.ui.View):
         self.queue.prefetched_autoplay_meta = None
         AutoPlayService.get_instance().trigger_prefetch(self.queue, self.music_cog.service)
         await interaction.response.send_message(
-            f"{Emojis.AI} AutoPlay Discovery mode switched to **{mode_desc}**.",
+            f"{Emojis.AUDIA_AI} AutoPlay Discovery mode switched to **{mode_desc}**.",
             ephemeral=True
         )
 
@@ -1606,7 +1606,7 @@ class AutoPlayControlCenterView(discord.ui.LayoutView):
             await interaction.response.edit_message(view=self)
         except Exception:
             await interaction.response.edit_message(embed=self.build_embed(), view=self)
-        await interaction.followup.send(f"{Emojis.AI} AutoPlay is now **{status}**.", ephemeral=True)
+        await interaction.followup.send(f"{Emojis.AUDIA_AI} AutoPlay is now **{status}**.", ephemeral=True)
 
     async def on_block_artist(self, interaction: discord.Interaction):
         await interaction.response.send_modal(AutoPlayBlockArtistModal(self.music_cog, self.user.id))
@@ -3107,7 +3107,7 @@ class Music(commands.Cog):
             queue.autoplay = True
             AutoPlayService.get_instance().trigger_prefetch(queue, self.service)
             embed = discord.Embed(
-                description=f"### {Emojis.AI} Audia AI AutoPlay is now **ENABLED**.\nAudia AI by SyncInk will seamlessly recommend matching tracks as your queue finishes.",
+                description=f"### {Emojis.AUDIA_AI} Audia AI AutoPlay is now **ENABLED**.\nAudia AI by SyncInk will seamlessly recommend matching tracks as your queue finishes.",
                 color=BRAND_COLOR
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -3476,7 +3476,7 @@ class Music(commands.Cog):
             if m in ("on", "true", "enable", "1"):
                 queue.autoplay = True
                 AutoPlayService.get_instance().trigger_prefetch(queue, self.service)
-                await ctx.send(f"{Emojis.AI} Audia AI AutoPlay is now **ENABLED**.", delete_after=5)
+                await ctx.send(f"{Emojis.AUDIA_AI} Audia AI AutoPlay is now **ENABLED**.", delete_after=5)
             elif m in ("off", "false", "disable", "0"):
                 queue.autoplay = False
                 queue.prefetched_autoplay_track = None
@@ -3490,7 +3490,7 @@ class Music(commands.Cog):
                     queue.prefetched_autoplay_track = None
                     queue.prefetched_autoplay_meta = None
                 status = "ENABLED" if queue.autoplay else "DISABLED"
-                await ctx.send(f"{Emojis.AI} Audia AI AutoPlay is now **{status}**.", delete_after=5)
+                await ctx.send(f"{Emojis.AUDIA_AI} Audia AI AutoPlay is now **{status}**.", delete_after=5)
             if ctx.message:
                 asyncio.create_task(_delayed_delete_msg(ctx.message, 5))
         else:
