@@ -310,27 +310,24 @@ export default function RadioDashboardPage() {
         {/* ========================================================= */}
         {/* TOP COMMAND HEADER */}
         {/* ========================================================= */}
-        <div className="relative rounded-3xl bg-gradient-to-br from-[#120a22]/90 via-[#0b0818]/90 to-[#070512]/90 border border-purple-500/25 p-6 sm:p-8 lg:p-10 shadow-[0_8px_40px_rgba(168,85,247,0.15)] overflow-hidden">
-          {/* Ambient top light */}
-          <div className="absolute -top-32 -right-32 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
-
+        <div className="relative rounded-xl bg-[#0c0f18] border border-white/[0.08] p-6 sm:p-8 lg:p-10 overflow-hidden">
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-start sm:items-center gap-5">
               {/* Radio Bot Logo */}
               <div className="relative shrink-0">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-[#080512] border-2 border-purple-500/40 p-1.5 flex items-center justify-center overflow-hidden shadow-[0_0_35px_rgba(168,85,247,0.35)] ring-1 ring-purple-400/30">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-[#101420] border border-white/[0.08] p-1.5 flex items-center justify-center overflow-hidden">
                   <Image
                     src="/radio-logo.png"
                     alt="SyncInk Radio Official Logo"
-                    width={96}
-                    height={96}
-                    className="w-full h-full object-contain rounded-2xl select-none"
+                    width={80}
+                    height={80}
+                    className="w-full h-full object-contain rounded-lg select-none"
                     priority
                   />
                 </div>
-                <div className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-md bg-purple-950/95 border border-purple-400/40 backdrop-blur-md flex items-center gap-1.5 shadow-md">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[10px] font-mono font-bold text-purple-200">OPUS 48K</span>
+                <div className="absolute -bottom-1 -right-1 px-1.5 py-0.2 rounded bg-[#090810] border border-white/10 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-[9px] font-mono font-medium text-slate-300">OPUS</span>
                 </div>
               </div>
 

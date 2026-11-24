@@ -1295,10 +1295,9 @@ export default function AudiaSpecPage() {
                   </tr>
                   <tr>
                     <td className="py-3 px-4 font-semibold text-white whitespace-nowrap">Command Namespace</td>
-                    <td className="py-3 px-4 text-[#A1A4B8]">Legacy /dj command triggers</td>
+                    <td className="py-3 px-4 text-[#A1A4B8]">Dedicated /audia command architecture</td>
                     <td className="py-3 px-4 text-purple-200 font-medium">
-                      Primary <code className="text-purple-300 font-bold bg-black/40 px-1.5 py-0.5 rounded border border-purple-500/30">/audia</code> commands with full{" "}
-                      <code className="text-[#F8F8FC] font-mono bg-black/40 px-1.5 py-0.5 rounded border border-white/10">/dj</code> alias compatibility
+                      Native <code className="text-purple-300 font-bold bg-black/40 px-1.5 py-0.5 rounded border border-purple-500/30">/audia</code> suite for taste vectorization and autoplay controls
                     </td>
                   </tr>
                   <tr>

@@ -72,14 +72,14 @@ function FeatureItem({
 }) {
   const [iconBg, iconColor] = accentClass.split(" ");
   return (
-    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-colors space-y-2">
+    <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.1] transition-colors space-y-1.5">
       <div className="flex items-center gap-2.5">
-        <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
-          <Icon className={`w-4 h-4 ${iconColor}`} />
+        <div className={`w-7 h-7 rounded-md ${iconBg} flex items-center justify-center shrink-0`}>
+          <Icon className={`w-3.5 h-3.5 ${iconColor}`} />
         </div>
-        <span className="font-semibold text-sm text-white">{title}</span>
+        <span className="font-medium text-sm text-white">{title}</span>
       </div>
-      <p className="text-xs text-slate-400 leading-relaxed pl-[42px]">{description}</p>
+      <p className="text-xs text-slate-400 leading-relaxed pl-[38px]">{description}</p>
     </div>
   );
 }
@@ -202,30 +202,26 @@ export default function HomePage() {
            ═════════════════════════════════════════════════════════════ */}
         <section className="pt-20 sm:pt-28 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
           <div className="text-center">
-            <h1 className="text-3xl sm:text-5xl lg:text-[3.5rem] font-black text-white tracking-tight leading-[1.12] max-w-3xl mx-auto mb-5">
-              Discord Infrastructure
-              <br className="hidden sm:block" />
-              <span className="text-blue-400"> Built for Performance</span>
+            <h1 className="text-3xl sm:text-5xl lg:text-[3.25rem] font-semibold text-white tracking-tight leading-[1.14] max-w-3xl mx-auto mb-4">
+              Discord infrastructure engineered for high-velocity communities
             </h1>
 
-            <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto leading-relaxed mb-8">
-              Private-thread ticket systems, dynamic temporary voice channels,
-              intelligent 24/7 AI radio streaming, and a dedicated support server security shield — engineered for
-              high-velocity communities.
+            <p className="text-sm sm:text-base text-slate-400 max-w-xl mx-auto leading-relaxed mb-8">
+              Private-thread ticketing, ephemeral voice generation, 24/7 lossless radio streaming with Audia AI, and autonomous support server defense.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-3">
               <a
                 href="#bots"
-                className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-colors flex items-center gap-2 active:scale-[0.98]"
+                className="h-10 px-5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm transition-colors flex items-center gap-2"
               >
-                <span>Explore Bots</span>
-                <ChevronRight className="w-4 h-4" />
+                <span>Explore bots</span>
+                <ChevronRight className="w-4 h-4 text-blue-200" />
               </a>
 
               <Link
                 href="/dashboard"
-                className="h-11 px-6 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-200 font-semibold text-sm transition-colors border border-white/[0.08] flex items-center gap-2 active:scale-[0.98]"
+                className="h-10 px-5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 font-medium text-sm transition-colors border border-white/[0.08] flex items-center gap-2"
               >
                 <Layers className="w-4 h-4 text-slate-400" />
                 <span>Console</span>
@@ -237,30 +233,31 @@ export default function HomePage() {
         {/* ═════════════════════════════════════════════════════════════
            SYSTEM & SHIELD STATUS (Live real-time polling)
            ═════════════════════════════════════════════════════════════ */}
-        <section className="px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto mb-20">
-          <div ref={statusSectionRef} className="p-5 sm:p-6 rounded-2xl bg-surface border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+        <section className="px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto mb-16">
+          <div ref={statusSectionRef} className="p-5 sm:p-6 rounded-xl bg-[#0c0f18] border border-white/[0.08]">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-5 border-b border-white/[0.06]">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
-                  <Activity className="w-4.5 h-4.5" />
+                <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300 shrink-0">
+                  <Activity className="w-4 h-4 text-blue-400" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-white text-sm sm:text-base">Support Server Status</h3>
-                  <p className="text-xs text-slate-400">Live operational health &amp; defense status from active bot instances</p>
+                  <h3 className="font-semibold text-white text-sm">Support server telemetry</h3>
+                  <p className="text-xs text-slate-400">Live operational metrics &amp; defense state from active bot instances</p>
                 </div>
               </div>
               <LivePulseBadge label={securityData.raidState === "NORMAL" ? "Operational" : "Threat Detected"} />
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5">
-              {/* Threat Level — Subtle Status Reveal Transition */}
-              <div className="text-center p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4">
+              {/* Threat Level */}
+              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                <div className="text-[11px] text-slate-400 font-mono mb-1">Threat level</div>
                 <motion.div
                   key={securityData.raidState}
                   initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className={`text-lg sm:text-2xl font-black ${
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className={`text-lg sm:text-xl font-mono font-semibold ${
                     securityData.raidState === "NORMAL"
                       ? "text-emerald-400"
                       : "text-red-400"
@@ -268,12 +265,12 @@ export default function HomePage() {
                 >
                   {securityData.raidState === "NORMAL" ? "SECURE" : securityData.raidState}
                 </motion.div>
-                <div className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Threat Level</div>
               </div>
 
-              {/* Mod Cases — Stagger 0ms */}
-              <div className="text-center p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <div className="text-lg sm:text-2xl font-black text-white">
+              {/* Mod Cases */}
+              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                <div className="text-[11px] text-slate-400 font-mono mb-1">Mod cases</div>
+                <div className="text-lg sm:text-xl font-mono font-semibold text-white tabular-nums">
                   <AnimatedCounter
                     value={securityData.modCasesCount}
                     delay={0}
@@ -281,12 +278,12 @@ export default function HomePage() {
                     enabled={isCountersActive}
                   />
                 </div>
-                <div className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Mod Cases</div>
               </div>
 
-              {/* Quarantined — Stagger 150ms */}
-              <div className="text-center p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <div className="text-lg sm:text-2xl font-black text-white">
+              {/* Quarantined */}
+              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                <div className="text-[11px] text-slate-400 font-mono mb-1">Quarantined</div>
+                <div className="text-lg sm:text-xl font-mono font-semibold text-white tabular-nums">
                   <AnimatedCounter
                     value={securityData.jailedCount}
                     delay={150}
@@ -294,12 +291,12 @@ export default function HomePage() {
                     enabled={isCountersActive}
                   />
                 </div>
-                <div className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Quarantined</div>
               </div>
 
-              {/* Incidents — Stagger 300ms */}
-              <div className="text-center p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <div className="text-lg sm:text-2xl font-black text-white">
+              {/* Incidents */}
+              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                <div className="text-[11px] text-slate-400 font-mono mb-1">Incidents</div>
+                <div className="text-lg sm:text-xl font-mono font-semibold text-white tabular-nums">
                   <AnimatedCounter
                     value={securityData.incidentCount}
                     delay={300}
@@ -307,7 +304,6 @@ export default function HomePage() {
                     enabled={isCountersActive}
                   />
                 </div>
-                <div className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Incidents</div>
               </div>
             </div>
           </div>
@@ -318,37 +314,37 @@ export default function HomePage() {
            ═════════════════════════════════════════════════════════════ */}
         <section id="bots" className="px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-12 pb-20">
           <div className="text-center mb-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">Bot Suite</p>
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Four bots. One ecosystem.
+            <p className="text-xs font-mono uppercase tracking-wider text-slate-400 mb-1">Ecosystem</p>
+            <h2 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">
+              Four bots. One coordinated platform.
             </h2>
           </div>
 
           {/* ─── BOT 1: TICKET BOT ─────────────────────────────────── */}
-          <div className="rounded-2xl bg-surface border border-white/[0.06] hover:border-blue-500/30 transition-all duration-200 overflow-hidden">
-            <div className="p-6 sm:p-8 lg:p-10">
+          <div className="rounded-xl bg-[#0c0f18] border border-white/[0.08] transition-colors overflow-hidden">
+            <div className="p-6 sm:p-8">
               {/* Header row */}
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
                 <div className="flex items-start sm:items-center gap-4">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 overflow-hidden">
+                  <div className="w-14 h-14 rounded-xl bg-[#101420] border border-white/[0.08] flex items-center justify-center shrink-0 overflow-hidden">
                     <img
                       src="/ticket-logo.png"
                       alt="SyncInk Ticket Bot"
-                      className="w-10 h-10 sm:w-12 sm:h-12 object-contain rounded-xl"
+                      className="w-10 h-10 sm:w-11 sm:h-11 object-contain rounded-lg"
                       onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
                     />
                   </div>
                   <div>
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/15">
-                        Support Tickets
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        Support tickets
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/[0.04] text-slate-300 border border-white/[0.06]">
-                        Private Threads
+                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.04] text-slate-300 border border-white/[0.06]">
+                        Private threads
                       </span>
                     </div>
-                    <h3 className="text-xl sm:text-2xl font-black text-white">SyncInk Ticket Bot</h3>
-                    <p className="text-sm text-slate-300 mt-1 max-w-lg leading-relaxed">
+                    <h3 className="text-xl sm:text-2xl font-semibold text-white">SyncInk Ticket Bot</h3>
+                    <p className="text-sm text-slate-400 mt-1 max-w-lg leading-relaxed">
                       Private-thread ticket isolation, intelligent claim system, automated transcripts, and role-based access — one seamless workflow.
                     </p>
                   </div>
@@ -359,14 +355,14 @@ export default function HomePage() {
                     href="https://discord.com/oauth2/authorize?client_id=1513075101992747158&permissions=361046068240&integration_type=0&scope=bot+applications.commands"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-colors flex items-center gap-2 active:scale-[0.98]"
+                    className="flex-1 lg:flex-initial justify-center h-9 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition-colors flex items-center gap-2"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Invite Bot</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-blue-200" />
+                    <span>Invite bot</span>
                   </a>
                   <Link
                     href="/dashboard/tickets"
-                    className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-semibold text-xs transition-colors border border-white/[0.06] flex items-center gap-2 active:scale-[0.98]"
+                    className="flex-1 lg:flex-initial justify-center h-9 px-4 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-medium text-xs transition-colors border border-white/[0.08] flex items-center gap-2"
                   >
                     <span>Dashboard</span>
                   </Link>
@@ -375,7 +371,7 @@ export default function HomePage() {
 
               {/* Category tags */}
               <div className="pt-5 pb-4">
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Customizable Categories</p>
+                <p className="text-[11px] font-mono text-slate-400 uppercase tracking-wider mb-2.5">Customizable categories</p>
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     { name: "General Request", id: "1513336781263732836" },
@@ -425,29 +421,29 @@ export default function HomePage() {
           </div>
 
           {/* ─── BOT 2: VOICE BOT ──────────────────────────────────── */}
-          <div className="rounded-2xl bg-surface border border-white/[0.06] hover:border-cyan-500/30 transition-all duration-200 overflow-hidden">
-            <div className="p-6 sm:p-8 lg:p-10">
+          <div className="rounded-xl bg-[#0c0f18] border border-white/[0.08] transition-colors overflow-hidden">
+            <div className="p-6 sm:p-8">
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
                 <div className="flex items-start sm:items-center gap-4">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0 overflow-hidden">
+                  <div className="w-14 h-14 rounded-xl bg-[#101420] border border-white/[0.08] flex items-center justify-center shrink-0 overflow-hidden">
                     <img
                       src="/voice-logo.png"
                       alt="SyncInk Voice Bot"
-                      className="w-10 h-10 sm:w-12 sm:h-12 object-contain rounded-xl"
+                      className="w-10 h-10 sm:w-11 sm:h-11 object-contain rounded-lg"
                       onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
                     />
                   </div>
                   <div>
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/15">
-                        Voice Channels
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                        Voice channels
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/[0.04] text-slate-300 border border-white/[0.06]">
-                        Auto-Generator
+                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/[0.04] text-slate-300 border border-white/[0.06]">
+                        Auto-generator
                       </span>
                     </div>
-                    <h3 className="text-xl sm:text-2xl font-black text-white">SyncInk Voice Bot</h3>
-                    <p className="text-sm text-slate-300 mt-1 max-w-lg leading-relaxed">
+                    <h3 className="text-xl sm:text-2xl font-semibold text-white">SyncInk Voice Bot</h3>
+                    <p className="text-sm text-slate-400 mt-1 max-w-lg leading-relaxed">
                       Dynamic temporary voice channel manager. Users click a generator hub to create a room with custom naming, user limits, and instant cleanup when empty.
                     </p>
                   </div>
@@ -458,14 +454,14 @@ export default function HomePage() {
                     href="https://discord.com/oauth2/authorize?client_id=1516578887109181520&permissions=285220880&integration_type=0&scope=bot+applications.commands"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition-colors flex items-center gap-2 active:scale-[0.98]"
+                    className="flex-1 lg:flex-initial justify-center h-9 px-4 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs transition-colors flex items-center gap-2"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Invite Bot</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-cyan-200" />
+                    <span>Invite bot</span>
                   </a>
                   <Link
                     href="/dashboard"
-                    className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-semibold text-xs transition-colors border border-white/[0.06] flex items-center gap-2 active:scale-[0.98]"
+                    className="flex-1 lg:flex-initial justify-center h-9 px-4 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-medium text-xs transition-colors border border-white/[0.08] flex items-center gap-2"
                   >
                     <span>Dashboard</span>
                   </Link>
@@ -496,123 +492,100 @@ export default function HomePage() {
           </div>
 
           {/* ─── BOT 3: SYNCINK RADIO (POWERED BY AUDIA AI) ────────────────── */}
-          <div className="rounded-2xl bg-surface border border-white/[0.06] hover:border-purple-500/30 transition-all duration-200 overflow-hidden relative">
-            {/* Subtle purple gradient ambient accent in top-right */}
-            <div className="absolute -top-24 -right-24 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="p-6 sm:p-8 lg:p-10 relative z-10">
+          <div className="rounded-xl bg-[#0c0f18] border border-white/[0.08] transition-colors overflow-hidden">
+            <div className="p-6 sm:p-8">
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
                 <div className="flex items-start sm:items-center gap-4">
                   <div className="relative group/avatar shrink-0">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#0b0816] border-2 border-purple-500/40 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-[0_0_30px_rgba(168,85,247,0.35)] ring-1 ring-purple-400/20 group-hover/avatar:border-purple-400/60 transition-all duration-300">
+                    <div className="w-14 h-14 rounded-xl bg-[#101420] border border-white/[0.08] p-1 flex items-center justify-center shrink-0 overflow-hidden">
                       <img
                         src="/radio-logo.png"
                         alt="SyncInk Radio Official Logo"
-                        className="w-full h-full object-contain rounded-xl select-none"
+                        className="w-full h-full object-contain rounded-lg select-none"
                       />
                     </div>
-                    {/* Live Opus Audio Stream Indicator with SVG Equalizer Bars */}
-                    <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-md bg-purple-950/95 border border-purple-400/40 backdrop-blur-md flex items-center gap-1 shadow-md">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-[9px] font-mono font-bold text-purple-200">OPUS</span>
+                    {/* Live Opus Audio Stream Indicator */}
+                    <div className="absolute -bottom-1 -right-1 px-1.5 py-0.2 rounded bg-[#090810] border border-white/10 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      <span className="text-[9px] font-mono font-medium text-slate-300">OPUS</span>
                     </div>
                   </div>
                   <div>
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1.5 shadow-sm shadow-purple-950/40">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20 flex items-center gap-1.5">
                         <Sparkles className="w-3 h-3 text-purple-400" />
                         Powered by Audia AI
                       </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm shadow-emerald-950/40">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        Official Release
+                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Official release
                       </span>
-                      {/* Studio Lossless Audio SVG Indicator */}
-                      <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-300 border border-purple-500/25 items-center gap-1.5">
-                        <svg className="w-3.5 h-3 text-purple-400" viewBox="0 0 16 12" fill="currentColor">
-                          <rect x="0" y="4" width="2" height="5" rx="1" className="animate-pulse" />
-                          <rect x="3.5" y="1" width="2" height="11" rx="1" style={{ animation: "pulse 1.1s ease-in-out infinite 0.2s" }} />
-                          <rect x="7" y="0" width="2" height="12" rx="1" style={{ animation: "pulse 0.85s ease-in-out infinite 0.4s" }} />
-                          <rect x="10.5" y="2" width="2" height="9" rx="1" style={{ animation: "pulse 1.3s ease-in-out infinite 0.1s" }} />
-                          <rect x="14" y="5" width="2" height="4" rx="1" className="animate-pulse" />
-                        </svg>
-                        48kHz Lossless Opus
+                      <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[11px] font-mono text-slate-400 bg-white/[0.04] border border-white/[0.06]">
+                        48kHz Opus
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2.5">
-                      <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">SyncInk Radio</h3>
+                      <h3 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">SyncInk Radio</h3>
                       <span className="text-slate-600 hidden sm:inline">•</span>
-                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/50 border border-purple-500/30 shadow-inner">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Engine:</span>
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.08]">
+                        <span className="text-[10px] text-slate-400 font-mono uppercase">Engine:</span>
                         <img
-                          src="/audia-ai-logo.png"
+                          src="/audia-symbol.png"
                           alt="Audia AI"
-                          className="h-3.5 sm:h-4 object-contain brightness-110"
+                          className="w-3.5 h-3.5 object-contain"
                         />
+                        <span className="text-xs font-medium text-white">Audia AI</span>
                       </div>
                     </div>
-                    <p className="text-sm text-slate-300 mt-1 max-w-xl leading-relaxed">
-                      Next-generation 24/7 high-fidelity music streaming bot for Discord, powered natively by{" "}
-                      <span className="text-white font-semibold">Audia AI</span>. Seamlessly learns personal listener taste vectors, executes continuous AutoPlay, and enforces strict zero-bleed acoustic and language isolation.
+                    <p className="text-sm text-slate-400 mt-1 max-w-xl leading-relaxed">
+                      24/7 lossless music streaming for Discord powered natively by{" "}
+                      <span className="text-white font-medium">Audia AI</span>. Learns personal listener taste vectors, executes continuous AutoPlay, and enforces strict zero-bleed acoustic isolation.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+                <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
                   <a
                     href="https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors flex items-center gap-2 active:scale-[0.98] shadow-md shadow-purple-900/30"
+                    className="flex-1 lg:flex-initial justify-center h-9 px-4 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs transition-colors flex items-center gap-2"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Invite Bot</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-purple-200" />
+                    <span>Invite bot</span>
                   </a>
                   <Link
                     href="/dashboard/radio"
-                    className="flex-1 lg:flex-initial justify-center h-10 px-4 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white font-semibold text-xs transition-colors border border-white/[0.08] flex items-center gap-2 active:scale-[0.98]"
+                    className="flex-1 lg:flex-initial justify-center h-9 px-3.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 font-medium text-xs transition-colors border border-white/[0.08] flex items-center gap-1.5"
                   >
                     <Radio className="w-3.5 h-3.5 text-purple-400" />
                     <span>Dashboard</span>
                   </Link>
                   <Link
                     href="/audia"
-                    className="flex-1 lg:flex-initial justify-center h-10 px-4 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/25 font-semibold text-xs transition-colors flex items-center gap-2 active:scale-[0.98]"
+                    className="flex-1 lg:flex-initial justify-center h-9 px-3.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 font-medium text-xs transition-colors flex items-center gap-1.5"
                   >
                     <FileText className="w-3.5 h-3.5 text-purple-400" />
-                    <span>Audia AI Spec</span>
+                    <span>Spec</span>
                   </Link>
                   <Link
                     href="/updates"
-                    className="flex-1 lg:flex-initial justify-center h-10 px-4 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-semibold text-xs transition-colors border border-white/[0.06] flex items-center gap-2 active:scale-[0.98]"
+                    className="flex-1 lg:flex-initial justify-center h-9 px-3.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-medium text-xs transition-colors border border-white/[0.06] flex items-center gap-1.5"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
                     <span>Changelog</span>
                   </Link>
-                  <a
-                    href="https://discord.gg/PmxfJwmQuB"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hidden sm:inline-flex h-10 px-3.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-xs text-slate-400 hover:text-white items-center gap-1.5 transition-colors"
-                    title="Join the official Discord server"
-                  >
-                    <span>Support Server</span>
-                    <ExternalLink className="w-3 h-3 text-slate-500" />
-                  </a>
                 </div>
               </div>
 
               {/* Audia AI Embedded Engine Rack with Live Studio Telemetry */}
-              <div className="my-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#140b22]/90 via-[#0d0918]/90 to-[#120a24]/90 border border-purple-500/25 relative overflow-hidden shadow-lg">
-                <div className="absolute top-0 right-1/4 w-60 h-20 bg-purple-500/10 blur-2xl pointer-events-none" />
-
-                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-xl bg-purple-500/15 border border-purple-500/30 p-1.5 flex items-center justify-center shrink-0 shadow-inner">
+              <div className="my-5 p-4 rounded-xl bg-[#090812] border border-white/[0.08]">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-lg bg-[#141224] border border-white/[0.12] p-1.5 flex items-center justify-center shrink-0">
                       <img
                         src="/audia-symbol.png"
                         alt="Audia AI Logo"
-                        className="w-full h-full object-contain select-none filter drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]"
+                        className="w-full h-full object-contain select-none"
                         onError={(e) => {
                           (e.currentTarget as HTMLImageElement).src = "https://cdn.discordapp.com/emojis/1571879222908031078.png";
                         }}
@@ -620,8 +593,8 @@ export default function HomePage() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-white">Audia AI Engine</span>
-                        <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        <span className="text-sm font-semibold text-white">Audia AI Engine</span>
+                        <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
                           v1.0 Core
                         </span>
                       </div>
@@ -631,74 +604,41 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 self-stretch md:self-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-white/[0.06]">
+                  <div className="flex flex-wrap items-center gap-2.5 self-stretch md:self-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-white/[0.06]">
                     <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                      <span className="text-[11px] text-slate-400">Commands:</span>
-                      <code className="text-purple-300 font-bold bg-black/60 px-2 py-0.5 rounded-md border border-purple-500/30 text-[11px]">/audia</code>
-                      <code className="text-slate-400 bg-black/40 px-1.5 py-0.5 rounded-md border border-white/10 text-[11px]">/dj</code>
+                      <span className="text-[11px] font-mono text-slate-400">Commands:</span>
+                      <code className="text-purple-300 font-mono bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.08] text-[11px]">/audia</code>
                     </div>
                     <Link
                       href="/audia"
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-purple-300 hover:text-white transition-colors bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 px-2.5 py-1 rounded-lg"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-purple-300 hover:text-white transition-colors bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 px-2.5 py-1 rounded-lg"
                     >
-                      <span>Engine Architecture</span>
+                      <span>Engine architecture</span>
                       <ArrowRight className="w-3 h-3" />
                     </Link>
                   </div>
                 </div>
 
-                {/* Real-Time Studio Telemetry Metrics with Custom SVG Symbols */}
-                <div className="mt-4 pt-3.5 border-t border-white/[0.06] grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-black/30 border border-white/[0.04]">
-                    <svg className="w-3.5 h-3.5 text-purple-400 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                      <rect x="2" y="9" width="3" height="6" rx="1.5" />
-                      <rect x="8" y="4" width="3" height="16" rx="1.5" />
-                      <rect x="14" y="7" width="3" height="10" rx="1.5" />
-                      <rect x="20" y="10" width="3" height="4" rx="1.5" />
-                    </svg>
-                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase font-mono">Audio Format</div>
-                      <div className="font-semibold text-slate-200">Opus 48kHz Stereo</div>
-                    </div>
+                {/* Real-Time Studio Telemetry Metrics */}
+                <div className="mt-3.5 pt-3.5 border-t border-white/[0.06] grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                    <div className="text-[10px] text-slate-500 font-mono uppercase">Audio format</div>
+                    <div className="font-mono text-xs font-medium text-slate-200 mt-0.5">Opus 48kHz Stereo</div>
                   </div>
 
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-black/30 border border-white/[0.04]">
-                    <svg className="w-3.5 h-3.5 text-fuchsia-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                      <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.26-8-12.355-8-5.096 0-5.096 8 0 8 5.095 0 7.26-8 12.355-8z" />
-                    </svg>
-                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase font-mono">AutoPlay</div>
-                      <div className="font-semibold text-slate-200">Continuous AI Loop</div>
-                    </div>
+                  <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                    <div className="text-[10px] text-slate-500 font-mono uppercase">Autoplay</div>
+                    <div className="font-mono text-xs font-medium text-slate-200 mt-0.5">Continuous AI loop</div>
                   </div>
 
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-black/30 border border-white/[0.04]">
-                    <svg className="w-3.5 h-3.5 text-indigo-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <line x1="4" y1="21" x2="4" y2="14" />
-                      <line x1="4" y1="10" x2="4" y2="3" />
-                      <line x1="12" y1="21" x2="12" y2="12" />
-                      <line x1="12" y1="8" x2="12" y2="3" />
-                      <line x1="20" y1="21" x2="20" y2="16" />
-                      <line x1="20" y1="12" x2="20" y2="3" />
-                      <circle cx="4" cy="12" r="2" fill="currentColor" />
-                      <circle cx="12" cy="10" r="2" fill="currentColor" />
-                      <circle cx="20" cy="14" r="2" fill="currentColor" />
-                    </svg>
-                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase font-mono">Personal Taste</div>
-                      <div className="font-semibold text-slate-200">Mathematical Vectors</div>
-                    </div>
+                  <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                    <div className="text-[10px] text-slate-500 font-mono uppercase">Personal taste</div>
+                    <div className="font-mono text-xs font-medium text-slate-200 mt-0.5">Mathematical vectors</div>
                   </div>
 
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-black/30 border border-white/[0.04]">
-                    <svg className="w-3.5 h-3.5 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                      <path d="M9 12l2 2 4-4" />
-                    </svg>
-                    <div>
-                      <div className="text-[10px] text-slate-500 uppercase font-mono">Language Lock</div>
-                      <div className="font-semibold text-emerald-300">Strict Zero-Bleed</div>
-                    </div>
+                  <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                    <div className="text-[10px] text-slate-500 font-mono uppercase">Language lock</div>
+                    <div className="font-mono text-xs font-medium text-emerald-400 mt-0.5">Strict zero-bleed</div>
                   </div>
                 </div>
               </div>
@@ -767,35 +707,33 @@ export default function HomePage() {
           </div>
 
           {/* ─── BOT 4: SUPPORT & SECURITY BOT ─────────────────────── */}
-          <div className="rounded-2xl bg-surface border border-white/[0.06] hover:border-indigo-500/30 transition-all duration-200 overflow-hidden">
-            <div className="p-6 sm:p-8 lg:p-10">
+          <div className="rounded-xl bg-[#0c0f18] border border-white/[0.08] transition-colors overflow-hidden">
+            <div className="p-6 sm:p-8">
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
                 <div className="flex items-start sm:items-center gap-4">
-                  <div className="relative group/avatar shrink-0">
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#0b0816] border border-indigo-500/30 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-[0_0_20px_rgba(99,102,241,0.25)] ring-1 ring-indigo-400/20 group-hover/avatar:border-indigo-400/60 transition-all duration-300">
-                      <img
-                        src={botAvatarUrl || "/syncink-support-logo.png"}
-                        alt="SyncInk Support Bot"
-                        className="w-full h-full object-cover rounded-xl select-none"
-                        onError={(e) => {
-                          if (e.currentTarget.src !== "/syncink-support-logo.png") {
-                            e.currentTarget.src = "/syncink-support-logo.png";
-                          }
-                        }}
-                      />
-                    </div>
+                  <div className="w-14 h-14 rounded-xl bg-[#101420] border border-white/[0.08] p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                    <img
+                      src={botAvatarUrl || "/syncink-support-logo.png"}
+                      alt="SyncInk Support Bot"
+                      className="w-full h-full object-cover rounded-lg select-none"
+                      onError={(e) => {
+                        if (e.currentTarget.src !== "/syncink-support-logo.png") {
+                          e.currentTarget.src = "/syncink-support-logo.png";
+                        }
+                      }}
+                    />
                   </div>
                   <div>
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/15">
-                        Internal Only
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                        Internal only
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
-                        Active Defense
+                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        Active defense
                       </span>
                     </div>
-                    <h3 className="text-xl sm:text-2xl font-black text-white">Support &amp; Security Bot</h3>
-                    <p className="text-sm text-slate-300 mt-1 max-w-lg leading-relaxed">
+                    <h3 className="text-xl sm:text-2xl font-semibold text-white">Support &amp; Security Bot</h3>
+                    <p className="text-sm text-slate-400 mt-1 max-w-lg leading-relaxed">
                       Dedicated defense shield protecting the official SyncInk Support Server 24/7.
                       Raid dampening, quarantine isolation, and synchronized moderation logs.
                     </p>
@@ -805,12 +743,12 @@ export default function HomePage() {
                 <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
                   <Link
                     href="/dashboard/security"
-                    className="flex-1 lg:flex-initial justify-center h-10 px-5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors flex items-center gap-2 active:scale-[0.98]"
+                    className="flex-1 lg:flex-initial justify-center h-9 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition-colors flex items-center gap-2"
                   >
                     <Shield className="w-3.5 h-3.5" />
                     <span>Security Console</span>
                   </Link>
-                  <span className="hidden sm:inline-flex h-10 px-4 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[11px] font-mono text-slate-400 items-center">
+                  <span className="hidden sm:inline-flex h-9 px-3.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[11px] font-mono text-slate-400 items-center">
                     ID: 1520457643842342912
                   </span>
                 </div>
@@ -842,11 +780,11 @@ export default function HomePage() {
           {/* ═════════════════════════════════════════════════════════
              FAQ ACCORDION
              ═════════════════════════════════════════════════════════ */}
-          <div className="rounded-2xl bg-surface border border-white/[0.06] p-6 sm:p-10">
+          <div className="rounded-xl bg-[#0c0f18] border border-white/[0.08] p-6 sm:p-10">
             <div className="text-center max-w-lg mx-auto mb-6">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">Help</p>
-              <h3 className="text-xl sm:text-2xl font-black text-white">
-                Frequently Asked Questions
+              <p className="text-xs font-mono uppercase tracking-wider text-slate-400 mb-1">Help</p>
+              <h3 className="text-xl sm:text-2xl font-semibold text-white">
+                Frequently asked questions
               </h3>
             </div>
 
@@ -856,7 +794,7 @@ export default function HomePage() {
                 return (
                   <div
                     key={idx}
-                    className={`border rounded-xl overflow-hidden transition-colors ${
+                    className={`border rounded-lg overflow-hidden transition-colors ${
                       isOpen
                         ? "border-blue-500/20 bg-blue-500/[0.03]"
                         : "border-white/[0.06] bg-white/[0.01] hover:border-white/[0.1]"
@@ -865,7 +803,7 @@ export default function HomePage() {
                     <button
                       type="button"
                       onClick={() => setOpenFaq(isOpen ? null : idx)}
-                      className="w-full flex items-center justify-between p-4 text-left text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset rounded-xl"
+                      className="w-full flex items-center justify-between p-4 text-left text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg"
                       aria-expanded={isOpen}
                     >
                       <span className="pr-4">{faq.q}</span>
@@ -885,7 +823,7 @@ export default function HomePage() {
                           transition={transition.expand}
                           className="overflow-hidden"
                         >
-                          <div className="px-4 pb-4 text-sm text-slate-300 leading-relaxed border-t border-white/[0.04] pt-3">
+                          <div className="px-4 pb-4 text-xs sm:text-sm text-slate-400 leading-relaxed border-t border-white/[0.04] pt-3">
                             {faq.a}
                           </div>
                         </motion.div>
@@ -900,34 +838,34 @@ export default function HomePage() {
           {/* ═════════════════════════════════════════════════════════
              RECRUITMENT CTA
              ═════════════════════════════════════════════════════════ */}
-          <div className="rounded-2xl bg-surface border border-white/[0.06] p-8 sm:p-12 text-center">
+          <div className="rounded-xl bg-[#0c0f18] border border-white/[0.08] p-8 sm:p-12 text-center">
             <div className="max-w-lg mx-auto space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/15 flex items-center justify-center mx-auto text-blue-400">
-                <Users className="w-6 h-6" />
+              <div className="w-10 h-10 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mx-auto text-blue-400">
+                <Users className="w-5 h-5" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-black text-white">
-                Join the Team
+              <h3 className="text-xl sm:text-2xl font-semibold text-white">
+                Join the team
               </h3>
-              <p className="text-sm text-slate-300 leading-relaxed">
+              <p className="text-sm text-slate-400 leading-relaxed">
                 Passionate about community moderation or bot development? Apply through
                 our portal with your Discord account in under two minutes.
               </p>
               <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
                 <Link
                   href="/apply"
-                  className="h-10 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-colors flex items-center gap-2 active:scale-[0.98]"
+                  className="h-9 px-5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition-colors flex items-center gap-2"
                 >
-                  <span>Apply Now</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span>Apply now</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-blue-200" />
                 </Link>
                 <a
                   href="https://discord.gg/PmxfJwmQuB"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 px-6 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 font-semibold text-sm transition-colors border border-white/[0.06] flex items-center gap-2 active:scale-[0.98]"
+                  className="h-9 px-5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-medium text-xs transition-colors border border-white/[0.08] flex items-center gap-2"
                 >
-                  <span>Discord Server</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Discord server</span>
+                  <ExternalLink className="w-3 h-3 text-slate-400" />
                 </a>
               </div>
             </div>
