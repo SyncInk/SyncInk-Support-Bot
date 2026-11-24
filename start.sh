@@ -32,7 +32,7 @@ while true; do
     echo "[SyncInk] Checking GitHub for updates..."
     # GIT_TERMINAL_PROMPT=0 ensures git does not freeze waiting for credentials if repo is private
     if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        GIT_TERMINAL_PROMPT=0 git pull origin main 2>/dev/null || {
+        GIT_TERMINAL_PROMPT=0 git pull --autostash origin main 2>/dev/null || {
             echo "[SyncInk] Note: GitHub pull skipped (private repo requires token or offline). Continuing locally..."
         }
     fi
