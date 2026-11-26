@@ -592,17 +592,17 @@ export function DiscordTranscriptViewer({
 
                     {/* Role Badges */}
                     {isBot && (
-                      <span className="px-1.5 py-0.2 rounded bg-[#5865f2] text-white text-[9px] font-extrabold tracking-wide uppercase">
+                      <span className="px-1.5 py-0.5 rounded bg-[#5865f2] text-white text-[9px] font-bold tracking-wide uppercase">
                         APP
                       </span>
                     )}
                     {isCreator && (
-                      <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] font-bold uppercase">
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] font-bold uppercase">
                         Creator
                       </span>
                     )}
                     {isStaff && (
-                      <span className="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[9px] font-bold uppercase">
+                      <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[9px] font-bold uppercase">
                         Staff
                       </span>
                     )}

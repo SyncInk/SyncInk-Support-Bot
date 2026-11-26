@@ -1,6 +1,19 @@
 import type { Metadata, Viewport } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { safeJsonLdString } from "@/lib/security";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const viewport: Viewport = {
   themeColor: "#060812",
@@ -175,7 +188,7 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={`dark ${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="alternate icon" href="/favicon.ico" />
@@ -185,7 +198,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: safeJsonLdString(jsonLd) }}
         />
       </head>
-      <body className="min-h-screen bg-background text-slate-100 antialiased selection:bg-brand-red selection:text-white">
+      <body className="min-h-screen bg-[#060812] text-slate-100 font-sans antialiased overflow-x-hidden selection:bg-brand-blue selection:text-white">
         {children}
       </body>
     </html>

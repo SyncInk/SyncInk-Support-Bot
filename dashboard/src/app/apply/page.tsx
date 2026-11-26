@@ -1,17 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import {
-  Shield,
-  Code,
   CheckCircle2,
   AlertCircle,
   Upload,
-  ArrowRight,
-  Sparkles,
   Lock,
-  Globe,
   Clock,
   Send,
   UserCheck,
@@ -19,15 +15,16 @@ import {
   RefreshCw,
   XCircle,
   ChevronDown,
-  ChevronUp,
   FileText,
   ExternalLink,
   MessageSquare,
   Award,
+  Sparkles,
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
 import { DISCORD_CUSTOM_EMOJIS } from "@/lib/custom-emojis";
+import { spring, transition, ease } from "@/lib/motion-tokens";
 
 interface UserInfo {
   id: string;
@@ -79,7 +76,7 @@ const COUNTRIES_MAP: Record<string, string> = {
   singapore: "🇸🇬", "south africa": "🇿🇦", "south korea": "🇰🇷", spain: "🇪🇸",
   sweden: "🇸🇪", switzerland: "🇨🇭", taiwan: "🇹🇼", thailand: "🇹🇭", turkey: "🇹🇷",
   ukraine: "🇺🇦", "united arab emirates": "🇦🇪", uae: "🇦🇪", "united kingdom": "🇬🇧",
-  uk: "🇬🇧", england: "🇬🇧", "united states": "🇺🇸", usa: "🇺🇸", america: "🇺🇸", vietnam: "🇻🇳"
+  uk: "🇬🇧", england: "🇬🇧", "united states": "🇺🇸", usa: "🇺🇸", america: "🇺🇸", vietnam: "🇻🇳",
 };
 
 function getCountryFlag(input: string): string | null {
@@ -96,7 +93,7 @@ function getCountryFlag(input: string): string | null {
 
 /**
  * Interactive Discord Custom Emoji Component
- * Renders high-resolution custom emojis inside a polished, semi-transparent frosted box.
+ * Renders high-resolution custom emojis inside a clean, quiet neutral container.
  */
 function DiscordEmoji({
   src,
@@ -113,7 +110,7 @@ function DiscordEmoji({
     xs: "w-5 h-5 rounded p-0.5",
     sm: "w-6 h-6 rounded-md p-1",
     md: "w-7 h-7 rounded-lg p-1",
-    lg: "w-9 h-9 rounded-xl p-1.5",
+    lg: "w-9 h-9 rounded-lg p-1.5",
     xl: "w-11 h-11 rounded-xl p-2",
   };
   const imgClasses = {
@@ -125,13 +122,13 @@ function DiscordEmoji({
   };
   return (
     <span
-      className={`inline-flex items-center justify-center bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] hover:border-white/[0.22] backdrop-blur-sm shadow-[0_2px_8px_rgba(0,0,0,0.35)] transition-all duration-200 hover:scale-105 shrink-0 align-middle ${boxClasses[size]} ${className}`}
+      className={`inline-flex items-center justify-center bg-white/[0.04] border border-white/[0.08] shrink-0 align-middle ${boxClasses[size]} ${className}`}
       title={alt}
     >
       <img
         src={src}
         alt={alt}
-        className={`object-contain select-none transition-transform duration-200 ${imgClasses[size]}`}
+        className={`object-contain select-none ${imgClasses[size]}`}
         loading="lazy"
       />
     </span>
@@ -185,6 +182,16 @@ export default function ApplyPage() {
     }
   }, []);
 
+  const switchRoleTab = (tab: "staff" | "developer") => {
+    setActiveTab(tab);
+    setErrorMessage("");
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tab);
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
+
   // Fetch Authenticated User
   useEffect(() => {
     async function checkAuth() {
@@ -237,6 +244,49 @@ export default function ApplyPage() {
   const staffFlag = getCountryFlag(staffTimezone);
   const devFlag = getCountryFlag(devTimezone);
 
+  const formProgress = useMemo(() => {
+    if (activeTab === "staff") {
+      const checks = [
+        Boolean(staffAge.trim() && Number(staffAge) >= 13),
+        Boolean(staffTimezone.trim()),
+        Boolean(staffAvailability),
+        staffReason.trim().length >= 15,
+        staffExp.trim().length >= 15,
+        staffScen1.trim().length >= 15,
+        staffScen2.trim().length >= 15,
+        staffScen3.trim().length >= 15,
+      ];
+      const done = checks.filter(Boolean).length;
+      return { done, total: checks.length };
+    }
+    const checks = [
+      Boolean(devAge.trim() && Number(devAge) >= 13),
+      Boolean(devTimezone.trim()),
+      Boolean(devLangs.trim()),
+      devPortfolio.trim().length >= 5,
+      devBotExp.trim().length >= 15,
+      devComplex.trim().length >= 15,
+    ];
+    const done = checks.filter(Boolean).length;
+    return { done, total: checks.length };
+  }, [
+    activeTab,
+    staffAge,
+    staffTimezone,
+    staffAvailability,
+    staffReason,
+    staffExp,
+    staffScen1,
+    staffScen2,
+    staffScen3,
+    devAge,
+    devTimezone,
+    devLangs,
+    devPortfolio,
+    devBotExp,
+    devComplex,
+  ]);
+
   async function handleStaffSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMessage("");
@@ -267,7 +317,11 @@ export default function ApplyPage() {
       setErrorMessage("Moderation experience must be at least 15 characters.");
       return;
     }
-    if (staffScen1.trim().length < 15 || staffScen2.trim().length < 15 || staffScen3.trim().length < 15) {
+    if (
+      staffScen1.trim().length < 15 ||
+      staffScen2.trim().length < 15 ||
+      staffScen3.trim().length < 15
+    ) {
       setErrorMessage("All scenario answers must be at least 15 characters long.");
       return;
     }
@@ -296,11 +350,9 @@ export default function ApplyPage() {
         throw new Error(data.error || "Submission failed. Please try again.");
       }
 
-      // Refresh application status to instantly show Under Review tracker
       await fetchApplicationStatus();
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to submit application.");
-      // If error was 409 or duplicate, refresh to display status
       if (err.message && err.message.includes("already have an active")) {
         await fetchApplicationStatus();
       }
@@ -369,7 +421,6 @@ export default function ApplyPage() {
         throw new Error(data.error || "Submission failed. Please try again.");
       }
 
-      // Refresh status to instantly transition to Under Review tracker
       await fetchApplicationStatus();
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to submit application.");
@@ -382,927 +433,1132 @@ export default function ApplyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col selection:bg-brand-red selection:text-white font-sans relative overflow-x-hidden">
-      <PublicNavbar />
+    <MotionConfig reducedMotion="user">
+      <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col selection:bg-brand-blue selection:text-white font-sans relative overflow-x-hidden">
+        <PublicNavbar />
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
-        {/* Recruitment Header */}
-        <div className="text-center mb-8 sm:mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-red/10 border border-brand-red/25 text-brand-crimson text-xs font-bold tracking-wider uppercase mb-4 shadow-[0_0_15px_rgba(231,76,60,0.15)]">
-            <Sparkles className="w-3.5 h-3.5" />
-            SyncInk Team Recruitment
-          </div>
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white mb-3">
-            Join the <span className="bg-gradient-to-r from-brand-crimson via-purple-400 to-accent-cyan bg-clip-text text-transparent">SyncInk Team</span>
-          </h1>
-          <p className="text-sm sm:text-base text-slate-400 max-w-xl mx-auto leading-relaxed">
-            Help shape the future of modern Discord bot infrastructure. We are actively reviewing dedicated staff members and talented bot engineers.
-          </p>
-        </div>
+        <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+          {/* Recruitment Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={transition.enter}
+            className="mb-7 sm:mb-9 space-y-3"
+          >
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#0c0f18] border border-white/[0.08] font-mono text-[11px] text-slate-300">
+              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+              <span>SyncInk Team Recruitment</span>
+            </div>
+            <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight text-white leading-[1.15]">
+              Join the SyncInk team
+            </h1>
+            <p className="text-sm sm:text-[15px] text-slate-400 max-w-2xl leading-relaxed">
+              We are reviewing dedicated staff moderators and software developers to support, moderate, and extend the SyncInk Discord infrastructure.
+            </p>
+          </motion.div>
 
-        {/* LOADING INDICATOR */}
-        {authLoading || appLoading ? (
-          <div className="p-12 rounded-2xl bg-[#0d111d]/90 border border-white/10 shadow-2xl text-center backdrop-blur-xl">
-            <div className="w-12 h-12 border-2 border-brand-crimson/30 border-t-brand-crimson rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-sm font-mono text-slate-400">Verifying Discord Session & Application Records...</p>
-          </div>
-        ) : existingApp ? (
-          /* ========================================================================= */
-          /* EXISTING APPLICATION STATUS & TRACKER CARD (ANTI-DUPLICATE GUARD)         */
-          /* ========================================================================= */
-          <div className="rounded-2xl bg-[#0d111d]/95 border border-white/10 shadow-2xl overflow-hidden backdrop-blur-xl">
-            {/* Header Status Bar */}
-            <div className="p-5 sm:p-6 border-b border-white/[0.08] bg-black/40 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <img
-                  src={
-                    user?.avatar
-                      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
-                      : "https://files.catbox.moe/74l9su.png"
-                  }
-                  alt={user?.username || "Candidate"}
-                  className="w-12 h-12 rounded-full border border-white/15 object-cover"
-                />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-white text-base">
-                      {user?.global_name || user?.username}
-                    </span>
-                    <span className="text-xs text-slate-400 font-mono">@{user?.username}</span>
+          {/* Loading State */}
+          {authLoading || appLoading ? (
+            <div className="p-10 sm:p-12 rounded-xl bg-[#0c0f18] border border-white/[0.08] text-center space-y-3">
+              <div className="w-8 h-8 border-2 border-white/15 border-t-blue-500 rounded-full animate-spin mx-auto" />
+              <p className="text-xs sm:text-sm font-mono text-slate-400">
+                Verifying Discord session &amp; application records...
+              </p>
+            </div>
+          ) : existingApp ? (
+            /* Existing Application Tracker Card */
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={transition.enter}
+              className="rounded-xl bg-[#0c0f18] border border-white/[0.08] overflow-hidden"
+            >
+              {/* Header Status Bar */}
+              <div className="p-4 sm:p-6 border-b border-white/[0.06] bg-white/[0.02] flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <img
+                    src={
+                      user?.avatar
+                        ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+                        : "/syncink-main-logo.png"
+                    }
+                    alt={user?.username || "Candidate"}
+                    className="w-11 h-11 rounded-full border border-white/[0.12] object-cover shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span className="font-semibold text-white text-sm sm:text-base truncate">
+                        {user?.global_name || user?.username}
+                      </span>
+                      <span className="text-xs text-slate-400 font-mono truncate">
+                        @{user?.username}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                      <span className="font-mono">ID: {user?.id}</span>
+                      <span className="text-slate-600">•</span>
+                      <span className="font-mono text-slate-300 tabular-nums">
+                        App #{existingApp.id}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <span>Candidate ID: <code className="text-accent-cyan font-mono">{user?.id}</code></span>
-                    <span>•</span>
-                    <span className="font-mono text-slate-300">App #{existingApp.id}</span>
+                </div>
+
+                {/* Status Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={fetchApplicationStatus}
+                    disabled={refreshing}
+                    title="Check for status updates"
+                    aria-label="Refresh application status"
+                    className="h-9 w-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white transition-colors inline-flex items-center justify-center disabled:opacity-50 touch-manipulation"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin text-blue-400" : ""}`} />
+                  </button>
+
+                  {existingApp.status === "REJECTED" ? (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs font-medium">
+                      <XCircle className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Rejected</span>
+                    </div>
+                  ) : existingApp.status === "ACCEPTED" ? (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs font-medium">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Accepted</span>
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs font-medium">
+                      <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Under review</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Application Progress Stepper */}
+              <div className="p-5 sm:p-6 border-b border-white/[0.06]">
+                <div className="flex items-center justify-between text-xs text-slate-400 mb-4">
+                  <span className="font-medium text-slate-200">Review lifecycle</span>
+                  <span className="font-mono text-[11px] text-slate-500 tabular-nums">
+                    Submitted {new Date(existingApp.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
+                  <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2 p-3 rounded-lg bg-[#060812] border border-white/[0.06]">
+                    <div className="w-7 h-7 rounded-md bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-white">1. Submitted</div>
+                      <div className="text-[11px] text-slate-400">Stored securely</div>
+                    </div>
+                  </div>
+
+                  <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2 p-3 rounded-lg bg-[#060812] border border-white/[0.06]">
+                    <div className="w-7 h-7 rounded-md bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-white">2. Verified</div>
+                      <div className="text-[11px] text-slate-400">Discord OAuth ID</div>
+                    </div>
+                  </div>
+
+                  <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2 p-3 rounded-lg bg-[#060812] border border-white/[0.06]">
+                    <div
+                      className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 border ${
+                        existingApp.status === "ACCEPTED"
+                          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                          : existingApp.status === "REJECTED"
+                          ? "bg-rose-500/15 border-rose-500/30 text-rose-400"
+                          : "bg-amber-500/15 border-amber-500/30 text-amber-400"
+                      }`}
+                    >
+                      {existingApp.status === "ACCEPTED" || existingApp.status === "REJECTED" ? (
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      ) : (
+                        <Clock className="w-3.5 h-3.5" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-white">3. Evaluation</div>
+                      <div className="text-[11px] text-slate-400">
+                        {existingApp.status === "PENDING" || existingApp.status === "UNDER_REVIEW"
+                          ? "Active review"
+                          : "Completed"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2 p-3 rounded-lg bg-[#060812] border border-white/[0.06]">
+                    <div
+                      className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-mono shrink-0 border ${
+                        existingApp.status === "ACCEPTED"
+                          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                          : existingApp.status === "REJECTED"
+                          ? "bg-rose-500/15 border-rose-500/30 text-rose-400"
+                          : "bg-white/[0.03] border-white/[0.08] text-slate-500"
+                      }`}
+                    >
+                      {existingApp.status === "ACCEPTED" ? (
+                        <Award className="w-3.5 h-3.5" />
+                      ) : existingApp.status === "REJECTED" ? (
+                        <XCircle className="w-3.5 h-3.5" />
+                      ) : (
+                        "4"
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-white">4. Outcome</div>
+                      <div className="text-[11px] text-slate-400">
+                        {existingApp.status === "ACCEPTED"
+                          ? "Approved"
+                          : existingApp.status === "REJECTED"
+                          ? "Closed"
+                          : "Pending"}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Status Pill */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={fetchApplicationStatus}
-                  disabled={refreshing}
-                  title="Check for status updates"
-                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin text-brand-crimson" : ""}`} />
-                </button>
-
+              {/* Status Details */}
+              <div className="p-5 sm:p-6 space-y-5">
                 {existingApp.status === "REJECTED" ? (
-                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-rose-500/15 border border-rose-500/35 text-rose-300 text-xs font-bold shadow-[0_0_15px_rgba(244,63,94,0.2)]">
-                    <XCircle className="w-4 h-4 text-rose-400" />
-                    Application Rejected
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-start gap-3">
+                      <XCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <div className="font-medium text-white text-sm">
+                          Application not selected
+                        </div>
+                        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                          Thank you for applying to the SyncInk team. After evaluation by our reviewers, we are unable to move forward at this time.
+                        </p>
+                      </div>
+                    </div>
+
+                    {existingApp.reviewer_notes && (
+                      <div className="p-4 rounded-xl bg-[#060812] border border-white/[0.08] space-y-1.5">
+                        <div className="text-xs font-medium text-rose-300 flex items-center gap-1.5">
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Reviewer feedback</span>
+                        </div>
+                        <div className="text-xs sm:text-sm text-slate-200 whitespace-pre-wrap leading-relaxed pl-3 border-l-2 border-rose-500/40">
+                          {existingApp.reviewer_notes}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="p-3.5 rounded-lg bg-white/[0.02] border border-white/[0.06] text-xs text-slate-400 flex items-center gap-2">
+                      <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>
+                        <strong className="text-slate-300 font-medium">Anti-duplicate policy:</strong>{" "}
+                        Repeat submissions are locked to preserve review integrity.
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
+                      <a
+                        href="https://discord.gg/PmxfJwmQuB"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="h-10 px-4 rounded-lg bg-[#5865F2] hover:bg-[#4752c4] text-white text-xs font-medium transition-colors inline-flex items-center justify-center gap-2 touch-manipulation"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Support Discord Server</span>
+                      </a>
+                      <Link
+                        href="/"
+                        className="h-10 px-4 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 text-xs font-medium transition-colors inline-flex items-center justify-center touch-manipulation"
+                      >
+                        Return home
+                      </Link>
+                    </div>
                   </div>
                 ) : existingApp.status === "ACCEPTED" ? (
-                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 text-xs font-bold shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    Accepted Member
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <div className="font-medium text-white text-sm">
+                          Application approved
+                        </div>
+                        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                          Welcome to SyncInk. Your application was approved and onboarding access has been prepared in our Discord channels.
+                        </p>
+                      </div>
+                    </div>
+
+                    {existingApp.reviewer_notes && (
+                      <div className="p-4 rounded-xl bg-[#060812] border border-white/[0.08] space-y-1.5">
+                        <div className="text-xs font-medium text-emerald-300 flex items-center gap-1.5">
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Onboarding note</span>
+                        </div>
+                        <div className="text-xs sm:text-sm text-slate-200 whitespace-pre-wrap leading-relaxed pl-3 border-l-2 border-emerald-500/40">
+                          {existingApp.reviewer_notes}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
+                      <a
+                        href="https://discord.gg/PmxfJwmQuB"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="h-10 px-4 rounded-lg bg-[#5865F2] hover:bg-[#4752c4] text-white text-xs font-medium transition-colors inline-flex items-center justify-center gap-2 touch-manipulation"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Join Staff Discord</span>
+                      </a>
+                      <Link
+                        href="/dashboard"
+                        className="h-10 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-colors inline-flex items-center justify-center touch-manipulation"
+                      >
+                        Open Command Dashboard
+                      </Link>
+                    </div>
                   </div>
                 ) : (
-                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/35 text-amber-300 text-xs font-bold animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-                    <Clock className="w-4 h-4 text-amber-400" />
-                    Under Review
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
+                      <Clock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <div className="font-medium text-white text-sm">
+                          Application currently under review
+                        </div>
+                        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                          Your submission is queued for the SyncInk management gateway. Reviews are completed in order of arrival, typically within 24 to 48 hours.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-lg bg-white/[0.02] border border-white/[0.06] text-xs text-slate-400 flex items-center gap-2">
+                      <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span>
+                        <strong className="text-slate-300 font-medium">Notice:</strong>{" "}
+                        Duplicate applications are disabled while this submission is active.
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={fetchApplicationStatus}
+                        disabled={refreshing}
+                        className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors inline-flex items-center justify-center gap-2 touch-manipulation"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+                        <span>Check application status</span>
+                      </button>
+                      <a
+                        href="https://discord.gg/PmxfJwmQuB"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="h-10 px-4 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 text-xs font-medium transition-colors inline-flex items-center justify-center gap-2 touch-manipulation"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Support Discord Server</span>
+                      </a>
+                    </div>
                   </div>
                 )}
-              </div>
-            </div>
 
-            {/* Application Progress Stepper */}
-            <div className="p-6 sm:p-8 border-b border-white/[0.08] bg-black/20">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-6 flex items-center justify-between">
-                <span>Application Review Lifecycle</span>
-                <span className="font-mono text-[11px] text-slate-500">
-                  Submitted {new Date(existingApp.created_at).toLocaleDateString()}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 relative">
-                {/* Step 1: Submission */}
-                <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2">
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400 font-bold text-xs shrink-0">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white">1. Submitted</div>
-                    <div className="text-[11px] text-slate-400">Encrypted in DB</div>
-                  </div>
-                </div>
-
-                {/* Step 2: Verification */}
-                <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2">
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400 font-bold text-xs shrink-0">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white">2. Verified</div>
-                    <div className="text-[11px] text-slate-400">Discord OAuth ID</div>
-                  </div>
-                </div>
-
-                {/* Step 3: Evaluation */}
-                <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-                      existingApp.status === "ACCEPTED"
-                        ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-400"
-                        : existingApp.status === "REJECTED"
-                        ? "bg-rose-500/20 border border-rose-500/50 text-rose-400"
-                        : "bg-amber-500/20 border border-amber-500/50 text-amber-400 animate-pulse"
-                    }`}
+                {/* Collapsible Submitted Answers */}
+                <div className="pt-4 border-t border-white/[0.06]">
+                  <button
+                    type="button"
+                    onClick={() => setShowSubmittedDetails((prev) => !prev)}
+                    aria-expanded={showSubmittedDetails}
+                    className="w-full min-h-[42px] flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-xs font-medium text-slate-200 transition-colors touch-manipulation"
                   >
-                    {existingApp.status === "ACCEPTED" || existingApp.status === "REJECTED" ? (
-                      <CheckCircle2 className="w-4 h-4" />
-                    ) : (
-                      <Clock className="w-4 h-4" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white">3. Management Review</div>
-                    <div className="text-[11px] text-slate-400">
-                      {existingApp.status === "PENDING" || existingApp.status === "UNDER_REVIEW"
-                        ? "Active Evaluation"
-                        : "Completed"}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 4: Decision */}
-                <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-                      existingApp.status === "ACCEPTED"
-                        ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-400"
-                        : existingApp.status === "REJECTED"
-                        ? "bg-rose-500/20 border border-rose-500/50 text-rose-400"
-                        : "bg-white/5 border border-white/10 text-slate-500"
-                    }`}
-                  >
-                    {existingApp.status === "ACCEPTED" ? (
-                      <Award className="w-4 h-4" />
-                    ) : existingApp.status === "REJECTED" ? (
-                      <XCircle className="w-4 h-4" />
-                    ) : (
-                      "4"
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white">4. Final Outcome</div>
-                    <div className="text-[11px] text-slate-400">
-                      {existingApp.status === "ACCEPTED"
-                        ? "Accepted"
-                        : existingApp.status === "REJECTED"
-                        ? "Closed"
-                        : "Awaiting Verdict"}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Dynamic Status Content */}
-            <div className="p-6 sm:p-8 space-y-6">
-              {existingApp.status === "REJECTED" ? (
-                /* REJECTED STATE */
-                <div className="space-y-4">
-                  <div className="p-4 sm:p-5 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-start gap-3">
-                    <XCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                    <div className="space-y-1">
-                      <div className="font-bold text-white text-sm">
-                        Application Concluded — Status: Rejected
-                      </div>
-                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                        Thank you for taking the time to apply to the SyncInk team. After thorough evaluation by our management team, we are unable to offer you a position at this time.
-                      </p>
-                    </div>
-                  </div>
-
-                  {existingApp.reviewer_notes && (
-                    <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
-                      <div className="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-2">
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        Feedback from Reviewers:
-                      </div>
-                      <div className="text-sm text-slate-200 italic whitespace-pre-wrap leading-relaxed pl-2 border-l-2 border-rose-500/40">
-                        "{existingApp.reviewer_notes}"
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Anti-Spam Notice */}
-                  <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs text-slate-400 flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span>
-                      <strong className="text-slate-300">Anti-Duplicate Policy:</strong> Repeated submissions are locked to prevent spam and preserve record integrity.
+                    <span className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-slate-400" />
+                      <span>Review your submitted answers</span>
                     </span>
-                  </div>
+                    <ChevronDown
+                      className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                        showSubmittedDetails ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
 
-                  <div className="flex flex-wrap items-center gap-3 pt-2">
-                    <a
-                      href="https://discord.gg/PmxfJwmQuB"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white text-xs font-bold transition-all shadow-md"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Contact Support Server
-                    </a>
-                    <Link
-                      href="/"
-                      className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all border border-white/10"
-                    >
-                      Return to Home
-                    </Link>
-                  </div>
-                </div>
-              ) : existingApp.status === "ACCEPTED" ? (
-                /* ACCEPTED STATE */
-                <div className="space-y-4">
-                  <div className="p-4 sm:p-5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                    <div className="space-y-1">
-                      <div className="font-bold text-white text-sm">
-                        Congratulations! Application Approved
-                      </div>
-                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                        Welcome aboard! Your application was approved by the SyncInk Senior Management team. You have been granted access to team resources and channels.
-                      </p>
-                    </div>
-                  </div>
+                  <AnimatePresence initial={false}>
+                    {showSubmittedDetails && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.24, ease: ease.inOut }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-3 p-4 sm:p-5 rounded-xl bg-[#060812] border border-white/[0.08] space-y-4 text-xs">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-3 border-b border-white/[0.06]">
+                            <div>
+                              <span className="text-slate-400 block font-mono text-[11px]">
+                                Role applied
+                              </span>
+                              <span className="font-medium text-white flex items-center gap-2 mt-1">
+                                {existingApp.app_type === "developer" ? (
+                                  <>
+                                    <DiscordEmoji
+                                      src={DISCORD_CUSTOM_EMOJIS.developer.url}
+                                      alt="Developer"
+                                      size="sm"
+                                    />
+                                    Developer Application
+                                  </>
+                                ) : (
+                                  <>
+                                    <DiscordEmoji
+                                      src={DISCORD_CUSTOM_EMOJIS.staff.url}
+                                      alt="Staff"
+                                      size="sm"
+                                    />
+                                    Staff Moderator Application
+                                  </>
+                                )}
+                              </span>
+                            </div>
 
-                  {existingApp.reviewer_notes && (
-                    <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
-                      <div className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        Management Onboarding Note:
-                      </div>
-                      <div className="text-sm text-slate-200 italic whitespace-pre-wrap leading-relaxed pl-2 border-l-2 border-emerald-500/40">
-                        "{existingApp.reviewer_notes}"
-                      </div>
-                    </div>
-                  )}
+                            <div>
+                              <span className="text-slate-400 block font-mono text-[11px]">
+                                Age
+                              </span>
+                              <span className="font-medium text-white mt-1 block tabular-nums">
+                                {existingApp.age} years old
+                              </span>
+                            </div>
 
-                  <div className="flex flex-wrap items-center gap-3 pt-2">
-                    <a
-                      href="https://discord.gg/PmxfJwmQuB"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white text-xs font-bold transition-all shadow-md"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Join Staff Discord
-                    </a>
-                    <Link
-                      href="/dashboard"
-                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-bold transition-all shadow-md"
-                    >
-                      Open Command Dashboard
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                /* UNDER REVIEW STATE */
-                <div className="space-y-4">
-                  <div className="p-4 sm:p-5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-3">
-                    <Clock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
-                    <div className="space-y-1">
-                      <div className="font-bold text-white text-sm">
-                        Application Currently Under Review
-                      </div>
-                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                        Your submission has been dispatched directly to the SyncInk management gateway. Reviewers evaluate applications in the order received, typically within 24 to 48 hours.
-                      </p>
-                    </div>
-                  </div>
+                            <div>
+                              <span className="text-slate-400 block font-mono text-[11px] flex items-center gap-1.5">
+                                <DiscordEmoji
+                                  src={DISCORD_CUSTOM_EMOJIS.region.url}
+                                  alt="Region"
+                                  size="xs"
+                                />
+                                <span>Region</span>
+                              </span>
+                              <span className="font-medium text-white mt-1 block">
+                                {existingApp.timezone}
+                              </span>
+                            </div>
 
-                  {/* Anti-Duplicate Notice */}
-                  <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs text-slate-400 flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>
-                      <strong className="text-slate-300">Notice:</strong> You cannot submit duplicate applications while an existing submission is under review.
-                    </span>
-                  </div>
+                            {existingApp.availability && (
+                              <div>
+                                <span className="text-slate-400 block font-mono text-[11px]">
+                                  Availability
+                                </span>
+                                <span className="font-medium text-white mt-1 block">
+                                  {existingApp.availability}
+                                </span>
+                              </div>
+                            )}
+                          </div>
 
-                  <div className="flex flex-wrap items-center gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={fetchApplicationStatus}
-                      disabled={refreshing}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-crimson/20 hover:bg-brand-crimson/30 border border-brand-crimson/40 text-white text-xs font-bold transition-all"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-                      Check Application Status
-                    </button>
-                    <a
-                      href="https://discord.gg/PmxfJwmQuB"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all border border-white/10"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Discord Support Server
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {/* Collapsible: Review Submitted Application */}
-              <div className="pt-4 border-t border-white/[0.08]">
-                <button
-                  type="button"
-                  onClick={() => setShowSubmittedDetails(!showSubmittedDetails)}
-                  className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.06] text-xs font-bold text-slate-300 transition-all"
-                >
-                  <span className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-accent-cyan" />
-                    Review Your Submitted Application Answers
-                  </span>
-                  {showSubmittedDetails ? (
-                    <ChevronUp className="w-4 h-4 text-slate-400" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
-                  )}
-                </button>
-
-                {showSubmittedDetails && (
-                  <div className="mt-4 p-5 rounded-xl bg-black/40 border border-white/10 space-y-4 text-xs">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-3 border-b border-white/[0.06]">
-                      <div>
-                        <span className="text-slate-400 block font-mono text-[10px] uppercase">Role Applied</span>
-                        <span className="font-bold text-white flex items-center gap-2 mt-0.5">
-                          {existingApp.app_type === "developer" ? (
-                            <>
-                              <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.developer.url} alt="Developer" size="sm" />
-                              Developer Application
-                            </>
+                          {existingApp.app_type === "staff" ? (
+                            <div className="space-y-3">
+                              {existingApp.reason && (
+                                <div>
+                                  <span className="text-slate-400 block font-mono text-[11px]">
+                                    Motivation
+                                  </span>
+                                  <p className="text-slate-200 mt-1 whitespace-pre-wrap leading-relaxed break-words">
+                                    {existingApp.reason}
+                                  </p>
+                                </div>
+                              )}
+                              {existingApp.experience && (
+                                <div>
+                                  <span className="text-slate-400 font-mono text-[11px] flex items-center gap-1.5">
+                                    <DiscordEmoji
+                                      src={DISCORD_CUSTOM_EMOJIS.experience.url}
+                                      alt="Experience"
+                                      size="xs"
+                                    />
+                                    <span>Past experience</span>
+                                  </span>
+                                  <p className="text-slate-200 mt-1 whitespace-pre-wrap leading-relaxed break-words">
+                                    {existingApp.experience}
+                                  </p>
+                                </div>
+                              )}
+                              {existingApp.scenario_1 && (
+                                <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                                  <span className="text-slate-200 font-medium flex items-center gap-1.5">
+                                    <DiscordEmoji
+                                      src={DISCORD_CUSTOM_EMOJIS.scenario1.url}
+                                      alt="Spam Warning"
+                                      size="sm"
+                                    />
+                                    <span>Scenario 1: Spam bypass</span>
+                                  </span>
+                                  <p className="text-slate-300 mt-1.5 whitespace-pre-wrap leading-relaxed break-words">
+                                    {existingApp.scenario_1}
+                                  </p>
+                                </div>
+                              )}
+                              {existingApp.scenario_2 && (
+                                <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                                  <span className="text-slate-200 font-medium flex items-center gap-1.5">
+                                    <DiscordEmoji
+                                      src={DISCORD_CUSTOM_EMOJIS.scenario2.url}
+                                      alt="Argument"
+                                      size="sm"
+                                    />
+                                    <span>Scenario 2: Heated argument</span>
+                                  </span>
+                                  <p className="text-slate-300 mt-1.5 whitespace-pre-wrap leading-relaxed break-words">
+                                    {existingApp.scenario_2}
+                                  </p>
+                                </div>
+                              )}
+                              {existingApp.scenario_3 && (
+                                <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                                  <span className="text-slate-200 font-medium flex items-center gap-1.5">
+                                    <DiscordEmoji
+                                      src={DISCORD_CUSTOM_EMOJIS.scenario3.url}
+                                      alt="Admin"
+                                      size="sm"
+                                    />
+                                    <span>Scenario 3: Staff abuse accusation</span>
+                                  </span>
+                                  <p className="text-slate-300 mt-1.5 whitespace-pre-wrap leading-relaxed break-words">
+                                    {existingApp.scenario_3}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
                           ) : (
-                            <>
-                              <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.staff.url} alt="Staff" size="sm" />
-                              Staff Moderator Application
-                            </>
+                            <div className="space-y-3">
+                              {existingApp.languages && (
+                                <div>
+                                  <span className="text-slate-400 block font-mono text-[11px]">
+                                    Languages &amp; frameworks
+                                  </span>
+                                  <p className="text-slate-200 mt-1 font-mono break-words">
+                                    {existingApp.languages}
+                                  </p>
+                                </div>
+                              )}
+                              {existingApp.portfolio && (
+                                <div>
+                                  <span className="text-slate-400 block font-mono text-[11px]">
+                                    Portfolio / GitHub
+                                  </span>
+                                  <a
+                                    href={existingApp.portfolio}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-400 hover:underline mt-1 block break-all font-mono"
+                                  >
+                                    {existingApp.portfolio}
+                                  </a>
+                                </div>
+                              )}
+                              {existingApp.bot_experience && (
+                                <div>
+                                  <span className="text-slate-400 font-mono text-[11px] flex items-center gap-1.5">
+                                    <DiscordEmoji
+                                      src={DISCORD_CUSTOM_EMOJIS.experience.url}
+                                      alt="Experience"
+                                      size="xs"
+                                    />
+                                    <span>Bot experience</span>
+                                  </span>
+                                  <p className="text-slate-200 mt-1 whitespace-pre-wrap leading-relaxed break-words">
+                                    {existingApp.bot_experience}
+                                  </p>
+                                </div>
+                              )}
+                              {existingApp.complex_features && (
+                                <div>
+                                  <span className="text-slate-400 block font-mono text-[11px]">
+                                    Complex feature built
+                                  </span>
+                                  <p className="text-slate-200 mt-1 whitespace-pre-wrap leading-relaxed break-words">
+                                    {existingApp.complex_features}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
                           )}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block font-mono text-[10px] uppercase">Age</span>
-                        <span className="font-bold text-white mt-0.5 block">{existingApp.age} years old</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block font-mono text-[10px] uppercase">
-                          <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.region.url} alt="Region" size="sm" className="mr-1" />
-                          Region
-                        </span>
-                        <span className="font-bold text-white mt-0.5 block">{existingApp.timezone}</span>
-                      </div>
-                      {existingApp.availability && (
-                        <div>
-                          <span className="text-slate-400 block font-mono text-[10px] uppercase">Availability</span>
-                          <span className="font-bold text-white mt-0.5 block">{existingApp.availability}</span>
                         </div>
-                      )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            /* Candidate Application Form */
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={transition.enter}
+              className="rounded-xl bg-[#0c0f18] border border-white/[0.08] overflow-hidden"
+            >
+              {/* Discord Identity Bar */}
+              <div className="p-4 sm:p-6 border-b border-white/[0.06] bg-white/[0.02]">
+                {user ? (
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img
+                        src={
+                          user.avatar
+                            ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+                            : "/syncink-main-logo.png"
+                        }
+                        alt={user.username}
+                        className="w-10 h-10 rounded-full border border-white/[0.12] object-cover shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-white text-sm sm:text-base truncate">
+                            {user.global_name || user.username}
+                          </span>
+                          <span className="text-xs text-slate-400 font-mono truncate">
+                            @{user.username}
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                          ID: {user.id}
+                        </div>
+                      </div>
                     </div>
 
-                    {existingApp.app_type === "staff" ? (
-                      <div className="space-y-3">
-                        {existingApp.reason && (
-                          <div>
-                            <span className="text-slate-400 block font-mono text-[10px] uppercase">Motivation / Why Join</span>
-                            <p className="text-slate-200 mt-1 whitespace-pre-wrap">{existingApp.reason}</p>
-                          </div>
-                        )}
-                        {existingApp.experience && (
-                          <div>
-                            <span className="text-slate-400 block font-mono text-[10px] uppercase flex items-center gap-1.5">
-                              <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.experience.url} alt="Experience" size="sm" />
-                              Past Experience
-                            </span>
-                            <p className="text-slate-200 mt-1 whitespace-pre-wrap">{existingApp.experience}</p>
-                          </div>
-                        )}
-                        {existingApp.scenario_1 && (
-                          <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
-                            <span className="text-amber-400 block font-bold flex items-center gap-1.5">
-                              <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.scenario1.url} alt="Warning" size="sm" />
-                              Scenario 1 Response (Spam Bypass)
-                            </span>
-                            <p className="text-slate-200 mt-1 whitespace-pre-wrap">{existingApp.scenario_1}</p>
-                          </div>
-                        )}
-                        {existingApp.scenario_2 && (
-                          <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
-                            <span className="text-amber-400 block font-bold flex items-center gap-1.5">
-                              <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.scenario2.url} alt="Argument" size="sm" />
-                              Scenario 2 Response (Heated Argument)
-                            </span>
-                            <p className="text-slate-200 mt-1 whitespace-pre-wrap">{existingApp.scenario_2}</p>
-                          </div>
-                        )}
-                        {existingApp.scenario_3 && (
-                          <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
-                            <span className="text-amber-400 block font-bold flex items-center gap-1.5">
-                              <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.scenario3.url} alt="Admin" size="sm" />
-                              Scenario 3 Response (Abuse Accusation)
-                            </span>
-                            <p className="text-slate-200 mt-1 whitespace-pre-wrap">{existingApp.scenario_3}</p>
-                          </div>
-                        )}
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
+                      <UserCheck className="w-3.5 h-3.5" />
+                      <span>Discord verified</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-3 rounded-lg bg-[#060812] border border-white/[0.08]">
+                    <div className="flex items-start gap-3">
+                      <Lock className="w-4 h-4 text-slate-300 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-white text-sm">
+                          Discord authentication required
+                        </div>
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          Sign in with Discord so your application links directly to your account.
+                        </div>
                       </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {existingApp.languages && (
-                          <div>
-                            <span className="text-slate-400 block font-mono text-[10px] uppercase">Languages / Frameworks</span>
-                            <p className="text-slate-200 mt-1 font-mono">{existingApp.languages}</p>
-                          </div>
-                        )}
-                        {existingApp.portfolio && (
-                          <div>
-                            <span className="text-slate-400 block font-mono text-[10px] uppercase">Portfolio / GitHub</span>
-                            <a
-                              href={existingApp.portfolio}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-accent-cyan hover:underline mt-1 block break-all font-mono"
-                            >
-                              {existingApp.portfolio}
-                            </a>
-                          </div>
-                        )}
-                        {existingApp.bot_experience && (
-                          <div>
-                            <span className="text-slate-400 block font-mono text-[10px] uppercase flex items-center gap-1.5">
-                              <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.experience.url} alt="Experience" size="sm" />
-                              Bot Experience
-                            </span>
-                            <p className="text-slate-200 mt-1 whitespace-pre-wrap">{existingApp.bot_experience}</p>
-                          </div>
-                        )}
-                        {existingApp.complex_features && (
-                          <div>
-                            <span className="text-slate-400 block font-mono text-[10px] uppercase">Complex Feature</span>
-                            <p className="text-slate-200 mt-1 whitespace-pre-wrap">{existingApp.complex_features}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    </div>
+                    <a
+                      href={`/api/auth/discord?redirect_to=${encodeURIComponent(
+                        `/apply?tab=${activeTab}`
+                      )}`}
+                      className="w-full sm:w-auto h-9 px-4 rounded-lg bg-[#5865F2] hover:bg-[#4752c4] text-white text-xs font-medium transition-colors inline-flex items-center justify-center gap-2 shrink-0 touch-manipulation"
+                    >
+                      <LogIn className="w-3.5 h-3.5" />
+                      <span>Sign in with Discord</span>
+                    </a>
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-        ) : (
-          /* ========================================================================= */
-          /* CANDIDATE APPLICATION FORM (ONLY SHOWN IF NO ACTIVE/EXISTING APPLICATION)  */
-          /* ========================================================================= */
-          <div className="rounded-2xl bg-[#0d111d]/90 border border-white/10 shadow-2xl overflow-hidden backdrop-blur-xl">
-            {/* Discord Identity Bar - Automatically verified */}
-            <div className="p-4 sm:p-6 border-b border-white/[0.08] bg-black/25">
-              {user ? (
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={
-                        user.avatar
-                          ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
-                          : "https://files.catbox.moe/74l9su.png"
-                      }
-                      alt={user.username}
-                      className="w-11 h-11 rounded-full border border-white/15 object-cover"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white text-sm sm:text-base">
-                          {user.global_name || user.username}
-                        </span>
-                        <span className="text-xs text-slate-400 font-mono">@{user.username}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-400">
-                        <span>Discord ID: <code className="text-accent-cyan font-mono">{user.id}</code></span>
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold">
-                    <UserCheck className="w-3.5 h-3.5" />
-                    Verified Discord Identity
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-2 rounded-xl bg-brand-red/10 border border-brand-red/25">
-                  <div className="flex items-center gap-3">
-                    <Lock className="w-5 h-5 text-brand-crimson shrink-0" />
-                    <div>
-                      <div className="font-bold text-white text-sm">Discord Authentication Required</div>
-                      <div className="text-xs text-slate-300">
-                        Log in with your Discord account so we can automatically link your identity securely.
-                      </div>
-                    </div>
-                  </div>
-                  <a
-                    href="/api/auth/discord?redirect_to=/apply"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white text-xs font-bold transition-all shadow-md shrink-0"
+              {/* Animated Segmented Role Switcher + Readiness Meter */}
+              <div className="p-4 sm:px-6 sm:pt-5 sm:pb-4 border-b border-white/[0.06] space-y-3 bg-[#080b14]">
+                <div className="grid grid-cols-2 p-1 rounded-xl bg-[#060812] border border-white/[0.08] gap-1">
+                  <button
+                    type="button"
+                    onClick={() => switchRoleTab("staff")}
+                    className={`relative min-h-[44px] px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-2 touch-manipulation ${
+                      activeTab === "staff"
+                        ? "text-white"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
                   >
-                    <LogIn className="w-4 h-4" />
-                    Sign in with Discord
-                  </a>
-                </div>
-              )}
-            </div>
-
-            {/* Application Type Tabs with Interactive Custom Emojis */}
-            <div className="flex border-b border-white/[0.08] bg-[#090c14]">
-              <button
-                type="button"
-                onClick={() => { setActiveTab("staff"); setErrorMessage(""); }}
-                className={`flex-1 py-4 px-4 text-center font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2.5 border-b-2 ${
-                  activeTab === "staff"
-                    ? "border-brand-crimson text-white bg-white/[0.03]"
-                    : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.01]"
-                }`}
-              >
-                <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.staff.url} alt="Staff" size="md" />
-                Staff Application
-              </button>
-              <button
-                type="button"
-                onClick={() => { setActiveTab("developer"); setErrorMessage(""); }}
-                className={`flex-1 py-4 px-4 text-center font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2.5 border-b-2 ${
-                  activeTab === "developer"
-                    ? "border-accent-cyan text-white bg-white/[0.03]"
-                    : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.01]"
-                }`}
-              >
-                <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.developer.url} alt="Developer" size="md" />
-                Developer Application
-              </button>
-            </div>
-
-            {/* Error Alert */}
-            {errorMessage && (
-              <div className="mx-6 mt-6 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-2.5 text-xs sm:text-sm text-red-400 animate-in fade-in">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMessage}</span>
-              </div>
-            )}
-
-            {/* STAFF FORM */}
-            {activeTab === "staff" && (
-              <form onSubmit={handleStaffSubmit} className="p-6 sm:p-8 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {/* Age */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                      Age <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      min={13}
-                      max={99}
-                      placeholder="Minimum 13"
-                      value={staffAge}
-                      onChange={(e) => setStaffAge(e.target.value)}
-                      required
-                      className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-brand-crimson transition-all"
-                    />
-                  </div>
-
-                  {/* Region / Country with Animated Region Custom Emoji */}
-                  <div>
-                    <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                      <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.region.url} alt="Region" size="sm" />
-                      Where are you from? <span className="text-red-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="e.g. United States, Germany, India"
-                        value={staffTimezone}
-                        onChange={(e) => setStaffTimezone(e.target.value)}
-                        required
-                        className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-brand-crimson transition-all pr-12"
+                    {activeTab === "staff" && (
+                      <motion.span
+                        layoutId="applyRoleTab"
+                        transition={spring.snappy}
+                        className="absolute inset-0 rounded-lg bg-white/[0.08] border border-white/[0.1]"
                       />
-                      {staffFlag && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xl pointer-events-none">
-                          {staffFlag}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                    )}
+                    <DiscordEmoji
+                      src={DISCORD_CUSTOM_EMOJIS.staff.url}
+                      alt="Staff"
+                      size="sm"
+                      className="relative z-10"
+                    />
+                    <span className="relative z-10 truncate">Staff</span>
+                  </button>
 
-                {/* Availability */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                    How many hours per week can you dedicate? <span className="text-red-400">*</span>
-                  </label>
-                  <select
-                    value={staffAvailability}
-                    onChange={(e) => setStaffAvailability(e.target.value)}
-                    required
-                    className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-brand-crimson transition-all"
+                  <button
+                    type="button"
+                    onClick={() => switchRoleTab("developer")}
+                    className={`relative min-h-[44px] px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-2 touch-manipulation ${
+                      activeTab === "developer"
+                        ? "text-white"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
                   >
-                    <option value="" disabled className="bg-[#0e121d]">Select weekly commitment</option>
-                    <option value="1-5 hours" className="bg-[#0e121d]">1-5 hours / week</option>
-                    <option value="5-10 hours" className="bg-[#0e121d]">5-10 hours / week</option>
-                    <option value="10-20 hours" className="bg-[#0e121d]">10-20 hours / week</option>
-                    <option value="20+ hours" className="bg-[#0e121d]">20+ hours / week (Highly Active)</option>
-                  </select>
-                </div>
-
-                {/* Motivation */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                      Why do you want to join the SyncInk Staff team? <span className="text-red-400">*</span>
-                    </label>
-                    <span className="text-[11px] text-slate-500 font-mono">
-                      {staffReason.length}/1024
-                    </span>
-                  </div>
-                  <textarea
-                    rows={3}
-                    maxLength={1024}
-                    placeholder="Describe your motivations, passion, and what makes you a reliable moderator..."
-                    value={staffReason}
-                    onChange={(e) => setStaffReason(e.target.value)}
-                    required
-                    className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-brand-crimson transition-all resize-y"
-                  />
-                </div>
-
-                {/* Experience with Experience Custom Emoji */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-300">
-                      <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.experience.url} alt="Experience" size="sm" />
-                      Past Moderation Experience <span className="text-red-400">*</span>
-                    </label>
-                    <span className="text-[11px] text-slate-500 font-mono">
-                      {staffExp.length}/1024
-                    </span>
-                  </div>
-                  <textarea
-                    rows={3}
-                    maxLength={1024}
-                    placeholder="List past servers you have moderated, roles held, or bot tools used..."
-                    value={staffExp}
-                    onChange={(e) => setStaffExp(e.target.value)}
-                    required
-                    className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-brand-crimson transition-all resize-y"
-                  />
-                </div>
-
-                {/* Scenarios with Custom Animated & Static Emojis */}
-                <div className="space-y-5 pt-2">
-                  <div className="text-xs font-extrabold uppercase tracking-widest text-brand-crimson flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Practical Scenarios
-                  </div>
-
-                  {/* Scenario 1: Warning Animated Emoji */}
-                  <div className="p-4 rounded-xl bg-black/30 border border-white/[0.08] hover:border-amber-500/30 transition-all">
-                    <label className="flex items-start gap-2 text-xs font-bold text-slate-200 mb-2">
-                      <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.scenario1.url} alt="Spam Warning" size="md" className="shrink-0 mt-0.5" />
-                      <span>
-                        Scenario 1: A user is spamming chat and attempting to bypass filters. What do you do? <span className="text-red-400">*</span>
-                      </span>
-                    </label>
-                    <textarea
-                      rows={2}
-                      maxLength={1024}
-                      placeholder="Step-by-step actions (mute, purge, escalation)..."
-                      value={staffScen1}
-                      onChange={(e) => setStaffScen1(e.target.value)}
-                      required
-                      className="w-full px-4 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-brand-crimson transition-all resize-y"
-                    />
-                  </div>
-
-                  {/* Scenario 2: Argument Custom Emoji */}
-                  <div className="p-4 rounded-xl bg-black/30 border border-white/[0.08] hover:border-amber-500/30 transition-all">
-                    <label className="flex items-start gap-2 text-xs font-bold text-slate-200 mb-2">
-                      <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.scenario2.url} alt="Argument" size="md" className="shrink-0 mt-0.5" />
-                      <span>
-                        Scenario 2: Two active members are having a heated argument escalating into insults. How do you de-escalate? <span className="text-red-400">*</span>
-                      </span>
-                    </label>
-                    <textarea
-                      rows={2}
-                      maxLength={1024}
-                      placeholder="Conflict resolution and mediation strategy..."
-                      value={staffScen2}
-                      onChange={(e) => setStaffScen2(e.target.value)}
-                      required
-                      className="w-full px-4 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-brand-crimson transition-all resize-y"
-                    />
-                  </div>
-
-                  {/* Scenario 3: Admin Custom Emoji */}
-                  <div className="p-4 rounded-xl bg-black/30 border border-white/[0.08] hover:border-amber-500/30 transition-all">
-                    <label className="flex items-start gap-2 text-xs font-bold text-slate-200 mb-2">
-                      <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.scenario3.url} alt="Admin" size="md" className="shrink-0 mt-0.5" />
-                      <span>
-                        Scenario 3: A user accuses another staff member of abuse of power. How do you handle it? <span className="text-red-400">*</span>
-                      </span>
-                    </label>
-                    <textarea
-                      rows={2}
-                      maxLength={1024}
-                      placeholder="Investigation procedure and reporting protocol..."
-                      value={staffScen3}
-                      onChange={(e) => setStaffScen3(e.target.value)}
-                      required
-                      className="w-full px-4 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-brand-crimson transition-all resize-y"
-                    />
-                  </div>
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={submitting || !user}
-                  className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-brand-crimson to-brand-red hover:opacity-95 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all shadow-[0_0_25px_rgba(231,76,60,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {submitting ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      Submit Staff Application
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
-
-            {/* DEVELOPER FORM */}
-            {activeTab === "developer" && (
-              <form onSubmit={handleDevSubmit} className="p-6 sm:p-8 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {/* Age */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                      Age <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      min={13}
-                      max={99}
-                      placeholder="Minimum 13"
-                      value={devAge}
-                      onChange={(e) => setDevAge(e.target.value)}
-                      required
-                      className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-accent-cyan transition-all"
-                    />
-                  </div>
-
-                  {/* Region with Animated Custom Emoji */}
-                  <div>
-                    <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                      <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.region.url} alt="Region" size="sm" />
-                      Where are you from? <span className="text-red-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="e.g. United States, Germany, India"
-                        value={devTimezone}
-                        onChange={(e) => setDevTimezone(e.target.value)}
-                        required
-                        className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-accent-cyan transition-all pr-12"
+                    {activeTab === "developer" && (
+                      <motion.span
+                        layoutId="applyRoleTab"
+                        transition={spring.snappy}
+                        className="absolute inset-0 rounded-lg bg-white/[0.08] border border-white/[0.1]"
                       />
-                      {devFlag && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xl pointer-events-none">
-                          {devFlag}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    )}
+                    <DiscordEmoji
+                      src={DISCORD_CUSTOM_EMOJIS.developer.url}
+                      alt="Developer"
+                      size="sm"
+                      className="relative z-10"
+                    />
+                    <span className="relative z-10 truncate">Developer</span>
+                  </button>
                 </div>
 
-                {/* Languages & Tech with Developer Custom Emoji */}
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                    <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.developer.url} alt="Developer" size="sm" />
-                    Primary Languages & Frameworks <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. TypeScript, Node.js, Python, Discord.js, Next.js, PostgreSQL"
-                    value={devLangs}
-                    onChange={(e) => setDevLangs(e.target.value)}
-                    required
-                    className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-accent-cyan transition-all"
-                  />
-                </div>
-
-                {/* GitHub or Portfolio URL */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                    GitHub Profile or Portfolio URL <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://github.com/your-username"
-                    value={devPortfolio}
-                    onChange={(e) => setDevPortfolio(e.target.value)}
-                    required
-                    className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-accent-cyan transition-all"
-                  />
-                </div>
-
-                {/* Bot Experience with Experience Custom Emoji */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-300">
-                      <DiscordEmoji src={DISCORD_CUSTOM_EMOJIS.experience.url} alt="Experience" size="sm" />
-                      Discord Bot Experience & Architecture <span className="text-red-400">*</span>
-                    </label>
-                    <span className="text-[11px] text-slate-500 font-mono">
-                      {devBotExp.length}/1024
+                {/* Live Completion Readiness Bar */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                    <span>
+                      {activeTab === "staff" ? "Staff checklist" : "Developer checklist"}
+                    </span>
+                    <span className="tabular-nums text-slate-300">
+                      {formProgress.done}/{formProgress.total} completed
                     </span>
                   </div>
-                  <textarea
-                    rows={3}
-                    maxLength={1024}
-                    placeholder="Describe bots you have developed, libraries used (discord.py, discord.js), and database solutions..."
-                    value={devBotExp}
-                    onChange={(e) => setDevBotExp(e.target.value)}
-                    required
-                    className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-accent-cyan transition-all resize-y"
-                  />
-                </div>
-
-                {/* Complex Feature */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                      Describe a Complex Feature You Have Built <span className="text-red-400">*</span>
-                    </label>
-                    <span className="text-[11px] text-slate-500 font-mono">
-                      {devComplex.length}/1024
-                    </span>
-                  </div>
-                  <textarea
-                    rows={3}
-                    maxLength={1024}
-                    placeholder="Explain the technical problem, your architecture decisions, edge cases handled, and performance outcomes..."
-                    value={devComplex}
-                    onChange={(e) => setDevComplex(e.target.value)}
-                    required
-                    className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-accent-cyan transition-all resize-y"
-                  />
-                </div>
-
-                {/* Optional File Attachment */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                    Attachment (Optional: Screenshot, Code Sample, or Resume)
-                  </label>
-                  <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/15 hover:border-accent-cyan/50 rounded-2xl bg-black/20 hover:bg-black/30 transition-all cursor-pointer">
-                    <Upload className="w-8 h-8 text-slate-400 mb-2" />
-                    <span className="text-xs sm:text-sm font-semibold text-slate-300">
-                      {devFile ? devFile.name : "Click or drag & drop to attach a file"}
-                    </span>
-                    <span className="text-[11px] text-slate-500 mt-1">
-                      Images, PDF, ZIP (Max 8MB)
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*,.pdf,.zip"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          setDevFile(e.target.files[0]);
-                        }
+                  <div className="h-1 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                    <motion.div
+                      initial={false}
+                      animate={{
+                        scaleX: formProgress.total > 0 ? formProgress.done / formProgress.total : 0,
                       }}
-                      className="hidden"
+                      transition={transition.hover}
+                      className="h-full w-full origin-left bg-blue-500 rounded-full"
                     />
-                  </label>
+                  </div>
                 </div>
+              </div>
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={submitting || !user}
-                  className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-95 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all shadow-[0_0_25px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {submitting ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      Submit Developer Application
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
-          </div>
-        )}
-      </main>
+              {/* Validation Error Banner */}
+              <AnimatePresence>
+                {errorMessage && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={transition.enter}
+                    className="mx-4 sm:mx-6 mt-5 p-3.5 rounded-lg bg-red-500/10 border border-red-500/25 flex items-start gap-2.5 text-xs sm:text-sm text-red-300"
+                  >
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
+                    <span>{errorMessage}</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-      <PublicFooter />
-    </div>
+              {/* Animated Role Form Switch */}
+              <AnimatePresence mode="wait">
+                {activeTab === "staff" ? (
+                  <motion.form
+                    key="staff-form"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={transition.enter}
+                    onSubmit={handleStaffSubmit}
+                    className="p-4 sm:p-6 space-y-5"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                          Age <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={13}
+                          max={99}
+                          placeholder="Minimum 13"
+                          value={staffAge}
+                          onChange={(e) => setStaffAge(e.target.value)}
+                          required
+                          className="w-full h-11 px-3.5 rounded-lg bg-[#060812] border border-white/[0.1] text-white placeholder-slate-500 text-base sm:text-sm focus:outline-none focus:border-blue-500 transition-colors tabular-nums"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
+                          <DiscordEmoji
+                            src={DISCORD_CUSTOM_EMOJIS.region.url}
+                            alt="Region"
+                            size="xs"
+                          />
+                          <span>Country or region</span>
+                          <span className="text-red-400">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="e.g. India, United States, Germany"
+                            value={staffTimezone}
+                            onChange={(e) => setStaffTimezone(e.target.value)}
+                            required
+                            className="w-full h-11 px-3.5 rounded-lg bg-[#060812] border border-white/[0.1] text-white placeholder-slate-500 text-base sm:text-sm focus:outline-none focus:border-blue-500 transition-colors pr-11"
+                          />
+                          {staffFlag && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">
+                              {staffFlag}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                        Weekly availability <span className="text-red-400">*</span>
+                      </label>
+                      <select
+                        value={staffAvailability}
+                        onChange={(e) => setStaffAvailability(e.target.value)}
+                        required
+                        className="w-full h-11 px-3.5 rounded-lg bg-[#060812] border border-white/[0.1] text-white text-base sm:text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                      >
+                        <option value="" disabled className="bg-[#0c0f18]">
+                          Select weekly commitment
+                        </option>
+                        <option value="1-5 hours" className="bg-[#0c0f18]">
+                          1-5 hours / week
+                        </option>
+                        <option value="5-10 hours" className="bg-[#0c0f18]">
+                          5-10 hours / week
+                        </option>
+                        <option value="10-20 hours" className="bg-[#0c0f18]">
+                          10-20 hours / week
+                        </option>
+                        <option value="20+ hours" className="bg-[#0c0f18]">
+                          20+ hours / week
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="block text-xs font-medium text-slate-300">
+                          Why do you want to join SyncInk Staff? <span className="text-red-400">*</span>
+                        </label>
+                        <span className="text-[11px] text-slate-500 font-mono tabular-nums">
+                          {staffReason.length}/1024
+                        </span>
+                      </div>
+                      <textarea
+                        rows={3}
+                        maxLength={1024}
+                        placeholder="Describe your motivations and what makes you a reliable moderator..."
+                        value={staffReason}
+                        onChange={(e) => setStaffReason(e.target.value)}
+                        required
+                        className="w-full p-3.5 rounded-lg bg-[#060812] border border-white/[0.1] text-white placeholder-slate-500 text-base sm:text-sm focus:outline-none focus:border-blue-500 transition-colors resize-y"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="flex items-center gap-1.5 text-xs font-medium text-slate-300">
+                          <DiscordEmoji
+                            src={DISCORD_CUSTOM_EMOJIS.experience.url}
+                            alt="Experience"
+                            size="xs"
+                          />
+                          <span>Past moderation experience</span>
+                          <span className="text-red-400">*</span>
+                        </label>
+                        <span className="text-[11px] text-slate-500 font-mono tabular-nums">
+                          {staffExp.length}/1024
+                        </span>
+                      </div>
+                      <textarea
+                        rows={3}
+                        maxLength={1024}
+                        placeholder="List servers moderated, roles held, or moderation tools used..."
+                        value={staffExp}
+                        onChange={(e) => setStaffExp(e.target.value)}
+                        required
+                        className="w-full p-3.5 rounded-lg bg-[#060812] border border-white/[0.1] text-white placeholder-slate-500 text-base sm:text-sm focus:outline-none focus:border-blue-500 transition-colors resize-y"
+                      />
+                    </div>
+
+                    {/* Practical Scenarios */}
+                    <div className="space-y-4 pt-2 border-t border-white/[0.06]">
+                      <div className="text-xs font-mono text-slate-400">
+                        Practical scenarios
+                      </div>
+
+                      <div className="p-3.5 sm:p-4 rounded-xl bg-[#060812] border border-white/[0.08] space-y-2.5">
+                        <label className="flex items-start gap-2.5 text-xs font-medium text-slate-200 leading-snug">
+                          <DiscordEmoji
+                            src={DISCORD_CUSTOM_EMOJIS.scenario1.url}
+                            alt="Spam Warning"
+                            size="sm"
+                            className="shrink-0 mt-0.5"
+                          />
+                          <span>
+                            Scenario 1: A user is spamming chat and attempting to bypass filters. What do you do? <span className="text-red-400">*</span>
+                          </span>
+                        </label>
+                        <textarea
+                          rows={2}
+                          maxLength={1024}
+                          placeholder="Step-by-step actions (timeout, purge, escalation)..."
+                          value={staffScen1}
+                          onChange={(e) => setStaffScen1(e.target.value)}
+                          required
+                          className="w-full p-3 rounded-lg bg-[#0c0f18] border border-white/[0.08] text-white placeholder-slate-500 text-base sm:text-sm focus:outline-none focus:border-blue-500 transition-colors resize-y"
+                        />
+                      </div>
+
+                      <div className="p-3.5 sm:p-4 rounded-xl bg-[#060812] border border-white/[0.08] space-y-2.5">
+                        <label className="flex items-start gap-2.5 text-xs font-medium text-slate-200 leading-snug">
+                          <DiscordEmoji
+                            src={DISCORD_CUSTOM_EMOJIS.scenario2.url}
+                            alt="Argument"
+                            size="sm"
+                            className="shrink-0 mt-0.5"
+                          />
+                          <span>
+                            Scenario 2: Two active members are having a heated argument escalating into insults. How do you de-escalate? <span className="text-red-400">*</span>
+                          </span>
+                        </label>
+                        <textarea
+                          rows={2}
+                          maxLength={1024}
+                          placeholder="Conflict resolution and mediation strategy..."
+                          value={staffScen2}
+                          onChange={(e) => setStaffScen2(e.target.value)}
+                          required
+                          className="w-full p-3 rounded-lg bg-[#0c0f18] border border-white/[0.08] text-white placeholder-slate-500 text-base sm:text-sm focus:outline-none focus:border-blue-500 transition-colors resize-y"
+                        />
+                      </div>
+
+                      <div className="p-3.5 sm:p-4 rounded-xl bg-[#060812] border border-white/[0.08] space-y-2.5">
+                        <label className="flex items-start gap-2.5 text-xs font-medium text-slate-200 leading-snug">
+                          <DiscordEmoji
+                            src={DISCORD_CUSTOM_EMOJIS.scenario3.url}
+                            alt="Admin"
+                            size="sm"
+                            className="shrink-0 mt-0.5"
+                          />
+                          <span>
+                            Scenario 3: A user accuses another staff member of abuse of power. How do you handle it? <span className="text-red-400">*</span>
+                          </span>
+                        </label>
+                        <textarea
+                          rows={2}
+                          maxLength={1024}
+                          placeholder="Investigation procedure and reporting protocol..."
+                          value={staffScen3}
+                          onChange={(e) => setStaffScen3(e.target.value)}
+                          required
+                          className="w-full p-3 rounded-lg bg-[#0c0f18] border border-white/[0.08] text-white placeholder-slate-500 text-base sm:text-sm focus:outline-none focus:border-blue-500 transition-colors resize-y"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={submitting || !user}
+                      className="w-full h-11 px-5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm flex items-center justify-center gap-2 transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+                    >
+                      {submitting ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          <span>Submit Staff Application</span>
+                        </>
+                      )}
+                    </button>
+                  </motion.form>
+                ) : (
+                  <motion.form
+                    key="dev-form"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={transition.enter}
+                    onSubmit={handleDevSubmit}
+                    className="p-4 sm:p-6 space-y-5"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                          Age <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={13}
+                          max={99}
+                          placeholder="Minimum 13"
+                          value={devAge}
+                          onChange={(e) => setDevAge(e.target.value)}
+                          required
+                          className="w-full h-11 px-3.5 rounded-lg bg-[#060812] border border-white/[0.1] text-white placeholder-slate-500 text-base sm:text-sm focus:outline-none focus:border-blue-500 transition-colors tabular-nums"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
+                          <DiscordEmoji
+                            src={DISCORD_CUSTOM_EMOJIS.region.url}
+                            alt="Region"
+                            size="xs"
+                          />
+                          <span>Country or region</span>
+                          <span className="text-red-400">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="e.g. India, United States, Germany"
+                            value={devTimezone}
+                            onChange={(e) => setDevTimezone(e.target.value)}
+                            required
+                            className="w-full h-11 px-3.5 rounded-lg bg-[#060812] border border-white/[0.1] text-white placeholder-slate-500 text-base sm:text-sm focus:outline-none focus:border-blue-500 transition-colors pr-11"
+                          />
+                          {devFlag && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">
+                              {devFlag}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
+                        <DiscordEmoji
+                          src={DISCORD_CUSTOM_EMOJIS.developer.url}
+                          alt="Developer"
+                          size="xs"
+                        />
+                        <span>Primary languages &amp; frameworks</span>
+                        <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. TypeScript, Node.js, Python, Discord.js, Next.js, PostgreSQL"
+                        value={devLangs}
+                        onChange={(e) => setDevLangs(e.target.value)}
+                        required
+                        className="w-full h-11 px-3.5 rounded-lg bg-[#060812] border border-white/[0.1] text-white placeholder-slate-500 text-base sm:text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                        GitHub profile or portfolio URL <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://github.com/your-username"
+                        value={devPortfolio}
+                        onChange={(e) => setDevPortfolio(e.target.value)}
+                        required
+                        className="w-full h-11 px-3.5 rounded-lg bg-[#060812] border border-white/[0.1] text-white placeholder-slate-500 text-base sm:text-sm font-mono focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="flex items-center gap-1.5 text-xs font-medium text-slate-300">
+                          <DiscordEmoji
+                            src={DISCORD_CUSTOM_EMOJIS.experience.url}
+                            alt="Experience"
+                            size="xs"
+                          />
+                          <span>Discord bot experience &amp; architecture</span>
+                          <span className="text-red-400">*</span>
+                        </label>
+                        <span className="text-[11px] text-slate-500 font-mono tabular-nums">
+                          {devBotExp.length}/1024
+                        </span>
+                      </div>
+                      <textarea
+                        rows={3}
+                        maxLength={1024}
+                        placeholder="Describe bots built, libraries used (discord.py, discord.js), and database design..."
+                        value={devBotExp}
+                        onChange={(e) => setDevBotExp(e.target.value)}
+                        required
+                        className="w-full p-3.5 rounded-lg bg-[#060812] border border-white/[0.1] text-white placeholder-slate-500 text-base sm:text-sm focus:outline-none focus:border-blue-500 transition-colors resize-y"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="block text-xs font-medium text-slate-300">
+                          Describe a complex feature you have built <span className="text-red-400">*</span>
+                        </label>
+                        <span className="text-[11px] text-slate-500 font-mono tabular-nums">
+                          {devComplex.length}/1024
+                        </span>
+                      </div>
+                      <textarea
+                        rows={3}
+                        maxLength={1024}
+                        placeholder="Explain the problem, architecture choices, edge cases handled, and performance results..."
+                        value={devComplex}
+                        onChange={(e) => setDevComplex(e.target.value)}
+                        required
+                        className="w-full p-3.5 rounded-lg bg-[#060812] border border-white/[0.1] text-white placeholder-slate-500 text-base sm:text-sm focus:outline-none focus:border-blue-500 transition-colors resize-y"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                        Attachment (optional: screenshot, code sample, or resume)
+                      </label>
+                      <label className="flex flex-col items-center justify-center p-5 border border-dashed border-white/[0.16] hover:border-white/[0.3] rounded-xl bg-[#060812] hover:bg-white/[0.02] transition-colors cursor-pointer touch-manipulation">
+                        <Upload className="w-6 h-6 text-slate-400 mb-2" />
+                        <span className="text-xs sm:text-sm font-medium text-slate-300 text-center break-all">
+                          {devFile ? devFile.name : "Tap to select a file"}
+                        </span>
+                        <span className="text-[11px] font-mono text-slate-500 mt-1">
+                          Images, PDF, ZIP · Max 8MB
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*,.pdf,.zip"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              setDevFile(e.target.files[0]);
+                            }
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={submitting || !user}
+                      className="w-full h-11 px-5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm flex items-center justify-center gap-2 transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+                    >
+                      {submitting ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          <span>Submit Developer Application</span>
+                        </>
+                      )}
+                    </button>
+                  </motion.form>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </main>
+
+        <PublicFooter />
+      </div>
+    </MotionConfig>
   );
 }

@@ -392,7 +392,7 @@ export default function AudiaSpecPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080910] text-[#F8F8FC] flex flex-col font-sans selection:bg-purple-600 selection:text-white relative">
+    <div className="min-h-screen bg-[#060812] text-[#F8F8FC] flex flex-col font-sans selection:bg-purple-600 selection:text-white relative overflow-x-hidden">
       <PublicNavbar />
 
       {/* ─── STICKY READING PROGRESS BAR ─────────────────────────────── */}
@@ -504,9 +504,7 @@ export default function AudiaSpecPage() {
         {/* ========================================================= */}
         {/* HERO SECTION — UNIFIED CENTER-ALIGNED EDITORIAL DESIGN   */}
         {/* ========================================================= */}
-        <header className="relative pt-8 sm:pt-16 pb-16 sm:pb-24 border-b border-white/[0.07] mb-16 overflow-hidden text-center">
-          {/* Subtle violet ambient atmospheric glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[680px] sm:w-[860px] h-[360px] sm:h-[420px] bg-[radial-gradient(ellipse_70%_50%_at_50%_50%,rgba(168,85,247,0.12),transparent_70%)] pointer-events-none blur-3xl -z-10" />
+        <header className="relative pt-8 sm:pt-14 pb-14 sm:pb-20 border-b border-white/[0.07] mb-12 sm:mb-16 text-center">
 
           <motion.div
             variants={heroContainerVariants}

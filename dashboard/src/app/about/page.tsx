@@ -1,13 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import {
   Shield,
-  Ticket,
-  Headphones,
   Lock,
   ExternalLink,
   ChevronRight,
@@ -23,756 +21,845 @@ import {
   ArrowRight,
   Server,
   Zap,
-  Eye,
-  Sliders,
   Terminal,
   Activity,
   Users,
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
+import { spring, transition } from "@/lib/motion-tokens";
+
+type BotFilter = "all" | "ticket" | "voice" | "radio" | "security";
+
+interface BotSpec {
+  id: Exclude<BotFilter, "all">;
+  name: string;
+  tagline: string;
+  availability: string;
+  runtime: string;
+  logo: string;
+  logoAlt: string;
+  useNextImage?: boolean;
+  primaryAction: {
+    label: string;
+    href: string;
+    external?: boolean;
+  };
+  secondaryAction?: {
+    label: string;
+    href: string;
+  };
+  tertiaryAction?: {
+    label: string;
+    href: string;
+  };
+  metaText?: string;
+  highlights: { title: string; desc: string }[];
+}
+
+const BOT_SPECS: BotSpec[] = [
+  {
+    id: "ticket",
+    name: "SyncInk Ticket Bot",
+    tagline: "Enterprise support ticketing with native private thread isolation",
+    availability: "Public · Invitable",
+    runtime: "Node.js & Discord.js v14",
+    logo: "/ticket-logo.png",
+    logoAlt: "SyncInk Ticket Bot Logo",
+    primaryAction: {
+      label: "Invite Ticket Bot",
+      href: "https://discord.com/oauth2/authorize?client_id=1513075101992747158&permissions=361046068240&integration_type=0&scope=bot+applications.commands",
+      external: true,
+    },
+    secondaryAction: {
+      label: "Ticket Dashboard",
+      href: "/dashboard/tickets",
+    },
+    highlights: [
+      {
+        title: "Private Thread Infrastructure",
+        desc: "Operates inside Discord's native private threads. Avoids filling up the server channel list, preserves member confidentiality, and never hits server channel quotas.",
+      },
+      {
+        title: "Custom Categories & Emojis",
+        desc: "Interactive buttons and drop-down menus with support for custom Discord emojis. Routes user tickets into dedicated departments (General, Bug Reports, Reports, etc.).",
+      },
+      {
+        title: "Encrypted Web Transcripts",
+        desc: "Automatic transcript generation upon closure. Archives message timestamps, attachments, and embedded messages in an encrypted HTML viewer for staff auditability.",
+      },
+    ],
+  },
+  {
+    id: "voice",
+    name: "SyncInk Voice Bot",
+    tagline: "Dynamic temporary voice channels with in-room owner controls",
+    availability: "Public · Invitable",
+    runtime: "Node.js & Express",
+    logo: "/voice-logo.png",
+    logoAlt: "SyncInk Voice Bot Logo",
+    primaryAction: {
+      label: "Invite Voice Bot",
+      href: "https://discord.com/oauth2/authorize?client_id=1516578887109181520&permissions=285220880&integration_type=0&scope=bot+applications.commands",
+      external: true,
+    },
+    secondaryAction: {
+      label: "Voice Dashboard",
+      href: "/dashboard/voice",
+    },
+    highlights: [
+      {
+        title: "Join-to-Create Hubs",
+        desc: "Members connect to a single generator channel. The bot instantly spawns a dedicated temporary voice channel and moves the user into it seamlessly.",
+      },
+      {
+        title: "In-Room Owner Controls",
+        desc: "Room creators manage permissions with slash commands and interactive panels: lock, hide (ghost mode), set user limits, permit friends, or kick unwanted members.",
+      },
+      {
+        title: "1.5-Second Auto-Purge",
+        desc: "When the last member disconnects, the channel is permanently deleted within 1.5 seconds. No lingering empty rooms or voice channel debris left behind.",
+      },
+    ],
+  },
+  {
+    id: "radio",
+    name: "SyncInk Radio",
+    tagline: "24/7 lossless 48kHz music and radio streaming powered by Audia AI",
+    availability: "Official Release · Live",
+    runtime: "Opus 48kHz Stereo · Audia AI",
+    logo: "/radio-logo.png",
+    logoAlt: "SyncInk Radio Logo",
+    useNextImage: true,
+    primaryAction: {
+      label: "Invite Radio Bot",
+      href: "https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands",
+      external: true,
+    },
+    secondaryAction: {
+      label: "Radio Dashboard",
+      href: "/dashboard/radio",
+    },
+    tertiaryAction: {
+      label: "Audia Spec",
+      href: "/audia",
+    },
+    highlights: [
+      {
+        title: "48kHz Lossless Opus Audio",
+        desc: "Direct Opus container extraction eliminates CPU resampling jitter. Streams at uncompromised 192kbps stereo with zero-buffer socket reconnections.",
+      },
+      {
+        title: "Audia AI Autonomous AutoPlay",
+        desc: "Continuously vectorizes listener preferences, tracks skips, and runs a six-stage recommendation cycle to queue matching upcoming tracks automatically.",
+      },
+      {
+        title: "Strict Zero-Bleed Isolation",
+        desc: "Enforces strict language isolation (e.g. Hindi, English, Punjabi) and acoustic mood barriers so tracks never bleed into dissonant or unwanted genres.",
+      },
+    ],
+  },
+  {
+    id: "security",
+    name: "SyncInk Support & Security Bot",
+    tagline: "Automod defense and real-time quarantine for the official SyncInk Support Server",
+    availability: "Internal Shield · Non-Invitable",
+    runtime: "Python 3.10+ & PostgreSQL",
+    logo: "/syncink-support-logo.png",
+    logoAlt: "SyncInk Support & Security Bot Logo",
+    primaryAction: {
+      label: "Security Console",
+      href: "/dashboard/security",
+    },
+    metaText: "Server ID: 1520457643842342912",
+    highlights: [
+      {
+        title: "Velocity Raid Dampening",
+        desc: "Detects abnormal member join spikes and message velocity surges. Engages instant emergency lockdowns in milliseconds to neutralize automated raid attacks.",
+      },
+      {
+        title: "Automated Quarantine",
+        desc: "Raid suspects and policy bypass accounts are automatically stripped of permissions and confined to an isolated quarantine channel awaiting staff review.",
+      },
+      {
+        title: "Live Database Forensics",
+        desc: "Persistent PostgreSQL migrations record every moderation action, strike tally, and whitelist change with real-time API sync to our web console.",
+      },
+    ],
+  },
+];
+
+const ARCHITECTURE_LAYERS = [
+  {
+    id: "runtime",
+    icon: Terminal,
+    title: "Discord.js v14 & Python",
+    tag: "Gateway & Worker Processes",
+    summary:
+      "Utilizing latest Discord gateway intents, slash command routing, and localized Cog architecture for predictable low-latency execution.",
+    details: [
+      "Isolated bot processes prevent voice spikes or radio decoding from delaying ticket interactions.",
+      "Dedicated command sync and event queues per domain with clean graceful shutdown handling.",
+      "Custom Components V2 layouts, ephemeral moderation responses, and structured audit logging.",
+    ],
+  },
+  {
+    id: "storage",
+    icon: Database,
+    title: "PostgreSQL & MongoDB",
+    tag: "Relational + Document Storage",
+    summary:
+      "Persistent relational data for moderation audit logs and thread state, paired with document storage for dynamic voice configurations.",
+    details: [
+      "Strict schema migrations preserve moderation case histories, strike tallies, and recovery tickets.",
+      "Encrypted HTML transcript payloads stored with strict staff/requester access boundaries.",
+      "Low-latency read paths power live status telemetry on syncink.site.",
+    ],
+  },
+  {
+    id: "console",
+    icon: Layers,
+    title: "Next.js 14 App Router",
+    tag: "Edge-Delivered Web Console",
+    summary:
+      "Server-rendered console hosted on Vercel with strict security headers and real-time API synchronization.",
+    details: [
+      "Unified multi-bot navigation across Ticket, Voice, Radio, Security, and Application portals.",
+      "Responsive layouts engineered for desktop consoles and mobile administration on the go.",
+      "Respects user motion preferences and keyboard-first workflows.",
+    ],
+  },
+  {
+    id: "security",
+    icon: Shield,
+    title: "Role-Based OAuth2 Security",
+    tag: "Verified Access Control",
+    summary:
+      "Discord OAuth2 session authentication restricting server dashboards exclusively to verified administrators and guild owners.",
+    details: [
+      "Session validation verifies live guild roles, staff clearance, and owner signatures.",
+      "Anti-duplicate application guards and verified account matching on onboarding endpoints.",
+      "Zero secret exposure across client bundles or public telemetry routes.",
+    ],
+  },
+];
+
+const QUICK_JUMP_SECTIONS = [
+  { id: "philosophy", label: "Philosophy" },
+  { id: "bots", label: "Bot suite" },
+  { id: "architecture", label: "Architecture" },
+  { id: "resources", label: "Resources" },
+];
 
 export default function AboutPage() {
+  const [selectedBot, setSelectedBot] = useState<BotFilter>("all");
+  const [activeLayer, setActiveLayer] = useState<string>("runtime");
+
+  const visibleBots =
+    selectedBot === "all"
+      ? BOT_SPECS
+      : BOT_SPECS.filter((b) => b.id === selectedBot);
+
+  const currentLayer =
+    ARCHITECTURE_LAYERS.find((l) => l.id === activeLayer) || ARCHITECTURE_LAYERS[0];
+  const ActiveLayerIcon = currentLayer.icon;
+
   return (
-    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-brand-red selection:text-white relative overflow-x-hidden">
-      <PublicNavbar />
+    <MotionConfig reducedMotion="user">
+      <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-brand-blue selection:text-white overflow-x-hidden">
+        <PublicNavbar />
 
-      <main className="flex-1 w-full">
-        {/* ========================================================= */}
-        {/* HERO SECTION */}
-        {/* ========================================================= */}
-        <section
-          aria-labelledby="about-hero-title"
-          className="relative pt-20 sm:pt-28 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-b border-white/[0.06]"
-        >
-          {/* Subtle Ambient Glow */}
-          <div
-            aria-hidden="true"
-            className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[36rem] h-[20rem] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"
-          />
-
-          <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-slate-300 text-xs font-semibold uppercase tracking-wider shadow-sm">
-              <Layers className="h-3.5 w-3.5 text-blue-400" />
-              <span>About SyncInk • Platform Overview</span>
-            </div>
-
-            <h1
-              id="about-hero-title"
-              className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15]"
+        <main className="flex-1 w-full">
+          {/* Hero Section */}
+          <section
+            aria-labelledby="about-hero-title"
+            className="pt-14 sm:pt-20 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto border-b border-white/[0.06]"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={transition.enter}
+              className="max-w-3xl space-y-5"
             >
-              Purpose-Built Automation for{" "}
-              <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-cyan-300 bg-clip-text text-transparent">
-                Modern Discord Communities.
-              </span>
-            </h1>
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#0c0f18] border border-white/[0.08] font-mono text-[11px] text-slate-300">
+                <Layers className="h-3.5 w-3.5 text-blue-400" />
+                <span>About SyncInk · Platform architecture</span>
+              </div>
 
-            <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
-              SyncInk designs and operates specialized Discord bots, web consoles, and community infrastructure. We replace cluttered, monolithic bots with focused, high-performance systems engineered for reliability, privacy, and scale.
-            </p>
-
-            {/* Factual Core Badges */}
-            <div className="pt-4 flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-xs font-medium text-slate-300">
-              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-                <Cpu className="w-4 h-4 text-blue-400" />
-                <span>Micro-Bot Specialization</span>
-              </div>
-              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-                <Lock className="w-4 h-4 text-indigo-400" />
-                <span>Thread-Native Privacy</span>
-              </div>
-              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-                <Zap className="w-4 h-4 text-cyan-400" />
-                <span>1.5s Ephemeral Purge</span>
-              </div>
-              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-                <Server className="w-4 h-4 text-emerald-400" />
-                <span>PostgreSQL & Node.js Engine</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ========================================================= */}
-        {/* PHILOSOPHY & WHY WE EXIST */}
-        {/* ========================================================= */}
-        <section
-          aria-labelledby="philosophy-title"
-          className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-b border-white/[0.06]"
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
-            <div className="lg:col-span-5 space-y-4">
-              <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">
-                Our Engineering Philosophy
-              </span>
-              <h2
-                id="philosophy-title"
-                className="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight"
+              <h1
+                id="about-hero-title"
+                className="text-3xl sm:text-5xl font-semibold text-white tracking-tight leading-[1.12]"
               >
-                Why Specialization Beats Monolithic Bots.
-              </h2>
-              <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-                Most community bots try to solve every problem at once—bundling tickets, voice, leveling, games, and moderation into a single fragile process. The result is often channel clutter, hitting Discord rate limits, and slow responsiveness during traffic spikes.
-              </p>
-              <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-                SyncInk takes an infrastructure-first approach: we break common server bottlenecks into independent, dedicated micro-bots. Each bot executes one domain flawlessly with isolated failure boundaries and zero server clutter.
-              </p>
-            </div>
+                Purpose-built automation for modern Discord communities
+              </h1>
 
-            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-              <div className="p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
-                  <Layers className="w-5 h-5" />
+              <p className="text-sm sm:text-base text-slate-400 max-w-2xl leading-relaxed">
+                SyncInk designs and operates specialized Discord bots, web consoles, and community infrastructure. Instead of cramming every feature into a fragile monolith, each system runs independently for reliability, privacy, and predictable scale.
+              </p>
+
+              {/* Spec Summary Strip */}
+              <div className="pt-2 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-3 rounded-lg bg-[#0c0f18] border border-white/[0.08]">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-white">
+                    <Cpu className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">Micro-bots</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-1">
+                    Isolated domains
+                  </div>
                 </div>
-                <h3 className="text-base font-bold text-white">Zero Channel Clutter</h3>
-                <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                  Instead of creating hundreds of separate text channels that fill server lists and hit Discord's 500-channel limit, our ticket platform operates entirely inside native private threads.
+
+                <div className="p-3 rounded-lg bg-[#0c0f18] border border-white/[0.08]">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-white">
+                    <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">Thread-native</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-1">
+                    Encrypted transcripts
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-[#0c0f18] border border-white/[0.08]">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-white">
+                    <Zap className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate tabular-nums">1.5s purge</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-1">
+                    Ephemeral voice rooms
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-[#0c0f18] border border-white/[0.08]">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-white">
+                    <Server className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">PostgreSQL</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-1">
+                    Next.js &amp; Node.js
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </section>
+
+          {/* Mobile Sticky Jump Strip */}
+          <div className="lg:hidden sticky top-16 z-30 bg-[#060812]/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-2">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-6xl mx-auto">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500 shrink-0 pr-1">
+                Sections
+              </span>
+              {QUICK_JUMP_SECTIONS.map((sec) => (
+                <a
+                  key={sec.id}
+                  href={`#${sec.id}`}
+                  className="shrink-0 min-h-[30px] px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-xs font-medium text-slate-300 hover:text-white inline-flex items-center touch-manipulation"
+                >
+                  {sec.label}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Philosophy Section */}
+          <section
+            id="philosophy"
+            aria-labelledby="philosophy-title"
+            className="scroll-mt-32 lg:scroll-mt-24 py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto border-b border-white/[0.06]"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+              <div className="lg:col-span-5 space-y-4">
+                <div className="font-mono text-xs text-slate-400">
+                  Engineering philosophy
+                </div>
+                <h2
+                  id="philosophy-title"
+                  className="text-2xl sm:text-3xl font-semibold text-white tracking-tight leading-tight"
+                >
+                  Why specialization beats monolithic bots
+                </h2>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  Bundling tickets, voice channels, leveling, and moderation into one fragile bot creates channel clutter, gateway rate limits, and unpredictable lag during peak server traffic.
+                </p>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  SyncInk separates each operational boundary into dedicated micro-bots with isolated queues, giving communities faster responses and zero server channel spam.
                 </p>
               </div>
 
-              <div className="p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-                  <Zap className="w-5 h-5" />
+              <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-5 rounded-xl bg-[#0c0f18] border border-white/[0.08] space-y-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white">Zero channel clutter</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Instead of creating hundreds of separate text channels near Discord&apos;s 500-channel cap, tickets run inside native private threads.
+                  </p>
                 </div>
-                <h3 className="text-base font-bold text-white">Ephemeral Resources</h3>
-                <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                  Voice rooms spawn automatically on demand and cleanly purge within 1.5 seconds of being vacated, guaranteeing clean voice categories without dead rooms.
+
+                <div className="p-5 rounded-xl bg-[#0c0f18] border border-white/[0.08] space-y-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white">Ephemeral resources</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Voice rooms spawn on demand and purge cleanly within 1.5 seconds once empty, leaving zero dead rooms behind.
+                  </p>
+                </div>
+
+                <div className="p-5 rounded-xl bg-[#0c0f18] border border-white/[0.08] space-y-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white">Confidential transcripts</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Ticket archives save as encrypted HTML transcripts accessible only to authorized staff and the original ticket author.
+                  </p>
+                </div>
+
+                <div className="p-5 rounded-xl bg-[#0c0f18] border border-white/[0.08] space-y-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white">Decoupled operations</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    A surge in temporary voice hubs never slows down ticket support or security defense triggers.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Interactive Product Suite */}
+          <section
+            id="bots"
+            aria-labelledby="products-title"
+            className="scroll-mt-32 lg:scroll-mt-24 py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto border-b border-white/[0.06]"
+          >
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+              <div className="space-y-2 max-w-xl">
+                <div className="font-mono text-xs text-slate-400">
+                  Product suite
+                </div>
+                <h2
+                  id="products-title"
+                  className="text-2xl sm:text-3xl font-semibold text-white tracking-tight"
+                >
+                  The SyncInk bot ecosystem
+                </h2>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  Filter by bot below to inspect specifications, invites, and web console endpoints.
                 </p>
               </div>
 
-              <div className="p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-                  <Lock className="w-5 h-5" />
-                </div>
-                <h3 className="text-base font-bold text-white">Confidential Transcripts</h3>
-                <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                  Ticket archives are saved as encrypted HTML transcripts. Only designated moderators and the ticket author can access records via our secured transcript viewer.
-                </p>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <Activity className="w-5 h-5" />
-                </div>
-                <h3 className="text-base font-bold text-white">Decoupled Operations</h3>
-                <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                  A spike in voice channel creations will never slow down support tickets. Each bot runs on dedicated services with isolated event queues.
-                </p>
+              {/* Smooth Animated Filter Tabs */}
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-[#0c0f18] border border-white/[0.08] overflow-x-auto no-scrollbar shrink-0">
+                {(
+                  [
+                    { id: "all", label: "All bots" },
+                    { id: "ticket", label: "Ticket" },
+                    { id: "voice", label: "Voice" },
+                    { id: "radio", label: "Radio" },
+                    { id: "security", label: "Security" },
+                  ] as const
+                ).map((tab) => {
+                  const active = selectedBot === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setSelectedBot(tab.id)}
+                      className={`relative px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors touch-manipulation ${
+                        active ? "text-white" : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      {active && (
+                        <motion.span
+                          layoutId="aboutBotTab"
+                          transition={spring.snappy}
+                          className="absolute inset-0 rounded-lg bg-blue-600"
+                        />
+                      )}
+                      <span className="relative z-10">{tab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          </div>
-        </section>
 
-        {/* ========================================================= */}
-        {/* PRODUCTS & BOTS ECOSYSTEM */}
-        {/* ========================================================= */}
-        <section
-          aria-labelledby="products-title"
-          className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-b border-white/[0.06]"
-        >
-          <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16 space-y-3">
-            <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">
-              The Product Lineup
-            </span>
-            <h2
-              id="products-title"
-              className="text-2xl sm:text-4xl font-black text-white tracking-tight"
-            >
-              The SyncInk Bot Suite
-            </h2>
-            <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-              Every tool in the SyncInk ecosystem is crafted for a distinct operational requirement in Discord community management.
-            </p>
-          </div>
+            <AnimatePresence mode="popLayout">
+              <div className="space-y-5">
+                {visibleBots.map((bot) => (
+                  <motion.article
+                    key={bot.id}
+                    layout
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={transition.enter}
+                    className="p-5 sm:p-7 rounded-xl bg-[#0c0f18] border border-white/[0.08] hover:border-white/[0.14] transition-colors"
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 pb-5 border-b border-white/[0.06]">
+                      <div className="flex items-start sm:items-center gap-4 min-w-0">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-[#060812] border border-white/[0.1] flex items-center justify-center shrink-0 overflow-hidden p-1.5">
+                          {bot.useNextImage ? (
+                            <Image
+                              src={bot.logo}
+                              alt={bot.logoAlt}
+                              width={52}
+                              height={52}
+                              className="object-contain rounded-lg select-none"
+                            />
+                          ) : (
+                            <img
+                              src={bot.logo}
+                              alt={bot.logoAlt}
+                              className="w-full h-full rounded-lg object-cover select-none"
+                            />
+                          )}
+                        </div>
 
-          <div className="space-y-8 sm:space-y-10">
-            {/* PRODUCT 1: SYNCINK TICKET BOT */}
-            <article className="p-6 sm:p-10 rounded-3xl bg-[#0a0d1a] border border-blue-500/20 hover:border-blue-500/40 transition-colors shadow-xl">
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-blue-600/15 border border-blue-500/30 flex items-center justify-center shrink-0">
-                    <img
-                      src="/ticket-logo.png"
-                      alt="SyncInk Ticket Bot Icon"
-                      className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = "none";
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-500/15 text-blue-300 border border-blue-500/30">
-                        Public Bot • Invitable
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-white/5 text-slate-300 border border-white/10">
-                        Node.js & Discord.js v14
-                      </span>
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] text-slate-300">
+                              {bot.availability}
+                            </span>
+                            <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-white/[0.02] border border-white/[0.06] text-slate-400">
+                              {bot.runtime}
+                            </span>
+                          </div>
+                          <h3 className="text-lg sm:text-xl font-semibold text-white tracking-tight">
+                            {bot.name}
+                          </h3>
+                          <p className="text-xs sm:text-sm text-slate-400 leading-snug">
+                            {bot.tagline}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 shrink-0 w-full lg:w-auto">
+                        {bot.metaText && (
+                          <span className="px-3 py-2 rounded-lg bg-[#060812] border border-white/[0.06] text-[11px] font-mono text-slate-400 w-full sm:w-auto text-center">
+                            {bot.metaText}
+                          </span>
+                        )}
+
+                        {bot.primaryAction.external ? (
+                          <a
+                            href={bot.primaryAction.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 sm:flex-initial h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors inline-flex items-center justify-center gap-1.5 active:scale-[0.98] touch-manipulation"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>{bot.primaryAction.label}</span>
+                          </a>
+                        ) : (
+                          <Link
+                            href={bot.primaryAction.href}
+                            className="flex-1 sm:flex-initial h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors inline-flex items-center justify-center gap-1.5 active:scale-[0.98] touch-manipulation"
+                          >
+                            <Shield className="w-3.5 h-3.5" />
+                            <span>{bot.primaryAction.label}</span>
+                          </Link>
+                        )}
+
+                        {bot.secondaryAction && (
+                          <Link
+                            href={bot.secondaryAction.href}
+                            className="flex-1 sm:flex-initial h-9 px-3.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 hover:text-white text-xs font-medium transition-colors inline-flex items-center justify-center gap-1.5 touch-manipulation"
+                          >
+                            {bot.id === "radio" ? (
+                              <Radio className="w-3.5 h-3.5 text-slate-400" />
+                            ) : (
+                              <Layers className="w-3.5 h-3.5 text-slate-400" />
+                            )}
+                            <span>{bot.secondaryAction.label}</span>
+                          </Link>
+                        )}
+
+                        {bot.tertiaryAction && (
+                          <Link
+                            href={bot.tertiaryAction.href}
+                            className="h-9 px-3 rounded-lg bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.06] text-slate-300 hover:text-white text-xs font-medium transition-colors inline-flex items-center justify-center gap-1.5 touch-manipulation"
+                          >
+                            <span>{bot.tertiaryAction.label}</span>
+                            <ArrowRight className="w-3 h-3 text-slate-400" />
+                          </Link>
+                        )}
+                      </div>
                     </div>
-                    <h3 className="text-xl sm:text-2xl font-bold text-white">SyncInk Ticket Bot</h3>
-                    <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                      Enterprise Support Ticketing with Native Private Thread Isolation
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                  <a
-                    href="https://discord.com/oauth2/authorize?client_id=1513075101992747158&permissions=361046068240&integration_type=0&scope=bot+applications.commands"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Invite Ticket Bot</span>
-                  </a>
-                  <Link
-                    href="/dashboard/tickets"
-                    className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 font-bold text-xs border border-white/10 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Layers className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Ticket Dashboard</span>
-                  </Link>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
-                <div className="space-y-1.5">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-blue-400" />
-                    Private Thread Infrastructure
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Operates inside Discord's private threads. Avoids filling up the server channel list, preserves member confidentiality, and never hits server channel quotas.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-blue-400" />
-                    Custom Categories & Emojis
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Interactive buttons and drop-down menus with support for custom Discord emojis. Routes user tickets into dedicated departments (General, Bug Reports, Reports, etc.).
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-blue-400" />
-                    Encrypted Web Transcripts
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Automatic transcript generation upon closure. Archives message timestamps, attachments, and embedded messages in an encrypted HTML viewer for staff auditability.
-                  </p>
-                </div>
-              </div>
-            </article>
-
-            {/* PRODUCT 2: SYNCINK VOICE BOT */}
-            <article className="p-6 sm:p-10 rounded-3xl bg-[#080f1a] border border-cyan-500/20 hover:border-cyan-500/40 transition-colors shadow-xl">
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-cyan-600/15 border border-cyan-500/30 flex items-center justify-center shrink-0">
-                    <img
-                      src="/voice-logo.png"
-                      alt="SyncInk Voice Bot Icon"
-                      className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = "none";
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                        Public Bot • Invitable
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-white/5 text-slate-300 border border-white/10">
-                        Node.js & Express Architecture
-                      </span>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-5">
+                      {bot.highlights.map((h) => (
+                        <div key={h.title} className="space-y-1.5">
+                          <h4 className="text-xs sm:text-sm font-medium text-white flex items-center gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>{h.title}</span>
+                          </h4>
+                          <p className="text-xs text-slate-400 leading-relaxed pl-5">
+                            {h.desc}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                    <h3 className="text-xl sm:text-2xl font-bold text-white">SyncInk Voice Bot</h3>
-                    <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                      Dynamic Temporary Voice Channels with In-Room Controls
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                  <a
-                    href="https://discord.com/oauth2/authorize?client_id=1516578887109181520&permissions=285220880&integration_type=0&scope=bot+applications.commands"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Invite Voice Bot</span>
-                  </a>
-                  <Link
-                    href="/dashboard/voice"
-                    className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 font-bold text-xs border border-white/10 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Layers className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Voice Dashboard</span>
-                  </Link>
-                </div>
+                  </motion.article>
+                ))}
               </div>
+            </AnimatePresence>
+          </section>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
-                <div className="space-y-1.5">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                    Join-to-Create Hubs
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Members connect to a single generator channel. The bot instantly spawns a dedicated temporary voice channel and moves the user into it seamlessly.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                    In-Room Owner Controls
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Room creators manage permissions with slash commands and interactive panels: lock, hide (ghost mode), set user limits, permit friends, or kick unwanted members.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                    1.5-Second Auto-Purge
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    When the last member disconnects, the channel is permanently deleted within 1.5 seconds. No lingering empty rooms or voice channel debris left behind.
-                  </p>
-                </div>
+          {/* Interactive Architecture Breakdown */}
+          <section
+            id="architecture"
+            aria-labelledby="tech-title"
+            className="scroll-mt-32 lg:scroll-mt-24 py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto border-b border-white/[0.06]"
+          >
+            <div className="max-w-2xl mb-8 space-y-2">
+              <div className="font-mono text-xs text-slate-400">
+                Under the hood
               </div>
-            </article>
-
-            {/* PRODUCT 3: SYNCINK SUPPORT & SECURITY BOT */}
-            <article className="p-6 sm:p-10 rounded-3xl bg-[#0f0c1a] border border-indigo-500/20 hover:border-indigo-500/40 transition-colors shadow-xl">
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#0b0816] border border-indigo-500/30 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-[0_0_20px_rgba(99,102,241,0.25)]">
-                    <img
-                      src="/syncink-support-logo.png"
-                      alt="SyncInk Support Bot Icon"
-                      className="w-full h-full rounded-xl object-cover select-none"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = "none";
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
-                        Internal Platform Shield • Non-Invitable
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-white/5 text-slate-300 border border-white/10">
-                        Python 3.10+ & PostgreSQL
-                      </span>
-                    </div>
-                    <h3 className="text-xl sm:text-2xl font-bold text-white">SyncInk Support & Security Bot</h3>
-                    <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                      Dedicated automod defense and real-time incident quarantine for the official SyncInk Support Server
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                  <span className="px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-indigo-300">
-                    Server ID: 1520457643842342912
-                  </span>
-                  <Link
-                    href="/dashboard/security"
-                    className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>Security Console</span>
-                  </Link>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
-                <div className="space-y-1.5">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-indigo-400" />
-                    Velocity Raid Dampening
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Detects abnormal member join spikes and message velocity surges. Engages instant emergency lockdowns in milliseconds to neutralize automated raid attacks.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-indigo-400" />
-                    Automated Quarantine
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Raid suspects and policy bypass accounts are automatically stripped of permissions and confined to an isolated quarantine channel awaiting staff review.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-indigo-400" />
-                    Live Database Forensics
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Persistent PostgreSQL migrations record every moderation action, strike tally, and whitelist change with real-time API sync to our web console.
-                  </p>
-                </div>
-              </div>
-            </article>
-
-            {/* PRODUCT 4: SYNCINK RADIO (OFFICIAL RELEASE) */}
-            <article className="p-6 sm:p-10 rounded-3xl bg-[#120a1c] border border-purple-500/20 hover:border-purple-500/40 transition-colors shadow-xl">
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-white/[0.06]">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#090714] border-2 border-purple-500/40 p-1 flex items-center justify-center shrink-0 shadow-[0_0_25px_rgba(168,85,247,0.35)] ring-1 ring-purple-400/20">
-                    <Image
-                      src="/radio-logo.png"
-                      alt="SyncInk Radio Official Logo"
-                      width={64}
-                      height={64}
-                      className="object-contain rounded-xl select-none"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1.5">
-                        <Sparkles className="w-3 h-3 text-purple-400" />
-                        Powered by Audia AI
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm shadow-emerald-950/40">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        Official Release (Live)
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-white/5 text-slate-300 border border-white/10">
-                        Opus 48kHz Stereo
-                      </span>
-                    </div>
-                    <h3 className="text-xl sm:text-2xl font-bold text-white">SyncInk Radio</h3>
-                    <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                      High-fidelity 24/7 music and global radio streaming bot featuring autonomous taste vectors and cycle-free AutoPlay.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-                  <a
-                    href="https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-md shadow-purple-900/30"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Invite Bot</span>
-                  </a>
-                  <Link
-                    href="/dashboard/radio"
-                    className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Radio className="w-3.5 h-3.5 text-purple-400" />
-                    <span>Dashboard</span>
-                  </Link>
-                  <Link
-                    href="/audia"
-                    className="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/25 text-purple-300 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <span>Audia Spec</span>
-                    <ArrowRight className="w-3 h-3 text-purple-400" />
-                  </Link>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
-                <div className="space-y-1.5">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-purple-400" />
-                    48kHz Lossless Opus Audio
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Direct Opus container extraction eliminates CPU resampling jitter. Streams at an uncompromised 192kbps stereo with zero-buffer socket reconnections.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-purple-400" />
-                    Audia AI Autonomous AutoPlay
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Continuously vectorizes listener preferences, tracks skips, and runs a six-stage recommendation cycle to queue the perfect upcoming song automatically.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-purple-400" />
-                    Strict Zero-Bleed Isolation
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Enforces strict language isolation (e.g. Hindi, English, Punjabi) and acoustic mood barriers so tracks never bleed into dissonant or unwanted genres.
-                  </p>
-                </div>
-              </div>
-            </article>
-          </div>
-        </section>
-
-        {/* ========================================================= */}
-        {/* ARCHITECTURE & TECHNOLOGY STANDARDS */}
-        {/* ========================================================= */}
-        <section
-          aria-labelledby="tech-title"
-          className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-b border-white/[0.06]"
-        >
-          <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16 space-y-3">
-            <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">
-              Under the Hood
-            </span>
-            <h2
-              id="tech-title"
-              className="text-2xl sm:text-4xl font-black text-white tracking-tight"
-            >
-              Architected for Stability & Low Latency
-            </h2>
-            <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-              Our infrastructure is purpose-built with modern toolchains, strict schema migrations, and clean separation between Discord bot processes and web dashboards.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            <div className="p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-                <Terminal className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-bold text-white">Discord.js v14 & Python</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Utilizing latest Discord gateway intents, slash command routing, and localized Cog architecture for predictable sub-millisecond execution.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
-                <Database className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-bold text-white">PostgreSQL & MongoDB</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Persistent relational data for moderation audit logs and thread state, paired with document storage for dynamic voice configurations.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                <Layers className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-bold text-white">Next.js 14 App Router</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Server-rendered console hosted on Vercel with edge caching, strict security headers, and instant real-time data synchronization.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                <Shield className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-bold text-white">Role-Based OAuth2 Security</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Discord OAuth2 session authentication restricting server dashboards exclusively to verified administrators and guild owners.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* ========================================================= */}
-        {/* ECOSYSTEM TRANSPARENCY & COMMUNITY DIRECTORY */}
-        {/* ========================================================= */}
-        <section
-          aria-labelledby="governance-title"
-          className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-b border-white/[0.06]"
-        >
-          <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-14 space-y-3">
-            <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">
-              Governance & Resources
-            </span>
-            <h2
-              id="governance-title"
-              className="text-2xl sm:text-4xl font-black text-white tracking-tight"
-            >
-              Public Standards & Transparency
-            </h2>
-            <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-              We operate with transparent policies, structured rules, and open channels for community participation and staff recruitment.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            <Link
-              href="/rules"
-              className="group p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] hover:border-white/20 transition-all space-y-2.5"
-            >
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-                  <BookOpen className="w-4 h-4" />
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
-              </div>
-              <h3 className="text-base font-bold text-white group-hover:text-blue-300 transition-colors">
-                Community Rules
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Official behavior policies, Discord bot usage guidelines, and moderation standards across all SyncInk servers.
-              </p>
-            </Link>
-
-            <Link
-              href="/faq"
-              className="group p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] hover:border-white/20 transition-all space-y-2.5"
-            >
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
-                  <HelpCircle className="w-4 h-4" />
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
-              </div>
-              <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition-colors">
-                Frequently Asked Questions
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Answers regarding bot permissions, setup commands (`/setup`), voice hub configuration, and troubleshooting.
-              </p>
-            </Link>
-
-            <Link
-              href="/privacy"
-              className="group p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] hover:border-white/20 transition-all space-y-2.5"
-            >
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
-              </div>
-              <h3 className="text-base font-bold text-white group-hover:text-emerald-300 transition-colors">
-                Privacy Policies
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Transparent documentation of data retention, transcript encryption, and minimal data access protocols.
-              </p>
-            </Link>
-
-            <Link
-              href="/terms"
-              className="group p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] hover:border-white/20 transition-all space-y-2.5"
-            >
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                  <FileCheck className="w-4 h-4" />
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
-              </div>
-              <h3 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors">
-                Terms of Service
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Conditions governing bot invitation, dashboard usage, API interactions, and community membership.
-              </p>
-            </Link>
-
-            <Link
-              href="/apply"
-              className="group p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] hover:border-white/20 transition-all space-y-2.5"
-            >
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
-              </div>
-              <h3 className="text-base font-bold text-white group-hover:text-amber-300 transition-colors">
-                Join the Team (Staff & Dev)
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Official application portal for community moderators, support personnel, and software developers.
-              </p>
-            </Link>
-
-            <a
-              href="https://github.com/SyncInk"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group p-6 rounded-2xl bg-[#0a0d18] border border-white/[0.08] hover:border-white/20 transition-all space-y-2.5"
-            >
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-                  <ExternalLink className="w-4 h-4" />
-                </div>
-                <ExternalLink className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
-              </div>
-              <h3 className="text-base font-bold text-white group-hover:text-purple-300 transition-colors">
-                GitHub Organization
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Official open repositories, issue tracking, and developer updates from the SyncInk development team.
-              </p>
-            </a>
-          </div>
-        </section>
-
-        {/* ========================================================= */}
-        {/* FINAL CALL TO ACTION */}
-        {/* ========================================================= */}
-        <section
-          aria-labelledby="community-cta-title"
-          className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
-        >
-          <div className="p-8 sm:p-14 rounded-3xl bg-gradient-to-b from-[#0f1426] to-[#0a0d18] border border-blue-500/25 text-center max-w-3xl mx-auto space-y-6 shadow-2xl relative overflow-hidden">
-            <div className="w-14 h-14 rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center mx-auto text-blue-400">
-              <Users className="w-7 h-7" />
-            </div>
-
-            <div className="space-y-2">
               <h2
-                id="community-cta-title"
-                className="text-2xl sm:text-4xl font-black text-white tracking-tight"
+                id="tech-title"
+                className="text-2xl sm:text-3xl font-semibold text-white tracking-tight"
               >
-                Join the SyncInk Ecosystem
+                Architected for stability and low latency
               </h2>
-              <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl mx-auto">
-                Whether you need scalable ticket support, automated voice rooms, or want to connect with our developer community, you can get started right now.
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Select any infrastructure layer to inspect how our Discord workers, databases, and web dashboard stay decoupled.
               </p>
             </div>
 
-            <div className="pt-2 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              {/* Layer Selector (Horizontal Rail on Mobile, Vertical Stack on Desktop) */}
+              <div className="lg:col-span-5 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible no-scrollbar pb-1 lg:pb-0">
+                {ARCHITECTURE_LAYERS.map((layer) => {
+                  const Icon = layer.icon;
+                  const active = activeLayer === layer.id;
+                  return (
+                    <button
+                      key={layer.id}
+                      type="button"
+                      onClick={() => setActiveLayer(layer.id)}
+                      className={`shrink-0 lg:w-full text-left p-3.5 sm:p-4 rounded-xl border transition-colors flex items-center gap-3 touch-manipulation ${
+                        active
+                          ? "bg-[#0c0f18] border-white/[0.18] text-white"
+                          : "bg-white/[0.02] border-white/[0.06] text-slate-400 hover:text-slate-200 hover:border-white/[0.1]"
+                      }`}
+                    >
+                      <div
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border ${
+                          active
+                            ? "bg-blue-600/15 border-blue-500/30 text-blue-400"
+                            : "bg-white/[0.03] border-white/[0.06] text-slate-400"
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs sm:text-sm font-medium text-white whitespace-nowrap lg:whitespace-normal">
+                          {layer.title}
+                        </div>
+                        <div className="text-[11px] font-mono text-slate-500 hidden sm:block">
+                          {layer.tag}
+                        </div>
+                      </div>
+                      <ChevronRight
+                        className={`w-4 h-4 ml-auto hidden lg:block transition-transform ${
+                          active ? "text-slate-200 translate-x-0.5" : "text-slate-600"
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Detail Panel */}
+              <div className="lg:col-span-7">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentLayer.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={transition.enter}
+                    className="p-6 sm:p-8 rounded-xl bg-[#0c0f18] border border-white/[0.08] space-y-5"
+                  >
+                    <div className="flex items-start justify-between gap-3 pb-4 border-b border-white/[0.06]">
+                      <div>
+                        <div className="font-mono text-[11px] text-blue-400 mb-1">
+                          {currentLayer.tag}
+                        </div>
+                        <h3 className="text-lg sm:text-xl font-semibold text-white">
+                          {currentLayer.title}
+                        </h3>
+                      </div>
+                      <ActiveLayerIcon className="w-5 h-5 text-slate-400 shrink-0 mt-1" />
+                    </div>
+
+                    <p className="text-sm text-slate-300 leading-relaxed">
+                      {currentLayer.summary}
+                    </p>
+
+                    <ul className="space-y-2.5 pt-1">
+                      {currentLayer.details.map((line) => (
+                        <li
+                          key={line}
+                          className="flex items-start gap-2.5 text-xs sm:text-[13px] text-slate-400 leading-relaxed"
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                          <span>{line}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
+          </section>
+
+          {/* Governance & Public Directory */}
+          <section
+            id="resources"
+            aria-labelledby="governance-title"
+            className="scroll-mt-32 lg:scroll-mt-24 py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto border-b border-white/[0.06]"
+          >
+            <div className="max-w-2xl mb-8 space-y-2">
+              <div className="font-mono text-xs text-slate-400">
+                Governance &amp; resources
+              </div>
+              <h2
+                id="governance-title"
+                className="text-2xl sm:text-3xl font-semibold text-white tracking-tight"
+              >
+                Public standards and transparency
+              </h2>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Structured documentation, server policies, and direct pathways for team applications.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                {
+                  href: "/rules",
+                  icon: BookOpen,
+                  title: "Community Rules",
+                  desc: "Behavior policies, bot usage guidelines, and moderation standards across SyncInk servers.",
+                },
+                {
+                  href: "/faq",
+                  icon: HelpCircle,
+                  title: "Frequently Asked Questions",
+                  desc: "Guides covering permissions, /setup configuration, voice hubs, and troubleshooting.",
+                },
+                {
+                  href: "/privacy",
+                  icon: Lock,
+                  title: "Privacy Policies",
+                  desc: "Documentation of data retention, transcript encryption, and minimal data protocols.",
+                },
+                {
+                  href: "/terms",
+                  icon: FileCheck,
+                  title: "Terms of Service",
+                  desc: "Conditions governing bot invitations, web dashboard usage, and API interactions.",
+                },
+                {
+                  href: "/apply",
+                  icon: Sparkles,
+                  title: "Join the Team",
+                  desc: "Application portal for community moderators, support staff, and software developers.",
+                },
+              ].map((card) => (
+                <Link
+                  key={card.href}
+                  href={card.href}
+                  className="group p-5 rounded-xl bg-[#0c0f18] border border-white/[0.08] hover:border-white/[0.16] transition-colors space-y-2.5 touch-manipulation"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300">
+                      <card.icon className="w-4 h-4" />
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white">
+                    {card.title}
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    {card.desc}
+                  </p>
+                </Link>
+              ))}
+
               <a
-                href="https://discord.gg/PmxfJwmQuB"
+                href="https://github.com/SyncInk"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all shadow-lg flex items-center gap-2 hover:-translate-y-0.5 duration-200"
+                className="group p-5 rounded-xl bg-[#0c0f18] border border-white/[0.08] hover:border-white/[0.16] transition-colors space-y-2.5 touch-manipulation"
               >
-                <span>Join Official Discord Server</span>
-                <ExternalLink className="w-4 h-4" />
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300">
+                    <Terminal className="w-4 h-4" />
+                  </div>
+                  <ExternalLink className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
+                </div>
+                <h3 className="text-sm font-semibold text-white">
+                  GitHub Organization
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Official open repositories, issue tracking, and updates from the SyncInk development team.
+                </p>
               </a>
-
-              <Link
-                href="/dashboard"
-                className="px-6 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 font-bold text-sm border border-white/10 transition-all flex items-center gap-2 hover:-translate-y-0.5 duration-200"
-              >
-                <Layers className="w-4 h-4 text-blue-400" />
-                <span>Multi-Bot Console</span>
-              </Link>
             </div>
-          </div>
-        </section>
-      </main>
+          </section>
 
-      <PublicFooter />
-    </div>
+          {/* Call To Action */}
+          <section
+            aria-labelledby="community-cta-title"
+            className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto"
+          >
+            <div className="p-6 sm:p-10 rounded-xl bg-[#0c0f18] border border-white/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-2 max-w-xl">
+                <div className="inline-flex items-center gap-2 text-xs font-mono text-slate-400">
+                  <Users className="w-3.5 h-3.5 text-slate-400" />
+                  <span>SyncInk Community</span>
+                </div>
+                <h2
+                  id="community-cta-title"
+                  className="text-xl sm:text-2xl font-semibold text-white tracking-tight"
+                >
+                  Ready to deploy in your server?
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                  Connect with our developer community or open the Multi-Bot Console to configure your bots right away.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+                <a
+                  href="https://discord.gg/PmxfJwmQuB"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-10 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-medium transition-colors inline-flex items-center justify-center gap-2 active:scale-[0.98] touch-manipulation"
+                >
+                  <span>Join Support Discord</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+
+                <Link
+                  href="/dashboard"
+                  className="h-10 px-4 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 hover:text-white text-xs sm:text-sm font-medium transition-colors inline-flex items-center justify-center gap-2 touch-manipulation"
+                >
+                  <Layers className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Multi-Bot Console</span>
+                </Link>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <PublicFooter />
+      </div>
+    </MotionConfig>
   );
 }

@@ -303,7 +303,7 @@ export default function RadioDashboardPage() {
   }, [stationSearch]);
 
   return (
-    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-purple-600 selection:text-white">
+    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans overflow-x-hidden selection:bg-purple-600 selection:text-white">
       <PublicNavbar />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10">
@@ -325,7 +325,7 @@ export default function RadioDashboardPage() {
                     priority
                   />
                 </div>
-                <div className="absolute -bottom-1 -right-1 px-1.5 py-0.2 rounded bg-[#090810] border border-white/10 flex items-center gap-1">
+                <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded bg-[#090810] border border-white/10 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                   <span className="text-[9px] font-mono font-medium text-slate-300">OPUS</span>
                 </div>

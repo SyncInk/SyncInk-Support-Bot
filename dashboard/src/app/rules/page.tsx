@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { motion, MotionConfig } from "framer-motion";
 import {
   Shield,
   BookOpen,
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
+import { transition } from "@/lib/motion-tokens";
 
 export default function RulesPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -249,110 +251,114 @@ export default function RulesPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#080a0f] text-slate-100 flex flex-col">
-      <PublicNavbar />
+    <MotionConfig reducedMotion="user">
+      <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans overflow-x-hidden">
+        <PublicNavbar />
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pt-12 pb-14 border-b border-white/[0.08] bg-gradient-to-b from-[#111624] via-[#0b0e15] to-[#080a0f]">
-        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[600px] h-[350px] rounded-full bg-brand-red/10 blur-[120px]" />
-
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-red/15 border border-brand-red/30 text-brand-crimson text-xs font-bold uppercase tracking-wider mb-4">
-            <BookOpen className="h-3.5 w-3.5" />
-            Official Server Guidelines & Policies
-          </div>
-
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
-            SyncInk Community Rules & AI Guidelines
-          </h1>
-
-          <p className="mt-4 text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Please read and adhere to all community standards and server guidelines listed below.
-            Non-compliance will result in automated moderation sanctions and staff enforcement.
-          </p>
-
-          {/* Discord Channel Link Callout */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs">
-            <a
-              href="https://discord.com/channels/1520457643842342912/1520460587522330634/1539582756001161238"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#5865F2]/20 border border-[#5865F2]/40 text-white hover:bg-[#5865F2]/30 transition-colors"
-            >
-              <span>View Original Embed in # 📖・guides</span>
-              <ExternalLink className="h-3 w-3" />
-            </a>
-
-            <a
-              href="#ai-rules"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-950/50 border border-cyan-800/50 text-accent-cyan hover:bg-cyan-900/50 transition-colors"
-            >
-              <Bot className="h-3.5 w-3.5" />
-              <span>Jump to Rules for Use of AI</span>
-            </a>
-          </div>
-
-          {/* Search Bar */}
-          <div className="mt-8 max-w-md mx-auto relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search server rules by keyword (e.g., spam, ticket, nsfw)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#121622] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-red/60 focus:ring-1 focus:ring-brand-red/60 transition-all"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1 w-full space-y-16">
-        {/* Section 1: Community Guidelines */}
-        <section className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2.5">
-                <Shield className="h-6 w-6 text-brand-crimson" />
-                Community Guidelines & Server Rules
-              </h2>
-              <p className="text-xs text-slate-400 mt-1">
-                Official rules mirrored directly from the SyncInk Support Server guides channel.
-              </p>
+        {/* Hero Section */}
+        <section className="pt-12 pb-12 border-b border-white/[0.08]">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={transition.enter}
+            className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#0c0f18] border border-white/[0.08] text-slate-300 font-mono text-[11px] mb-4">
+              <BookOpen className="h-3.5 w-3.5 text-slate-400" />
+              <span>Official guidelines &amp; policies</span>
             </div>
-            <span className="text-xs text-slate-400 font-mono">
-              Showing {filteredRules.length} of {communityRules.length} Rules
-            </span>
-          </div>
 
-          <div className="grid grid-cols-1 gap-5">
-            {filteredRules.map((rule) => (
-              <div
-                key={rule.id}
-                id={rule.id}
-                className="group relative rounded-2xl border border-white/[0.08] bg-[#0e121d] p-6 hover:border-brand-red/40 hover:shadow-[0_4px_24px_rgba(231,76,60,0.12)] transition-all duration-300"
+            <h1 className="text-3xl sm:text-5xl font-semibold text-white tracking-tight leading-tight">
+              SyncInk Community Rules &amp; AI Guidelines
+            </h1>
+
+            <p className="mt-3 text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              Please read and follow all community standards listed below. Violations trigger automated moderation checks and staff review.
+            </p>
+
+            {/* Discord Channel Link Callout */}
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5 text-xs">
+              <a
+                href="https://discord.com/channels/1520457643842342912/1520460587522330634/1539582756001161238"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-[#5865F2] hover:bg-[#4752c4] text-white font-medium transition-colors touch-manipulation"
               >
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-black text-white uppercase tracking-wider px-2.5 py-1 rounded-md bg-white/[0.06] border border-white/10 font-mono">
-                      {rule.number}
-                    </span>
-                    <h3 className="text-lg font-bold text-white group-hover:text-brand-crimson transition-colors">
-                      {rule.title}
-                    </h3>
-                  </div>
+                <span>View original #guides post</span>
+                <ExternalLink className="h-3 w-3" />
+              </a>
 
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${rule.badgeColor}`}
-                    >
-                      {rule.badge}
-                    </span>
-                    <button
-                      onClick={() => handleCopyLink(rule.id)}
-                      title="Copy link to this rule"
-                      className="p-1 rounded-md text-slate-500 hover:text-white hover:bg-white/[0.06] transition-colors"
-                    >
+              <a
+                href="#ai-rules"
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-200 hover:bg-white/[0.08] hover:text-white transition-colors touch-manipulation"
+              >
+                <Bot className="h-3.5 w-3.5 text-slate-400" />
+                <span>Jump to AI usage rules</span>
+              </a>
+            </div>
+
+            {/* Search Bar */}
+            <div className="mt-7 max-w-md mx-auto relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search rules (e.g. spam, ticket, nsfw)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-10 bg-[#0c0f18] border border-white/[0.1] rounded-lg pl-10 pr-4 text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+              />
+            </div>
+          </motion.div>
+        </section>
+
+        {/* Main Content */}
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 flex-1 w-full space-y-14">
+          {/* Section 1: Community Guidelines */}
+          <section className="space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-white/[0.08] pb-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-semibold text-white flex items-center gap-2.5">
+                  <Shield className="h-5 w-5 text-slate-300" />
+                  <span>Community Guidelines &amp; Server Rules</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Mirrored directly from the SyncInk Support Server guides channel.
+                </p>
+              </div>
+              <span className="text-xs text-slate-400 font-mono tabular-nums">
+                Showing {filteredRules.length} of {communityRules.length} rules
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {filteredRules.map((rule) => (
+                <div
+                  key={rule.id}
+                  id={rule.id}
+                  className="group relative scroll-mt-24 rounded-xl border border-white/[0.08] bg-[#0c0f18] p-5 sm:p-6 hover:border-white/[0.16] transition-colors"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span className="text-xs font-semibold text-white px-2 py-0.5 rounded bg-white/[0.06] border border-white/[0.1] font-mono tabular-nums">
+                        {rule.number}
+                      </span>
+                      <h3 className="text-base sm:text-lg font-semibold text-white">
+                        {rule.title}
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded border ${rule.badgeColor}`}
+                      >
+                        {rule.badge}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyLink(rule.id)}
+                        title="Copy link to this rule"
+                        className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors touch-manipulation"
+                      >
                       {copiedRuleId === rule.id ? (
                         <Check className="h-3.5 w-3.5 text-emerald-400" />
                       ) : (
@@ -408,13 +414,13 @@ export default function RulesPage() {
         </section>
 
         {/* Section 2: Rules for Use of AI (SyncInk AI Assistant) */}
-        <section id="ai-rules" className="space-y-6 scroll-mt-20">
-          <div className="border-b border-cyan-500/20 pb-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-800/50 text-accent-cyan text-xs font-bold uppercase tracking-wider mb-2">
+        <section id="ai-rules" className="space-y-6 scroll-mt-24">
+          <div className="border-b border-white/[0.08] pb-4">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#0c0f18] border border-white/[0.08] text-cyan-300 font-mono text-[11px] mb-2">
               <Bot className="h-3.5 w-3.5" />
-              SyncInk AI Assistant Policy
+              <span>SyncInk AI Assistant Policy</span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2.5">
+            <h2 className="text-xl sm:text-2xl font-semibold text-white flex items-center gap-2.5">
               Rules for Use of Artificial Intelligence (AI)
             </h2>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
@@ -423,21 +429,21 @@ export default function RulesPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {aiRules.map((rule) => (
               <div
                 key={rule.id}
-                className="relative rounded-2xl border border-white/[0.08] bg-[#0c101a] p-5 hover:border-cyan-500/40 hover:shadow-[0_4px_24px_rgba(0,210,211,0.1)] transition-all duration-300 flex flex-col justify-between"
+                className="relative rounded-xl border border-white/[0.08] bg-[#0c0f18] p-5 hover:border-white/[0.16] transition-colors flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-950/80 text-accent-cyan border border-cyan-800/50">
+                    <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-white/[0.04] text-cyan-300 border border-white/[0.08]">
                       {rule.code}
                     </span>
-                    <Bot className="h-4 w-4 text-cyan-400" />
+                    <Bot className="h-4 w-4 text-slate-400" />
                   </div>
 
-                  <h3 className="text-base font-bold text-white mb-2">
+                  <h3 className="text-base font-semibold text-white mb-2">
                     {rule.title}
                   </h3>
 
@@ -535,6 +541,7 @@ export default function RulesPage() {
       </main>
 
       <PublicFooter />
-    </div>
+      </div>
+    </MotionConfig>
   );
 }

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import {
   HelpCircle,
   ChevronDown,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
+import { transition } from "@/lib/motion-tokens";
 
 interface FAQItem {
   question: string;
@@ -396,147 +398,166 @@ export default function FAQPage() {
     .filter((section) => section.items.length > 0);
 
   return (
-    <div className="min-h-screen bg-[#080a0f] text-slate-100 flex flex-col">
-      <PublicNavbar />
+    <MotionConfig reducedMotion="user">
+      <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col overflow-x-hidden font-sans">
+        <PublicNavbar />
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pt-12 pb-14 border-b border-white/[0.08] bg-gradient-to-b from-[#111624] via-[#0b0e15] to-[#080a0f]">
-        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[600px] h-[350px] rounded-full bg-amber-500/10 blur-[120px]" />
-
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider mb-4">
-            <HelpCircle className="h-3.5 w-3.5" />
-            Official Knowledge Base & Answers
-          </div>
-
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
-            Frequently Asked Questions
-          </h1>
-
-          <p className="mt-4 text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Everything you need to know about the SyncInk Support Server, Ticket Bot, Voice Bot,
-            Security Shield, and AI Assistant.
-          </p>
-
-          {/* Quick Jump Buttons */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs">
-            <Link
-              href="/rules"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-red/15 border border-brand-red/30 text-white hover:bg-brand-red/25 transition-colors"
-            >
-              <BookOpen className="h-3.5 w-3.5 text-brand-crimson" />
-              <span>Read Server Rules</span>
-            </Link>
-
-            <a
-              href="https://discord.com/channels/1520457643842342912/1520460624864350218"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#5865F2]/20 border border-[#5865F2]/40 text-white hover:bg-[#5865F2]/30 transition-colors"
-            >
-              <span>View Discord # ❓・faq Channel</span>
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          </div>
-
-          {/* Search Bar */}
-          <div className="mt-8 max-w-md mx-auto relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search FAQ by topic (e.g. ticket, voice, ai, apply)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#121622] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 transition-all"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Main FAQ Accordion */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1 w-full space-y-12">
-        {filteredSections.map((section, sIdx) => {
-          const Icon = section.icon;
-          return (
-            <div key={sIdx} className="space-y-4">
-              <div className="flex items-center gap-2.5 border-b border-white/[0.08] pb-3">
-                <span className={`p-1.5 rounded-lg border ${section.color}`}>
-                  <Icon className="h-4 w-4" />
-                </span>
-                <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-                  {section.category}
-                </h2>
-              </div>
-
-              <div className="space-y-3">
-                {section.items.map((item, iIdx) => {
-                  const itemKey = `${sIdx}-${iIdx}`;
-                  const isOpen = openItems[itemKey];
-
-                  return (
-                    <div
-                      key={iIdx}
-                      className="rounded-2xl border border-white/[0.08] bg-[#0e121d] overflow-hidden transition-all duration-200"
-                    >
-                      <button
-                        onClick={() => toggleItem(itemKey)}
-                        className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-white/[0.03] transition-colors focus:outline-none"
-                      >
-                        <span className="text-sm font-semibold text-white pr-4">
-                          {item.question}
-                        </span>
-                        <ChevronDown
-                          className={`h-4 w-4 text-slate-400 flex-shrink-0 transition-transform duration-200 ${
-                            isOpen ? "rotate-180 text-white" : ""
-                          }`}
-                        />
-                      </button>
-
-                      {isOpen && (
-                        <div className="px-5 pb-5 pt-1 border-t border-white/[0.04] text-slate-300">
-                          {item.answer}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+        {/* Hero Section */}
+        <section className="pt-12 pb-12 border-b border-white/[0.08]">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={transition.enter}
+            className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#0c0f18] border border-white/[0.08] text-slate-300 font-mono text-[11px] mb-4">
+              <HelpCircle className="h-3.5 w-3.5 text-amber-400" />
+              <span>Knowledge base</span>
             </div>
-          );
-        })}
 
-        {/* Still have questions banner */}
-        <section className="rounded-2xl border border-white/[0.08] bg-gradient-to-r from-[#121622] to-[#0c0f16] p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
-          <div className="space-y-1.5">
-            <h3 className="text-base font-bold text-white">
-              Still have a question not covered here?
-            </h3>
-            <p className="text-xs text-slate-400 max-w-lg">
-              Our support team and AI assistant are available 24/7 on Discord to help answer any
-              inquiries regarding bot configurations, accounts, or collaborations.
+            <h1 className="text-3xl sm:text-5xl font-semibold text-white tracking-tight leading-tight">
+              Frequently asked questions
+            </h1>
+
+            <p className="mt-3 text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              Everything you need to know about the SyncInk Support Server, Ticket Bot, Voice Bot, SyncInk Radio, Security Shield, and AI Assistant.
             </p>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <a
-              href="https://discord.com/channels/1520457643842342912/1520460764937322566"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand-red hover:bg-brand-crimson transition-colors shadow-lg shadow-brand-red/20"
-            >
-              Open Support Ticket
-            </a>
-            <Link
-              href="/rules"
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 transition-colors"
-            >
-              Read Rules
-            </Link>
-          </div>
+            {/* Quick Jump Buttons */}
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5 text-xs">
+              <Link
+                href="/rules"
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-200 hover:bg-white/[0.08] hover:text-white transition-colors touch-manipulation"
+              >
+                <BookOpen className="h-3.5 w-3.5 text-slate-400" />
+                <span>Read Server Rules</span>
+              </Link>
+
+              <a
+                href="https://discord.com/channels/1520457643842342912/1520460624864350218"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-[#5865F2] hover:bg-[#4752c4] text-white font-medium transition-colors touch-manipulation"
+              >
+                <span>Discord #faq channel</span>
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+
+            {/* Search Bar */}
+            <div className="mt-7 max-w-md mx-auto relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search FAQ (e.g. ticket, voice, radio, ai, apply)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-10 bg-[#0c0f18] border border-white/[0.1] rounded-lg pl-10 pr-4 text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+              />
+            </div>
+          </motion.div>
         </section>
-      </main>
 
-      <PublicFooter />
-    </div>
+        {/* Main FAQ Accordion */}
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 flex-1 w-full space-y-10">
+          {filteredSections.map((section, sIdx) => {
+            const Icon = section.icon;
+            return (
+              <div key={sIdx} className="space-y-3.5">
+                <div className="flex items-center gap-2.5 border-b border-white/[0.08] pb-3">
+                  <span className={`p-1.5 rounded-lg border ${section.color}`}>
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <h2 className="text-base sm:text-lg font-semibold text-white tracking-tight">
+                    {section.category}
+                  </h2>
+                </div>
+
+                <div className="space-y-2.5">
+                  {section.items.map((item, iIdx) => {
+                    const itemKey = `${sIdx}-${iIdx}`;
+                    const isOpen = Boolean(openItems[itemKey]);
+
+                    return (
+                      <div
+                        key={iIdx}
+                        className={`rounded-xl border overflow-hidden transition-colors ${
+                          isOpen
+                            ? "border-white/[0.14] bg-[#0c0f18]"
+                            : "border-white/[0.08] bg-[#0c0f18]/70 hover:border-white/[0.12]"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleItem(itemKey)}
+                          aria-expanded={isOpen}
+                          className="w-full px-4 sm:px-5 py-3.5 sm:py-4 flex items-center justify-between text-left hover:bg-white/[0.02] transition-colors focus:outline-none touch-manipulation"
+                        >
+                          <span className="text-sm font-medium text-white pr-4">
+                            {item.question}
+                          </span>
+                          <ChevronDown
+                            className={`h-4 w-4 text-slate-400 flex-shrink-0 transition-transform duration-200 ${
+                              isOpen ? "rotate-180 text-white" : ""
+                            }`}
+                          />
+                        </button>
+
+                        <AnimatePresence initial={false}>
+                          {isOpen && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={transition.expand}
+                              className="overflow-hidden"
+                            >
+                              <div className="px-4 sm:px-5 pb-4 pt-3 border-t border-white/[0.06] text-slate-300">
+                                {item.answer}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Still have questions banner */}
+          <section className="rounded-xl border border-white/[0.08] bg-[#0c0f18] p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-5 text-center sm:text-left">
+            <div className="space-y-1.5">
+              <h3 className="text-base font-semibold text-white">
+                Still have a question not covered here?
+              </h3>
+              <p className="text-xs text-slate-400 max-w-lg leading-relaxed">
+                Our support team and AI assistant are available on Discord to help with bot setup, permissions, or recovery requests.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2.5 shrink-0">
+              <a
+                href="https://discord.com/channels/1520457643842342912/1520460764937322566"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-9 px-4 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 transition-colors inline-flex items-center touch-manipulation"
+              >
+                Open Support Ticket
+              </a>
+              <Link
+                href="/rules"
+                className="h-9 px-4 rounded-lg text-xs font-medium text-slate-200 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-colors inline-flex items-center touch-manipulation"
+              >
+                Read Rules
+              </Link>
+            </div>
+          </section>
+        </main>
+
+        <PublicFooter />
+      </div>
+    </MotionConfig>
   );
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence, useReducedMotion, useInView } from "framer-motion";
+import { motion, AnimatePresence, MotionConfig, useReducedMotion, useInView } from "framer-motion";
 import {
   MessageSquare,
   Radio,
@@ -193,6 +193,7 @@ export default function HomePage() {
   }, []);
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-brand-blue selection:text-white relative overflow-x-hidden">
       <PublicNavbar />
 
@@ -505,7 +506,7 @@ export default function HomePage() {
                       />
                     </div>
                     {/* Live Opus Audio Stream Indicator */}
-                    <div className="absolute -bottom-1 -right-1 px-1.5 py-0.2 rounded bg-[#090810] border border-white/10 flex items-center gap-1">
+                    <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded bg-[#090810] border border-white/10 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                       <span className="text-[9px] font-mono font-medium text-slate-300">OPUS</span>
                     </div>
@@ -782,7 +783,7 @@ export default function HomePage() {
              ═════════════════════════════════════════════════════════ */}
           <div className="rounded-xl bg-[#0c0f18] border border-white/[0.08] p-6 sm:p-10">
             <div className="text-center max-w-lg mx-auto mb-6">
-              <p className="text-xs font-mono uppercase tracking-wider text-slate-400 mb-1">Help</p>
+              <p className="text-xs font-mono text-slate-400 mb-1">Help</p>
               <h3 className="text-xl sm:text-2xl font-semibold text-white">
                 Frequently asked questions
               </h3>
@@ -875,5 +876,6 @@ export default function HomePage() {
 
       <PublicFooter />
     </div>
+    </MotionConfig>
   );
 }

@@ -38,7 +38,10 @@ import {
   Layers,
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
+import { PublicFooter } from "@/components/PublicFooter";
 import { DISCORD_CUSTOM_EMOJIS } from "@/lib/custom-emojis";
+import { motion, MotionConfig } from "framer-motion";
+import { transition } from "@/lib/motion-tokens";
 
 interface CurrentUser {
   id: string;
@@ -441,79 +444,83 @@ export default function ReportPortalPage() {
   );
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-brand-blue selection:text-white relative overflow-x-hidden">
       <PublicNavbar />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
-        {/* ========================================================= */}
-        {/* HERO SECTION */}
-        {/* ========================================================= */}
-        <div className="relative border-b border-white/[0.08] pb-8 mb-8">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {/* Hero Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={transition.enter}
+          className="relative border-b border-white/[0.08] pb-7 mb-7"
+        >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-300 text-xs font-semibold uppercase tracking-wider mb-3">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#0c0f18] border border-white/[0.08] text-red-300 font-mono text-[11px] mb-3">
                 <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-                <span>Incident Response &amp; Data Recovery Desk</span>
+                <span>Incident response &amp; data recovery desk</span>
               </div>
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
+              <h1 className="text-2xl sm:text-4xl font-semibold text-white tracking-tight">
                 Data Loss Recovery &amp; Bot Inquiries
               </h1>
               <p className="text-sm sm:text-base text-slate-400 max-w-2xl mt-2 leading-relaxed">
-                Experiencing missing ticket transcripts, accidental wipe, or technical bot disruptions? Open a recovery inquiry to communicate directly with SyncInk administrators and engineering leads.
+                Experiencing missing ticket transcripts, accidental wipe, or technical bot disruptions? Open a recovery inquiry to communicate directly with SyncInk administrators and engineers.
               </p>
             </div>
           </div>
 
           {/* Navigation Mode Switcher */}
-          <div className="flex items-center gap-2.5 mt-8 border-t border-white/[0.06] pt-6">
+          <div className="grid grid-cols-2 sm:inline-flex items-center gap-2 mt-6 border-t border-white/[0.06] pt-5">
             <button
+              type="button"
               onClick={() => setActiveTab("submit")}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
+              className={`h-10 px-4 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-2 touch-manipulation ${
                 activeTab === "submit"
-                  ? "bg-blue-600 text-white shadow-[0_0_20px_rgba(88,101,242,0.35)]"
-                  : "bg-white/[0.03] text-slate-400 hover:text-white border border-white/5 hover:bg-white/[0.06]"
+                  ? "bg-blue-600 text-white"
+                  : "bg-[#0c0f18] text-slate-400 hover:text-white border border-white/[0.08]"
               }`}
             >
-              <RotateCcw className="w-4 h-4" />
-              <span>Submit Recovery Request</span>
+              <RotateCcw className="w-4 h-4 shrink-0" />
+              <span className="truncate">Submit request</span>
             </button>
 
             <button
+              type="button"
               onClick={() => setActiveTab("cases")}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
+              className={`h-10 px-4 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-2 touch-manipulation ${
                 activeTab === "cases"
-                  ? "bg-blue-600 text-white shadow-[0_0_20px_rgba(88,101,242,0.35)]"
-                  : "bg-white/[0.03] text-slate-400 hover:text-white border border-white/5 hover:bg-white/[0.06]"
+                  ? "bg-blue-600 text-white"
+                  : "bg-[#0c0f18] text-slate-400 hover:text-white border border-white/[0.08]"
               }`}
             >
-              <MessageSquare className="w-4 h-4" />
-              <span>Recovery Chat &amp; Cases</span>
+              <MessageSquare className="w-4 h-4 shrink-0" />
+              <span className="truncate">Cases &amp; chat</span>
               {reports.length > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-white/20 text-white">
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-black/25 text-white tabular-nums">
                   {reports.length}
                 </span>
               )}
             </button>
           </div>
-        </div>
+        </motion.div>
 
-        {/* ========================================================= */}
-        {/* AUTH CHECK / LOGIN BANNER IF LOGGED OUT */}
-        {/* ========================================================= */}
+        {/* Auth Check Banner */}
         {!authLoading && !currentUser && (
-          <div className="mb-8 p-6 rounded-2xl bg-blue-500/[0.06] border border-blue-500/25 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="mb-8 p-5 rounded-xl bg-[#0c0f18] border border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1">
-              <h3 className="font-bold text-white text-base flex items-center gap-2">
+              <h3 className="font-semibold text-white text-sm sm:text-base flex items-center gap-2">
                 <Lock className="w-4 h-4 text-blue-400" />
-                Sign in with Discord to Submit or View Inquiries
+                <span>Sign in with Discord to submit or view inquiries</span>
               </h3>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-                Authentication with your Discord account verifies server administration rights, guarantees transcript recovery access, and ensures private chat with support engineers.
+              <p className="text-xs sm:text-sm text-slate-400 max-w-xl leading-relaxed">
+                Authentication verifies server administration rights, protects transcript recovery access, and opens private chat with support engineers.
               </p>
             </div>
             <a
               href="/api/auth/discord?redirect=/report"
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all shadow-[0_0_20px_rgba(88,101,242,0.35)] flex items-center gap-2 shrink-0 active:scale-[0.98]"
+              className="w-full sm:w-auto h-10 px-4 rounded-lg bg-[#5865F2] hover:bg-[#4752c4] text-white font-medium text-xs sm:text-sm transition-colors flex items-center justify-center gap-2 shrink-0 active:scale-[0.98] touch-manipulation"
             >
               <svg className="w-4 h-4 fill-current" viewBox="0 0 127.14 96.36">
                 <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.91,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.91,96.12,53,91.08,65.69,84.69,65.69Z" />
@@ -1311,9 +1318,8 @@ export default function ReportPortalPage() {
         )}
       </main>
 
-      <footer className="py-6 border-t border-white/[0.06] text-center text-xs text-slate-500">
-        © 2026 SyncInk Incident Response Desk. All rights reserved.
-      </footer>
+      <PublicFooter />
     </div>
+    </MotionConfig>
   );
 }

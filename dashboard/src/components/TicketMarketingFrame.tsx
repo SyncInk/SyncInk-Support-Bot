@@ -2,7 +2,10 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { motion, AnimatePresence, MotionConfig } from "framer-motion";
+import { transition } from "@/lib/motion-tokens";
 import {
   Shield,
   BookOpen,
@@ -61,9 +64,10 @@ export function TicketMarketingFrame({
   ];
 
   return (
-    <div className="min-h-screen bg-[#080a0f] text-slate-100 flex flex-col font-sans selection:bg-[#8b4cff]/30 selection:text-white">
-      {/* Sticky Full-Width Navbar Matching /rules */}
-      <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-[#0a0c10]/85 backdrop-blur-xl">
+    <MotionConfig reducedMotion="user">
+    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans overflow-x-hidden selection:bg-[#8b4cff]/30 selection:text-white">
+      {/* Sticky Full-Width Navbar */}
+      <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-[#060812]/90 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Brand Logo & Name */}
@@ -71,27 +75,26 @@ export function TicketMarketingFrame({
               href="/dashboard/tickets"
               className="flex items-center gap-3 group focus:outline-none"
             >
-              <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-[#161b26] border border-white/10 shadow-[0_0_15px_rgba(139,76,255,0.25)] group-hover:border-purple-500/50 transition-all duration-300">
-                <img
-                  src="https://files.catbox.moe/74l9su.png"
-                  alt="SyncInk Logo"
-                  className="h-7 w-7 object-contain drop-shadow"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = "none";
-                  }}
+              <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-[#0c0f18] border border-white/[0.08] group-hover:border-white/[0.16] transition-colors">
+                <Image
+                  src="/syncink-main-logo.png"
+                  alt="SyncInk"
+                  width={20}
+                  height={20}
+                  className="object-contain"
                 />
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-base font-extrabold text-white tracking-tight group-hover:text-purple-400 transition-colors">
+                  <span className="text-sm sm:text-base font-semibold text-white tracking-tight group-hover:text-blue-400 transition-colors">
                     SyncInk Ticket
                   </span>
-                  <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-purple-950/60 text-purple-400 border border-purple-800/50 rounded-md">
+                  <span className="px-1.5 py-0.5 text-[10px] font-mono bg-white/[0.04] text-slate-300 border border-white/[0.08] rounded">
                     Tickets
                   </span>
                 </div>
-                <span className="text-[11px] text-slate-400 font-medium">
-                  Enterprise Discord Support
+                <span className="text-[11px] text-slate-400">
+                  Enterprise Discord support
                 </span>
               </div>
             </Link>
@@ -105,15 +108,15 @@ export function TicketMarketingFrame({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       isActive
-                        ? "bg-purple-600/15 text-white border border-purple-500/30 shadow-[0_0_12px_rgba(139,76,255,0.15)]"
-                        : "text-slate-300 hover:text-white hover:bg-white/[0.05]"
+                        ? "bg-white/[0.08] text-white border border-white/[0.12]"
+                        : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
                     }`}
                   >
                     <Icon
                       className={`h-3.5 w-3.5 ${
-                        isActive ? "text-purple-400" : "text-slate-400"
+                        isActive ? "text-blue-400" : "text-slate-400"
                       }`}
                     />
                     <span>{item.label}</span>
@@ -123,19 +126,19 @@ export function TicketMarketingFrame({
             </nav>
 
             {/* Right Action Buttons */}
-            <div className="hidden sm:flex items-center gap-2.5">
+            <div className="hidden sm:flex items-center gap-2">
               <Link
                 href="/dashboard/tickets"
-                className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-white bg-[#161b26] border border-white/10 hover:border-white/20 hover:bg-[#1c2331] transition-all duration-200 shadow-sm"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium text-white bg-[#0c0f18] border border-white/[0.08] hover:border-white/[0.16] hover:bg-white/[0.04] transition-colors touch-manipulation"
               >
-                <Shield className="h-3.5 w-3.5 text-purple-400" />
+                <Shield className="h-3.5 w-3.5 text-slate-400" />
                 <span>Ticket Console</span>
               </Link>
               <a
                 href={SUPPORT_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold text-white bg-[#5865F2] hover:bg-[#4752c4] shadow-[0_0_15px_rgba(88,101,242,0.35)] transition-all duration-200"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium text-white bg-[#5865F2] hover:bg-[#4752c4] transition-colors touch-manipulation"
               >
                 <MessageSquare className="h-3.5 w-3.5" />
                 <span>Join Discord</span>
@@ -145,7 +148,7 @@ export function TicketMarketingFrame({
             {/* Mobile Menu Button */}
             <button
               type="button"
-              className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+              className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors touch-manipulation"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle navigation menu"
             >
@@ -155,8 +158,16 @@ export function TicketMarketingFrame({
         </div>
 
         {/* Mobile Navigation Drawer */}
+        <AnimatePresence>
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-white/[0.08] bg-[#0c1018] px-4 pt-3 pb-5 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={transition.expand}
+            className="lg:hidden overflow-hidden border-t border-white/[0.08] bg-[#0c0f18]"
+          >
+          <div className="px-4 pt-3 pb-5 space-y-1">
             {navLinks.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || active === item.id;
@@ -165,13 +176,13 @@ export function TicketMarketingFrame({
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors touch-manipulation ${
                     isActive
-                      ? "bg-purple-600/15 text-white border border-purple-500/30"
+                      ? "bg-white/[0.08] text-white border border-white/[0.12]"
                       : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${isActive ? "text-purple-400" : "text-slate-400"}`} />
+                  <Icon className={`h-4 w-4 ${isActive ? "text-blue-400" : "text-slate-400"}`} />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -180,52 +191,57 @@ export function TicketMarketingFrame({
               <Link
                 href="/dashboard/tickets"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-white bg-[#161b26] border border-white/10"
+                className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-medium text-white bg-white/[0.04] border border-white/[0.08]"
               >
-                <Shield className="h-4 w-4 text-purple-400" />
+                <Shield className="h-4 w-4 text-slate-300" />
                 <span>Ticket Console</span>
               </Link>
               <a
                 href={SUPPORT_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-[#5865F2]"
+                className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-medium text-white bg-[#5865F2]"
               >
                 <MessageSquare className="h-4 w-4" />
                 <span>Join Discord Support</span>
               </a>
             </div>
           </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </header>
 
-      {/* Hero Section Matching /rules Header */}
-      <section className="relative overflow-hidden pt-12 pb-14 border-b border-white/[0.08] bg-gradient-to-b from-[#111624] via-[#0b0e15] to-[#080a0f]">
-        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[600px] h-[350px] rounded-full bg-purple-600/10 blur-[120px]" />
-
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+      {/* Hero Section */}
+      <section className="pt-12 pb-12 border-b border-white/[0.08]">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={transition.enter}
+          className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
+        >
           {eyebrow && (
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/60 border border-purple-800/50 text-purple-400 text-xs font-bold uppercase tracking-wider mb-4">
-              {eyebrowIcon || <Sparkles className="h-3.5 w-3.5" />}
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#0c0f18] border border-white/[0.08] text-slate-300 font-mono text-[11px] mb-4">
+              {eyebrowIcon || <Sparkles className="h-3.5 w-3.5 text-blue-400" />}
               <span>{eyebrow}</span>
             </div>
           )}
 
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
+          <h1 className="text-3xl sm:text-5xl font-semibold text-white tracking-tight leading-tight">
             {title}
           </h1>
 
-          <p className="mt-4 text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-3 text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
             {description}
           </p>
 
           {actions && actions.length > 0 && (
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5 text-xs">
               {actions.map((act, i) => {
                 const isPrimary = act.tone !== "secondary";
                 const btnClass = isPrimary
-                  ? "inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-[0_0_20px_rgba(139,76,255,0.3)] transition-all"
-                  : "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#161b26] border border-white/10 hover:border-white/20 text-slate-200 hover:text-white transition-all font-semibold";
+                  ? "inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors touch-manipulation"
+                  : "inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-white/[0.04] border border-white/[0.08] hover:border-white/[0.16] text-slate-200 hover:text-white transition-colors font-medium touch-manipulation";
 
                 if (act.to) {
                   return (
@@ -249,16 +265,17 @@ export function TicketMarketingFrame({
               })}
             </div>
           )}
-        </div>
+        </motion.div>
       </section>
 
       {/* Main Content Area */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1 w-full space-y-10">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 flex-1 w-full space-y-10">
         {children}
       </main>
 
       {/* Public Footer */}
       <PublicFooter />
     </div>
+    </MotionConfig>
   );
 }

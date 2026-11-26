@@ -96,14 +96,14 @@ export default function DedicatedStatusPage() {
     >
       <div className="space-y-6">
         {/* Main Operational Banner */}
-        <div className="rounded-2xl border border-emerald-500/30 bg-[#0c1412] p-5 sm:p-6 shadow-[0_0_25px_rgba(16,185,129,0.1)]">
+        <div className="rounded-xl border border-emerald-500/25 bg-[#0c1412] p-5 sm:p-6">
           <div className="flex items-center gap-3.5">
-            <span className="relative flex h-3.5 w-3.5 shrink-0">
+            <span className="relative flex h-3 w-3 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 shadow-[0_0_12px_#10b981]" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
             </span>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-white leading-tight">All Systems Fully Operational</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-white leading-tight">All Systems Fully Operational</h3>
               <p className="text-xs text-slate-400 mt-0.5">
                 All Discord bot clusters, websocket shards, queue workers, and database APIs are operating normally.
               </p>
@@ -113,17 +113,17 @@ export default function DedicatedStatusPage() {
 
         {/* Quick Highlights Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-5 rounded-2xl bg-[#0e121d] border border-white/[0.08] flex flex-col gap-1">
-            <span className="text-2xl font-extrabold text-white">99.96%</span>
-            <span className="text-xs text-slate-400">Overall 90-Day Uptime</span>
+          <div className="p-5 rounded-xl bg-[#0c0f18] border border-white/[0.08] flex flex-col gap-1">
+            <span className="text-2xl font-semibold text-white font-mono tabular-nums">99.96%</span>
+            <span className="text-xs text-slate-400">Overall 90-day uptime</span>
           </div>
-          <div className="p-5 rounded-2xl bg-[#0e121d] border border-white/[0.08] flex flex-col gap-1">
-            <span className="text-2xl font-extrabold text-emerald-400">21ms</span>
-            <span className="text-xs text-slate-400">Avg Cluster Latency</span>
+          <div className="p-5 rounded-xl bg-[#0c0f18] border border-white/[0.08] flex flex-col gap-1">
+            <span className="text-2xl font-semibold text-emerald-400 font-mono tabular-nums">21ms</span>
+            <span className="text-xs text-slate-400">Avg cluster latency</span>
           </div>
-          <div className="p-5 rounded-2xl bg-[#0e121d] border border-white/[0.08] flex flex-col gap-1">
-            <span className="text-2xl font-extrabold text-purple-400">0 Active</span>
-            <span className="text-xs text-slate-400">Service Disruptions</span>
+          <div className="p-5 rounded-xl bg-[#0c0f18] border border-white/[0.08] flex flex-col gap-1">
+            <span className="text-2xl font-semibold text-purple-300 font-mono tabular-nums">0 Active</span>
+            <span className="text-xs text-slate-400">Service disruptions</span>
           </div>
         </div>
 

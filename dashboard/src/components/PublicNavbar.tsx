@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { transition } from "@/lib/motion-tokens";
 import {
   Shield,
   Radio,
@@ -195,10 +197,10 @@ export function PublicNavbar() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-base font-black text-white tracking-tight group-hover:text-blue-400 transition-colors">
+                <span className="text-base font-semibold text-white tracking-tight group-hover:text-blue-400 transition-colors">
                   SyncInk
                 </span>
-                <span className="hidden sm:inline-flex px-1.5 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-white/[0.04] text-slate-400 border border-white/10 rounded-md">
+                <span className="hidden sm:inline-flex px-1.5 py-0.5 text-[10px] font-mono font-medium bg-white/[0.04] text-slate-400 border border-white/[0.08] rounded-md">
                   .site
                 </span>
               </div>
@@ -211,7 +213,7 @@ export function PublicNavbar() {
           <nav className="hidden md:flex items-center gap-1 lg:gap-1.5">
             <Link
               href="/#bots"
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 pathname === "/"
                   ? "text-white bg-white/[0.06]"
                   : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
@@ -222,7 +224,7 @@ export function PublicNavbar() {
 
             <Link
               href="/about"
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 pathname === "/about"
                   ? "text-blue-300 bg-blue-500/15 border border-blue-500/25"
                   : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
@@ -233,7 +235,7 @@ export function PublicNavbar() {
 
             <Link
               href="/updates"
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 pathname === "/updates"
                   ? "text-blue-300 bg-blue-500/15 border border-blue-500/25"
                   : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
@@ -244,7 +246,7 @@ export function PublicNavbar() {
 
             <Link
               href="/apply"
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 pathname === "/apply"
                   ? "text-blue-300 bg-blue-500/15 border border-blue-500/25"
                   : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
@@ -257,7 +259,7 @@ export function PublicNavbar() {
             <div className="relative" ref={resourcesRef}>
               <button
                 onClick={() => setResourcesOpen((prev) => !prev)}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all focus:outline-none ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none ${
                   resourcesOpen
                     ? "text-white bg-white/[0.08]"
                     : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
@@ -273,8 +275,15 @@ export function PublicNavbar() {
                 />
               </button>
 
-              {resourcesOpen && (
-                <div className="absolute left-0 mt-2 w-48 rounded-xl bg-[#0b0e1d] border border-white/10 shadow-2xl p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <AnimatePresence>
+                {resourcesOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                    transition={transition.enter}
+                    className="absolute left-0 mt-2 w-52 rounded-xl bg-[#0c0f18] border border-white/[0.1] shadow-card p-1.5 z-50 origin-top-left"
+                  >
                   <Link
                     href="/dashboard/radio"
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-purple-300 hover:text-white hover:bg-white/[0.06] transition-colors"
@@ -330,8 +339,9 @@ export function PublicNavbar() {
                     <Lock className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Privacy Policy</span>
                   </Link>
-                </div>
-              )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </nav>
 
@@ -381,7 +391,7 @@ export function PublicNavbar() {
                   </span>
 
                   {isOwnerUser && (
-                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium uppercase bg-amber-500/15 text-amber-300 border border-amber-500/25">
                       Owner
                     </span>
                   )}
@@ -394,8 +404,15 @@ export function PublicNavbar() {
                 </button>
 
                 {/* Dropdown Menu */}
-                {userDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#0b0e1d] border border-white/10 shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <AnimatePresence>
+                  {userDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                      transition={transition.enter}
+                      className="absolute right-0 mt-2 w-64 rounded-xl bg-[#0c0f18] border border-white/[0.1] shadow-card p-2 z-50 origin-top-right"
+                    >
                     {/* User Identity Banner */}
                     <div className="px-3 py-2.5 border-b border-white/[0.08] mb-1">
                       <div className="text-xs font-bold text-white truncate">
@@ -459,14 +476,15 @@ export function PublicNavbar() {
                       <LogOut className="w-3.5 h-3.5" />
                       <span>Sign Out</span>
                     </button>
-                  </div>
-                )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
               /* Signed-out Discord Login Button */
               <a
                 href="/api/auth/discord"
-                className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-[#5865F2] hover:bg-[#4752c4] transition-all shadow-[0_0_15px_rgba(88,101,242,0.3)]"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium text-white bg-[#5865F2] hover:bg-[#4752c4] transition-colors touch-manipulation"
               >
                 <svg
                   className="w-3.5 h-3.5 fill-current"
@@ -506,8 +524,16 @@ export function PublicNavbar() {
         {/* ========================================================= */}
         {/* MOBILE NAVIGATION SHEET */}
         {/* ========================================================= */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-white/[0.08] space-y-3 animate-in fade-in slide-in-from-top-2">
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={transition.expand}
+              className="md:hidden overflow-hidden"
+            >
+              <div className="py-4 border-t border-white/[0.08] space-y-3">
             {currentUser && (
               <div className="px-3 py-2 bg-white/[0.02] border border-white/5 rounded-xl mb-2 flex items-center justify-between">
                 <div>
@@ -642,14 +668,16 @@ export function PublicNavbar() {
               ) : (
                 <a
                   href="/api/auth/discord"
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-[#5865F2]"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-[#5865F2] hover:bg-[#4752c4] transition-colors touch-manipulation"
                 >
                   <span>Sign in with Discord</span>
                 </a>
               )}
-            </div>
-          </div>
-        )}
+              </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </header>
   );

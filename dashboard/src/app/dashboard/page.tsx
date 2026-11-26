@@ -26,6 +26,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { PublicNavbar } from "@/components/PublicNavbar";
+import { PublicFooter } from "@/components/PublicFooter";
 
 interface CurrentUser {
   id: string;
@@ -144,16 +145,15 @@ export default function MasterDashboardHub() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans">
+      <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans overflow-x-hidden">
         <PublicNavbar />
         <main className="flex-1 flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-[#0b0e1d]/90 border border-white/10 rounded-3xl p-8 text-center space-y-4 shadow-2xl backdrop-blur-xl">
-            <div className="relative w-14 h-14 mx-auto flex items-center justify-center">
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-blue-600/30 to-purple-600/30 animate-pulse" />
-              <RefreshCw className="w-7 h-7 text-blue-400 animate-spin relative z-10" />
+          <div className="max-w-md w-full bg-[#0c0f18] border border-white/[0.08] rounded-xl p-8 text-center space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
+              <RefreshCw className="w-6 h-6 text-blue-400 animate-spin" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-base font-bold text-white tracking-wide">Loading Bot Operations</h3>
+              <h3 className="text-base font-semibold text-white">Loading Bot Operations</h3>
               <p className="text-xs text-slate-400">Verifying authenticated session...</p>
             </div>
           </div>
@@ -163,21 +163,19 @@ export default function MasterDashboardHub() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans overflow-x-hidden selection:bg-blue-600 selection:text-white">
       <PublicNavbar />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
-        {/* ========================================================= */}
-        {/* TOP COMMAND CENTER HEADER & USER STATUS */}
-        {/* ========================================================= */}
-        <div className="bg-[#0b0e1d] border border-white/[0.08] rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+        {/* Top Command Center Header */}
+        <div className="bg-[#0c0f18] border border-white/[0.08] rounded-xl p-5 sm:p-8 relative overflow-hidden">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-400 text-xs font-bold uppercase tracking-wider mb-3">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.08] text-blue-400 font-mono text-[11px] mb-3">
                 <Shield className="w-3.5 h-3.5 text-blue-400" />
-                <span>SyncInk Bot Operations Console</span>
+                <span>SyncInk bot operations console</span>
               </div>
-              <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+              <h1 className="text-2xl sm:text-4xl font-semibold text-white tracking-tight">
                 Unified Support Bot Dashboard
               </h1>
               <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-2xl leading-relaxed">
@@ -622,9 +620,7 @@ export default function MasterDashboardHub() {
         </div>
       </main>
 
-      <footer className="py-6 border-t border-white/[0.06] text-center text-xs text-slate-500">
-        © 2026 SyncInk Security &amp; Bot Operations Platform. All rights reserved.
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

@@ -2,6 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
+import { motion, MotionConfig } from "framer-motion";
+import { transition } from "@/lib/motion-tokens";
 import {
   Shield,
   Ticket,
@@ -22,51 +24,57 @@ import { PublicFooter } from "@/components/PublicFooter";
 
 export default function UnifiedTermsPage() {
   return (
-    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans selection:bg-brand-purple selection:text-white">
+    <MotionConfig reducedMotion="user">
+    <div className="min-h-screen bg-[#060812] text-slate-100 flex flex-col font-sans overflow-x-hidden selection:bg-brand-blue selection:text-white">
       <PublicNavbar />
 
       {/* Header Banner */}
-      <section className="relative overflow-hidden pt-16 sm:pt-20 pb-12 border-b border-white/[0.08] bg-gradient-to-b from-[#0f1322] via-[#090c17] to-[#060812]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold uppercase tracking-wider mb-4 shadow-sm">
+      <section className="pt-14 sm:pt-16 pb-10 border-b border-white/[0.08]">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={transition.enter}
+          className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
+        >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#0c0f18] border border-white/[0.08] text-blue-400 font-mono text-[11px] mb-4">
             <Scale className="h-3.5 w-3.5" />
-            <span>Platform Legal Governance</span>
+            <span>Platform legal governance</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+          <h1 className="text-3xl sm:text-5xl font-semibold text-white tracking-tight">
             Terms of Service Hub
           </h1>
-          <p className="mt-4 text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Every SyncInk service maintains its own dedicated operational terms and service agreements. Select your target service below to view its official terms.
+          <p className="mt-3 text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            Every SyncInk service maintains its own dedicated operational terms and service agreements. Select your target service below to view its official documentation.
           </p>
-        </div>
+        </motion.div>
       </section>
 
       {/* Main Content Layout */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 flex-1 w-full flex flex-col lg:flex-row gap-8 lg:gap-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-1 w-full flex flex-col lg:flex-row gap-8">
         
         {/* Sidebar Service Selector */}
         <aside className="lg:w-80 flex-shrink-0">
-          <div className="sticky top-24 space-y-4">
+          <div className="lg:sticky lg:top-24 space-y-3">
             <div className="pl-1">
-              <span className="text-xs font-extrabold text-slate-400 uppercase tracking-widest">
-                Select Service Terms
+              <span className="text-xs font-mono text-slate-400">
+                Select service terms
               </span>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-2.5">
               {/* Option 1: Support Bot (Current Page) */}
               <div
-                className="relative flex items-center justify-between p-4 rounded-2xl bg-white/[0.04] border border-brand-red/40 shadow-lg text-left"
+                className="relative flex items-center justify-between p-3.5 rounded-xl bg-[#0c0f18] border border-white/[0.16] text-left"
               >
-                <div className="flex items-center gap-3.5">
-                  <div className="p-2.5 rounded-xl bg-brand-red/20 text-brand-crimson">
-                    <Shield className="w-5 h-5" />
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-white/[0.05] text-slate-200 shrink-0">
+                    <Shield className="w-4 h-4" />
                   </div>
-                  <div>
-                    <div className="font-bold text-sm text-white">SyncInk Support Bot</div>
-                    <div className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                      Active On This Page
+                  <div className="min-w-0">
+                    <div className="font-medium text-sm text-white truncate">SyncInk Support Bot</div>
+                    <div className="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      <span className="truncate">Active page</span>
                     </div>
                   </div>
                 </div>
@@ -75,49 +83,43 @@ export default function UnifiedTermsPage() {
               {/* Option 2: Ticket Bot (Direct Redirect Link) */}
               <Link
                 href="/dashboard/tickets/terms"
-                className="group relative flex items-center justify-between p-4 rounded-2xl bg-[#0c101d] border border-white/10 hover:border-blue-500/50 hover:bg-[#11172a] transition-all duration-200 text-left"
+                className="group relative flex items-center justify-between p-3.5 rounded-xl bg-[#0c0f18] border border-white/[0.08] hover:border-white/[0.16] transition-colors text-left touch-manipulation"
               >
-                <div className="flex items-center gap-3.5">
-                  <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 transition-colors">
-                    <Ticket className="w-5 h-5" />
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-white/[0.04] text-blue-400 shrink-0">
+                    <Ticket className="w-4 h-4" />
                   </div>
-                  <div>
-                    <div className="font-bold text-sm text-slate-200 group-hover:text-white transition-colors">
-                      SyncInk Ticket Bot
+                  <div className="min-w-0">
+                    <div className="font-medium text-sm text-slate-200 group-hover:text-white transition-colors truncate">
+                      Ticket Bot
                     </div>
-                    <div className="text-[11px] text-slate-400 group-hover:text-blue-300 transition-colors">
-                      Dedicated Ticket Terms
+                    <div className="text-[11px] text-slate-400 truncate">
+                      Ticket terms
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-blue-400 font-semibold px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 group-hover:bg-blue-500/20 transition-all">
-                  <span>Open</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </div>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-white shrink-0" />
               </Link>
 
               {/* Option 3: Voice Bot (Direct Redirect Link) */}
               <Link
                 href="/dashboard/voice/terms"
-                className="group relative flex items-center justify-between p-4 rounded-2xl bg-[#0a141b] border border-white/10 hover:border-cyan-500/50 hover:bg-[#0e1d27] transition-all duration-200 text-left"
+                className="group relative flex items-center justify-between p-3.5 rounded-xl bg-[#0c0f18] border border-white/[0.08] hover:border-white/[0.16] transition-colors text-left touch-manipulation"
               >
-                <div className="flex items-center gap-3.5">
-                  <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20 transition-colors">
-                    <Headphones className="w-5 h-5" />
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-white/[0.04] text-cyan-400 shrink-0">
+                    <Headphones className="w-4 h-4" />
                   </div>
-                  <div>
-                    <div className="font-bold text-sm text-slate-200 group-hover:text-white transition-colors">
-                      SyncInk Voice Bot
+                  <div className="min-w-0">
+                    <div className="font-medium text-sm text-slate-200 group-hover:text-white transition-colors truncate">
+                      Voice Bot
                     </div>
-                    <div className="text-[11px] text-slate-400 group-hover:text-cyan-300 transition-colors">
-                      Dedicated Voice Terms
+                    <div className="text-[11px] text-slate-400 truncate">
+                      Voice terms
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-cyan-400 font-semibold px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20 group-hover:bg-cyan-500/20 transition-all">
-                  <span>Open</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </div>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-white shrink-0" />
               </Link>
             </div>
 
@@ -138,29 +140,27 @@ export default function UnifiedTermsPage() {
         <div className="flex-1 min-w-0 space-y-10">
           
           {/* Main Card: Support Bot Official Terms of Service */}
-          <div className="bg-[#0b0e18] border border-white/10 rounded-[2rem] p-6 sm:p-10 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-brand-red/10 rounded-full blur-[100px] pointer-events-none" />
-
-            <div className="relative z-10">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/[0.08] pb-6 mb-8 gap-4">
+          <div className="bg-[#0c0f18] border border-white/[0.08] rounded-xl p-5 sm:p-8">
+            <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/[0.08] pb-5 mb-7 gap-4">
                 <div>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-brand-red/20 border border-brand-red/30 flex items-center justify-center text-brand-crimson shrink-0">
-                      <Shield className="w-6 h-6" />
+                    <div className="w-9 h-9 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300 shrink-0">
+                      <Shield className="w-5 h-5" />
                     </div>
                     <div>
-                      <h2 className="text-2xl sm:text-3xl font-black text-white">
+                      <h2 className="text-xl sm:text-2xl font-semibold text-white">
                         SyncInk Support Bot Terms of Service
                       </h2>
                       <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                        Official Server Defense & Moderation Agreement for SyncInk Support Server
+                        Official Server Defense &amp; Moderation Agreement for SyncInk Support Server
                       </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 self-start sm:self-auto">
-                  <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-brand-red/15 text-brand-crimson border border-brand-red/30">
+                  <span className="px-2.5 py-1 rounded-md text-[11px] font-mono bg-white/[0.04] text-slate-300 border border-white/[0.08]">
                     Updated October 2026
                   </span>
                 </div>
@@ -228,7 +228,7 @@ export default function UnifiedTermsPage() {
           {/* Dedicated Directory Section for All Other Bots */}
           <div className="space-y-6">
             <div>
-              <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              <h3 className="text-lg sm:text-xl font-semibold text-white tracking-tight">
                 Ecosystem Bot Legal & Resource Directories
               </h3>
               <p className="text-sm text-slate-400 mt-1">
@@ -236,28 +236,28 @@ export default function UnifiedTermsPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               
               {/* Card 1: Ticket Bot Complete Directory */}
-              <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-b from-[#0f1222] to-[#090b14] border border-blue-500/25 shadow-xl space-y-5 flex flex-col justify-between">
+              <div className="p-5 sm:p-6 rounded-xl bg-[#0c0f18] border border-white/[0.08] space-y-5 flex flex-col justify-between">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-300">
-                        <Ticket className="w-5 h-5" />
+                      <div className="w-9 h-9 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-blue-400">
+                        <Ticket className="w-4 h-4" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-white text-base">SyncInk Ticket Bot</h4>
-                        <span className="text-xs text-blue-400 font-semibold">Enterprise Support</span>
+                        <h4 className="font-semibold text-white text-sm">SyncInk Ticket Bot</h4>
+                        <span className="text-xs text-slate-400">Enterprise support</span>
                       </div>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-300 border border-blue-500/30">
-                      5 Pages Live
+                    <span className="px-2 py-0.5 rounded font-mono text-[10px] bg-white/[0.04] text-slate-300 border border-white/[0.08]">
+                      5 pages
                     </span>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    Review Ticket Bot's specialized service agreements, acceptable ticketing conduct, and server administrator responsibilities.
+                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                    Review Ticket Bot&apos;s specialized service agreements, acceptable ticketing conduct, and server administrator responsibilities.
                   </p>
                 </div>
 
@@ -265,7 +265,7 @@ export default function UnifiedTermsPage() {
                   {/* Primary Link: Terms of Service */}
                   <Link
                     href="/dashboard/tickets/terms"
-                    className="flex items-center justify-between p-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all shadow-[0_0_15px_rgba(88,101,242,0.35)]"
+                    className="flex items-center justify-between h-10 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs sm:text-sm transition-colors touch-manipulation"
                   >
                     <span className="flex items-center gap-2">
                       <FileText className="w-4 h-4" />
@@ -309,25 +309,25 @@ export default function UnifiedTermsPage() {
               </div>
 
               {/* Card 2: Voice Bot Complete Directory */}
-              <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-b from-[#09151c] to-[#060c11] border border-cyan-500/25 shadow-xl space-y-5 flex flex-col justify-between">
+              <div className="p-5 sm:p-6 rounded-xl bg-[#0c0f18] border border-white/[0.08] space-y-5 flex flex-col justify-between">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-300">
-                        <Headphones className="w-5 h-5" />
+                      <div className="w-9 h-9 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-cyan-400">
+                        <Headphones className="w-4 h-4" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-white text-base">SyncInk Voice Bot</h4>
-                        <span className="text-xs text-cyan-400 font-semibold">Dynamic Audio Hub</span>
+                        <h4 className="font-semibold text-white text-sm">SyncInk Voice Bot</h4>
+                        <span className="text-xs text-slate-400">Dynamic audio hub</span>
                       </div>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
-                      5 Pages Live
+                    <span className="px-2 py-0.5 rounded font-mono text-[10px] bg-white/[0.04] text-slate-300 border border-white/[0.08]">
+                      5 pages
                     </span>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    Review Voice Bot's join-to-create usage terms, intellectual property protections, and acceptable voice room conduct policies.
+                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                    Review Voice Bot&apos;s join-to-create usage terms, intellectual property protections, and acceptable voice room conduct policies.
                   </p>
                 </div>
 
@@ -335,7 +335,7 @@ export default function UnifiedTermsPage() {
                   {/* Primary Link: Terms of Service */}
                   <Link
                     href="/dashboard/voice/terms"
-                    className="flex items-center justify-between p-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs sm:text-sm transition-all shadow-[0_0_15px_rgba(6,182,212,0.35)]"
+                    className="flex items-center justify-between h-10 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs sm:text-sm transition-colors touch-manipulation"
                   >
                     <span className="flex items-center gap-2">
                       <FileText className="w-4 h-4" />
@@ -386,5 +386,6 @@ export default function UnifiedTermsPage() {
 
       <PublicFooter />
     </div>
+    </MotionConfig>
   );
 }

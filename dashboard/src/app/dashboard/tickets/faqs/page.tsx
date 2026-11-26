@@ -112,7 +112,7 @@ export default function DedicatedFaqsPage() {
 
       {/* Category Filters and Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-6">
-        <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
+        <div className="flex flex-nowrap sm:flex-wrap items-center gap-1.5 w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0">
           {[
             { id: "all", label: `All Topics (${FAQS.length})` },
             { id: "setup", label: "Setup & Config" },
@@ -126,9 +126,9 @@ export default function DedicatedFaqsPage() {
               <button
                 key={tab.id}
                 type="button"
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 border ${
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border touch-manipulation ${
                   isActive
-                    ? "bg-purple-600/15 text-white border-purple-500/30 shadow-[0_0_12px_rgba(139,76,255,0.15)]"
+                    ? "bg-purple-600/15 text-white border-purple-500/30"
                     : "text-slate-300 hover:text-white hover:bg-white/[0.05] border-transparent"
                 }`}
                 onClick={() => setCategoryFilter(tab.id)}

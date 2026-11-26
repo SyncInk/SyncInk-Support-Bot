@@ -671,7 +671,7 @@ export default function OwnerControlPanel() {
                   <Icon className="w-3.5 h-3.5" />
                   <span>{tab.label}</span>
                   {typeof tab.badge === "number" && tab.badge > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/30 text-amber-200 border border-amber-500/40">
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/30 text-amber-200 border border-amber-500/40 tabular-nums">
                       {tab.badge}
                     </span>
                   )}
