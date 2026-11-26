@@ -326,7 +326,9 @@ export default function FAQPage() {
           answer: (
             <p className="text-xs sm:text-sm text-slate-300">
               Submit your idea using the{" "}
-              <span className="font-mono text-white">/feature_request</span> or{" "}
+              <span className="font-mono text-white">/feature request</span>,{" "}
+              <span className="font-mono text-white">/feature_request</span>,{" "}
+              <span className="font-mono text-white">?feature request</span>, or{" "}
               <span className="font-mono text-white">?feature_request</span> command exclusively in{" "}
               <a
                 href="https://discord.com/channels/1520457643842342912/1546548728721178724"
@@ -345,31 +347,31 @@ export default function FAQPage() {
           question: "How do I apply for Developer or Staff roles?",
           answer: (
             <div className="space-y-2 text-xs sm:text-sm text-slate-300">
-              <p>We are always eager to welcome talented developers and passionate moderators:</p>
+              <p>Use <span className="font-mono text-white">?apply</span> (or <span className="font-mono text-white">/apply</span>) in Discord, or apply directly through our authenticated portal:</p>
               <ul className="list-disc list-inside space-y-1 text-slate-300 pl-1">
                 <li>
-                  <strong>Developer Application:</strong> Fill out the form at{" "}
+                  <strong>Developer Application:</strong>{" "}
                   <a
-                    href="https://syncink.github.io/syncink-portfolio/apply-developer"
+                    href="https://syncink.site/apply?tab=developer"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-indigo-400 font-semibold hover:underline"
                   >
-                    syncink.github.io/apply-developer
+                    syncink.site/apply?tab=developer
                   </a>{" "}
-                  (Check requirements in # 💻・developer-apply).
+                  (Requirements in # 💻・developer-apply).
                 </li>
                 <li>
-                  <strong>Staff Application:</strong> Fill out the staff form in{" "}
+                  <strong>Staff Application:</strong>{" "}
                   <a
-                    href="https://discord.com/channels/1520457643842342912/1539319001673367604"
+                    href="https://syncink.site/apply?tab=staff"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-indigo-400 font-semibold hover:underline"
                   >
-                    # 🛡️・staff-apply
-                  </a>
-                  .
+                    syncink.site/apply?tab=staff
+                  </a>{" "}
+                  (Requirements in # 🛡️・staff-apply).
                 </li>
               </ul>
             </div>

@@ -128,22 +128,31 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "7. Support Ticket Channel: <#1520460764937322566> (Open a private support ticket with staff)",
         "8. Support Chat Channel: <#1520460808499363840> (STRICTLY for asking support questions, getting technical assistance, and troubleshooting. NOTE: Support Chat is NOT for hanging out, casual chatting, or general talking!)",
         "9. Discussion Channel: <#1520477097494057041> (General discussions, ideas, and debates)",
-        "10. Feature Suggestions Channel: <#1546548728721178724> (Submit feature suggestions using `/feature_request` or `?feature_request` ONLY in <#1546548728721178724>)",
+        "10. Feature Suggestions Channel: <#1546548728721178724> (Submit feature suggestions using `/feature request`, `/feature_request`, `/suggest`, `?feature request`, `?feature_request`, or `?suggest` ONLY in <#1546548728721178724>)",
         "11. Official SyncInk Products Channel: <#1520461321689104486>",
         "    - Public Service Bots (<@&1521166171523780688>): Ticket Bot (<@1513075101992747158>), Voice Bot (<@1516578887109181520>), SyncInk Radio (<@1500567606648897819>)",
         "    - Private Bot (<@&1520533971476156469>): SyncInk Security Bot (<@1520522990280769727>) - protects community from spam and deletes blacklisted messages",
         "12. General Chat: <#1520461481857122485> (The designated channel where members hang out, talk, and have casual conversation. All general talking belongs here!)",
         "13. Media Showcase Channel: <#1520461517093343232> (Share images, media, clips. STRICT NOTE: Any NSFW content will result in an immediate permanent ban!)",
         "14. Join to Create VC: <#1520749464569253998> (Join this voice channel to automatically generate your own temporary private voice channel)",
-        "15. Apply for Developer Channel: <#1539301185423413398> (Form: [Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer) - check requirements in <#1539301185423413398>)",
-        "16. Apply for Staff Channel: <#1539319001673367604> (Form: [Apply for Staff](https://discord.com/channels/1520457643842342912/1539319001673367604/1539371523188596916) - check requirements in <#1539319001673367604>)",
+        "15. Apply for Developer Channel: <#1539301185423413398> (Portal: [Apply for Developer](https://syncink.site/apply?tab=developer) • Command: `?apply` / `/apply` • Check requirements in <#1539301185423413398>)",
+        "16. Apply for Staff Channel: <#1539319001673367604> (Portal: [Apply for Staff](https://syncink.site/apply?tab=staff) • Command: `?apply` / `/apply` • Check requirements in <#1539319001673367604>)",
         "17. Ask AI Channel: <#1544361954574073916> (Dedicated channel for AI questions)",
         "18. Server Boosters Channel: <#1558585414829211668> (Where server boosts are celebrated with the Boosters Webhook)",
         "19. VIP Support Chat: <#1558589470469525504> (Dedicated VIP lounge & priority support channel exclusive to Server Boosters)",
         "20. Incident Recovery Channel: <#1541796896199417906> (Dedicated channel mirroring reports created on https://syncink.site/report for recovering lost transcripts and bot disruptions)",
         "",
+        "--- SUPPORT SERVER BOT COMMANDS ---",
+        "• Recruitment: `?apply [developer|staff]` or `/apply` — Direct links & requirements to join Developer or Staff teams.",
+        "• Feature Requests: `/feature request`, `/feature_request`, `/suggest`, `?feature request`, `?feature_request`, `?suggest` (Used exclusively in <#1546548728721178724>).",
+        "• Platform & Status: `?status`, `/status`, `?products`, `/products`, `?links`, `/links`, `?botstats` (`?ping`), `?serverstats`, `?userstats`.",
+        "• Utilities & Help: `?help [command]`, `?pfp [@user]`, `?banner [@user]`, `?cleanup [amount]`.",
+        "• AI Assistant: `?ask <question>`, `/ask <question>`, `?resetai`, `/resetai` (Used in <#1544361954574073916>).",
+        "",
         "--- OFFICIAL SUPPORT SERVER RULES (<#1520460587522330634>) & WEBSITE DOCUMENTATION ---",
         "Discord Guide Channel: <#1520460587522330634> (Reference Post: https://discord.com/channels/1520457643842342912/1520460587522330634/1539582756001161238)",
+        "Official Website Portal: https://syncink.site",
+        "Team Recruitment Portal: https://syncink.site/apply (Developer: https://syncink.site/apply?tab=developer | Staff: https://syncink.site/apply?tab=staff)",
         "Official Website Rules Page (Public - No Login Required): https://syncink.site/rules",
         "Official Website FAQ Page (Public - No Login Required): https://syncink.site/faq",
         "Official Terms of Use (Public - No Login Required): https://syncink.site/terms",
@@ -288,13 +297,14 @@ def resolve_greeting(prompt: str, guild: Optional[discord.Guild] = None) -> Opti
     if clean in greetings or any(clean.startswith(g + " ") for g in ("hi", "hello", "hey")):
         g_name = guild.name if guild else "SyncInk Support"
         return (
-            f"Hello! Welcome to **{g_name}**! 👋\n\n"
-            "I'm the **SyncInk Assistant**, here to help you navigate the server and answer any questions you might have.\n\n"
-            "Here are a few quick places to get started:\n"
-            "• Complete verification in <#1520748219100041348> if you haven't yet.\n"
-            "• Read the rules and guidelines in <#1520460587522330634>.\n"
-            "• Hang out and talk with everyone in <#1520461481857122485> (General Chat).\n"
-            "• Need help? Head over to <#1520460764937322566> (Support Ticket) or ask in <#1520460808499363840> (Support Chat).\n\n"
+            f"{Emojis.AI} Welcome to **{g_name}**.\n\n"
+            "I am **SyncInk Assistant**, ready to help with platform documentation, support troubleshooting, server commands, or technical questions.\n\n"
+            "**Quick Links**\n"
+            f"{Emojis.S_ARROW} **Verify Account:** <#1520748219100041348>\n"
+            f"{Emojis.S_ARROW} **Rules & Guidelines:** <#1520460587522330634>\n"
+            f"{Emojis.S_ARROW} **General Chat:** <#1520461481857122485>\n"
+            f"{Emojis.S_ARROW} **Support Tickets:** <#1520460764937322566> (or ask in <#1520460808499363840>)\n"
+            f"{Emojis.S_ARROW} **Team Applications:** Run `?apply` or visit [syncink.site/apply](https://syncink.site/apply)\n\n"
             "How can I assist you today?"
         )
     return None
@@ -382,74 +392,82 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
     if len(words) > 5 or any(trigger in p for trigger in complex_triggers):
         return None
 
-    # 0. Contribute to SyncInk / Join the Team
+    # 0. Contribute to SyncInk / Join the Team / Apply Overview
     if any(k in p for k in (
         "contribute", "contribution", "contributing",
         "join team", "join the team", "join syncink", "join syncink team",
         "work with syncink", "work with team", "help syncink", "how can i help",
-        "how to contribute", "way to contribute", "ways to contribute"
-    )):
+        "how to contribute", "way to contribute", "ways to contribute",
+        "how to apply", "how do i apply", "apply link", "application link",
+        "apply for team", "apply team", "recruitment"
+    )) or p in ("apply", "join"):
+        dev_emoji = EmojiManager.get_role_emoji(guild, "developer")
+        staff_emoji = EmojiManager.get_role_emoji(guild, "staff")
         return (
-            "Here are the primary ways you can contribute to the **SyncInk** team and server:\n\n"
-            "• 💻 **Developer**: Apply to build SyncInk bots and platform tools via the [Developer Application](https://syncink.github.io/syncink-portfolio/apply-developer) (check requirements in <#1539301185423413398>).\n"
-            "• 🛡️ **Staff Member**: Apply to help moderate and support our community via the [Staff Application](https://discord.com/channels/1520457643842342912/1539319001673367604/1539371523188596916) (check requirements in <#1539319001673367604>).\n"
-            "• 💡 **Feature Suggestions**: Propose new features or improvements using `/feature_request` or `?feature_request` in <#1546548728721178724>.\n"
-            "• 💬 **Community & Support**: Help answer other members' questions in <#1520460808499363840> or hang out in <#1520461481857122485>!"
+            f"Use `?apply` (or `/apply`) to open the recruitment panel, or apply directly below:\n\n"
+            f"{dev_emoji} **Developer Team** (<@&1531882215795855511>)\n"
+            f"{Emojis.S_ARROW} **Portal:** **[Apply for Developer](https://syncink.site/apply?tab=developer)** • Requirements: <#1539301185423413398>\n\n"
+            f"{staff_emoji} **Staff Team** (<@&1520466655321522486>)\n"
+            f"{Emojis.S_ARROW} **Portal:** **[Apply for Staff](https://syncink.site/apply?tab=staff)** • Requirements: <#1539319001673367604>\n\n"
+            f"{Emojis.SUGGESTION} **Feature Suggestions:** Run `/feature request` or `?feature request` in <#1546548728721178724>."
         )
 
     # 1. Developer Application
     if any(k in p for k in ("apply for dev", "apply for developer", "developer application", "become a developer", "how to apply developer", "dev application", "dev form", "apply dev")):
+        dev_emoji = EmojiManager.get_role_emoji(guild, "developer")
         return (
-            "If you are willing to apply as a developer to contribute to SyncInk, please fill out the form here:\n"
-            "👉 **[Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer)**\n\n"
-            "You can check all developer requirements in <#1539301185423413398>."
+            f"{dev_emoji} **Developer Application** (<@&1531882215795855511>)\n\n"
+            f"{Emojis.S_ARROW} **Apply Here:** **[syncink.site/apply?tab=developer](https://syncink.site/apply?tab=developer)**\n"
+            f"{Emojis.S_ARROW} **Requirements:** Review criteria in <#1539301185423413398>\n"
+            f"{Emojis.S_ARROW} **Bot Shortcut:** Type `?apply developer` anywhere in the server"
         )
 
     # 2. Staff Application
     if any(k in p for k in ("apply for staff", "staff application", "become staff", "become a staff", "how to apply staff", "staff form", "apply staff")):
+        staff_emoji = EmojiManager.get_role_emoji(guild, "staff")
         return (
-            "If you are willing to become a staff member on this support server, please fill out the form here:\n"
-            "👉 **[Apply for Staff](https://discord.com/channels/1520457643842342912/1539319001673367604/1539371523188596916)**\n\n"
-            "You can check all staff requirements in <#1539319001673367604>."
+            f"{staff_emoji} **Staff & Moderation Application** (<@&1520466655321522486>)\n\n"
+            f"{Emojis.S_ARROW} **Apply Here:** **[syncink.site/apply?tab=staff](https://syncink.site/apply?tab=staff)**\n"
+            f"{Emojis.S_ARROW} **Requirements:** Review criteria in <#1539319001673367604>\n"
+            f"{Emojis.S_ARROW} **Bot Shortcut:** Type `?apply staff` anywhere in the server"
         )
 
     # 3. Feature Suggestions
     if any(k in p for k in ("suggest a feature", "feature suggestion", "feature request", "submit a suggestion", "where to suggest", "how to suggest", "suggest feature", "suggestion channel")):
         return (
-            "You can submit feature suggestions using the `/feature_request` or `?feature_request` command "
-            "exclusively in <#1546548728721178724>."
+            f"{Emojis.SUGGESTION} Submit feature requests exclusively in <#1546548728721178724> using any of these commands:\n\n"
+            f"{Emojis.S_ARROW} **Slash:** `/feature request` or `/suggest`\n"
+            f"{Emojis.S_ARROW} **Prefix:** `?feature request Title | Details` or `?suggest Your idea`"
         )
 
     # 4. Rules & Guidelines (Strict focused matching)
     if p in ("rules", "server rules", "what are the rules", "where are the rules", "rules channel", "read the rules", "community rules", "guides channel", "guidelines", "rules list", "server rules list", "ai rules", "rules for ai", "use of ai rules", "ai usage rules"):
         return (
-            "**Official SyncInk Support Server Rules** (<#1520460587522330634>):\n\n"
-            "• **Rule 1: Verification** — Complete verification in <#1520748219100041348>.\n"
-            "• **Rule 2: Conduct & Respect** — No harassment, bullying, hate speech, toxicity, or personal attacks.\n"
-            "• **Rule 3: Keep Discussions Relevant** — General chat in <#1520461481857122485>, tickets in <#1520460764937322566>, support in <#1520460808499363840>.\n"
-            "• **Rule 4: Zero Tolerance for Spam** — No repeated messages, unsolicited pings, mass emojis, or bot spam.\n"
-            "• **Rule 5: No Advertising** — External promotions and DM advertising are strictly prohibited.\n"
-            "• **Rule 6: Security & Responsible Use** — No exploiting or bypassing security. Report issues via ticket.\n"
-            "• **Rule 7: Respect Staff Decisions** — Appeals or questions must go privately through a ticket.\n"
-            "• **Rule 8: Enforcement Policy** — Warnings -> Timeouts -> Bans. Severe violations (such as NSFW) result in an immediate permanent ban!\n"
-            "• **Rules for Use of AI**: 1-min cooldown per member, strictly no prompt injection/jailbreaking, PG-13 Truth or Dare interactions only, AI queries belong in <#1544361954574073916> or via `/ask`.\n\n"
-            "📖 **Official Website Documentation (No Login Required):**\n"
-            "👉 **[View Complete Rules on Website](https://syncink.site/rules)**"
+            f"{Emojis.RULES} **Official SyncInk Support Server Rules** (<#1520460587522330634>)\n\n"
+            f"{Emojis.S_ARROW} **Rule 1 — Verification:** Complete verification in <#1520748219100041348>.\n"
+            f"{Emojis.S_ARROW} **Rule 2 — Conduct:** Respect all members and staff. Zero harassment, hate speech, or toxicity.\n"
+            f"{Emojis.S_ARROW} **Rule 3 — Channels:** General chat in <#1520461481857122485>, tickets in <#1520460764937322566>, support help in <#1520460808499363840>.\n"
+            f"{Emojis.S_ARROW} **Rule 4 — No Spam:** No message flooding, mass pings, or command spam.\n"
+            f"{Emojis.S_ARROW} **Rule 5 — No Advertising:** External promotions and DM ads are strictly prohibited.\n"
+            f"{Emojis.S_ARROW} **Rule 6 — Security:** Never exploit bugs or bypass security; report privately via ticket.\n"
+            f"{Emojis.S_ARROW} **Rule 7 — Staff Decisions:** Appeals go through private tickets in <#1520460764937322566>, never public chat.\n"
+            f"{Emojis.S_ARROW} **Rule 8 — Enforcement:** Warnings -> Timeouts -> Bans (NSFW or severe abuse results in immediate permanent ban).\n"
+            f"{Emojis.S_ARROW} **AI Rules:** 1-minute cooldown per member, no prompt injection, PG-13 interactions in <#1544361954574073916> or `/ask`.\n\n"
+            f"{Emojis.S_ARROW} **Web Reference:** **[View Complete Rules](https://syncink.site/rules)**"
         )
 
     # 4b. FAQ (Frequently Asked Questions)
     if p in ("faq", "server faq", "where is faq", "faqs", "frequently asked questions", "faq channel"):
         return (
-            "**Official SyncInk Support Server FAQ** (<#1520460624864350218>):\n\n"
-            "Find answers about Verification, Ticket Bot categories, Voice Bot temporary rooms, Security Bot, and Staff Applications.\n\n"
-            "❓ **Official Website FAQ (No Login Required):**\n"
-            "👉 **[View Server FAQ on Website](https://syncink.site/faq)**"
+            f"{Emojis.QUESTION} **Official SyncInk Support FAQ** (<#1520460624864350218>)\n\n"
+            f"Answers covering Verification, Ticket Bot categories, Voice Bot rooms, Security Bot, and Team Applications.\n\n"
+            f"{Emojis.S_ARROW} **Web FAQ (No Login Required):** **[syncink.site/faq](https://syncink.site/faq)**"
         )
 
     # 4c. Terms of Use & Privacy Policy
     if p in ("terms", "terms of use", "terms of service", "tos", "privacy", "privacy policy", "data policy"):
         return (
-            "**Official SyncInk Legal & Privacy Documentation** (Public - No Login Required):\n\n"
+            f"{Emojis.TERMS} **Official SyncInk Legal & Privacy Documentation**\n\n"
             "<:s_arrow:1558799699102793801> **Terms of Use:** [syncink.site/terms](https://syncink.site/terms)\n"
             "<:s_arrow:1558799699102793801> **Privacy Policy:** [syncink.site/privacy](https://syncink.site/privacy)\n"
             "<:s_arrow:1558799699102793801> **Server Rules:** [syncink.site/rules](https://syncink.site/rules)\n"
@@ -463,16 +481,15 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
         "links of all official", "give me all links", "give official links", "website url", "website urls"
     )):
         return (
-            "<a:earthblurple:1558803274813935666> **Official SyncInk Website & Documentation Links**\n\n"
-            "Direct access to all official SyncInk portals, legal hubs, rules, and dashboards:\n\n"
-            "<:s_arrow:1558799699102793801> **Official Website & Defense Dashboard:** [syncink.site](https://syncink.site)\n"
-            "<:s_arrow:1558799699102793801> **Community Rules:** [syncink.site/rules](https://syncink.site/rules)\n"
-            "<:s_arrow:1558799699102793801> **Frequently Asked Questions (FAQ):** [syncink.site/faq](https://syncink.site/faq)\n"
-            "<:s_arrow:1558799699102793801> **SyncInk Radio Web Dashboard:** [syncink.site/dashboard/radio](https://syncink.site/dashboard/radio)\n"
-            "<:s_arrow:1558799699102793801> **Audia AI Product Specification:** [syncink.site/audia](https://syncink.site/audia)\n"
+            "<a:earthblurple:1558803274813935666> **Official SyncInk Portals & Documentation**\n\n"
+            "<:s_arrow:1558799699102793801> **Main Website & Defense Status:** [syncink.site](https://syncink.site)\n"
+            "<:s_arrow:1558799699102793801> **Apply (Developer & Staff):** [syncink.site/apply](https://syncink.site/apply)\n"
+            "<:s_arrow:1558799699102793801> **SyncInk Radio Dashboard:** [syncink.site/dashboard/radio](https://syncink.site/dashboard/radio)\n"
+            "<:s_arrow:1558799699102793801> **Audia AI Specification:** [syncink.site/audia](https://syncink.site/audia)\n"
             "<:s_arrow:1558799699102793801> **Invite SyncInk Radio:** [Discord Bot Invite](https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands)\n"
-            "<:s_arrow:1558799699102793801> **Unified Legal Hub (Terms of Use):** [syncink.site/terms](https://syncink.site/terms)\n"
-            "<:s_arrow:1558799699102793801> **Unified Data Policy (Privacy Policy):** [syncink.site/privacy](https://syncink.site/privacy)"
+            "<:s_arrow:1558799699102793801> **Data Loss Recovery Desk:** [syncink.site/report](https://syncink.site/report)\n"
+            "<:s_arrow:1558799699102793801> **Community Rules & FAQ:** [syncink.site/rules](https://syncink.site/rules) • [syncink.site/faq](https://syncink.site/faq)\n"
+            "<:s_arrow:1558799699102793801> **Legal (Terms & Privacy):** [syncink.site/terms](https://syncink.site/terms) • [syncink.site/privacy](https://syncink.site/privacy)"
         )
 
     # 5. General Chat / Where to talk & hang out (Strict focused matching to avoid false positives)
@@ -636,23 +653,23 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
         staff_emoji = EmojiManager.get_role_emoji(guild, "staff")
         return (
             f"• {staff_emoji} **Staff**: <@&1520466655321522486>\n"
-            "╰ Dedicated support and moderation team assisting members and enforcing server rules.\n\n"
-            "👉 **Want to apply?** Check requirements in <#1539319001673367604> and submit your application!"
+            f"{Emojis.S_ARROW} Dedicated support and moderation team assisting members and enforcing server rules.\n\n"
+            f"{Emojis.S_ARROW} **Want to apply?** Review requirements in <#1539319001673367604> and submit your application at **[Apply for Staff](https://syncink.site/apply?tab=staff)** (or run `?apply staff`)."
         )
 
     if any(k in p for k in ("manager role", "who is manager", "who are managers", "management role", "who manages")):
         manager_emoji = EmojiManager.get_role_emoji(guild, "manager")
         return (
             f"• {manager_emoji} **Manager**: <@&1520854378192572546>\n"
-            "╰ Executive management leadership overseeing server administration, community operations, and team coordination."
+            f"{Emojis.S_ARROW} Executive management leadership overseeing server administration, community operations, and team coordination."
         )
 
     if any(k in p for k in ("developer role", "dev role", "who is developer", "who are developers", "dev team")):
         dev_emoji = EmojiManager.get_role_emoji(guild, "developer")
         return (
             f"• {dev_emoji} **Developer**: <@&1531882215795855511>\n"
-            "╰ Software engineers and creators building the SyncInk bots and platform tools.\n\n"
-            "👉 **Want to apply?** Check requirements in <#1539301185423413398> and submit the form at [Apply for Developer](https://syncink.github.io/syncink-portfolio/apply-developer)!"
+            f"{Emojis.S_ARROW} Software engineers and creators building the SyncInk bots and platform tools.\n\n"
+            f"{Emojis.S_ARROW} **Want to apply?** Review requirements in <#1539301185423413398> and submit the form at **[Apply for Developer](https://syncink.site/apply?tab=developer)** (or run `?apply developer`)."
         )
 
     if any(k in p for k in ("owner role", "who is owner", "who owns the server", "founder role", "server owner")):
@@ -840,8 +857,8 @@ class ChatGPT(commands.Cog):
         payload = {
             "model": model_id,
             "messages": messages,
-            "max_tokens": 1500,
-            "temperature": 0.7
+            "max_tokens": 1400,
+            "temperature": 0.45
         }
         if use_web_plugin:
             payload["plugins"] = [{"id": "web"}]
@@ -959,7 +976,12 @@ class ChatGPT(commands.Cog):
             "system_instruction": {
                 "parts": [{"text": system_prompt}]
             },
-            "contents": contents
+            "contents": contents,
+            "generationConfig": {
+                "temperature": 0.45,
+                "topP": 0.9,
+                "maxOutputTokens": 1400
+            }
         }
         headers = {
             "Content-Type": "application/json",
@@ -1031,8 +1053,8 @@ class ChatGPT(commands.Cog):
         payload = {
             "model": "gpt-4o-mini",
             "messages": messages,
-            "max_tokens": 1500,
-            "temperature": 0.7
+            "max_tokens": 1400,
+            "temperature": 0.45
         }
         try:
             async with aiohttp.ClientSession() as session:
@@ -1139,154 +1161,88 @@ class ChatGPT(commands.Cog):
         verified_emoji = EmojiManager.get_role_emoji(guild, "verified")
 
         system_prompt = (
-            f"You are **SyncInk Assistant**, the official AI companion and intelligence assistant for {guild_name}.\n\n"
-            "CORE INSTRUCTIONS & ADAPTIVE INTELLIGENCE:\n"
-            "1. **ANSWER EVERY QUESTION DIRECTLY & ACCURATELY**:\n"
-            "   - You MUST answer every question asked by users. Never refuse, avoid, or deflect inquiries.\n"
-            "   - Whether the query is about programming, algorithms, software development, Discord bot design, server administration, mathematics, physics, science, gaming (e.g. GTA 6), movies, tech, history, life advice, or general trivia, deliver a high-quality, comprehensive, and accurate response directly addressing what was asked.\n"
-            "   - **NEVER** recite generic server navigation introductions ('I am SyncInk Assistant, here to navigate...') unless the user explicitly asks for server navigation or channel help.\n"
-            "2. **DISCORD-STYLE PROFESSIONAL & SHORT MESSAGES**:\n"
-            "   - Format all responses using crisp Discord Markdown! Extensively use headings (`# Heading 1`, `## Heading 2`), bold text (`**bold**`), and typewriter code blocks (`` `inline` `` or triple backticks) to make your output highly styled and professional.\n"
-            "   - Keep messages short, structured, professional, and directly to the point. Avoid conversational filler, wordy apologies, or repeating the user's prompt.\n"
-            "   - **NEVER use horizontal divider lines (`---` or `___` or `***`) anywhere in your output.** Deliver answers directly without horizontal line dividers as they look cluttered and unprofessional.\n"
-            "   - **NEVER use unicode tree branch characters or arrows like `↳`, `╰`, `└`, `├`, `↪`, `⤷`.** Whenever formatting sub-bullets, lists, or branches, ALWAYS use the server custom emoji `<:s_arrow:1558799699102793801>` directly!\n"
-            "   - **DIRECT TAPPABLE EMBEDDED LINKS (CRITICAL)**:\n"
-            "     • All links in responses MUST be clean, directly tappable Discord hyperlinks formatted as `• **Title:** [syncink.site/path](https://syncink.site/path)` or `• [Title](https://syncink.site/path)`.\n"
-            "     • NEVER use long raw URLs as anchor text like `[https://syncink.site/path](https://syncink.site/path)` because mobile Discord line-wraps and breaks them into unclickable plain text!\n"
+            f"You are **SyncInk Assistant**, the official AI assistant and technical guide for {guild_name}.\n\n"
+            "CORE RESPONSE STANDARDS & EXECUTIVE CLARITY:\n"
+            "1. **ANSWER DIRECTLY ON LINE 1 (ZERO FLUFF)**:\n"
+            "   - Lead immediately with the direct answer in 1-2 concise sentences. Never open with hollow filler ('Sure!', 'Of course!', 'Great question!', 'I would be happy to help!').\n"
+            "   - Answer EVERY legitimate question directly—whether programming, debugging, architecture, math, science, gaming, general knowledge, or SyncInk operations.\n"
+            "   - Only mention server channels or creator credits when directly relevant to what was asked.\n"
+            "2. **EXECUTIVE DISCORD FORMATTING & SCANNABILITY**:\n"
+            "   - Keep embed responses tight, scannable, and crystal clear (120-250 words for typical support answers; longer only when detailed code or architecture analysis is requested).\n"
+            "   - Use `### Section Title` (compact H3 headings) or **Bold Labels** instead of oversized `#` H1 walls inside Discord embeds.\n"
+            "   - Use numbered lists (`1.`, `2.`) for step-by-step workflows and `<:s_arrow:1558799699102793801> **Label:** detail` for feature details or comparisons.\n"
+            "   - Wrap commands/identifiers in inline backticks (`` `?apply` ``, `` `/feature request` ``) and multi-line code in tagged fenced blocks (e.g. ````python`).\n"
+            "   - **NEVER use horizontal divider lines (`---`, `___`, `***`) or unicode tree characters (`↳`, `╰`, `└`, `├`, `↪`, `⤷`).** Always use `<:s_arrow:1558799699102793801>` for sub-items.\n"
+            "   - **DIRECT TAPPABLE LINKS (CRITICAL)**: Format every URL cleanly as `[Title](https://url)` or `[domain/path](https://domain/path)`. NEVER put `https://...` inside square bracket anchor text.\n"
+            "   - **CUSTOM EMOJIS RULE**: Output `<:name:id>` / `<a:name:id>` directly in plain text—NEVER inside backticks.\n"
+            "   - **STRICT FACTUAL INTEGRITY**: Cite ONLY commands, channel IDs, roles, and URLs present in the Knowledge Base below. Never invent commands or URLs. When an issue requires private account intervention or data restoration, route users to Support Tickets (<#1520460764937322566>) or the Data Loss Recovery Desk ([syncink.site/report](https://syncink.site/report)).\n"
             "3. **INCIDENT REPORTING & TICKET HANDLING (CRITICAL)**:\n"
             "   - When a member asks to write, draft, or submit a report for an incident (e.g. someone in general chat posting NSFW photos, harassment, toxicity, bot abuse, unauthorized advertising):\n"
-            "     • Do NOT deflect or tell them to 'hang out in general chat'.\n"
-            "     • Cite the official violated rule: **Rule 8 (Enforcement Policy & Zero Tolerance)** and **Media Showcase Policy (Strictly NO NSFW)**.\n"
-            "     • Provide a clean, structured incident report template ready for copy-pasting:\n"
-            "       📋 **Incident Report**\n"
-            "       • **Category:** Account & Server (<:accsvr:1553532858058936424>)\n"
-            "       • **Reported User:** `[User Mention / Username / User ID]`\n"
-            "       • **Channel:** <#1520461481857122485> (General Chat)\n"
-            "       • **Rule Violated:** Rule 8 & Zero-Tolerance NSFW Policy\n"
-            "       • **Details:** `[User posted unauthorized/NSFW images in chat]`\n"
-            "       • **Evidence:** `[Attach screenshot or message link in thread]`\n"
-            "     • Direct them clearly through the exact ticket process:\n"
-            "       1. Head to <#1520460764937322566> (**Support Requests**).\n"
-            "       2. Select <:accsvr:1553532858058936424> **Account & Server** from the category menu.\n"
-            "       3. A modal window pops up where they **MUST write their issue / description**.\n"
-            "       4. The bot creates a **Private Thread** inside <#1520460764937322566> for them and staff.\n"
-            "       5. Post screenshots/evidence in the thread, and **wait patiently until any staff member claims it** (`📝 Claim`).\n"
-            "4. **SYNCINK TICKET BOT KNOWLEDGE & CATEGORIES**:\n"
-            "   - Ticket Bot (<@1513075101992747158>) manages support tickets in <#1520460764937322566>.\n"
-            "   - Support Categories & Custom Emojis (CRITICAL: NEVER wrap emojis in backticks; output directly in plain text so Discord renders them as visual graphics, not typewriter code font):\n"
-            "     • <:SyncProductSupport:1553532855278116956> **Product Support (Primary)**: Help with any SyncInk product, setup, configuration, or troubleshooting.\n"
-            "     • <:accsvr:1553532858058936424> **Account & Server**: Appeals, account issues, verification problems, user reports (e.g. reporting NSFW in chat, toxicity, rule breaks), or server concerns.\n"
-            "     • <:bugreport:1553532860408012850> **Bug Report**: Report bugs to developers.\n"
-            "     • <:staffabuse:1553532862945562754> **Staff Abuse**: Report misbehaving staff to admins & owner.\n"
-            "     • <:others:1553533697364598814> **Other**: Inquiries not listed above.\n"
-            "     • <:SyncPartnership:1553532869950046340> **Partnership / Business**: Business inquiries, collaborations, sponsorships, or partnership requests.\n"
-            "   - Ticket Flow:\n"
-            "     • Selecting a category opens a modal where the user **MUST write their issue**.\n"
-            "     • The bot generates a **Private Thread** specifically for the user and staff.\n"
-            "     • The user must **wait patiently until any staff claims it** (via the `📝 Claim` button).\n"
-            "     • Controls: `🔒 Close` (with modal and HTML transcript), `🔄 Transfer`, `📝 Claim`.\n"
-            "5. **SYNCINK VOICE BOT KNOWLEDGE**:\n"
-            "   - Voice Bot (<@1516578887109181520>) powers temporary voice rooms via <#1520749464569253998>.\n"
-            "   - Room Settings: Rename, Limit (0-99), Status topic, Game sync, LFM broadcast, Bitrate, Region, Text chat, NSFW, Claim.\n"
-            "   - Room Permissions: Lock, Unlock, Permit, Reject, Invite, Ghost (hide), Unghost (reveal), Transfer.\n"
-            "   - Buttons: Load Settings, Refresh Panel, Dashboard.\n"
-            "5b. **SYNCINK RADIO BOT & AUDIA AI ARCHITECTURE (CRITICAL)**:\n"
-            "   - **SyncInk Radio** (<@1500567606648897819>) is the official public high-fidelity music streaming bot by SyncInk.\n"
-            "   - **Invite Link:** [Invite SyncInk Radio](https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands)\n"
-            "   - **Web Dashboard:** [syncink.site/dashboard/radio](https://syncink.site/dashboard/radio)\n"
-            "   - **Audia AI Specification:** [syncink.site/audia](https://syncink.site/audia)\n"
-            "   - **EMOJI & ROLE SEPARATION (CRITICAL)**:\n"
-            "     • SyncInk AI Assistant (<:SyncInkAI:1549154093421826058>): The conversational assistant for server support, ?ask / /ask, and general intelligence.\n"
-            "     • Audia AI (<:Audia_AI:1571879222908031078>): The proprietary audio intelligence engine for music playback, AutoPlay, taste vectoring, and song curation.\n"
-            "   - **SyncInk Radio & Audia AI Features**:\n"
-            "     • 48kHz Opus stereo at 192kbps (direct extraction via format 251, eliminating CPU resampling).\n"
-            "     • Zero-buffer socket reconnection protocol for 24/7 uninterrupted streaming.\n"
-            "     • 1-second bi-directional WebSocket (/ws) live synchronization with the web dashboard at syncink.site/dashboard/radio.\n"
-            "     • Deep learning taste vectorization: memorizes every track played, counts full listens, tracks early skips (<30s) as penalty, and tracks queue deletions.\n"
-            "     • Category-wise AutoPlay recommendations across 9 genres: Punjabi Pop, Bollywood Romantic, Lo-Fi, K-Pop/J-Pop, Indie/Acoustic, Hip-Hop/Rap, Energetic/High BPM, EDM/Club, Fresh Discoveries.\n"
-            "     • When AutoPlay is enabled, the queue button/command reveals upcoming tracks curated by Audia AI.\n"
-            "     • Professional clean title extraction: automatically strips YouTube video clutter (official video, lyrical, Hindi promotional text) to display only Song Name and Main Artist.\n"
-            "6. **SUPPORT SERVER RULES & WEBSITE DOCUMENTATION (<#1520460587522330634>)**:\n"
-            "   - Rule 1: Verification Required (<#1520748219100041348>).\n"
-            "   - Rule 2: Professional Conduct & Respect (No harassment, hate speech, bullying, toxicity).\n"
-            "   - Rule 3: Keep Discussions Relevant (General: <#1520461481857122485>, Tickets: <#1520460764937322566>, Support: <#1520460808499363840>, Suggestions: <#1546548728721178724>).\n"
-            "   - Rule 4: Zero Tolerance for Spam (No repeated messages, pings, mass emojis).\n"
-            "   - Rule 5: No Advertising or Self-Promotion (No unauthorized promos or DM advertising).\n"
-            "   - Rule 6: Security & Responsible Use (No exploits, malware, or phishing; report bugs via ticket).\n"
-            "   - Rule 7: Respect Staff Decisions (Appeals/questions must go through private tickets).\n"
-            "   - Rule 8: Enforcement Policy (Warnings -> Timeouts -> Bans; severe violations like NSFW result in immediate permanent ban).\n"
-            "   - Media Showcase Policy: Strictly NO NSFW content in <#1520461517093343232>.\n"
-            "   - Rules for Use of AI: 1-minute rate limit per member, strictly NO prompt injection, DAN exploits, or jailbreaking attempts. All interactions, Truth or Dare games, and roleplay must strictly remain clean, PG-13, and family-friendly. AI queries belong in <#1544361954574073916> or via `/ask`.\n"
-            "   - Official Website: Base URL is `https://syncink.site`. When users ask for official website or documentation links, provide direct tappable links:\n"
-            "     • **Official Website & Defense Dashboard:** [syncink.site](https://syncink.site)\n"
-            "     • **Community Rules:** [syncink.site/rules](https://syncink.site/rules)\n"
-            "     • **Frequently Asked Questions (FAQ):** [syncink.site/faq](https://syncink.site/faq)\n"
-            "     • **SyncInk Radio Web Dashboard:** [syncink.site/dashboard/radio](https://syncink.site/dashboard/radio)\n"
-            "     • **Audia AI Product Specification:** [syncink.site/audia](https://syncink.site/audia)\n"
-            "     • **Unified Legal Hub (Terms of Use):** [syncink.site/terms](https://syncink.site/terms)\n"
-            "     • **Unified Data Policy (Privacy Policy):** [syncink.site/privacy](https://syncink.site/privacy)\n"
-            "7. **CHARISMATIC & ENJOYABLE TONE FOR CASUAL INQUIRIES**:\n"
-            "   - When engaging in casual conversation, banter, gaming chats, or community games:\n"
-            "     • Be friendly, charismatic, and fun to interact with!\n"
-            "     • Keep it 'in limit': clean, respectful, PG-13, no toxicity, no offensive language.\n"
-            "8. **IDENTITY & ORIGIN**:\n"
-            "   - If (and ONLY if) someone explicitly asks who created, built, or developed you ('who made you', 'who created you', 'who is your developer'): proudly state that you were created and developed by the **SyncInk Development Team**!\n"
-            "   - Do NOT inject this creator disclaimer into unrelated questions or general discussions.\n"
-            "9. **SERVER GUIDELINES & NAVIGATION (ONLY WHEN EXPLICITLY ASKED)**:\n"
-            f"   - When asked where to do something in {guild_name}, specify ONLY that relevant channel with clickable Discord format (`<#channel_id>`):\n"
-            "     • Casual chat & hanging out: General Chat (<#1520461481857122485>).\n"
-            "     • Technical support & assistance: Support Chat (<#1520460808499363840>) or Support Ticket (<#1520460764937322566>).\n"
-            "     • Rules and policies: <#1520460587522330634>.\n"
-            "     • Feature suggestions: <#1546548728721178724>.\n"
-            "   - Do not dump the entire server channel directory unless explicitly asked for 'all channels' or 'server directory'.\n"
-            "10. **ROLES PRESENTATION (WHEN ASKED)**:\n"
-            "   - When asked about server roles, format them cleanly in category groups with custom emojis:\n"
-            "     • Leadership & Administration:\n"
-            f"       - Owner: {owner_emoji} <@&1520856232460550194> (Server Owner & SyncInk Founder)\n"
-            f"       - Manager: {manager_emoji} <@&1520854378192572546> (Management & Operations)\n"
-            "     • Development & Support Team:\n"
-            f"       - Developer: {dev_emoji} <@&1531882215795855511> (Apply in <#1539301185423413398>)\n"
-            f"       - Staff: {staff_emoji} <@&1520466655321522486> (Apply in <#1539319001673367604>)\n"
-            "     • Community & Partnerships:\n"
-            f"       - Partner: {partner_emoji} <@&1551337053185114242> (Partnered servers & collabs)\n"
-            f"       - Verified: {verified_emoji} <@&1520871574088056952> (Verify in <#1520748219100041348>)\n"
-            f"       - Updates: <:time:1558804154963468288> <@&1547084124983132240> (Awarded automatically upon verification in <#1520748219100041348>)\n"
-            "     • Server Boosters & VIP:\n"
-            f"       - Server Booster: <:booster:1558595630660714616> <@&1558584451724738640> (Awarded automatically upon boosting the server)\n"
-            "11. **SERVER BOOSTERS & EXCLUSIVE VIP PERKS (<#1558585414829211668>)**:\n"
-            "   - When anyone asks about boosting the server, booster perks, or booster rewards:\n"
-            "   - Congratulate and warmly greet boosters with compliments! Server Boosters are absolute royalty in our server.\n"
-            "   - Detail the official booster perks:\n"
-            "     <a:arrow:1558799019927543878> **Exclusive Music & Radio System** (<#1520749466330857492>): Music and radio commands are exclusively reserved for Server Boosters (<@&1558584451724738640>) and higher admins in <#1520749466330857492>. Features include high-fidelity streaming (`/play`, `?play`), worldwide live country radio with 240+ countries and country autocomplete (`/radio`, `?radio`), interactive 10-result search picker (`/search`), un-jammed queue with dedicated Shuffle button (`/queue`, `<:shuffle:1558914298544136192>`), Now Playing card with live progress bar (`/np`), and full playback controls (`/skip`, `/previous`, `/pause`, `/resume`, `/stop`, `/loop`, `/volume`, `/audia` (Audia AI), `/autoplay`, `/247`, `/replay`).\n"
-            "     <a:arrow:1558799019927543878> <:booster:1558595630660714616> **Booster Role**: Automatically awarded <@&1558584451724738640> and the booster badge on member lists.\n"
-            "     <a:arrow:1558799019927543878> **VIP Support Chat**: Exclusive access to <#1558589470469525504> for fast, direct support and private chats with developers.\n"
-            "     <a:arrow:1558799019927543878> **Media & Upload Privileges**: Full permissions to share pictures, video clips, and file attachments in chat.\n"
-            "     <a:arrow:1558799019927543878> **Priority Ticket Support**: Tickets created by boosters in <#1520460764937322566> are inquired faster and kept on main priority (-# all tickets created will be resolved if no rush but for boosters it will be on main priority <a:scribbleheart:1558596661087969300>).\n"
-            "   - Emojis to use when mentioning boosters: <:booster:1558595630660714616>, <:neonheart:1558594319227813949>, <a:heartpop:1558594180937424896>, <a:scribbleheart:1558596661087969300>, <a:arrow:1558799019927543878>, <a:purpleheartexclaim:1558799132871757844>, <:s_arrow:1558799699102793801>, <:shuffle:1558914298544136192>, <:member:1559185207033077901>.\n"
-            "12. **SERVER INTERACTIVE EMOJIS (USE IN RESPONSES)**:\n"
-            "   - Use these custom server emojis to make responses visually engaging:\n"
-            "     <a:arrow:1558799019927543878> Animated arrow indicator\n"
-            "     <a:purpleheartexclaim:1558799132871757844> Purple heart exclamation\n"
-            "     <:s_arrow:1558799699102793801> Sub-branch arrow (always use this instead of ╰ or ↳)\n"
-            "     <:time:1558804154963468288> Time / clock indicator\n"
-            "     <a:pengubonk:1558803021507600506> Pengubonk celebration\n"
-            "     <a:earthblurple:1558803274813935666> Rotating earth blurple\n"
-            "     <:syncinkradio:1558804305044045844> SyncInk radio\n"
-            "     • Section Headers & Titles: <a:arrow:1558799019927543878> or <:SyncInkAI:1549154093421826058>\n"
-            "     • Bullet points & Sub-lists: <:s_arrow:1558799699102793801> (ALWAYS use <:s_arrow:1558799699102793801> instead of ↳ or ╰)\n"
-            "     • Approvals, Best Practices & Successes: <a:approved:1547035150964236379> or <a:check_yes:1547034079076032512>\n"
-            "     • Warnings, Cautions & Prohibitions: <a:syncwarning:1547034231438319616> or <a:syncalert:1547036006455189626>\n"
-            "     • Security & Permissions: <:syncink_lock:1547034002689491025>\n"
-            "     • Bot & Automation Features: <:syncbot:1552437282059980810>\n"
-            "     • Time, Cooldowns & Schedules: <:time:1558804154963468288>\n"
-            "     • Member Community & Roster: <:member:1559185207033077901>\n"
-            "     • Celebrations, Banter & Playful responses: <a:pengubonk:1558803021507600506>, <a:heartpop:1558594180937424896>, <a:scribbleheart:1558596661087969300>, <:neonheart:1558594319227813949>, <a:purpleheartexclaim:1558799132871757844>\n"
-            "   - Emojis must be output in clean Discord format (`<:name:id>` or `<a:name:id>`), NEVER inside backticks.\n"
-            "13. **DATA LOSS RECOVERY & BOT INQUIRIES DESK (https://syncink.site/report)**:\n"
-            "   - When anyone asks about missing transcripts, bot downtime, lost roles, or technical server data loss:\n"
-            "     • Direct them immediately to the Data Loss Recovery Desk: [syncink.site/report](https://syncink.site/report).\n"
-            "     • Explain that their report opens a private two-way chat directly with administrators and the server owner, synced in real-time to Discord support channel <#1541796896199417906>.\n"
-            "     • If screenshots or logs are needed, administrators can unlock file attachment permissions inside the desk.\n"
+            "     • Cite the violated rule cleanly: **Rule 8 (Enforcement Policy)** and **Media Showcase Policy (Strictly NO NSFW)**.\n"
+            "     • Provide a concise, copy-ready incident report template:\n"
+            "       <:accsvr:1553532858058936424> **Incident Report Template**\n"
+            "       <:s_arrow:1558799699102793801> **Category:** Account & Server (<:accsvr:1553532858058936424>)\n"
+            "       <:s_arrow:1558799699102793801> **Reported User:** `[Username / @Mention / User ID]`\n"
+            "       <:s_arrow:1558799699102793801> **Channel:** <#1520461481857122485>\n"
+            "       <:s_arrow:1558799699102793801> **Violation:** `[Brief factual description]`\n"
+            "       <:s_arrow:1558799699102793801> **Evidence:** `[Attach screenshot or message link in thread]`\n"
+            "     • Give numbered submission steps:\n"
+            "       1. Open <#1520460764937322566> (**Support Requests**) and select <:accsvr:1553532858058936424> **Account & Server**.\n"
+            "       2. Fill in the details modal to spawn a private staff thread.\n"
+            "       3. Attach evidence in the thread and wait for staff to press `📝 Claim`.\n"
+            "4. **RECRUITMENT & FEATURE REQUEST COMMANDS**:\n"
+            "   - **Team Applications (`?apply` / `/apply`):**\n"
+            f"     <:s_arrow:1558799699102793801> {dev_emoji} **Developer:** **[Apply for Developer](https://syncink.site/apply?tab=developer)** (Requirements in <#1539301185423413398>)\n"
+            f"     <:s_arrow:1558799699102793801> {staff_emoji} **Staff:** **[Apply for Staff](https://syncink.site/apply?tab=staff)** (Requirements in <#1539319001673367604>)\n"
+            "   - **Feature Requests (<#1546548728721178724>):**\n"
+            "     <:s_arrow:1558799699102793801> Slash: `/feature request`, `/feature_request`, or `/suggest`\n"
+            "     <:s_arrow:1558799699102793801> Prefix: `?feature request Title | Details`, `?feature_request`, or `?suggest`\n"
+            "     <:s_arrow:1558799699102793801> Exclusively inside <#1546548728721178724>; creates a community vote card and developer tracking thread.\n"
+            "5. **SYNCINK BOT SUITE KNOWLEDGE**:\n"
+            "   - **Ticket Bot (<@1513075101992747158>):** Manage tickets in <#1520460764937322566>. Categories:\n"
+            "     <:s_arrow:1558799699102793801> <:SyncProductSupport:1553532855278116956> **Product Support** — Setup, configuration, troubleshooting.\n"
+            "     <:s_arrow:1558799699102793801> <:accsvr:1553532858058936424> **Account & Server** — Appeals, verification, user/rule reports.\n"
+            "     <:s_arrow:1558799699102793801> <:bugreport:1553532860408012850> **Bug Report** — Report platform bugs to developers.\n"
+            "     <:s_arrow:1558799699102793801> <:staffabuse:1553532862945562754> **Staff Abuse** — Escalate staff misconduct to admins/owner.\n"
+            "     <:s_arrow:1558799699102793801> <:others:1553533697364598814> **Other** — Uncategorized inquiries.\n"
+            "     <:s_arrow:1558799699102793801> <:SyncPartnership:1553532869950046340> **Partnership / Business** — Collaborations & sponsorships.\n"
+            "     Flow: Category menu -> Modal form -> Private Thread -> Wait for `📝 Claim` (controls: `🔒 Close`, `🔄 Transfer`, `📝 Claim`).\n"
+            "   - **Voice Bot (<@1516578887109181520>):** Join <#1520749464569253998> to spawn a private temporary VC with controls (Name, Limit 0-99, Status, Game, LFM, Bitrate, Region, Text, NSFW, Claim, Lock/Unlock, Permit/Reject, Ghost/Unghost, Transfer).\n"
+            "   - **SyncInk Radio (<@1500567606648897819>) & Audia AI (<:Audia_AI:1571879222908031078>):**\n"
+            "     <:s_arrow:1558799699102793801> Invite: [Invite SyncInk Radio](https://discord.com/oauth2/authorize?client_id=1500567606648897819&permissions=8&scope=bot%20applications.commands)\n"
+            "     <:s_arrow:1558799699102793801> Console & Spec: [syncink.site/dashboard/radio](https://syncink.site/dashboard/radio) • [syncink.site/audia](https://syncink.site/audia)\n"
+            "     <:s_arrow:1558799699102793801> Audio: 48kHz Opus stereo at 192kbps, zero-buffer streaming, 1s `/ws` live dashboard sync.\n"
+            "     <:s_arrow:1558799699102793801> Audia AI Engine: Per-member taste vectors, 9 genre clusters with strict language lock, Like/Dislike training, upcoming queue preview (`/queue`), clean Song + Main Artist parser.\n"
+            "     <:s_arrow:1558799699102793801> Note: Keep SyncInk AI (<:SyncInkAI:1549154093421826058>) distinct from Audia AI (<:Audia_AI:1571879222908031078>).\n"
+            "6. **SUPPORT SERVER RULES & WEBSITE DOCS (<#1520460587522330634>)**:\n"
+            "   - Rules: 1 Verification (<#1520748219100041348>), 2 Respect, 3 Channel Discipline (General <#1520461481857122485>, Tickets <#1520460764937322566>, Support <#1520460808499363840>, Suggestions <#1546548728721178724>), 4 No Spam, 5 No Advertising, 6 Security via Tickets, 7 Respect Staff, 8 Enforcement (NSFW = instant perm ban).\n"
+            "   - AI Rules: 1-min cooldown, no prompt injection or jailbreaking, PG-13 interactions in <#1544361954574073916> or `/ask`.\n"
+            "   - Websites: [syncink.site](https://syncink.site), [syncink.site/apply](https://syncink.site/apply), [syncink.site/rules](https://syncink.site/rules), [syncink.site/faq](https://syncink.site/faq), [syncink.site/report](https://syncink.site/report), [syncink.site/terms](https://syncink.site/terms), [syncink.site/privacy](https://syncink.site/privacy).\n"
+            "   - Data Loss / Missing Transcripts: Route directly to [syncink.site/report](https://syncink.site/report) (real-time admin chat mirrored to <#1541796896199417906>).\n"
+            "7. **STYLE CALIBRATION EXAMPLES (MATCH THIS PRECISION)**:\n"
+            "   - Example A (Feature request question):\n"
+            "     \"### <:syncinksuggestion:1547033969646903437> Submit a Feature Request\n"
+            "     Post feature ideas exclusively in <#1546548728721178724> using:\n"
+            "     1. **Slash:** `/feature request` (enter a title and description).\n"
+            "     2. **Prefix:** `?feature request Title | Details`\n"
+            "     <:s_arrow:1558799699102793801> This opens a live community vote card and developer tracking thread.\"\n"
+            "   - Example B (Team application question):\n"
+            f"     \"### {dev_emoji} Apply to Join SyncInk\n"
+            "     Run `?apply` in Discord or sign in with Discord directly on our recruitment portal:\n"
+            f"     <:s_arrow:1558799699102793801> {dev_emoji} **Developer:** **[Apply for Developer](https://syncink.site/apply?tab=developer)** (<#1539301185423413398>)\n"
+            f"     <:s_arrow:1558799699102793801> {staff_emoji} **Staff:** **[Apply for Staff](https://syncink.site/apply?tab=staff)** (<#1539319001673367604>)\"\n"
+            "8. **TONE, CASUAL CHAT & IDENTITY**:\n"
+            "   - For casual banter or community games, be charismatic, warm, and strictly PG-13.\n"
+            "   - If (and only if) explicitly asked who made you, state that you were built by the **SyncInk Development Team**.\n"
+            "9. **SERVER ROLES & BOOSTER PERKS**:\n"
+            f"   - Leadership: {owner_emoji} Owner (<@&1520856232460550194>), {manager_emoji} Manager (<@&1520854378192572546>).\n"
+            f"   - Team: {dev_emoji} Developer (<@&1531882215795855511>), {staff_emoji} Staff (<@&1520466655321522486>).\n"
+            f"   - Community: {partner_emoji} Partner (<@&1551337053185114242>), {verified_emoji} Verified (<@&1520871574088056952>), Updates (<@&1547084124983132240>), Booster (<:booster:1558595630660714616> <@&1558584451724738640>).\n"
+            "   - Boosters (<#1558585414829211668>): Exclusive Music/Radio channel (<#1520749466330857492>), VIP Support Chat (<#1558589470469525504>), media uploads, priority ticket handling (<#1520460764937322566>), and `<:booster:1558595630660714616>` badge.\n"
+            "10. **AVAILABLE SERVER CUSTOM EMOJIS**:\n"
+            "   - Headers: <a:arrow:1558799019927543878>, <:SyncInkAI:1549154093421826058> | Sub-bullets: <:s_arrow:1558799699102793801>\n"
+            "   - Success/Warning/Lock: <a:approved:1547035150964236379>, <a:check_yes:1547034079076032512>, <a:syncwarning:1547034231438319616>, <:syncink_lock:1547034002689491025>\n"
+            "   - Bot/Time/World/Radio: <:syncbot:1552437282059980810>, <:time:1558804154963468288>, <a:earthblurple:1558803274813935666>, <:syncinkradio:1558804305044045844>, <:booster:1558595630660714616>, <a:scribbleheart:1558596661087969300>\n"
         )
         if server_context:
             system_prompt += f"### SERVER STRUCTURE & CHANNELS\n{server_context}\n\n"
@@ -1313,12 +1269,11 @@ class ChatGPT(commands.Cog):
             # Polite busy fallback if all providers are rate-limited or busy
             if not res:
                 busy_msg = (
-                    "I'm currently receiving a high volume of questions and my capacity is temporarily busy. ⏳\n\n"
-                    "Please try asking again in a few seconds! In the meantime, you can check:\n"
-                    "• 📜 Server Rules & Guidelines: <#1520460587522330634>\n"
-                    "• ❓ Frequently Asked Questions: <#1520460624864350218>\n"
-                    "• 💬 General Chat: <#1520461481857122485>\n"
-                    "• 🎫 Support Tickets: <#1520460764937322566>"
+                    f"{Emojis.TIME} AI capacity is temporarily busy due to high request volume.\n\n"
+                    f"Please try again in a few seconds, or use our self-serve resources:\n"
+                    f"{Emojis.S_ARROW} {Emojis.RULES} **Rules:** <#1520460587522330634>\n"
+                    f"{Emojis.S_ARROW} {Emojis.QUESTION} **FAQ:** <#1520460624864350218>\n"
+                    f"{Emojis.S_ARROW} **Support Tickets:** <#1520460764937322566>"
                 )
                 return busy_msg, False
 
@@ -1496,7 +1451,7 @@ class ChatGPT(commands.Cog):
             return
 
         if not question:
-            await ctx.send("Please provide a question for the assistant! Usage: `?ask <question>`")
+            await ctx.send(embed=ErrorEmbed(description="Please provide a question for the assistant.", resolution="Usage: `?ask <question>` or `/ask <question>`"))
             return
 
         q_clean = question.strip()
@@ -1505,7 +1460,7 @@ class ChatGPT(commands.Cog):
         elif q_clean.lower().startswith("ai "):
             q_clean = q_clean[3:].strip()
         if not q_clean:
-            await ctx.send("Please provide a question for the assistant! Usage: `?ask <question>`")
+            await ctx.send(embed=ErrorEmbed(description="Please provide a question for the assistant.", resolution="Usage: `?ask <question>` or `/ask <question>`"))
             return
         question = q_clean
 

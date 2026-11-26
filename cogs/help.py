@@ -124,8 +124,11 @@ class Help(commands.Cog):
         if query:
             query_clean = query.lower().strip().lstrip("?")
             all_cmds = {
-                "suggest": ("`/suggest <title> <description>` or `?suggest <text>`", "Submit an idea or feature request with voting in #suggestions.", False),
-                "feature_request": ("`/feature_request <title> <description>`", "Submit a formal feature request with community voting in #suggestions.", False),
+                "suggest": ("`/suggest <title> <description>` or `?suggest <text>`", "Submit an idea or feature request with voting in <#1546548728721178724>.", False),
+                "feature": ("`/feature request <title> <description>` or `?feature request <text>`", "Submit a formal feature request with community voting in <#1546548728721178724>.", False),
+                "feature request": ("`/feature request <title> <description>` or `?feature request <text>`", "Submit a formal feature request with community voting in <#1546548728721178724>.", False),
+                "feature_request": ("`/feature_request <title> <description>` or `?feature_request <text>`", "Submit a formal feature request with community voting in <#1546548728721178724>.", False),
+                "apply": ("`?apply [developer|staff]` or `/apply [role]`", "Get official application links and requirements to join Developer or Staff teams.", False),
                 "botstats": ("`?botstats`", "View bot latency, uptime, and server count (Alias: `?ping`).", False),
                 "ping": ("`?ping`", "View bot latency and ping.", False),
                 "status": ("`?status`", "Check real-time operational status of the SyncInk platform.", False),
@@ -135,8 +138,8 @@ class Help(commands.Cog):
                 "avatar": ("`?avatar [@member/id]`", "Display a member's profile photo in full size.", False),
                 "banner": ("`?banner [@member/id]`", "Display a member's profile banner in full size.", False),
                 "cleanup": ("`?cleanup [amount]`", "Clean up recent bot responses in the current channel.", False),
-                "ask": ("`?ask <question>`", "Ask any question to the integrated OpenAI assistant (Alias: `?ai`).", False),
-                "ai": ("`?ai <question>`", "Ask any question to the integrated OpenAI assistant.", False),
+                "ask": ("`?ask <question>` or `/ask <question>`", "Ask any question to the integrated SyncInk AI assistant (Alias: `?ai`).", False),
+                "ai": ("`?ai <question>`", "Ask any question to the integrated SyncInk AI assistant.", False),
                 # Music & 24/7 Radio commands:
                 "play": ("`?play <song/url>` or `/play <query>`", "Search & stream high-fidelity audio from YouTube, Spotify, etc. (Alias: `?p`).", False),
                 "p": ("`?p <query>`", "Alias for `?play` - Search and stream audio.", False),
@@ -271,14 +274,15 @@ class Help(commands.Cog):
             (
                 f"{Emojis.SUGGESTION} **Suggestions & Feature Requests**",
                 [
-                    ("/suggest <title> <description>", "Submit an idea or feature request with community voting in #suggestions (Slash command)."),
-                    ("/feature_request <title> <description>", "Submit a formal feature request with community voting in #suggestions (Slash command)."),
-                    ("?suggest <title | description>", "Prefix version to submit suggestions directly in #suggestions.")
+                    ("/feature request <title> <description>", "Submit a formal feature request with community voting in #feature-request."),
+                    ("?feature request <title | description>", "Submit a formal feature request using prefix syntax (or `?feature_request`)."),
+                    ("/suggest • ?suggest <idea>", "Alternative quick shortcut to post feature ideas with community voting.")
                 ]
             ),
             (
                 f"{Emojis.SETTINGS} **Platform & Utilities**",
                 [
+                    ("?apply [developer|staff] • /apply", "Get official application links and criteria for Developer & Staff teams."),
                     ("?botstats", "View bot latency, uptime, and server count (Alias: `?ping`)."),
                     ("?status", "Check real-time operational status of the SyncInk platform."),
                     ("?products", "Explore SyncInk products, hosting, and bot solutions."),

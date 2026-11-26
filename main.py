@@ -49,7 +49,10 @@ class SyncInkBot(commands.Bot):
             
         # Re-register persistent views
         from cogs.security import VerificationView
+        from cogs.feedback import SuggestionVoteView, FeatureRequestStaffView
         self.add_view(VerificationView())
+        self.add_view(SuggestionVoteView())
+        self.add_view(FeatureRequestStaffView())
         log.info("Persistent views registered.")
 
         # Load Cogs dynamically

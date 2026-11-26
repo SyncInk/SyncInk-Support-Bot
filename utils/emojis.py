@@ -22,11 +22,11 @@ class Emojis:
     SYNCBOT = "<:syncbot:1552437282059980810>"
     BOT = SYNCBOT
     CPU = "<:CPU:1551310556038701118>"
-    # Official Server Role Emojis (Default fallbacks; updated dynamically by EmojiManager)
-    ROLE_OWNER = "<:sync_owner:1513803214674464788>"
-    ROLE_MANAGER = "<:sync_admin:1513805305492799508>"
-    ROLE_DEVELOPER = "<:developer:1562591562754424872>"
-    ROLE_STAFF = "<:staff:1562591917295009802>"
+    # Official Server Role Emojis (Verified App Emojis; updated dynamically by EmojiManager)
+    ROLE_OWNER = "<:sync_owner:1551347016037040158>"
+    ROLE_MANAGER = "<:sync_admin:1551347018444570695>"
+    ROLE_DEVELOPER = "<:VerifiedBotDeveloper:1551347020562956352>"
+    ROLE_STAFF = "<:sync_moderator:1551347025147334710>"
     ROLE_PARTNER = "<:partnered:1551337413660381255>"
     ROLE_VERIFIED = "<:verified:1551336293017845822>"
     ROLE_BOOSTER = "<:booster:1558595630660714616>"
@@ -65,6 +65,9 @@ class Emojis:
     SYNCINK_LOGO = "<:syncinkmainlogo:1529117858859061331>"
     # Feature request custom emojis
     LOADING = "<a:Loading:1547095365679849492>"
+    PENDING = "<a:pending:1547110867466985532>"
+    ATTENTION = "<:attention:1547095501604921395>"
+    TRUSTED_USER = "<:trusted_user:1547621146558730340>"
     MEMBERS = "<:members:1547109992212205608>"
     MEMBER = "<:member:1559185207033077901>"
     CANCELLED = "<:cancelled:1547111776267804692>"
@@ -129,10 +132,10 @@ class EmojiPartials:
     SYNCBOT = discord.PartialEmoji(name="syncbot", id=1552437282059980810, animated=False)
     BOT = SYNCBOT
     CPU = discord.PartialEmoji(name="CPU", id=1551310556038701118, animated=False)
-    ROLE_OWNER = discord.PartialEmoji(name="👑")
-    ROLE_MANAGER = discord.PartialEmoji(name="💼")
-    ROLE_DEVELOPER = discord.PartialEmoji(name="💻")
-    ROLE_STAFF = discord.PartialEmoji(name="🛡️")
+    ROLE_OWNER = discord.PartialEmoji(name="sync_owner", id=1551347016037040158, animated=False)
+    ROLE_MANAGER = discord.PartialEmoji(name="sync_admin", id=1551347018444570695, animated=False)
+    ROLE_DEVELOPER = discord.PartialEmoji(name="VerifiedBotDeveloper", id=1551347020562956352, animated=False)
+    ROLE_STAFF = discord.PartialEmoji(name="sync_moderator", id=1551347025147334710, animated=False)
     ROLE_PARTNER = discord.PartialEmoji(name="partnered", id=1551337413660381255, animated=False)
     ROLE_VERIFIED = discord.PartialEmoji(name="verified", id=1551336293017845822, animated=False)
     ROLE_BOOSTER = discord.PartialEmoji(name="booster", id=1558595630660714616, animated=False)
@@ -258,13 +261,15 @@ EMOJI_NAME_MAP = {
     "cpu": "<:CPU:1551310556038701118>",
 
     # Roles & Brand Emojis
-    "sync_owner": "<:sync_owner:1513803214674464788>",
-    "owner": "<:sync_owner:1513803214674464788>",
-    "sync_admin": "<:sync_admin:1513805305492799508>",
-    "admin": "<:sync_admin:1513805305492799508>",
-    "developer": "<:developer:1562591562754424872>",
-    "dev": "<:developer:1562591562754424872>",
-    "staff": "<:staff:1562591917295009802>",
+    "sync_owner": "<:sync_owner:1551347016037040158>",
+    "owner": "<:sync_owner:1551347016037040158>",
+    "sync_admin": "<:sync_admin:1551347018444570695>",
+    "admin": "<:sync_admin:1551347018444570695>",
+    "developer": "<:VerifiedBotDeveloper:1551347020562956352>",
+    "verifiedbotdeveloper": "<:VerifiedBotDeveloper:1551347020562956352>",
+    "dev": "<:VerifiedBotDeveloper:1551347020562956352>",
+    "staff": "<:sync_moderator:1551347025147334710>",
+    "sync_moderator": "<:sync_moderator:1551347025147334710>",
     "experience": "<:experience:1562588852324143125>",
     "region": "<a:region:1562591209543966831>",
     "argument": "<:argument:1562587869762158762>",

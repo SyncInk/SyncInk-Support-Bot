@@ -16,25 +16,25 @@ class EmojiManager:
             "key": "owner",
             "names": ["sync_owner", "owner"],
             "file": "sync_owner.png",
-            "fallback": "<:sync_owner:1513803214674464788>"
+            "fallback": "<:sync_owner:1551347016037040158>"
         },
         {
             "key": "manager",
             "names": ["sync_admin", "admin", "manager"],
             "file": "sync_admin.png",
-            "fallback": "<:sync_admin:1513805305492799508>"
+            "fallback": "<:sync_admin:1551347018444570695>"
         },
         {
             "key": "developer",
             "names": ["VerifiedBotDeveloper", "developer", "dev", "sync_developer"],
             "file": "VerifiedBotDeveloper.png",
-            "fallback": "<:developer:1562591562754424872>"
+            "fallback": "<:VerifiedBotDeveloper:1551347020562956352>"
         },
         {
             "key": "staff",
             "names": ["sync_moderator", "moderator", "staff"],
             "file": "sync_moderator.png",
-            "fallback": "<:staff:1562591917295009802>"
+            "fallback": "<:sync_moderator:1551347025147334710>"
         },
         {
             "key": "partner",

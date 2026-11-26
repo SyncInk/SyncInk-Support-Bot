@@ -1,15 +1,20 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from utils.ui import SuccessEmbed, ErrorEmbed, SyncInkEmbed, BRAND_ACCENT, SUCCESS_COLOR, ERROR_COLOR
+from typing import Optional
+from utils.ui import SuccessEmbed, ErrorEmbed, SyncInkEmbed, BRAND_ACCENT, ERROR_COLOR
 from utils.metrics import metrics
+from utils.logger import log
 from services.settings_service import SettingsService
 from database import db
-from utils.permissions import has_permission
 from utils.emojis import Emojis, EmojiPartials
 
+REQUIRED_SUGGESTION_CHANNEL_ID = 1546548728721178724
+DEVELOPER_ROLE_ID = 1531882215795855511
+
+
 class SuggestionVoteView(discord.ui.View):
-    def __init__(self, request_id: int, upvotes: int = 0, downvotes: int = 0):
+    def __init__(self, request_id: int = 0, upvotes: int = 0, downvotes: int = 0):
         super().__init__(timeout=None)
         self.request_id = request_id
         self.upvotes = upvotes
@@ -34,72 +39,77 @@ class SuggestionVoteView(discord.ui.View):
 
     async def _handle_vote(self, interaction: discord.Interaction, vote_type: str):
         user_id = interaction.user.id
-        
-        # Check existing vote
+        req_id = self.request_id
+
+        # Support persistent clicks after bot restarts by resolving request_id from message_id
+        if not req_id and interaction.message:
+            req_id = await db.fetchval(
+                "SELECT id FROM feature_requests WHERE message_id = $1",
+                interaction.message.id
+            )
+        if not req_id:
+            return await interaction.response.send_message(
+                f"{Emojis.REFUSED} Could not locate this feature request in the database.",
+                ephemeral=True
+            )
+
         existing = await db.fetchrow(
             "SELECT vote_type FROM feature_request_votes WHERE request_id = $1 AND user_id = $2",
-            self.request_id, user_id
+            req_id, user_id
         )
-        
+
         if existing and existing['vote_type'] == vote_type:
-            # Toggle off vote
             await db.execute(
                 "DELETE FROM feature_request_votes WHERE request_id = $1 AND user_id = $2",
-                self.request_id, user_id
+                req_id, user_id
             )
             resp_msg = f"Your {vote_type.lower()}vote has been removed."
         else:
-            # Insert or update vote
             await db.execute("""
                 INSERT INTO feature_request_votes (request_id, user_id, vote_type)
                 VALUES ($1, $2, $3)
                 ON CONFLICT (request_id, user_id) DO UPDATE SET vote_type = $3
-            """, self.request_id, user_id, vote_type)
+            """, req_id, user_id, vote_type)
             resp_msg = f"Your {vote_type.lower()}vote has been recorded!"
 
-        # Recount votes
         counts = await db.fetchrow("""
             SELECT 
                 COUNT(*) FILTER (WHERE vote_type = 'UP') as up_count,
                 COUNT(*) FILTER (WHERE vote_type = 'DOWN') as down_count
             FROM feature_request_votes WHERE request_id = $1
-        """, self.request_id)
-        
-        self.upvotes = counts['up_count'] if counts else 0
-        self.downvotes = counts['down_count'] if counts else 0
+        """, req_id)
 
-        # Update DB summary
+        upvotes = counts['up_count'] if counts else 0
+        downvotes = counts['down_count'] if counts else 0
+
         await db.execute(
             "UPDATE feature_requests SET upvotes = $1, downvotes = $2 WHERE id = $3",
-            self.upvotes, self.downvotes, self.request_id
+            upvotes, downvotes, req_id
         )
 
-        self._update_buttons()
+        # Build a fresh view instance so concurrent votes never mutate shared singleton state
+        updated_view = SuggestionVoteView(req_id, upvotes=upvotes, downvotes=downvotes)
 
-        # Update embed
         try:
             embed = interaction.message.embeds[0]
             for i, field in enumerate(embed.fields):
                 if "Community Votes" in field.name or "Votes" in field.name:
                     embed.set_field_at(
-                        i, 
-                        name="🗳️ **Community Votes**", 
-                        value=f"{Emojis.APPROVED} **{self.upvotes}** Upvotes   •   {Emojis.REFUSED} **{self.downvotes}** Downvotes", 
+                        i,
+                        name="🗳️ **Community Votes**",
+                        value=f"{Emojis.APPROVED} **{upvotes}** Upvotes   •   {Emojis.REFUSED} **{downvotes}** Downvotes",
                         inline=False
                     )
                     break
-            await interaction.response.edit_message(embed=embed, view=self)
+            await interaction.response.edit_message(embed=embed, view=updated_view)
         except Exception:
-            await interaction.response.edit_message(view=self)
+            await interaction.response.edit_message(view=updated_view)
 
         await interaction.followup.send(resp_msg, ephemeral=True)
 
 
-REQUIRED_SUGGESTION_CHANNEL_ID = 1546548728721178724
-DEVELOPER_ROLE_ID = 1531882215795855511
-
 class FeatureRequestStaffView(discord.ui.View):
-    def __init__(self, request_id: int, message_id: int, channel_id: int):
+    def __init__(self, request_id: int = 0, message_id: int = 0, channel_id: int = 0):
         super().__init__(timeout=None)
         self.request_id = request_id
         self.message_id = message_id
@@ -114,22 +124,50 @@ class FeatureRequestStaffView(discord.ui.View):
         is_admin = getattr(interaction.user.guild_permissions, 'administrator', False)
         if not (is_owner or has_dev or is_admin):
             await interaction.response.send_message(
-                f"{Emojis.REFUSED} Only the Server Owner and Developers can update request status.", 
+                f"{Emojis.REFUSED} Only the Server Owner and Developers can update request status.",
                 ephemeral=True
             )
             return False
         return True
 
+    async def _resolve_target(self, interaction: discord.Interaction):
+        req_id = self.request_id
+        msg_id = self.message_id
+        chan_id = self.channel_id
+        if not req_id and interaction.message and interaction.message.embeds:
+            import re
+            title = interaction.message.embeds[0].title or ""
+            desc = interaction.message.embeds[0].description or ""
+            m = re.search(r"#(\d+)", desc) or re.search(r"#(\d+)", title)
+            if m:
+                req_id = int(m.group(1))
+        if req_id and (not msg_id or not chan_id):
+            row = await db.fetchrow(
+                "SELECT message_id, channel_id FROM feature_requests WHERE id = $1",
+                req_id
+            )
+            if row:
+                msg_id = row["message_id"]
+                chan_id = row["channel_id"]
+        return req_id, msg_id, chan_id
+
     async def _update_status(self, interaction: discord.Interaction, db_status: str, display_text: str):
         if not await self._check_perm(interaction):
             return
 
-        await db.execute("UPDATE feature_requests SET status = $1 WHERE id = $2", db_status, self.request_id)
+        req_id, msg_id, chan_id = await self._resolve_target(interaction)
+        if not req_id:
+            return await interaction.response.send_message(
+                f"{Emojis.REFUSED} Could not resolve feature request ID.",
+                ephemeral=True
+            )
 
-        channel = interaction.guild.get_channel(self.channel_id)
-        if channel:
+        await db.execute("UPDATE feature_requests SET status = $1 WHERE id = $2", db_status, req_id)
+
+        channel = interaction.guild.get_channel(chan_id) if chan_id else None
+        if channel and msg_id:
             try:
-                msg = await channel.fetch_message(self.message_id)
+                msg = await channel.fetch_message(msg_id)
                 if msg and msg.embeds:
                     embed = msg.embeds[0]
                     for i, field in enumerate(embed.fields):
@@ -165,7 +203,12 @@ class Feedback(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    async def _resolve_suggestion_channel(self, guild: discord.Guild) -> discord.TextChannel:
+    feature_slash = app_commands.Group(
+        name="feature",
+        description="Submit and manage SyncInk platform feature requests."
+    )
+
+    async def _resolve_suggestion_channel(self, guild: discord.Guild) -> Optional[discord.TextChannel]:
         ch = guild.get_channel(REQUIRED_SUGGESTION_CHANNEL_ID)
         if ch:
             return ch
@@ -175,28 +218,29 @@ class Feedback(commands.Cog):
             ch = guild.get_channel(chan_id)
             if ch:
                 return ch
-        
-        # Fallback: Auto-discover channel by name
+
         for channel in guild.text_channels:
             name = channel.name.lower()
             if any(term in name for term in ["feature-request", "feature", "suggest", "ideas", "feedback"]):
                 return channel
-                
+
         return None
 
-    async def _process_suggestion(self, target, title: str, description: str):
+    async def _process_suggestion(self, target, title: str, description: str, deferred: bool = False):
         metrics.record_suggestion()
-        
+
         is_interaction = isinstance(target, discord.Interaction)
         guild = target.guild
         author = target.user if is_interaction else target.author
         source_channel = target.channel
 
+        title = (title or "Suggestion").strip()[:240]
+        description = (description or title).strip()[:3800]
+
         target_channel = await self._resolve_suggestion_channel(guild)
         if not target_channel:
             target_channel = source_channel
 
-        # Insert into DB
         row = await db.fetchrow("""
             INSERT INTO feature_requests (guild_id, user_id, channel_id, title, content, status)
             VALUES ($1, $2, $3, $4, $5, 'PENDING')
@@ -213,8 +257,8 @@ class Feedback(commands.Cog):
         embed.add_field(name=f"{Emojis.MEMBERS} **Submitted By**", value=author.mention, inline=True)
         embed.add_field(name=f"{Emojis.LOADING} **Status**", value=f"{Emojis.PENDING} **Pending Review**", inline=True)
         embed.add_field(
-            name="🗳️ **Community Votes**", 
-            value=f"{Emojis.APPROVED} **0** Upvotes   •   {Emojis.REFUSED} **0** Downvotes", 
+            name="🗳️ **Community Votes**",
+            value=f"{Emojis.APPROVED} **0** Upvotes   •   {Emojis.REFUSED} **0** Downvotes",
             inline=False
         )
         embed.set_footer(text=f"SyncInk Platform • Request #{request_id}", icon_url="https://files.catbox.moe/74l9su.png")
@@ -225,13 +269,11 @@ class Feedback(commands.Cog):
             sent_msg = await target_channel.send(embed=embed, view=view)
             await db.execute("UPDATE feature_requests SET message_id = $1 WHERE id = $2", sent_msg.id, request_id)
 
-            # Automatically create discussion thread
             try:
                 thread = await sent_msg.create_thread(
                     name=f"Request #{request_id}: {title[:35]}"
                 )
-                
-                # Add Server Owner
+
                 if guild.owner:
                     try:
                         await thread.add_user(guild.owner)
@@ -245,7 +287,6 @@ class Feedback(commands.Cog):
                         except Exception:
                             pass
 
-                # Add members with Developer role (1531882215795855511)
                 dev_role = guild.get_role(DEVELOPER_ROLE_ID)
                 if dev_role:
                     for dev_mem in dev_role.members:
@@ -254,10 +295,9 @@ class Feedback(commands.Cog):
                         except Exception:
                             pass
 
-                # Post staff status control panel in thread
                 staff_view = FeatureRequestStaffView(request_id, sent_msg.id, target_channel.id)
                 staff_ctrl_embed = SyncInkEmbed(
-                    title="🛠️ Feature Request Controls",
+                    title=f"{Emojis.SETTINGS} Feature Request Controls",
                     description=(
                         f"**Feature Request #{request_id}: {title}**\n\n"
                         f"Discussion thread created for this feature request.\n"
@@ -266,84 +306,141 @@ class Feedback(commands.Cog):
                     color=BRAND_ACCENT
                 )
                 await thread.send(embed=staff_ctrl_embed, view=staff_view)
-            except Exception:
-                pass
-            
-            resp = SuccessEmbed(f"Your feature request has been successfully posted in {target_channel.mention}!")
+            except Exception as thread_err:
+                log.warning(f"Failed creating feature request discussion thread: {thread_err}")
+
+            resp = SuccessEmbed(f"Your feature request **#{request_id}** has been posted in {target_channel.mention}!")
             if is_interaction:
-                await target.response.send_message(embed=resp, ephemeral=True)
+                if deferred or target.response.is_done():
+                    await target.followup.send(embed=resp, ephemeral=True)
+                else:
+                    await target.response.send_message(embed=resp, ephemeral=True)
             else:
                 await target.send(embed=resp)
         except discord.Forbidden:
-            err = ErrorEmbed(description="Failed to post feature request.", resolution="Bot lacks permissions to send messages in the target channel.")
+            err = ErrorEmbed(
+                description="Failed to post feature request.",
+                resolution="Bot lacks permissions to send messages in the target channel."
+            )
             if is_interaction:
-                await target.response.send_message(embed=err, ephemeral=True)
+                if deferred or target.response.is_done():
+                    await target.followup.send(embed=err, ephemeral=True)
+                else:
+                    await target.response.send_message(embed=err, ephemeral=True)
             else:
                 await target.send(embed=err)
 
-    @app_commands.command(name="suggest", description="Submit a feature request or suggestion for the platform.")
-    @app_commands.describe(title="Short title for your request", description="Detailed explanation of the feature or idea")
-    async def slash_suggest(self, interaction: discord.Interaction, title: str, description: str):
-        if interaction.channel_id != REQUIRED_SUGGESTION_CHANNEL_ID:
-            embed = SyncInkEmbed(
-                title=f"{Emojis.REFUSED} **Channel Restriction**",
-                description=f"This command can only be used in <#{REQUIRED_SUGGESTION_CHANNEL_ID}>.",
-                color=ERROR_COLOR
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        await self._process_suggestion(interaction, title, description)
+    async def _handle_slash_suggest(self, interaction: discord.Interaction, title: str, description: str):
+        if interaction.guild and interaction.guild.get_channel(REQUIRED_SUGGESTION_CHANNEL_ID):
+            if interaction.channel_id != REQUIRED_SUGGESTION_CHANNEL_ID:
+                embed = SyncInkEmbed(
+                    title=f"{Emojis.REFUSED} **Channel Restriction**",
+                    description=f"This command can only be used in <#{REQUIRED_SUGGESTION_CHANNEL_ID}>.",
+                    color=ERROR_COLOR
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
 
-    @app_commands.command(name="feature_request", description="Submit a formal feature request with community voting.")
-    @app_commands.describe(title="Short title for your request", description="Detailed explanation of the feature or idea")
-    async def slash_feature_request(self, interaction: discord.Interaction, title: str, description: str):
-        await self.slash_suggest(interaction, title, description)
+        await interaction.response.defer(ephemeral=True)
+        await self._process_suggestion(interaction, title, description, deferred=True)
 
-    @commands.command(name="suggest", description="Submit a feature request or suggestion for the platform.")
-    async def suggest(self, ctx: commands.Context, *, text: str = None):
-        if ctx.channel.id != REQUIRED_SUGGESTION_CHANNEL_ID:
-            embed = SyncInkEmbed(
-                title=f"{Emojis.REFUSED} **Channel Restriction**",
-                description=f"This command can only be used in <#{REQUIRED_SUGGESTION_CHANNEL_ID}>.",
-                color=ERROR_COLOR
-            )
-            msg = await ctx.send(embed=embed)
-            await msg.delete(delay=8)
-            return
-
-        if not text:
-            await ctx.send(embed=ErrorEmbed(
-                description="Please provide your suggestion!",
-                resolution="Format: `?suggest Title | Detailed description` or `?suggest Your idea here`"
-            ))
-            return
-
+    @staticmethod
+    def _parse_prefix_suggestion_text(text: str) -> tuple[str, str]:
         if "|" in text:
             parts = text.split("|", 1)
             title = parts[0].strip()
-            description = parts[1].strip()
+            description = parts[1].strip() or title
         elif "\n" in text:
             parts = text.split("\n", 1)
             title = parts[0].strip()
-            description = parts[1].strip()
+            description = parts[1].strip() or title
         else:
             if len(text) > 40:
                 cut = text[:40].rfind(" ")
                 if cut > 10:
                     title = text[:cut].strip()
-                    description = text[cut:].strip()
+                    description = text.strip()
                 else:
-                    title = "Suggestion"
+                    title = text[:40].strip()
                     description = text.strip()
             else:
                 title = text.strip()
                 description = text.strip()
+        return title, description
 
+    async def _handle_prefix_suggest(self, ctx: commands.Context, text: Optional[str]):
+        if ctx.guild and ctx.guild.get_channel(REQUIRED_SUGGESTION_CHANNEL_ID):
+            if ctx.channel.id != REQUIRED_SUGGESTION_CHANNEL_ID:
+                embed = SyncInkEmbed(
+                    title=f"{Emojis.REFUSED} **Channel Restriction**",
+                    description=f"This command can only be used in <#{REQUIRED_SUGGESTION_CHANNEL_ID}>.",
+                    color=ERROR_COLOR
+                )
+                msg = await ctx.send(embed=embed)
+                await msg.delete(delay=8)
+                return
+
+        if not text or not text.strip():
+            await ctx.send(embed=ErrorEmbed(
+                description="Please provide your feature request!",
+                resolution=(
+                    f"{Emojis.S_ARROW} **With title & details:** `?feature request Title | Detailed explanation`\n"
+                    f"{Emojis.S_ARROW} **Quick idea:** `?feature request Add 8D audio filter` or `?suggest Your idea`"
+                )
+            ))
+            return
+
+        title, description = self._parse_prefix_suggestion_text(text.strip())
         await self._process_suggestion(ctx, title, description)
 
-    @commands.command(name="feature_request", description="Submit a formal feature request with community voting.")
+    # ── Slash Commands: /suggest, /feature_request, /feature request ─────
+    @app_commands.command(name="suggest", description="Submit a feature request or suggestion for the platform.")
+    @app_commands.describe(title="Short title for your request", description="Detailed explanation of the feature or idea")
+    async def slash_suggest(self, interaction: discord.Interaction, title: str, description: str):
+        await self._handle_slash_suggest(interaction, title, description)
+
+    @app_commands.command(name="feature_request", description="Submit a formal feature request with community voting.")
+    @app_commands.describe(title="Short title for your request", description="Detailed explanation of the feature or idea")
+    async def slash_feature_request(self, interaction: discord.Interaction, title: str, description: str):
+        await self._handle_slash_suggest(interaction, title, description)
+
+    @feature_slash.command(name="request", description="Submit a formal feature request with community voting.")
+    @app_commands.describe(title="Short title for your request", description="Detailed explanation of the feature or idea")
+    async def slash_feature_group_request(self, interaction: discord.Interaction, title: str, description: str):
+        await self._handle_slash_suggest(interaction, title, description)
+
+    # ── Prefix Commands: ?suggest, ?feature_request, ?feature request ────
+    @commands.command(name="suggest", description="Submit a feature request or suggestion for the platform.")
+    async def suggest(self, ctx: commands.Context, *, text: str = None):
+        await self._handle_prefix_suggest(ctx, text)
+
+    @commands.command(
+        name="feature_request",
+        aliases=["featurerequest"],
+        description="Submit a formal feature request with community voting."
+    )
     async def feature_request(self, ctx: commands.Context, *, text: str = None):
-        await self.suggest(ctx, text=text)
+        await self._handle_prefix_suggest(ctx, text)
+
+    @commands.group(
+        name="feature",
+        aliases=["fr"],
+        invoke_without_command=True,
+        description="Submit a formal feature request (`?feature request <idea>`)."
+    )
+    async def feature_group(self, ctx: commands.Context, *, text: str = None):
+        if text and text.lower().strip() == "request":
+            await self._handle_prefix_suggest(ctx, None)
+            return
+        await self._handle_prefix_suggest(ctx, text)
+
+    @feature_group.command(
+        name="request",
+        aliases=["add", "submit"],
+        description="Submit a formal feature request with community voting."
+    )
+    async def feature_group_request(self, ctx: commands.Context, *, text: str = None):
+        await self._handle_prefix_suggest(ctx, text)
 
     @commands.command(name="set_suggestion_status", aliases=["set_status"], description="Update the status of a feature request (Staff Only).")
     @commands.has_permissions(manage_guild=True)
@@ -399,6 +496,7 @@ class Feedback(commands.Cog):
         await ctx.send(
             embed=SuccessEmbed(f"Feature Request **#{request_id}** status updated to **{display_name}**.")
         )
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Feedback(bot))

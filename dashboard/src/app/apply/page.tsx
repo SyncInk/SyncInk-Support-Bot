@@ -172,6 +172,19 @@ export default function ApplyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Respect URL ?tab=developer or ?tab=staff deep links
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab")?.toLowerCase();
+      if (tab === "developer" || tab === "dev") {
+        setActiveTab("developer");
+      } else if (tab === "staff" || tab === "mod") {
+        setActiveTab("staff");
+      }
+    }
+  }, []);
+
   // Fetch Authenticated User
   useEffect(() => {
     async function checkAuth() {
