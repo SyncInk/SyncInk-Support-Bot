@@ -349,6 +349,7 @@ class Settings(commands.Cog):
         await ctx.send(embed=embed, view=view, delete_after=25)
 
     @app_commands.command(name="config", description="Manage server settings via the private interactive dashboard (Server Owner only).")
+    @app_commands.default_permissions(administrator=True)
     async def slash_config(self, interaction: discord.Interaction):
         from utils.permissions import STAFF_MOD_CHANNEL_IDS
         if not interaction.guild or interaction.channel_id not in STAFF_MOD_CHANNEL_IDS:
@@ -367,7 +368,7 @@ class Settings(commands.Cog):
             return
 
         embed = SyncInkEmbed(title="Platform Dashboard")
-        embed.set_author(name="SyncInk Administration", icon_url="https://syncink.xyz/assets/logo.png")
+        embed.set_author(name="SyncInk Administration", icon_url="https://syncink.site/syncink-main-logo.png")
         embed.description = "Welcome to the control panel. Use the dropdown below to navigate and configure your server."
         embed.add_field(name="Status", value="All Systems Operational", inline=False)
         

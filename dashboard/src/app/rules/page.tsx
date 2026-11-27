@@ -85,7 +85,7 @@ export default function RulesPage() {
         "General Chat (# 💬・general): Designated channel for casual talk, socializing, and off-topic discussion.",
         "Support Requests (# 🎟️・create-ticket): Official private tickets for one-on-one assistance, reports, and appeals.",
         "Support Chat (# 💬・support-chat): STRICTLY for asking public support questions, troubleshooting, and bot usage. (Note: Casual chatting is NOT permitted here!).",
-        "Feature Suggestions (# 💡・feature-request): Post community proposals exclusively via /feature_request or ?feature_request.",
+        "Feature Suggestions (# 💡・feature-request): Post community proposals exclusively via /feature request or ?feature request.",
       ],
       severity: "Message Deletion -> Warning",
     },

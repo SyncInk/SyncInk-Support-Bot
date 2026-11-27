@@ -328,10 +328,8 @@ export default function FAQPage() {
           answer: (
             <p className="text-xs sm:text-sm text-slate-300">
               Submit your idea using the{" "}
-              <span className="font-mono text-white">/feature request</span>,{" "}
-              <span className="font-mono text-white">/feature_request</span>,{" "}
-              <span className="font-mono text-white">?feature request</span>, or{" "}
-              <span className="font-mono text-white">?feature_request</span> command exclusively in{" "}
+              <span className="font-mono text-white">/feature request</span> or{" "}
+              <span className="font-mono text-white">?feature request</span> command exclusively in{" "}
               <a
                 href="https://discord.com/channels/1520457643842342912/1546548728721178724"
                 target="_blank"
@@ -340,7 +338,7 @@ export default function FAQPage() {
               >
                 # 💡・feature-request
               </a>
-              . The community and team will vote on and review submissions.
+              . Both open a guided submission form, and the community and team will vote on and review requests.
             </p>
           ),
           tags: ["feature", "suggestion", "request", "ideas"],

@@ -64,13 +64,13 @@ class Emojis:
     QUESTION = "<:syncinkquestion:1547033451029594222>"
     SYNCINK_LOGO = "<:syncinkmainlogo:1529117858859061331>"
     # Feature request custom emojis
-    LOADING = "<a:Loading:1547095365679849492>"
+    LOADING = "<a:loading:1575985269050704054>"
     PENDING = "<a:pending:1547110867466985532>"
     ATTENTION = "<:attention:1547095501604921395>"
     TRUSTED_USER = "<:trusted_user:1547621146558730340>"
     MEMBERS = "<:members:1547109992212205608>"
     MEMBER = "<:member:1559185207033077901>"
-    CANCELLED = "<:cancelled:1547111776267804692>"
+    CANCELLED = "<:cancelled:1575988362941300746>"
 
     # Official Music Player Emojis (<:name:id>)
     PLAY_BUTTON = "<:playbutton:1558913195119222814>"
@@ -117,7 +117,7 @@ class EmojiPartials:
     APPROVED = discord.PartialEmoji(name="approved", id=1547035150964236379, animated=True)
     WARNING = discord.PartialEmoji(name="syncwarning", id=1547034231438319616, animated=True)
     CHECK_YES = discord.PartialEmoji(name="check_yes", id=1547034079076032512, animated=True)
-    LOADING = discord.PartialEmoji(name="Loading", id=1547095365679849492, animated=True)
+    LOADING = discord.PartialEmoji(name="loading", id=1575985269050704054, animated=True)
     PENDING = discord.PartialEmoji(name="pending", id=1547110867466985532, animated=True)
     CONNECTION_PING = discord.PartialEmoji(name="connectionping", id=1551311432392646737, animated=True)
 
@@ -170,7 +170,7 @@ class EmojiPartials:
     QUESTION = discord.PartialEmoji(name="syncinkquestion", id=1547033451029594222, animated=False)
     MEMBERS = discord.PartialEmoji(name="members", id=1547109992212205608, animated=False)
     MEMBER = discord.PartialEmoji(name="member", id=1559185207033077901, animated=False)
-    CANCELLED = discord.PartialEmoji(name="cancelled", id=1547111776267804692, animated=False)
+    CANCELLED = discord.PartialEmoji(name="cancelled", id=1575988362941300746, animated=False)
 
     # Official Music Player Partials
     PLAY_BUTTON = discord.PartialEmoji(name="playbutton", id=1558913195119222814, animated=False)
@@ -221,6 +221,9 @@ OLD_TAG_MAP = {
     "<:others:1513337572078911488>": "<:others:1553533697364598814>",
     "<:SyncPartnership:1522289808599290006>": "<:SyncPartnership:1553532869950046340>",
     "<a:7049earthblurple:1558803274813935666>": "<a:earthblurple:1558803274813935666>",
+    "<a:Loading:1547095365679849492>": "<a:loading:1575985269050704054>",
+    "<a:loading:1547095365679849492>": "<a:loading:1575985269050704054>",
+    "<:cancelled:1547111776267804692>": "<:cancelled:1575988362941300746>",
 }
 
 # Comprehensive mapping of raw emoji names to valid custom Discord emoji tags
@@ -292,11 +295,11 @@ EMOJI_NAME_MAP = {
     "moderation": "<:moderation:1547035031275573289>",
     "looking": "<:looking:1547034317018898552>",
     "rules": "<:rules:1547034188702818426>",
-    "loading": "<a:Loading:1547095365679849492>",
+    "loading": "<a:loading:1575985269050704054>",
     "pending": "<a:pending:1547110867466985532>",
     "members": "<:members:1547109992212205608>",
     "member": "<:member:1559185207033077901>",
-    "cancelled": "<:cancelled:1547111776267804692>",
+    "cancelled": "<:cancelled:1575988362941300746>",
 
     # Booster Emojis
     "booster": "<:booster:1558595630660714616>",

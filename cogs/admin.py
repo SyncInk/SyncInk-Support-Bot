@@ -2,10 +2,8 @@ import os
 import sys
 import asyncio
 import subprocess
-from typing import Optional, Literal
 import discord
 from discord.ext import commands, tasks
-from discord import app_commands
 from utils.ui import SyncInkEmbed, SuccessEmbed
 from utils.logger import log
 
@@ -105,147 +103,7 @@ class Admin(commands.Cog):
     async def before_auto_update_task(self):
         await self.bot.wait_until_ready()
 
-    @commands.command(name="update", aliases=["gitpull", "pullupdate"], description="Pull latest updates from GitHub and restart the bot.")
-    @commands.has_permissions(administrator=True)
-    async def update_bot(self, ctx: commands.Context):
-        """Owner/admin command to pull updates and restart."""
-        msg = await ctx.send("🔄 **Checking GitHub for updates...**")
-        try:
-            # 1. Fetch remote
-            proc_fetch = await asyncio.create_subprocess_exec(
-                "git", "fetch", "origin", "main",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            await proc_fetch.communicate()
-
-            # 2. Check diff
-            proc_head = await asyncio.create_subprocess_exec(
-                "git", "rev-parse", "HEAD",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            out_head, _ = await proc_head.communicate()
-            current_head = out_head.decode().strip()
-
-            proc_remote = await asyncio.create_subprocess_exec(
-                "git", "rev-parse", "origin/main",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            out_remote, _ = await proc_remote.communicate()
-            remote_head = out_remote.decode().strip()
-
-            if current_head and remote_head and current_head == remote_head:
-                proc_log = await asyncio.create_subprocess_exec(
-                    "git", "log", "-1", "--pretty=format:%s (%h)",
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-                out_log, _ = await proc_log.communicate()
-                latest = out_log.decode().strip()
-                await msg.edit(content=f"✅ **Bot is already up to date with `origin/main`!**\n> Current commit: `{latest}`")
-                return
-
-            await msg.edit(content="⬇️ **New updates found on GitHub! Pulling latest changes...**")
-            proc_pull = await asyncio.create_subprocess_exec(
-                "git", "pull", "origin", "main",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            await proc_pull.communicate()
-
-            try:
-                proc_pip = await asyncio.create_subprocess_exec(
-                    sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--quiet",
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-                await proc_pip.communicate()
-            except Exception:
-                pass
-
-            proc_log = await asyncio.create_subprocess_exec(
-                "git", "log", "-1", "--pretty=format:%s (%h by %an)",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            out_log, _ = await proc_log.communicate()
-            latest = out_log.decode().strip()
-
-            await msg.edit(content=f"🚀 **Successfully updated!**\n> Applied commit: `{latest}`\n\n*Restarting bot now...*")
-            await asyncio.sleep(1)
-            restart_process()
-        except Exception as e:
-            log.error(f"Manual update failed: {e}")
-            await msg.edit(content=f"❌ **Failed to update from GitHub:** `{e}`")
-
-    @app_commands.command(name="update", description="Pull latest updates from GitHub and restart the bot.")
-    @app_commands.default_permissions(administrator=True)
-    async def slash_update(self, interaction: discord.Interaction):
-        if not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message("❌ You do not have permission to run this command.", ephemeral=True)
-            return
-
-        await interaction.response.defer(ephemeral=False)
-        try:
-            proc_fetch = await asyncio.create_subprocess_exec(
-                "git", "fetch", "origin", "main",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            await proc_fetch.communicate()
-
-            proc_head = await asyncio.create_subprocess_exec(
-                "git", "rev-parse", "HEAD",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            out_head, _ = await proc_head.communicate()
-            current_head = out_head.decode().strip()
-
-            proc_remote = await asyncio.create_subprocess_exec(
-                "git", "rev-parse", "origin/main",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            out_remote, _ = await proc_remote.communicate()
-            remote_head = out_remote.decode().strip()
-
-            if current_head and remote_head and current_head == remote_head:
-                proc_log = await asyncio.create_subprocess_exec(
-                    "git", "log", "-1", "--pretty=format:%s (%h)",
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-                out_log, _ = await proc_log.communicate()
-                latest = out_log.decode().strip()
-                await interaction.followup.send(f"✅ **Bot is already up to date with `origin/main`!**\n> Current commit: `{latest}`")
-                return
-
-            proc_pull = await asyncio.create_subprocess_exec(
-                "git", "pull", "origin", "main",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            await proc_pull.communicate()
-
-            proc_log = await asyncio.create_subprocess_exec(
-                "git", "log", "-1", "--pretty=format:%s (%h by %an)",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            out_log, _ = await proc_log.communicate()
-            latest = out_log.decode().strip()
-
-            await interaction.followup.send(f"🚀 **Successfully updated!**\n> Applied commit: `{latest}`\n\n*Restarting bot now...*")
-            await asyncio.sleep(1)
-            restart_process()
-        except Exception as e:
-            log.error(f"Manual slash update failed: {e}")
-            await interaction.followup.send(f"❌ **Failed to update from GitHub:** `{e}`")
-
-    @commands.command(name="installpillow", aliases=["pillow", "fixpillow"], description="Install python-pillow package on Termux for visual stats graphics.")
+    @commands.command(name="installpillow", aliases=["pillow", "fixpillow"], hidden=True, description="Install python-pillow package on Termux for visual stats graphics.")
     @commands.has_permissions(administrator=True)
     async def install_pillow_cmd(self, ctx: commands.Context):
         msg = await ctx.send("⏳ **Checking and installing Pillow graphics library...**")
@@ -256,55 +114,20 @@ class Admin(commands.Cog):
         else:
             await msg.edit(content="❌ **Auto-install could not complete.** Please run `pkg install -y python-pillow` directly in your Termux app.")
 
-    @commands.command(name="create_button_role", description="Generate a persistent role-toggle button.")
+    @commands.command(name="create_button_role", hidden=True, description="Generate a persistent role-toggle button.")
     @commands.has_permissions(administrator=True)
     async def create_button_role(self, ctx: commands.Context, role: discord.Role, *, message: str = "Click the button below to toggle role:"):
-        embed = SyncInkEmbed(title="Role Selection")
-        embed.set_author(name="Assign Roles", icon_url="https://syncink.xyz/assets/logo.png")
+        embed = SyncInkEmbed(title="Role Selection", footer=False)
+        embed.set_author(name="Assign Roles", icon_url="https://syncink.site/syncink-main-logo.png")
         embed.description = message
         
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label=role.name, style=discord.ButtonStyle.primary, custom_id=f"toggle_role_{role.id}"))
         
         await ctx.channel.send(embed=embed, view=view)
-        await ctx.send(embed=SuccessEmbed("Interactive role panel successfully created."))
+        await ctx.send(embed=SuccessEmbed("Interactive role panel successfully created."), delete_after=6)
 
-    @commands.command(name="sync", description="Force sync application slash commands to this server or globally.")
-    @commands.has_permissions(administrator=True)
-    async def sync_cmd(self, ctx: commands.Context, scope: str = "guild"):
-        """Sync slash commands immediately with Discord."""
-        msg = await ctx.send(f"🔄 **Syncing slash commands ({scope})...**")
-        try:
-            if scope.lower() == "global":
-                synced = await self.bot.tree.sync()
-                await msg.edit(content=f"✅ **Synced {len(synced)} command(s) globally!** (Discord global cache propagation may take up to 1 hour).")
-            else:
-                self.bot.tree.copy_global_to(guild=ctx.guild)
-                synced = await self.bot.tree.sync(guild=ctx.guild)
-                await msg.edit(content=f"✅ **Instantly synced {len(synced)} slash command(s) to this server ({ctx.guild.name})!** Refresh your Discord client (restart app or Ctrl+R) to view them immediately.")
-        except Exception as e:
-            await msg.edit(content=f"❌ **Sync failed:** `{e}`")
-
-    @app_commands.command(name="sync", description="Force sync application slash commands to this server or globally.")
-    @app_commands.default_permissions(administrator=True)
-    async def slash_sync(self, interaction: discord.Interaction, scope: Literal["guild", "global"] = "guild"):
-        if not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message("❌ Administrator permission required.", ephemeral=True)
-            return
-
-        await interaction.response.defer(ephemeral=True)
-        try:
-            if scope == "global":
-                synced = await self.bot.tree.sync()
-                await interaction.followup.send(f"✅ **Synced {len(synced)} command(s) globally!**")
-            else:
-                self.bot.tree.copy_global_to(guild=interaction.guild)
-                synced = await self.bot.tree.sync(guild=interaction.guild)
-                await interaction.followup.send(f"✅ **Instantly synced {len(synced)} slash command(s) to this server!**")
-        except Exception as e:
-            await interaction.followup.send(f"❌ **Sync failed:** `{e}`")
-
-    @commands.command(name="installmusic", aliases=["fixmusic"], description="Install music and Discord voice dependencies.")
+    @commands.command(name="installmusic", aliases=["fixmusic"], hidden=True, description="Install music and Discord voice dependencies.")
     @commands.has_permissions(administrator=True)
     async def install_music_cmd(self, ctx: commands.Context):
         msg = await ctx.send("⏳ **Installing the native Discord voice/DAVE and music dependencies...**")

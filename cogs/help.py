@@ -124,10 +124,8 @@ class Help(commands.Cog):
         if query:
             query_clean = query.lower().strip().lstrip("?")
             all_cmds = {
-                "suggest": ("`/suggest <title> <description>` or `?suggest <text>`", "Submit an idea or feature request with voting in <#1546548728721178724>.", False),
-                "feature": ("`/feature request <title> <description>` or `?feature request <text>`", "Submit a formal feature request with community voting in <#1546548728721178724>.", False),
-                "feature request": ("`/feature request <title> <description>` or `?feature request <text>`", "Submit a formal feature request with community voting in <#1546548728721178724>.", False),
-                "feature_request": ("`/feature_request <title> <description>` or `?feature_request <text>`", "Submit a formal feature request with community voting in <#1546548728721178724>.", False),
+                "feature": ("`/feature request` or `?feature request`", "Open an interactive form to submit a feature request with voting in <#1546548728721178724>.", False),
+                "feature request": ("`/feature request` or `?feature request`", "Open an interactive form to submit a feature request with voting in <#1546548728721178724>.", False),
                 "apply": ("`?apply [developer|staff]` or `/apply [role]`", "Get official application links and requirements to join Developer or Staff teams.", False),
                 "botstats": ("`?botstats`", "View bot latency, uptime, and server count (Alias: `?ping`).", False),
                 "ping": ("`?ping`", "View bot latency and ping.", False),
@@ -196,11 +194,6 @@ class Help(commands.Cog):
                 "spawn_verification": ("`?spawn_verification`", "Deploy the persistent 'Verify Now' security gate button.", True),
                 "announce": ("`?announce [#channel] <message>`", "Broadcast a formatted markdown announcement.", True),
                 "webhook_post": ("`?webhook_post <name | content>`", "Post custom announcement via webhook.", True),
-                "sync": ("`?sync [guild|global]`", "Force sync slash commands to current server or globally (Admin only).", True),
-                "installmusic": ("`?installmusic`", "Auto-install yt-dlp & PyNaCl music dependencies on Termux (Alias: `?fixmusic`).", True),
-                "fixmusic": ("`?fixmusic`", "Alias for `?installmusic` - Auto-install music dependencies.", True),
-                "update": ("`?update`", "Pull latest updates from GitHub and restart the bot (Alias: `?gitpull`).", True),
-                "gitpull": ("`?gitpull`", "Alias for `?update` - Pull latest updates from GitHub.", True),
             }
 
             if query_clean in all_cmds:
@@ -274,9 +267,8 @@ class Help(commands.Cog):
             (
                 f"{Emojis.SUGGESTION} **Suggestions & Feature Requests**",
                 [
-                    ("/feature request <title> <description>", "Submit a formal feature request with community voting in #feature-request."),
-                    ("?feature request <title | description>", "Submit a formal feature request using prefix syntax (or `?feature_request`)."),
-                    ("/suggest • ?suggest <idea>", "Alternative quick shortcut to post feature ideas with community voting.")
+                    ("/feature request", "Open an interactive form to submit a feature request with voting in <#1546548728721178724>."),
+                    ("?feature request", "Launch the interactive feature request form inside <#1546548728721178724>."),
                 ]
             ),
             (

@@ -128,7 +128,7 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "7. Support Ticket Channel: <#1520460764937322566> (Open a private support ticket with staff)",
         "8. Support Chat Channel: <#1520460808499363840> (STRICTLY for asking support questions, getting technical assistance, and troubleshooting. NOTE: Support Chat is NOT for hanging out, casual chatting, or general talking!)",
         "9. Discussion Channel: <#1520477097494057041> (General discussions, ideas, and debates)",
-        "10. Feature Suggestions Channel: <#1546548728721178724> (Submit feature suggestions using `/feature request`, `/feature_request`, `/suggest`, `?feature request`, `?feature_request`, or `?suggest` ONLY in <#1546548728721178724>)",
+        "10. Feature Suggestions Channel: <#1546548728721178724> (Submit feature suggestions using `/feature request` or `?feature request` ONLY in <#1546548728721178724> — no other commands work in that channel)",
         "11. Official SyncInk Products Channel: <#1520461321689104486>",
         "    - Public Service Bots (<@&1521166171523780688>): Ticket Bot (<@1513075101992747158>), Voice Bot (<@1516578887109181520>), SyncInk Radio (<@1500567606648897819>)",
         "    - Private Bot (<@&1520533971476156469>): SyncInk Security Bot (<@1520522990280769727>) - protects community from spam and deletes blacklisted messages",
@@ -144,7 +144,7 @@ def build_server_guide_context(guild: discord.Guild, settings: Optional[dict] = 
         "",
         "--- SUPPORT SERVER BOT COMMANDS ---",
         "• Recruitment: `?apply [developer|staff]` or `/apply` — Direct links & requirements to join Developer or Staff teams.",
-        "• Feature Requests: `/feature request`, `/feature_request`, `/suggest`, `?feature request`, `?feature_request`, `?suggest` (Used exclusively in <#1546548728721178724>).",
+        "• Feature Requests: `/feature request` or `?feature request` (Used exclusively in <#1546548728721178724>; opens a form modal for title & description).",
         "• Platform & Status: `?status`, `/status`, `?products`, `/products`, `?links`, `/links`, `?botstats` (`?ping`), `?serverstats`, `?userstats`.",
         "• Utilities & Help: `?help [command]`, `?pfp [@user]`, `?banner [@user]`, `?cleanup [amount]`.",
         "• AI Assistant: `?ask <question>`, `/ask <question>`, `?resetai`, `/resetai` (Used in <#1544361954574073916>).",
@@ -435,9 +435,9 @@ def resolve_server_faq(prompt: str, guild: Optional[discord.Guild] = None) -> Op
     # 3. Feature Suggestions
     if any(k in p for k in ("suggest a feature", "feature suggestion", "feature request", "submit a suggestion", "where to suggest", "how to suggest", "suggest feature", "suggestion channel")):
         return (
-            f"{Emojis.SUGGESTION} Submit feature requests exclusively in <#1546548728721178724> using any of these commands:\n\n"
-            f"{Emojis.S_ARROW} **Slash:** `/feature request` or `/suggest`\n"
-            f"{Emojis.S_ARROW} **Prefix:** `?feature request Title | Details` or `?suggest Your idea`"
+            f"{Emojis.SUGGESTION} Submit feature requests exclusively in <#1546548728721178724> using:\n\n"
+            f"{Emojis.S_ARROW} **Slash:** `/feature request` (opens the submission form directly)\n"
+            f"{Emojis.S_ARROW} **Prefix:** `?feature request` (opens the form launcher privately)"
         )
 
     # 4. Rules & Guidelines (Strict focused matching)
@@ -1195,9 +1195,9 @@ class ChatGPT(commands.Cog):
             f"     <:s_arrow:1558799699102793801> {dev_emoji} **Developer:** **[Apply for Developer](https://syncink.site/apply?tab=developer)** (Requirements in <#1539301185423413398>)\n"
             f"     <:s_arrow:1558799699102793801> {staff_emoji} **Staff:** **[Apply for Staff](https://syncink.site/apply?tab=staff)** (Requirements in <#1539319001673367604>)\n"
             "   - **Feature Requests (<#1546548728721178724>):**\n"
-            "     <:s_arrow:1558799699102793801> Slash: `/feature request`, `/feature_request`, or `/suggest`\n"
-            "     <:s_arrow:1558799699102793801> Prefix: `?feature request Title | Details`, `?feature_request`, or `?suggest`\n"
-            "     <:s_arrow:1558799699102793801> Exclusively inside <#1546548728721178724>; creates a community vote card and developer tracking thread.\n"
+            "     <:s_arrow:1558799699102793801> Slash: `/feature request` (opens interactive submission form directly)\n"
+            "     <:s_arrow:1558799699102793801> Prefix: `?feature request` (opens a private form launcher button — no inline formatting needed)\n"
+            "     <:s_arrow:1558799699102793801> Exclusively inside <#1546548728721178724>; no other commands work in that channel.\n"
             "5. **SYNCINK BOT SUITE KNOWLEDGE**:\n"
             "   - **Ticket Bot (<@1513075101992747158>):** Manage tickets in <#1520460764937322566>. Categories:\n"
             "     <:s_arrow:1558799699102793801> <:SyncProductSupport:1553532855278116956> **Product Support** — Setup, configuration, troubleshooting.\n"

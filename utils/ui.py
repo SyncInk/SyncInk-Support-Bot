@@ -70,19 +70,20 @@ async def send_clean_v2_message(destination: Any, layout_view: discord.ui.Layout
 class SyncInkEmbed(discord.Embed):
     """Premium Base Embed class for the SyncInk Ecosystem."""
     
-    def __init__(self, color: int = BRAND_ACCENT, **kwargs):
+    def __init__(self, color: int = BRAND_ACCENT, footer: bool = True, **kwargs):
         super().__init__(color=color, **kwargs)
-        self.timestamp = discord.utils.utcnow()
-        self.set_footer(text="SyncInk Platform", icon_url="https://files.catbox.moe/74l9su.png")
+        if footer:
+            self.timestamp = discord.utils.utcnow()
+            self.set_footer(text="SyncInk Platform", icon_url="https://files.catbox.moe/74l9su.png")
 
 class SuccessEmbed(SyncInkEmbed):
-    def __init__(self, description: str, **kwargs):
-        super().__init__(color=SUCCESS_COLOR, description=description, **kwargs)
+    def __init__(self, description: str, footer: bool = False, **kwargs):
+        super().__init__(color=SUCCESS_COLOR, description=description, footer=footer, **kwargs)
         self.title = f"{Emojis.APPROVED} Action Successful"
 
 class ErrorEmbed(SyncInkEmbed):
-    def __init__(self, description: str, resolution: str = "Please contact a server administrator if the issue persists.", **kwargs):
-        super().__init__(color=ERROR_COLOR, description=description, **kwargs)
+    def __init__(self, description: str, resolution: str = "Please contact a server administrator if the issue persists.", footer: bool = False, **kwargs):
+        super().__init__(color=ERROR_COLOR, description=description, footer=footer, **kwargs)
         self.title = f"{Emojis.REFUSED} Action Required"
         self.add_field(name="How to fix this?", value=f"> {resolution}", inline=False)
 
@@ -103,18 +104,18 @@ class BaseConfirmView(discord.ui.View):
         self.stop()
 
 class LoadingEmbed(SyncInkEmbed):
-    def __init__(self, description: str = "Processing request...", **kwargs):
-        super().__init__(color=BRAND_ACCENT, description=description, **kwargs)
+    def __init__(self, description: str = "Processing request...", footer: bool = False, **kwargs):
+        super().__init__(color=BRAND_ACCENT, description=description, footer=footer, **kwargs)
         self.title = f"{Emojis.ALERT} Please Wait"
 
 class EmptyStateEmbed(SyncInkEmbed):
-    def __init__(self, title: str, description: str, **kwargs):
-        super().__init__(color=BRAND_PRIMARY, description=description, **kwargs)
+    def __init__(self, title: str, description: str, footer: bool = False, **kwargs):
+        super().__init__(color=BRAND_PRIMARY, description=description, footer=footer, **kwargs)
         self.title = f"{Emojis.REFUSED} {title}"
 
 class InfoCard(SyncInkEmbed):
-    def __init__(self, title: str, description: str, **kwargs):
-        super().__init__(color=BRAND_ACCENT, title=title, description=description, **kwargs)
+    def __init__(self, title: str, description: str, footer: bool = False, **kwargs):
+        super().__init__(color=BRAND_ACCENT, title=title, description=description, footer=footer, **kwargs)
 
 class PaginationView(discord.ui.View):
     """A generic pagination view for embeds."""

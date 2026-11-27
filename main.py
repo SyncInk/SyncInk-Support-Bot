@@ -8,8 +8,11 @@ from dotenv import load_dotenv
 
 from utils.logger import log
 from utils.exceptions import ConfigurationError, UserFacingError
-from utils.ui import ErrorEmbed
+from utils.ui import ErrorEmbed, SyncInkEmbed, ERROR_COLOR
+from utils.emojis import Emojis
 from utils.validator import validate_environment
+
+FEATURE_SUGGESTION_CHANNEL_ID = 1546548728721178724
 from utils.i18n import i18n
 from utils.tasks import task_manager
 from database import db
@@ -81,16 +84,64 @@ class SyncInkBot(commands.Bot):
             log.warning(f"Failed to sync application slash commands: {e}")
 
         # Restrict application slash commands and component interactions strictly to target support guild
-        @self.tree.interaction_check
         async def global_interaction_check(interaction: discord.Interaction) -> bool:
             primary_id = int(os.getenv("TARGET_GUILD_ID", os.getenv("SUPPORT_GUILD_ID", "1520457643842342912")))
             if interaction.guild_id and interaction.guild_id != primary_id:
                 return False
+
+            # Inside #feature-suggestion, only /feature request slash command is permitted
+            if (
+                interaction.type == discord.InteractionType.application_command
+                and interaction.channel_id == FEATURE_SUGGESTION_CHANNEL_ID
+            ):
+                # CommandTree._call runs interaction_check BEFORE resolving interaction.command, so inspect raw payload too
+                is_feature_request = False
+                if interaction.command and interaction.command.qualified_name == "feature request":
+                    is_feature_request = True
+                elif isinstance(interaction.data, dict) and interaction.data.get("name") == "feature":
+                    opts = interaction.data.get("options") or []
+                    if opts and isinstance(opts[0], dict) and opts[0].get("name") == "request":
+                        is_feature_request = True
+
+                if not is_feature_request:
+                    embed = SyncInkEmbed(
+                        title=f"{Emojis.REFUSED} Channel Restricted",
+                        description=f"Only `/feature request` and `?feature request` can be used in <#{FEATURE_SUGGESTION_CHANNEL_ID}>.",
+                        color=ERROR_COLOR,
+                        footer=False,
+                    )
+                    try:
+                        if not interaction.response.is_done():
+                            await interaction.response.send_message(embed=embed, ephemeral=True)
+                    except discord.HTTPException:
+                        pass
+                    return False
             return True
 
-        # Register global command rate limiter & flood check
+        self.tree.interaction_check = global_interaction_check
+
+        # Register global channel rules & command rate limiter
         @self.check
         async def global_command_rate_limit_check(ctx: commands.Context) -> bool:
+            if ctx.channel and ctx.channel.id == FEATURE_SUGGESTION_CHANNEL_ID:
+                cmd_name = ctx.command.qualified_name if ctx.command else ""
+                if cmd_name not in ("feature request", "feature"):
+                    try:
+                        await ctx.message.delete()
+                    except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                        pass
+                    try:
+                        embed = SyncInkEmbed(
+                            title=f"{Emojis.REFUSED} Channel Restricted",
+                            description=f"Only `/feature request` and `?feature request` can be used in <#{FEATURE_SUGGESTION_CHANNEL_ID}>.",
+                            color=ERROR_COLOR,
+                            footer=False,
+                        )
+                        await ctx.send(embed=embed, delete_after=6)
+                    except discord.HTTPException:
+                        pass
+                    return False
+
             try:
                 from services.automod_service import AutomodService
                 return await AutomodService.check_command_rate_limit(ctx)
@@ -142,6 +193,23 @@ class SyncInkBot(commands.Bot):
             return
 
         if isinstance(error, commands.CommandNotFound):
+            if ctx.channel and ctx.channel.id == FEATURE_SUGGESTION_CHANNEL_ID and ctx.message:
+                raw = ctx.message.content.strip()
+                if len(raw) > 1 and raw[0] == "?" and raw[1].isalnum():
+                    try:
+                        await ctx.message.delete()
+                    except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                        pass
+                    try:
+                        embed = SyncInkEmbed(
+                            title=f"{Emojis.REFUSED} Channel Restricted",
+                            description=f"Only `/feature request` and `?feature request` can be used in <#{FEATURE_SUGGESTION_CHANNEL_ID}>.",
+                            color=ERROR_COLOR,
+                            footer=False,
+                        )
+                        await ctx.send(embed=embed, delete_after=6)
+                    except discord.HTTPException:
+                        pass
             return
 
         if isinstance(error, (commands.MissingPermissions, commands.NotOwner)):
@@ -180,6 +248,9 @@ def main():
         # Global error handler for app commands (slash commands)
         @bot.tree.error
         async def on_app_command_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
+            if isinstance(error, discord.app_commands.CheckFailure):
+                return
+
             if hasattr(error, 'original') and isinstance(error.original, UserFacingError):
                 if not interaction.response.is_done():
                     await interaction.response.send_message(embed=ErrorEmbed(error.original.message), ephemeral=True)
